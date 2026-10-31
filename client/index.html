@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Ludo</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="loading" class="overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Connecting…</p>
+      </div>
+
+      <main id="game" class="hidden">
+        <section class="board-wrap">
+          <canvas id="board"></canvas>
+          <div id="banner" class="banner hidden"></div>
+        </section>
+
+        <aside class="panel">
+          <header class="panel-head">
+            <h1>Ludo</h1>
+            <span id="phase-tag" class="tag"></span>
+          </header>
+
+          <div id="seats" class="seats"></div>
+
+          <div id="lobby-controls" class="controls hidden">
+            <button id="start-btn" class="btn primary">Start game</button>
+            <p id="lobby-hint" class="hint"></p>
+          </div>
+
+          <div id="play-controls" class="controls hidden">
+            <div class="dice-row">
+              <button id="dice" class="dice" aria-label="Roll dice"></button>
+              <div>
+                <div id="turn-text" class="turn-text"></div>
+                <div id="timer" class="timer"><div id="timer-bar"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="finish-controls" class="controls hidden">
+            <button id="again-btn" class="btn primary">Back to lobby</button>
+          </div>
+
+          <ul id="log" class="log"></ul>
+        </aside>
+      </main>
+
+      <div id="toast" class="toast hidden"></div>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
