@@ -1,34 +1,46 @@
 // One game room per Discord Activity instance.
 import { randomInt } from 'node:crypto';
-import { COLORS } from '../shared/board.js';
+import { MODES, boardFor } from '../shared/board.js';
+import { DEFAULT_EQUIPPED, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove } from './rules.js';
 
 const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
 const TURN_TIMEOUT_MS = 30_000;
-const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova'];
+const EMOTE_COOLDOWN_MS = 1200;
+const EMOTE_TTL_MS = 3000;
+const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
+const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 export class Room {
-  constructor(id, { onChange, rng = () => randomInt(1, 7), delays = {} } = {}) {
+  constructor(id, { onChange, rng = () => randomInt(1, 7), delays = {}, profiles = null } = {}) {
     this.id = id;
     this.onChange = onChange || (() => {});
     this.rng = rng;
     this.delays = { bot: BOT_DELAY_MS, noMove: NO_MOVE_DELAY_MS, timeout: TURN_TIMEOUT_MS, ...delays };
+    this.profiles = profiles; // ProfileStore (optional): skins, emotes and coin rewards
     this.clients = new Set(); // sockets
     this.connected = new Map(); // userId -> connection count
-    this.seats = [null, null, null, null]; // { userId, name, bot, connected }
+    this.mode = '4p';
+    this.board = boardFor(this.mode);
+    this.seats = Array(this.board.arms).fill(null); // { userId, name, bot, connected }
     this.hostId = null;
     this.phase = 'lobby';
-    this.tokens = newTokens();
+    this.tokens = newTokens(this.board.arms);
     this.turn = 0;
     this.dice = null;
     this.rolled = false;
     this.movable = [];
     this.sixCount = 0;
     this.winners = [];
+    this.captures = [];
+    this.rewards = null; // seat -> coins, once a game is over
     this.lastMove = null;
     this.seq = 0;
     this.log = [];
+    this.emotes = [];
+    this.emoteSeq = 0;
+    this.lastEmote = new Map(); // userId -> time
     this.turnDeadline = null;
     this.timer = null;
   }
@@ -83,10 +95,13 @@ export class Room {
       case 'sit': return this.sit(user, msg.seat);
       case 'stand': return this.stand(user);
       case 'addBot': return this.addBot(user, msg.seat);
+      case 'fillBots': return this.fillBots(user);
       case 'removeSeat': return this.removeSeat(user, msg.seat);
+      case 'setMode': return this.setMode(user, msg.mode);
       case 'start': return this.start(user);
       case 'roll': return this.roll(user);
       case 'move': return this.move(user, msg.token);
+      case 'emote': return this.emote(user, msg.item);
       case 'newGame': return this.newGame(user);
       default: throw new Error('Unknown action');
     }
@@ -94,7 +109,7 @@ export class Room {
 
   sit(user, seat) {
     this.requirePhase('lobby');
-    if (!validSeat(seat)) throw new Error('Bad seat');
+    if (!this.validSeat(seat)) throw new Error('Bad seat');
     if (this.seats[seat]) throw new Error('That seat is taken');
     const current = this.seatOf(user.id);
     if (current >= 0) this.seats[current] = null;
@@ -112,16 +127,55 @@ export class Room {
   addBot(user, seat) {
     this.requirePhase('lobby');
     this.requireHost(user);
-    if (!validSeat(seat) || this.seats[seat]) throw new Error('That seat is taken');
-    this.seats[seat] = { userId: `bot-${seat}`, name: BOT_NAMES[seat], bot: true, connected: true };
+    if (!this.validSeat(seat) || this.seats[seat]) throw new Error('That seat is taken');
+    this.seats[seat] = newBot(seat);
+    this.changed();
+  }
+
+  fillBots(user) {
+    this.requirePhase('lobby');
+    this.requireHost(user);
+    for (const i of MODES[this.mode].seats) if (!this.seats[i]) this.seats[i] = newBot(i);
     this.changed();
   }
 
   removeSeat(user, seat) {
     this.requirePhase('lobby');
     this.requireHost(user);
-    if (!validSeat(seat)) throw new Error('Bad seat');
+    if (!this.validSeat(seat)) throw new Error('Bad seat');
     this.seats[seat] = null;
+    this.changed();
+  }
+
+  setMode(user, mode) {
+    this.requirePhase('lobby');
+    this.requireHost(user);
+    if (!MODES[mode]) throw new Error('Unknown mode');
+    if (mode === this.mode) return;
+    const old = this.seats.map((s, i) => s && { s, i }).filter(Boolean);
+    const allowed = MODES[mode].seats;
+    this.mode = mode;
+    this.board = boardFor(mode);
+    this.seats = Array(this.board.arms).fill(null);
+    this.tokens = newTokens(this.board.arms);
+
+    // Humans keep their seat if it still exists, then the rest fill free seats.
+    // Bots go last, so they are the ones dropped when the new mode has fewer seats.
+    const free = () => allowed.find((i) => !this.seats[i]);
+    const humans = old.filter((o) => !o.s.bot);
+    const moved = [];
+    for (const o of humans) {
+      if (allowed.includes(o.i)) this.seats[o.i] = o.s;
+      else moved.push(o);
+    }
+    for (const o of moved) {
+      const i = free();
+      if (i !== undefined) this.seats[i] = o.s;
+    }
+    for (const o of old.filter((o) => o.s.bot)) {
+      const i = allowed.includes(o.i) && !this.seats[o.i] ? o.i : free();
+      if (i !== undefined) this.seats[i] = newBot(i);
+    }
     this.changed();
   }
 
@@ -132,8 +186,10 @@ export class Room {
     if (active.length < 2) throw new Error('Need at least 2 players (add a bot!)');
     if (!active.some((i) => !this.seats[i].bot)) throw new Error('At least one human must play');
     this.phase = 'playing';
-    this.tokens = newTokens();
+    this.tokens = newTokens(this.board.arms);
     this.winners = [];
+    this.captures = Array(this.board.arms).fill(0);
+    this.rewards = null;
     this.lastMove = null;
     this.log = [];
     this.turn = active[randomInt(active.length)];
@@ -152,6 +208,20 @@ export class Room {
     this.doMove(token);
   }
 
+  emote(user, itemId) {
+    const item = ITEMS[itemId];
+    if (!item || item.type !== 'emote') throw new Error('Unknown emote');
+    const seat = this.seatOf(user.id);
+    if (seat < 0) throw new Error('Take a seat to send emotes');
+    if (!ownsItem(this.profiles?.peek(user.id), itemId)) throw new Error("You don't own that emote");
+    const now = Date.now();
+    if (now - (this.lastEmote.get(user.id) || 0) < EMOTE_COOLDOWN_MS) return;
+    this.lastEmote.set(user.id, now);
+    this.emotes = this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS);
+    this.emotes.push({ id: ++this.emoteSeq, seat, emoji: item.emoji, at: now });
+    this.onChange(this); // nothing in the game changed, so skip automate()
+  }
+
   newGame(user) {
     this.requireHost(user);
     if (this.phase === 'lobby') return;
@@ -159,12 +229,13 @@ export class Room {
     this.phase = 'lobby';
     // Drop disconnected humans, keep everyone else seated.
     this.seats = this.seats.map((s) => (s && (s.bot || s.connected) ? s : null));
-    this.tokens = newTokens();
+    this.tokens = newTokens(this.board.arms);
     this.dice = null;
     this.rolled = false;
     this.movable = [];
     this.lastMove = null;
     this.winners = [];
+    this.rewards = null;
     this.turnDeadline = null;
     this.changed();
   }
@@ -192,7 +263,7 @@ export class Room {
       return;
     }
 
-    this.movable = legalMoves(this.tokens, seat, dice);
+    this.movable = legalMoves(this.tokens, seat, dice, this.board);
     if (this.movable.length === 0) {
       this.addLog(`${name} rolled a ${dice} — no moves.`);
       this.changed();
@@ -207,10 +278,11 @@ export class Room {
     if (!this.movable.includes(token)) throw new Error("That token can't move");
     const seat = this.turn;
     const name = this.seats[seat].name;
-    const result = applyMove(this.tokens, seat, token, this.dice, this.activeSeats());
+    const result = applyMove(this.tokens, seat, token, this.dice, this.activeSeats(), this.board);
     this.seq++;
     this.lastMove = { ...result, seq: this.seq };
     this.movable = [];
+    this.captures[seat] += result.captured.length;
 
     for (const c of result.captured) {
       this.addLog(`${name} captured ${this.seats[c.seat].name}'s token!`);
@@ -219,16 +291,11 @@ export class Room {
 
     if (result.allHome) {
       this.winners.push(seat);
-      const place = ['1st', '2nd', '3rd', '4th'][this.winners.length - 1];
-      this.addLog(`🏆 ${name} finished ${place}!`);
+      this.addLog(`🏆 ${name} finished ${PLACES[this.winners.length - 1]}!`);
       const left = this.activeSeats().filter((s) => !this.winners.includes(s));
       if (left.length <= 1) {
         this.winners.push(...left);
-        this.phase = 'finished';
-        this.rolled = false;
-        this.turnDeadline = null;
-        this.clearTimer();
-        this.changed();
+        this.finish();
         return;
       }
       this.nextTurn();
@@ -246,11 +313,34 @@ export class Room {
     }
   }
 
+  finish() {
+    this.phase = 'finished';
+    this.rolled = false;
+    this.turnDeadline = null;
+    this.clearTimer();
+    this.giveRewards();
+    this.changed();
+  }
+
+  // Coins for every human: by finishing place, plus a bonus per capture.
+  giveRewards() {
+    const humans = this.winners.filter((s) => !this.seats[s].bot);
+    const factor = humans.length >= 2 ? 1 : REWARDS.soloFactor;
+    this.rewards = {};
+    this.winners.forEach((s, place) => {
+      const seat = this.seats[s];
+      if (seat.bot) return;
+      const coins = Math.round((REWARDS.place[place] + this.captures[s] * REWARDS.capture) * factor);
+      this.rewards[s] = coins;
+      this.profiles?.addCoins(seat.userId, coins);
+    });
+  }
+
   nextTurn() {
     if (this.phase !== 'playing') return;
-    const order = [0, 1, 2, 3];
-    for (let i = 1; i <= 4; i++) {
-      const s = order[(this.turn + i) % 4];
+    const n = this.seats.length;
+    for (let i = 1; i <= n; i++) {
+      const s = (this.turn + i) % n;
       if (this.seats[s] && !this.winners.includes(s)) {
         this.turn = s;
         break;
@@ -279,7 +369,7 @@ export class Room {
       try {
         if (!this.rolled) this.doRoll();
         else {
-          const t = chooseBotMove(this.tokens, this.turn, this.dice, this.activeSeats());
+          const t = chooseBotMove(this.tokens, this.turn, this.dice, this.activeSeats(), this.board);
           if (t !== null) this.doMove(t);
         }
       } catch (err) {
@@ -321,6 +411,14 @@ export class Room {
     if (this.log.length > 30) this.log.shift();
   }
 
+  validSeat(seat) {
+    return Number.isInteger(seat) && MODES[this.mode].seats.includes(seat);
+  }
+
+  equipped(userId) {
+    return this.profiles?.peek(userId)?.equipped || DEFAULT_EQUIPPED;
+  }
+
   requirePhase(phase) {
     if (this.phase !== phase) throw new Error(`Not allowed right now`);
   }
@@ -335,27 +433,41 @@ export class Room {
   }
 
   snapshot() {
+    const now = Date.now();
     return {
+      mode: this.mode,
+      seatsAllowed: MODES[this.mode].seats,
       phase: this.phase,
       hostId: this.hostId,
-      seats: this.seats.map((s, i) => (s ? { ...s, color: COLORS[i] } : null)),
+      // Everyone sees the host's board theme.
+      theme: this.equipped(this.hostId).board,
+      seats: this.seats.map(
+        (s, i) =>
+          s && {
+            ...s,
+            color: this.board.colors[i],
+            skins: s.bot ? DEFAULT_EQUIPPED : this.equipped(s.userId),
+          },
+      ),
       tokens: this.tokens,
       turn: this.turn,
       dice: this.dice,
       rolled: this.rolled,
       movable: this.movable,
       winners: this.winners,
+      rewards: this.rewards,
       lastMove: this.lastMove,
       seq: this.seq,
       log: this.log.slice(-8),
+      emotes: this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS),
       turnDeadline: this.turnDeadline,
       turnTimeout: this.delays.timeout,
-      serverNow: Date.now(),
+      serverNow: now,
       spectators: this.connected.size,
     };
   }
 }
 
-function validSeat(seat) {
-  return Number.isInteger(seat) && seat >= 0 && seat < 4;
+function newBot(seat) {
+  return { userId: `bot-${seat}`, name: BOT_NAMES[seat], bot: true, connected: true };
 }

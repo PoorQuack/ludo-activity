@@ -1,6 +1,10 @@
 # 🎲 Ludo — a Discord Activity
 
-Multiplayer Ludo that runs inside Discord as an Activity. You can have 2–4 players, and bots can fill empty seats.
+Multiplayer Ludo that runs inside Discord as an Activity.
+
+- **Modes:** 2 players, 4 players, or 6 players on a hexagon board. Bots can fill empty seats.
+- **Main menu** with Play, Shop and How to play.
+- **Coins and shop:** players earn coins by finishing games and spend them on token skins, dice skins, board themes and emotes. Coins are saved on the server in `data/profiles.json`.
 
 - **Server:** Node.js, Express and WebSockets. The server enforces the rules, so players can't cheat.
 - **Client:** Plain JavaScript drawing on a canvas, bundled with Vite and using the Discord Embedded App SDK.
@@ -117,6 +121,8 @@ pm2 startup        # run the command it prints
 
 The server uses roughly 50–80 MB of RAM.
 
+Player coins and purchases live in `data/profiles.json` (git ignores it). Back that file up if you rebuild the VM. Set `DATA_FILE` in `.env` to store it somewhere else.
+
 ### HTTPS on the VM: choose one
 
 **Option A: Cloudflare named tunnel (recommended if you own a domain on Cloudflare).**
@@ -163,8 +169,9 @@ cd ludo-activity && git pull && npm ci && npm run build && pm2 restart ludo
 ## Project layout
 
 ```
-client/      game UI (canvas board, dice, lobby) and Discord login
-server/      index.js = HTTP + WebSocket server, room.js = game flow, rules.js = Ludo rules + bot
-shared/      board geometry used by both sides
+client/      main.js = screens + animations, renderer.js = canvas drawing, shop-ui.js, skins.js
+server/      index.js = HTTP + WebSocket server, room.js = game flow, rules.js = Ludo rules + bot,
+             store.js = saved coins and shop items
+shared/      board.js = 4- and 6-arm board geometry, shop.js = shop items, prices and rewards
 test/        rule tests: npm test
 ```

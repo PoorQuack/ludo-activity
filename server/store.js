@@ -1,0 +1,99 @@
+// Player profiles (coins and shop items), kept in memory and saved to a JSON file.
+// Guests (plain-browser testing) are never written to disk.
+import fs from 'node:fs';
+import path from 'node:path';
+import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, ownsItem } from '../shared/shop.js';
+
+const SAVE_DELAY_MS = 1000;
+
+export class ProfileStore {
+  constructor(file, { onChange } = {}) {
+    this.file = file;
+    this.onChange = onChange || (() => {});
+    this.profiles = new Map();
+    this.saveTimer = null;
+    if (file) this.load();
+  }
+
+  load() {
+    try {
+      const data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
+      for (const [id, p] of Object.entries(data)) this.profiles.set(id, normalize(p));
+    } catch (err) {
+      if (err.code !== 'ENOENT') console.error('Could not read profiles', err);
+    }
+  }
+
+  // Returns the profile, creating it on a player's first visit.
+  get(id) {
+    let p = this.profiles.get(id);
+    if (!p) {
+      p = normalize({});
+      this.profiles.set(id, p);
+      this.save();
+    }
+    return p;
+  }
+
+  peek(id) {
+    return this.profiles.get(id) || null;
+  }
+
+  addCoins(id, coins) {
+    this.get(id).coins += coins;
+    this.changed(id);
+  }
+
+  buy(id, itemId) {
+    const item = ITEMS[itemId];
+    if (!item) throw new Error('Unknown item');
+    const p = this.get(id);
+    if (ownsItem(p, itemId)) throw new Error('You already own that');
+    if (p.coins < item.price) throw new Error('Not enough coins');
+    p.coins -= item.price;
+    p.owned.push(itemId);
+    if (item.type !== 'emote') p.equipped[item.type] = itemId;
+    this.changed(id);
+  }
+
+  equip(id, itemId) {
+    const item = ITEMS[itemId];
+    if (!item || item.type === 'emote') throw new Error("That can't be equipped");
+    const p = this.get(id);
+    if (!ownsItem(p, itemId)) throw new Error("You don't own that yet");
+    p.equipped[item.type] = itemId;
+    this.changed(id);
+  }
+
+  changed(id) {
+    this.save();
+    this.onChange(id);
+  }
+
+  save() {
+    if (!this.file || this.saveTimer) return;
+    this.saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS);
+  }
+
+  // Writes a temp file first, so a crash mid-write can't corrupt the save.
+  flush() {
+    clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    if (!this.file) return;
+    const data = {};
+    for (const [id, p] of this.profiles) if (!id.startsWith('guest-')) data[id] = p;
+    fs.mkdirSync(path.dirname(this.file), { recursive: true });
+    const tmp = `${this.file}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(data));
+    fs.renameSync(tmp, this.file);
+  }
+}
+
+function normalize(p) {
+  const owned = Array.isArray(p.owned) ? p.owned.filter((id) => ITEMS[id]) : [];
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, owned, equipped: { ...DEFAULT_EQUIPPED } };
+  for (const [type, id] of Object.entries(p.equipped || {})) {
+    if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
+  }
+  return profile;
+}

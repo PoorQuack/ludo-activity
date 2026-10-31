@@ -1,31 +1,46 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
-import { COLORS, COLOR_HEX, FINISHED, tokenCenter } from '../shared/board.js';
-import { BoardRenderer } from './renderer.js';
+import { COLOR_HEX, MODES, boardFor } from '../shared/board.js';
+import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
+import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS } from './renderer.js';
+import { renderShop } from './shop-ui.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
 // Inside Discord every request to our server goes through Discord's proxy.
 const BASE = inDiscord ? '/.proxy' : '';
-const STEP_MS = 150;
+const STEP_MS = 170; // one square of movement
+const EXIT_MS = 450; // jumping out of base
+const CAPTURE_MS = 650; // a captured token flying home
+const MAX_QUEUE = 6; // further behind than this, skip animations to catch up
+const MEDALS = ['🥇', '🥈', '🥉'];
 
 const $ = (id) => document.getElementById(id);
 const els = {
   loading: $('loading'),
   loadingText: $('loading-text'),
-  game: $('game'),
+  screens: { menu: $('menu'), shop: $('shop'), howto: $('howto'), game: $('game') },
+  menuName: $('menu-name'),
+  menuStatus: $('menu-status'),
+  playBtn: $('play-btn'),
+  shopTabs: $('shop-tabs'),
+  shopGrid: $('shop-grid'),
+  coins: [...document.querySelectorAll('.coins')],
   canvas: $('board'),
   banner: $('banner'),
+  turnPop: $('turn-pop'),
   phaseTag: $('phase-tag'),
+  modePicker: $('mode-picker'),
   seats: $('seats'),
   lobbyControls: $('lobby-controls'),
+  fillBtn: $('fill-btn'),
   startBtn: $('start-btn'),
   lobbyHint: $('lobby-hint'),
   playControls: $('play-controls'),
-  dice: $('dice'),
   turnText: $('turn-text'),
   timerBar: $('timer-bar'),
   finishControls: $('finish-controls'),
   againBtn: $('again-btn'),
+  emoteBar: $('emote-bar'),
   log: $('log'),
   toast: $('toast'),
 };
@@ -35,14 +50,26 @@ const renderer = new BoardRenderer(els.canvas);
 let ws = null;
 let hello = null;
 let me = null;
+let profile = null;
 let state = null;
 let clockOffset = 0;
-let displayTokens = null; // what the board currently shows (lags behind state while animating)
-let anim = null;
-let lastAnimatedSeq = 0;
-let lastDiceSeq = 0;
-let diceRollingUntil = 0;
 let reconnectDelay = 500;
+let screen = 'loading';
+let shopTab = 'token';
+
+// Server updates become a queue of rolls and moves that play one at a time,
+// so nothing is skipped when several arrive close together.
+let events = [];
+let current = null;
+let shownTokens = null; // board after the last finished animation
+let latestTokens = null; // board in the latest server update
+let lastRollSeq = 0;
+let lastMoveSeq = 0;
+let lastEmoteId = 0;
+let floaters = []; // emotes rising over the board
+let dice = { mode: 'hidden' };
+let celebrated = false;
+let lastFrame = 0;
 
 // ---------------- startup ----------------
 
@@ -109,6 +136,7 @@ function connect() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'welcome') me = msg.you;
+    else if (msg.type === 'profile') onProfile(msg.profile);
     else if (msg.type === 'state') onState(msg.state);
     else if (msg.type === 'error') toast(msg.message);
   };
@@ -123,39 +151,59 @@ function send(action, extra = {}) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'action', action, ...extra }));
 }
 
-// ---------------- state handling ----------------
+function sendShop(op, item) {
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'shop', op, item }));
+}
+
+// ---------------- server updates ----------------
+
+function onProfile(next) {
+  const gained = profile && next.coins > profile.coins ? next.coins - profile.coins : 0;
+  profile = next;
+  if (gained) {
+    toast(`+${gained} coins!`, 'ok');
+    bumpCoins();
+  }
+  if (screen === 'shop') drawShop();
+  renderUI();
+}
 
 function onState(next) {
   const prev = state;
   state = next;
   clockOffset = next.serverNow - Date.now();
   els.loading.classList.add('hidden');
-  els.game.classList.remove('hidden');
+  if (screen === 'loading') showScreen('menu');
 
-  const lm = next.lastMove;
-  if (prev && lm && lm.seq > lastAnimatedSeq && displayTokens) {
-    // Finish any running animation, then animate this move from the old positions.
-    const base = anim ? anim.finalTokens : displayTokens;
-    const startTokens = base.map((row) => row.slice());
-    const steps = [];
-    if (lm.from < 0) steps.push(0);
-    else for (let p = lm.from + 1; p <= lm.to; p++) steps.push(p);
-    anim = { move: lm, steps, start: performance.now(), startTokens, finalTokens: next.tokens };
-    displayTokens = startTokens;
-  } else if (!anim) {
-    displayTokens = next.tokens;
+  // New board or new game: start fresh. (playing → finished keeps going so the winning move animates.)
+  const reset = !prev || prev.mode !== next.mode || (prev.phase !== next.phase && next.phase !== 'finished');
+  if (reset) {
+    events = [];
+    current = null;
+    shownTokens = latestTokens = next.tokens;
+    lastMoveSeq = next.lastMove?.seq ?? 0;
+    lastRollSeq = next.seq;
+    dice = { mode: 'hidden' };
+    celebrated = false;
+    if (next.phase === 'finished') {
+      celebrated = true;
+      showFinish();
+    }
   } else {
-    anim.finalTokens = next.tokens;
+    if (next.lastMove && next.lastMove.seq > lastMoveSeq) {
+      events.push({ type: 'move', move: next.lastMove, start: latestTokens, final: next.tokens });
+      lastMoveSeq = next.lastMove.seq;
+    } else if (next.rolled && !next.lastMove && next.seq !== lastRollSeq) {
+      events.push({ type: 'roll', seat: next.turn, value: next.dice });
+      lastRollSeq = next.seq;
+    }
+    latestTokens = next.tokens;
   }
-  if (lm) lastAnimatedSeq = Math.max(lastAnimatedSeq, lm.seq);
 
-  // Dice roll animation when a fresh roll arrives
-  if (next.rolled && next.dice && !next.lastMove && next.seq !== lastDiceSeq) {
-    lastDiceSeq = next.seq;
-    diceRollingUntil = performance.now() + 450;
-    els.dice.classList.remove('rolling');
-    void els.dice.offsetWidth;
-    els.dice.classList.add('rolling');
+  for (const e of next.emotes) {
+    if (e.id <= lastEmoteId) continue;
+    lastEmoteId = e.id;
+    floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
   }
 
   renderUI();
@@ -170,19 +218,87 @@ function isHost() {
   return state && me && state.hostId === me.id;
 }
 
-// ---------------- UI ----------------
+// ---------------- screens ----------------
+
+function showScreen(name) {
+  screen = name;
+  for (const [id, el] of Object.entries(els.screens)) el.classList.toggle('hidden', id !== name);
+  if (name === 'shop') drawShop();
+  renderUI();
+}
+
+function drawShop() {
+  renderShop(
+    { tabs: els.shopTabs, grid: els.shopGrid },
+    {
+      tab: shopTab,
+      profile,
+      onTab: (t) => {
+        shopTab = t;
+        drawShop();
+      },
+      onBuy: (item) => {
+        if ((profile?.coins ?? 0) < item.price) return toast(`You need ${item.price - profile.coins} more coins`);
+        sendShop('buy', item.id);
+        toast(`Bought ${item.name}!`, 'ok');
+      },
+      onEquip: (item) => sendShop('equip', item.id),
+    },
+  );
+}
 
 function renderUI() {
+  if (!state) return;
+  for (const el of els.coins) el.querySelector('b').textContent = profile ? profile.coins : '…';
+  renderMenu();
+  renderPanel();
+}
+
+function renderMenu() {
+  els.menuName.textContent = me ? `👋 ${me.name}` : '';
+  const seat = mySeat();
+  els.playBtn.textContent =
+    state.phase === 'lobby' ? '▶ Play' : seat >= 0 ? '▶ Back to game' : '👀 Watch game';
+  const n = state.spectators;
+  const what =
+    state.phase === 'lobby'
+      ? `lobby is set to ${MODES[state.mode].label}`
+      : state.phase === 'playing'
+        ? 'a game is in progress'
+        : 'the game just finished';
+  els.menuStatus.textContent = `${n} ${n === 1 ? 'person' : 'people'} here · ${what}`;
+}
+
+function renderPanel() {
   const seat = mySeat();
   const { phase } = state;
-  els.phaseTag.textContent = phase === 'lobby' ? 'Lobby' : phase === 'playing' ? 'In game' : 'Game over';
+  const board = boardFor(state.mode);
+  els.phaseTag.textContent =
+    phase === 'lobby' ? `Lobby · ${MODES[state.mode].label}` : phase === 'playing' ? 'In game' : 'Game over';
+
+  // Mode picker (host only, lobby only)
+  els.modePicker.classList.toggle('hidden', phase !== 'lobby');
+  const modeKey = `${state.mode}|${isHost()}`;
+  if (els.modePicker.dataset.key !== modeKey) {
+    els.modePicker.dataset.key = modeKey;
+    els.modePicker.innerHTML = '';
+    for (const [id, m] of Object.entries(MODES)) {
+      const b = button(m.label, () => send('setMode', { mode: id }));
+      b.classList.toggle('active', id === state.mode);
+      b.disabled = !isHost();
+      els.modePicker.appendChild(b);
+    }
+  }
 
   // Seats
   els.seats.innerHTML = '';
-  state.seats.forEach((s, i) => {
+  els.seats.classList.toggle('six', state.seatsAllowed.length > 4);
+  for (const i of state.seatsAllowed) {
+    const s = state.seats[i];
+    const colorName = board.colors[i];
     const card = document.createElement('div');
     card.className = 'seat';
-    card.style.setProperty('--seat-color', COLOR_HEX[COLORS[i]]);
+    card.style.setProperty('--seat-color', COLOR_HEX[colorName]);
     if (phase === 'playing' && state.turn === i) card.classList.add('turn');
     if (s && !s.bot && me && s.userId === me.id) card.classList.add('me');
     if (s && !s.connected) card.classList.add('offline');
@@ -190,7 +306,7 @@ function renderUI() {
     const top = document.createElement('div');
     top.className = 'seat-top';
     top.innerHTML = `<span class="seat-dot"></span><span class="seat-name"></span>`;
-    top.querySelector('.seat-name').textContent = s ? s.name : capitalize(COLORS[i]);
+    top.querySelector('.seat-name').textContent = s ? s.name : capitalize(colorName);
     card.appendChild(top);
 
     const sub = document.createElement('div');
@@ -198,7 +314,7 @@ function renderUI() {
     if (!s) sub.textContent = 'Empty seat';
     else if (phase === 'lobby') sub.textContent = s.bot ? 'Bot' : s.userId === state.hostId ? 'Host' : 'Ready';
     else {
-      const home = state.tokens[i].filter((p) => p >= FINISHED).length;
+      const home = state.tokens[i].filter((p) => p >= board.finished).length;
       const place = state.winners.indexOf(i);
       sub.textContent =
         place >= 0 ? `🏆 ${ordinal(place + 1)} place` : `${home}/4 home${s.connected ? '' : ' · offline (auto)'}`;
@@ -219,7 +335,7 @@ function renderUI() {
       card.appendChild(actions);
     }
     els.seats.appendChild(card);
-  });
+  }
 
   // Controls
   els.lobbyControls.classList.toggle('hidden', phase !== 'lobby');
@@ -228,7 +344,9 @@ function renderUI() {
 
   if (phase === 'lobby') {
     const count = state.seats.filter(Boolean).length;
+    const empty = state.seatsAllowed.some((i) => !state.seats[i]);
     els.startBtn.classList.toggle('hidden', !isHost());
+    els.fillBtn.classList.toggle('hidden', !isHost() || !empty);
     els.startBtn.disabled = count < 2;
     const hostName = state.seats.find((s) => s && s.userId === state.hostId)?.name;
     if (isHost()) {
@@ -242,22 +360,31 @@ function renderUI() {
   if (phase === 'playing') {
     const cur = state.seats[state.turn];
     const myTurn = seat === state.turn;
-    els.dice.style.setProperty('--glow', COLOR_HEX[COLORS[state.turn]]);
-    if (myTurn && !state.rolled) els.turnText.textContent = 'Your turn — roll!';
+    if (myTurn && !state.rolled) els.turnText.textContent = 'Your turn — tap the dice!';
     else if (myTurn && state.movable.length) els.turnText.textContent = 'Tap a glowing token';
     else if (myTurn) els.turnText.textContent = 'No moves this time';
     else els.turnText.textContent = `${cur.name}'s turn`;
-    els.turnText.style.color = COLOR_HEX[COLORS[state.turn]];
-    els.dice.disabled = !(myTurn && !state.rolled);
-    els.dice.classList.toggle('ready', myTurn && !state.rolled);
+    els.turnText.style.color = COLOR_HEX[board.colors[state.turn]];
   }
 
-  if (phase === 'finished') {
-    const lines = state.winners.map((s, i) => `${['🥇', '🥈', '🥉', '4️⃣'][i]} ${state.seats[s]?.name}`);
-    els.banner.innerHTML = `Game over!<br>${lines.map(escapeHtml).join('<br>')}`;
-    els.banner.classList.remove('hidden');
-  } else {
-    els.banner.classList.add('hidden');
+  if (phase !== 'finished') els.banner.classList.add('hidden');
+
+  // Emotes you own (only once you're seated)
+  const owned = SHOP_ITEMS.filter((i) => i.type === 'emote' && ownsItem(profile, i.id));
+  const emoteKey = seat >= 0 ? owned.map((i) => i.id).join() : '';
+  if (els.emoteBar.dataset.key !== emoteKey) {
+    els.emoteBar.dataset.key = emoteKey;
+    els.emoteBar.innerHTML = '';
+    if (emoteKey) {
+      for (const item of owned) {
+        const b = document.createElement('button');
+        b.className = 'emote';
+        b.title = item.name;
+        b.textContent = item.emoji;
+        b.addEventListener('click', () => send('emote', { item: item.id }));
+        els.emoteBar.appendChild(b);
+      }
+    }
   }
 
   els.log.innerHTML = '';
@@ -268,113 +395,238 @@ function renderUI() {
   }
 }
 
-function renderDice(value) {
-  const layouts = {
-    1: [5],
-    2: [1, 9],
-    3: [1, 5, 9],
-    4: [1, 3, 7, 9],
-    5: [1, 3, 5, 7, 9],
-    6: [1, 3, 4, 6, 7, 9],
-  };
-  const key = value || 0;
-  if (els.dice.dataset.value === String(key)) return;
-  els.dice.dataset.value = String(key);
-  els.dice.innerHTML = '';
-  if (!value) {
-    els.dice.innerHTML = '<span style="grid-area:1/1/4/4;place-self:center;font-weight:800;color:#222;font-size:22px">?</span>';
+function showFinish() {
+  const lines = state.winners.map((s, i) => {
+    const coins = state.rewards?.[s];
+    const reward = coins ? ` <span class="reward">+${coins} 🪙</span>` : '';
+    return `${MEDALS[i] || `${i + 1}.`} ${escapeHtml(state.seats[s]?.name)}${reward}`;
+  });
+  els.banner.innerHTML = `<div class="banner-title">Game over!</div>${lines.join('<br>')}`;
+  els.banner.classList.remove('hidden');
+}
+
+// ---------------- animation ----------------
+
+const idle = () => !current && events.length === 0;
+
+function stepAnimations(now, dt) {
+  if (events.length > MAX_QUEUE) skipAnimations();
+  if (!current && events.length) startEvent(events.shift(), now);
+  if (current) {
+    current.elapsed += dt * (events.length ? 2 : 1); // hurry when more is waiting
+    if (current.type === 'move') current.overrides = moveOverrides(current);
+    if (current.elapsed >= current.duration) endEvent(current, now);
+  }
+  updateDice(now);
+
+  if (state.phase === 'finished' && idle() && !celebrated) {
+    celebrated = true;
+    showFinish();
+    renderer.confetti(state.winners.slice(0, 3).map((s) => COLOR_HEX[boardFor(state.mode).colors[s]]).concat('#ffffff', '#f6cf57'));
+  }
+}
+
+function startEvent(ev, now) {
+  current = ev;
+  ev.elapsed = 0;
+  if (ev.type === 'roll') {
+    ev.duration = SPIN_MS + 120;
+    dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now };
     return;
   }
-  for (const pos of layouts[value]) {
-    const pip = document.createElement('span');
-    pip.className = 'pip';
-    pip.style.gridArea = `${Math.ceil(pos / 3)} / ${((pos - 1) % 3) + 1}`;
-    els.dice.appendChild(pip);
+  const { move } = ev;
+  ev.steps = [];
+  if (move.from < 0) ev.steps.push(0);
+  else for (let p = move.from + 1; p <= move.to; p++) ev.steps.push(p);
+  ev.hopMs = move.from < 0 ? EXIT_MS : STEP_MS;
+  ev.moveMs = ev.steps.length * ev.hopMs;
+  ev.duration = ev.moveMs + (move.captured.length ? CAPTURE_MS : 120);
+  ev.lastStep = 0;
+  // The dice has done its job: shrink it away.
+  if (dice.mode !== 'hidden' && dice.mode !== 'leave') dice = { ...dice, mode: 'leave', t0: now };
+}
+
+function endEvent(ev, now) {
+  if (ev.type === 'roll') {
+    dice = { ...dice, mode: 'shown', t0: now };
+    renderer.ring(0, 0, '#ffffff', 1.2);
+  } else {
+    shownTokens = ev.final;
   }
+  current = null;
+}
+
+function skipAnimations() {
+  events = [];
+  current = null;
+  shownTokens = latestTokens;
+  dice = state.phase === 'playing' && state.rolled ? { mode: 'shown', seat: state.turn, value: state.dice, t0: 0 } : { mode: 'hidden' };
+}
+
+// Where the moving token (and anything it captured) is right now.
+function moveOverrides(ev) {
+  const board = boardFor(state.mode);
+  const { seat, token, captured } = ev.move;
+  const color = COLOR_HEX[board.colors[seat]];
+  const map = new Map();
+  const e = ev.elapsed;
+
+  if (e < ev.moveMs) {
+    const i = Math.floor(e / ev.hopMs);
+    const t = (e % ev.hopMs) / ev.hopMs;
+    const fromP = i === 0 ? ev.move.from : ev.steps[i - 1];
+    const a = board.tokenCenter(seat, fromP, token);
+    const b = board.tokenCenter(seat, ev.steps[i], token);
+    if (i !== ev.lastStep) {
+      ev.lastStep = i;
+      renderer.ring(a.x, a.y, color, 0.45); // little dust ring on each landing
+    }
+    const k = easeInOut(t);
+    map.set(`${seat}-${token}`, {
+      x: a.x + (b.x - a.x) * k,
+      y: a.y + (b.y - a.y) * k,
+      lift: Math.sin(Math.PI * t) * (ev.move.from < 0 ? 1.2 : 0.5),
+      squash: i > 0 && t < 0.2 ? 0.82 + 0.9 * t : 1,
+    });
+    return map;
+  }
+
+  const end = board.tokenCenter(seat, ev.move.to, token);
+  if (!ev.landed) {
+    ev.landed = true;
+    renderer.ring(end.x, end.y, color, 0.8);
+    if (captured.length) renderer.burst(end.x, end.y, [color, '#ffffff', '#ffd23f'], { count: 22, speed: 5 });
+    if (ev.move.finishedToken) renderer.burst(end.x, end.y, [color, '#f6cf57', '#ffffff'], { count: 30, speed: 4, life: 900 });
+  }
+  const settle = Math.min(1, (e - ev.moveMs) / 160);
+  map.set(`${seat}-${token}`, { x: end.x, y: end.y, lift: 0, squash: 0.8 + 0.2 * easeOutBack(settle) });
+
+  // Captured tokens fly back to base.
+  const ct = Math.min(1, (e - ev.moveMs) / CAPTURE_MS);
+  for (const c of captured) {
+    const from = board.tokenCenter(c.seat, ev.start[c.seat][c.token], c.token);
+    const to = board.tokenCenter(c.seat, -1, c.token);
+    const k = easeInOut(ct);
+    map.set(`${c.seat}-${c.token}`, {
+      x: from.x + (to.x - from.x) * k,
+      y: from.y + (to.y - from.y) * k,
+      lift: Math.sin(Math.PI * ct) * 2.5,
+      squash: 1,
+    });
+  }
+  return map;
+}
+
+// The dice appears for whoever must roll, and leaves once it has been used.
+function updateDice(now) {
+  if (dice.mode === 'leave' && now - dice.t0 > LEAVE_MS) dice = { mode: 'hidden' };
+  if (!idle()) return;
+  const leave = () => (dice = { ...dice, mode: 'leave', t0: now });
+
+  if (state.phase !== 'playing') {
+    if (dice.mode !== 'hidden' && dice.mode !== 'leave') leave();
+    return;
+  }
+  if (state.rolled) {
+    // e.g. joined mid-turn: just show the roll
+    if (dice.mode === 'hidden' || dice.mode === 'ready') dice = { mode: 'shown', seat: state.turn, value: state.dice, t0: now };
+    return;
+  }
+  if (dice.mode === 'shown' || (dice.mode === 'ready' && dice.seat !== state.turn)) leave();
+  else if (dice.mode === 'hidden') {
+    dice = { mode: 'ready', seat: state.turn, t0: now };
+    if (state.turn === mySeat()) showTurnPop();
+  }
+}
+
+function canRoll() {
+  return state?.phase === 'playing' && mySeat() === state.turn && !state.rolled && dice.mode === 'ready' && idle();
+}
+
+function canMove() {
+  return (
+    state?.phase === 'playing' &&
+    mySeat() === state.turn &&
+    state.rolled &&
+    state.movable.length > 0 &&
+    dice.mode === 'shown' &&
+    idle()
+  );
 }
 
 // ---------------- frame loop ----------------
 
 function frame(now) {
   requestAnimationFrame(frame);
+  // Real elapsed time, so the queue keeps up even when frames are slow (e.g. a background tab).
+  const dt = lastFrame ? Math.min(1000, now - lastFrame) : 16;
+  lastFrame = now;
   if (!state) return;
+  stepAnimations(now, dt);
+  if (screen !== 'game') return;
 
+  const board = boardFor(state.mode);
+  renderer.setBoard(board, state.theme);
   const wrap = els.canvas.parentElement.getBoundingClientRect();
   renderer.resize(Math.max(200, Math.min(wrap.width, wrap.height)));
 
-  let override = null;
-  if (anim) {
-    const elapsed = Math.max(0, now - anim.start);
-    const i = Math.floor(elapsed / STEP_MS);
-    if (i >= anim.steps.length) {
-      displayTokens = anim.finalTokens;
-      anim = null;
-    } else {
-      const { seat, token } = anim.move;
-      const fromP = i === 0 ? anim.move.from : anim.steps[i - 1];
-      const toP = anim.steps[i];
-      const t = (elapsed % STEP_MS) / STEP_MS;
-      override = { seat, token, progress: toP, point: hop(seat, token, fromP, toP, t) };
-    }
-  }
-
   const seat = mySeat();
-  const canMove = state.phase === 'playing' && seat === state.turn && state.rolled && !anim && now > diceRollingUntil;
-  const active = new Set(state.seats.map((s, i) => (s ? i : -1)).filter((i) => i >= 0));
-  if (state.phase === 'lobby') for (let i = 0; i < 4; i++) active.add(i);
+  const active =
+    state.phase === 'lobby' ? state.seatsAllowed : state.seats.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
+  floaters = floaters.filter((f) => now - f.start < EMOTE_MS);
 
   renderer.draw(
     {
-      tokens: displayTokens,
+      tokens: current?.type === 'move' ? current.start : shownTokens,
       active,
-      override,
-      highlight: canMove ? { seat, tokens: state.movable } : null,
+      skins: state.seats.map((s) => s?.skins.token),
+      overrides: current?.type === 'move' ? current.overrides : null,
+      highlight: canMove() ? { seat, tokens: state.movable } : null,
       turn: state.phase === 'playing' ? state.turn : null,
+      dice: diceView(now, board),
+      emotes: floaters,
     },
     now,
   );
-
-  // Dice face (random faces while "rolling")
-  if (now < diceRollingUntil) renderDice(1 + Math.floor((now / 70) % 6));
-  else renderDice(state.phase === 'playing' ? state.dice : null);
 
   // Turn timer
   if (state.phase === 'playing' && state.turnDeadline) {
     const left = state.turnDeadline - (Date.now() + clockOffset);
     const pct = Math.max(0, Math.min(1, left / state.turnTimeout));
     els.timerBar.style.width = `${pct * 100}%`;
-    els.timerBar.style.background = COLOR_HEX[COLORS[state.turn]];
+    els.timerBar.style.background = COLOR_HEX[board.colors[state.turn]];
   }
 }
 
-// Interpolates between two squares with a little hop.
-function hop(seat, token, fromP, toP, t) {
-  const a = centerOf(seat, fromP, token);
-  const b = centerOf(seat, toP, token);
-  const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  const y = a[0] + (b[0] - a[0]) * ease - Math.sin(Math.PI * t) * 0.35;
-  const x = a[1] + (b[1] - a[1]) * ease;
-  return [y, x];
+function diceView(now, board) {
+  if (dice.mode === 'hidden') return null;
+  return {
+    mode: dice.mode,
+    t: now - dice.t0,
+    value: dice.value,
+    style: state.seats[dice.seat]?.skins.dice,
+    color: COLOR_HEX[board.colors[dice.seat]],
+    mine: dice.seat === mySeat(),
+  };
 }
-
-const centerOf = (seat, p, t) => tokenCenter(seat, p, t);
 
 // ---------------- input ----------------
 
-els.dice.addEventListener('click', () => send('roll'));
+for (const b of document.querySelectorAll('[data-go]')) b.addEventListener('click', () => showScreen(b.dataset.go));
+els.playBtn.addEventListener('click', () => showScreen('game'));
 els.startBtn.addEventListener('click', () => send('start'));
+els.fillBtn.addEventListener('click', () => send('fillBots'));
 els.againBtn.addEventListener('click', () => send('newGame'));
 
 els.canvas.addEventListener('pointerdown', (e) => {
-  if (!state || state.phase !== 'playing' || anim) return;
-  const seat = mySeat();
-  if (seat !== state.turn || !state.rolled) return;
-  const token = renderer.hitTest(e.clientX, e.clientY, seat, state.movable);
+  if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return send('roll');
+  if (!canMove()) return;
+  const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), state.movable);
   if (token !== null) send('move', { token });
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && state?.phase === 'playing' && mySeat() === state.turn && !state.rolled) {
+  if (e.code === 'Space' && screen === 'game' && canRoll()) {
     e.preventDefault();
     send('roll');
   }
@@ -387,11 +639,29 @@ function setLoading(text) {
 }
 
 let toastTimer = null;
-function toast(text) {
+function toast(text, kind = 'error') {
   els.toast.textContent = text;
-  els.toast.classList.remove('hidden');
+  els.toast.className = `toast ${kind}`;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => els.toast.classList.add('hidden'), 2500);
+}
+
+let popTimer = null;
+function showTurnPop() {
+  els.turnPop.classList.remove('hidden');
+  els.turnPop.style.animation = 'none';
+  void els.turnPop.offsetWidth;
+  els.turnPop.style.animation = '';
+  clearTimeout(popTimer);
+  popTimer = setTimeout(() => els.turnPop.classList.add('hidden'), 1300);
+}
+
+function bumpCoins() {
+  for (const el of els.coins) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
 }
 
 function button(label, onClick) {
@@ -407,22 +677,30 @@ function capitalize(s) {
 }
 
 function ordinal(n) {
-  return ['1st', '2nd', '3rd', '4th'][n - 1];
+  return ['1st', '2nd', '3rd', '4th', '5th', '6th'][n - 1];
 }
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
-// Used by automated browser tests: screen position of a token you can move right now.
+function easeInOut(t) {
+  return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+}
+
+function easeOutBack(k) {
+  const c = 1.70158;
+  return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2;
+}
+
+// Used by automated browser tests: screen positions of things you can tap right now.
 window.__ludoMovablePoint = () => {
+  if (!canMove() || !renderer.lastLayout) return null;
   const seat = mySeat();
-  if (!state || seat !== state.turn || !state.rolled || anim || !renderer.lastLayout) return null;
   const p = renderer.lastLayout.find((it) => it.seat === seat && state.movable.includes(it.token));
-  if (!p) return null;
-  const rect = els.canvas.getBoundingClientRect();
-  return { x: rect.left + p.x * renderer.cell, y: rect.top + p.y * renderer.cell };
+  return p ? renderer.toClient(p.x, p.y) : null;
 };
+window.__ludoDicePoint = () => (canRoll() ? renderer.toClient(0, 0) : null);
 
 requestAnimationFrame(frame);
 main();

@@ -6,9 +6,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { Room } from './room.js';
+import { ProfileStore } from './store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
+const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'profiles.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
@@ -61,11 +63,19 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 /** @type {Map<string, Room>} */
 const rooms = new Map();
 const idleTimers = new Map();
+/** @type {Map<string, Set<import('ws').WebSocket>>} */
+const userSockets = new Map();
+const store = new ProfileStore(DATA_FILE, { onChange: sendProfile });
+
+function sendProfile(userId) {
+  const msg = JSON.stringify({ type: 'profile', profile: store.peek(userId) });
+  for (const ws of userSockets.get(userId) || []) if (ws.readyState === 1) ws.send(msg);
+}
 
 function getRoom(id) {
   let room = rooms.get(id);
   if (!room) {
-    room = new Room(id, { onChange: broadcast });
+    room = new Room(id, { onChange: broadcast, profiles: store });
     rooms.set(id, room);
   }
   clearTimeout(idleTimers.get(id));
@@ -116,12 +126,22 @@ wss.on('connection', (ws) => {
         const roomId = String(msg.instanceId || 'local').slice(0, 100);
         room = getRoom(roomId);
         room.clients.add(ws);
+        if (!userSockets.has(user.id)) userSockets.set(user.id, new Set());
+        userSockets.get(user.id).add(ws);
+        store.get(user.id);
         send({ type: 'welcome', you: user });
+        sendProfile(user.id);
         room.connect(user);
         return;
       }
       if (!user || !room) return send({ type: 'error', message: 'Not connected yet' });
       if (msg.type === 'action') room.handle(user, msg);
+      if (msg.type === 'shop') {
+        if (msg.op === 'buy') store.buy(user.id, msg.item);
+        else if (msg.op === 'equip') store.equip(user.id, msg.item);
+        else return;
+        broadcast(room); // skins and themes are visible to everyone
+      }
     } catch (err) {
       send({ type: 'error', message: err.message || 'Something went wrong' });
     }
@@ -130,6 +150,9 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (!room || !user) return;
     room.clients.delete(ws);
+    const sockets = userSockets.get(user.id);
+    sockets?.delete(ws);
+    if (sockets?.size === 0) userSockets.delete(user.id);
     room.disconnect(user);
     if (room.empty) {
       const id = room.id;
@@ -156,6 +179,14 @@ setInterval(() => {
     ws.ping();
   }
 }, 30_000);
+
+// Save coins before exiting.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    store.flush();
+    process.exit(0);
+  });
+}
 
 server.listen(PORT, () => {
   console.log(`Ludo server running on http://localhost:${PORT}`);

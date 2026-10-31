@@ -1,119 +1,144 @@
 // Board geometry and rule constants shared by the server and the client.
 //
-// The board is a 15x15 grid, addressed as [row, col].
-// Seat order is clockwise: red (top-left), green (top-right),
-// yellow (bottom-right), blue (bottom-left).
+// A board is n identical "arms" (3 squares wide, 6 long) around a central hub:
+// 4 arms make the classic square board, 6 arms the hexagon board. Seats go
+// clockwise, starting with the left arm. Coordinates are in square-sized units,
+// with (0, 0) at the centre of the board and y pointing down.
 //
 // A token's position is its "progress" from its own start square:
-//   -1        = in base
-//   0..50     = on the shared 52-square track
-//   51..55    = in its own coloured home column
-//   56        = finished (centre)
+//   -1                         = in base
+//   0..board.lastTrack         = on the shared track (13 squares per arm)
+//   lastTrack+1..lastTrack+5   = in its own coloured home column
+//   board.finished             = done (centre)
 
-export const COLORS = ['red', 'green', 'yellow', 'blue'];
 export const COLOR_HEX = {
   red: '#e5484d',
   green: '#30a46c',
   yellow: '#f5b301',
   blue: '#3e63dd',
+  purple: '#8e4ec6',
+  orange: '#f76b15',
 };
 
-export const TRACK_LEN = 52;
-export const LAST_TRACK = 50;
-export const FINISHED = 56;
-export const START_INDEX = [0, 13, 26, 39];
-// Start squares + star squares are safe: no captures there.
-export const SAFE_INDICES = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+export const MODES = {
+  '2p': { label: '2 Players', arms: 4, seats: [0, 2] },
+  '4p': { label: '4 Players', arms: 4, seats: [0, 1, 2, 3] },
+  '6p': { label: '6 Players', arms: 6, seats: [0, 1, 2, 3, 4, 5] },
+};
 
-function segment(from, to) {
-  const cells = [];
-  const [r1, c1] = from;
-  const [r2, c2] = to;
-  const dr = Math.sign(r2 - r1);
-  const dc = Math.sign(c2 - c1);
-  let r = r1;
-  let c = c1;
-  cells.push([r, c]);
-  while (r !== r2 || c !== c2) {
-    r += dr;
-    c += dc;
-    cells.push([r, c]);
+const PALETTES = {
+  4: ['red', 'green', 'yellow', 'blue'],
+  6: ['red', 'green', 'purple', 'yellow', 'blue', 'orange'],
+};
+const ARM_SQUARES = 13; // shared track squares per arm
+const START_OFFSET = 8; // where a seat's start square sits along its own arm
+const QUAD = [
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+];
+
+export function makeBoard(n) {
+  const hub = 1.5 / Math.tan(Math.PI / n); // centre → inner end of each arm
+  const armAngle = (arm) => Math.PI + (arm * 2 * Math.PI) / n;
+
+  // Square `d` (1 = next to the hub … 6 = outer end) in lane `v` of an arm.
+  // Lane -1 faces the previous seat's arm, lane +1 faces the next seat's arm.
+  function square(arm, d, v) {
+    const a = armAngle(arm);
+    const r = hub + d - 0.5;
+    return { x: Math.cos(a) * r - Math.sin(a) * v, y: Math.sin(a) * r + Math.cos(a) * v, angle: a };
   }
-  return cells;
-}
 
-// The 52 shared squares, clockwise, starting at red's start square.
-export const TRACK = [
-  ...segment([6, 1], [6, 5]),
-  ...segment([5, 6], [0, 6]),
-  [0, 7],
-  ...segment([0, 8], [5, 8]),
-  ...segment([6, 9], [6, 14]),
-  [7, 14],
-  ...segment([8, 14], [8, 9]),
-  ...segment([9, 8], [14, 8]),
-  [14, 7],
-  ...segment([14, 6], [9, 6]),
-  ...segment([8, 5], [8, 0]),
-  [7, 0],
-  [6, 0],
-];
-
-if (TRACK.length !== TRACK_LEN) throw new Error('Track must have 52 squares');
-
-// Home columns (progress 51..55) for each seat.
-export const HOME_COLUMNS = [
-  segment([7, 1], [7, 5]),
-  segment([1, 7], [5, 7]),
-  segment([7, 13], [7, 9]),
-  segment([13, 7], [9, 7]),
-];
-
-// Where each seat's finished tokens sit inside the centre triangle.
-export const FINISH_CELLS = [
-  [7, 6.35],
-  [6.35, 7],
-  [7, 7.65],
-  [7.65, 7],
-];
-
-// Base quadrant top-left corners and the 4 parking spots within them.
-export const BASE_ORIGIN = [
-  [0, 0],
-  [0, 9],
-  [9, 9],
-  [9, 0],
-];
-const BASE_SPOTS = [
-  [1.5, 1.5],
-  [1.5, 3.5],
-  [3.5, 1.5],
-  [3.5, 3.5],
-];
-
-export function trackIndex(seat, progress) {
-  return (START_INDEX[seat] + progress) % TRACK_LEN;
-}
-
-// Centre point (in cell units, e.g. 6.5) of a token for drawing.
-export function tokenCenter(seat, progress, tokenIdx) {
-  if (progress < 0) {
-    const [or, oc] = BASE_ORIGIN[seat];
-    const [sr, sc] = BASE_SPOTS[tokenIdx];
-    return [or + sr + 0.5, oc + sc + 0.5];
+  // Around each arm: out along lane -1, across the end, back in along lane +1.
+  const loop = [];
+  for (let arm = 0; arm < n; arm++) {
+    for (let d = 1; d <= 6; d++) loop.push(square(arm, d, -1));
+    loop.push(square(arm, 6, 0));
+    for (let d = 6; d >= 1; d--) loop.push(square(arm, d, 1));
   }
-  if (progress >= FINISHED) {
-    const [r, c] = FINISH_CELLS[seat];
-    return [r + 0.5, c + 0.5];
+  // Index 0 of the track is seat 0's start square.
+  const track = [...loop.slice(START_OFFSET), ...loop.slice(0, START_OFFSET)];
+  const trackLen = track.length;
+  const lastTrack = trackLen - 2;
+  const finished = lastTrack + 6;
+
+  const seats = [...Array(n).keys()];
+  const startIndex = seats.map((s) => s * ARM_SQUARES);
+  // Start squares + star squares are safe: no captures there.
+  const safe = new Set(startIndex.flatMap((i) => [i, i + 8]));
+  const homeColumns = seats.map((s) => [5, 4, 3, 2, 1].map((d) => square(s, d, 0)));
+  const finishSpots = seats.map((s) => ({
+    x: Math.cos(armAngle(s)) * hub * 0.45,
+    y: Math.sin(armAngle(s)) * hub * 0.45,
+  }));
+
+  // Bases sit in the gap between a seat's arm and the next one, beside its start square.
+  const square4 = n === 4;
+  const bases = seats.map((s) => {
+    const a = armAngle(s) + Math.PI / n;
+    const dist = square4 ? 4.5 * Math.SQRT2 : 6.7;
+    return { x: Math.cos(a) * dist, y: Math.sin(a) * dist, size: square4 ? 3 : 1.75, square: square4 };
+  });
+  const baseSpread = square4 ? 1 : 0.72;
+
+  const trackIndex = (seat, progress) => (startIndex[seat] + progress) % trackLen;
+
+  // Centre point of a token for drawing.
+  function tokenCenter(seat, progress, tokenIdx) {
+    if (progress < 0) {
+      const b = bases[seat];
+      const [ox, oy] = QUAD[tokenIdx];
+      return { x: b.x + ox * baseSpread, y: b.y + oy * baseSpread };
+    }
+    if (progress >= finished) return finishSpots[seat];
+    const sq = progress <= lastTrack ? track[trackIndex(seat, progress)] : homeColumns[seat][progress - lastTrack - 1];
+    return { x: sq.x, y: sq.y };
   }
-  const [r, c] = progress <= LAST_TRACK ? TRACK[trackIndex(seat, progress)] : HOME_COLUMNS[seat][progress - 51];
-  return [r + 0.5, c + 0.5];
+
+  // A stable key for "which square is this token on" (for stacking offsets).
+  function cellKey(seat, progress, tokenIdx) {
+    if (progress < 0) return `base-${seat}-${tokenIdx}`;
+    if (progress >= finished) return `finish-${seat}`;
+    if (progress <= lastTrack) return `t-${trackIndex(seat, progress)}`;
+    return `h-${seat}-${progress}`;
+  }
+
+  // Half-width of the board: the furthest corner of any square or base.
+  let extent = 0;
+  for (const sq of [...track, ...homeColumns.flat()]) {
+    const c = Math.cos(sq.angle);
+    const sn = Math.sin(sq.angle);
+    for (const [du, dv] of QUAD) {
+      const x = sq.x + (c * du - sn * dv) / 2;
+      const y = sq.y + (sn * du + c * dv) / 2;
+      extent = Math.max(extent, Math.abs(x), Math.abs(y));
+    }
+  }
+  for (const b of bases) extent = Math.max(extent, Math.abs(b.x) + b.size, Math.abs(b.y) + b.size);
+
+  return {
+    arms: n,
+    colors: PALETTES[n],
+    hub,
+    armAngle,
+    track,
+    trackLen,
+    lastTrack,
+    finished,
+    startIndex,
+    safe,
+    homeColumns,
+    finishSpots,
+    bases,
+    baseSpread,
+    extent,
+    trackIndex,
+    tokenCenter,
+    cellKey,
+  };
 }
 
-// A stable key for "which square is this token on" (for stacking offsets).
-export function cellKey(seat, progress, tokenIdx) {
-  if (progress < 0) return `base-${seat}-${tokenIdx}`;
-  if (progress >= FINISHED) return `finish-${seat}`;
-  if (progress <= LAST_TRACK) return `t-${trackIndex(seat, progress)}`;
-  return `h-${seat}-${progress}`;
-}
+export const BOARDS = { 4: makeBoard(4), 6: makeBoard(6) };
+export const boardFor = (mode) => BOARDS[MODES[mode].arms];

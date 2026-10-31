@@ -13,39 +13,107 @@
         <p id="loading-text">Connecting…</p>
       </div>
 
-      <main id="game" class="hidden">
+      <!-- Main menu -->
+      <section id="menu" class="screen hidden">
+        <div class="menu-card">
+          <div class="logo">
+            <div class="logo-dots">
+              <i style="--c: var(--red)"></i><i style="--c: var(--green)"></i><i style="--c: var(--yellow)"></i><i style="--c: var(--blue)"></i>
+            </div>
+            <h1>LUDO</h1>
+          </div>
+          <div class="profile-row">
+            <span id="menu-name" class="menu-name"></span>
+            <span class="coins"><span class="coin"></span><b>0</b></span>
+          </div>
+          <button id="play-btn" class="btn primary big">▶ Play</button>
+          <div class="menu-row">
+            <button class="btn big" data-go="shop">🛒 Shop</button>
+            <button class="btn big" data-go="howto">📖 How to play</button>
+          </div>
+          <p id="menu-status" class="hint"></p>
+        </div>
+      </section>
+
+      <!-- Shop -->
+      <section id="shop" class="screen page hidden">
+        <header class="screen-head">
+          <button class="btn small" data-go="menu">← Back</button>
+          <h2>Shop</h2>
+          <span class="coins"><span class="coin"></span><b>0</b></span>
+        </header>
+        <nav id="shop-tabs" class="tabs"></nav>
+        <div id="shop-grid" class="shop-grid"></div>
+      </section>
+
+      <!-- How to play -->
+      <section id="howto" class="screen page hidden">
+        <header class="screen-head">
+          <button class="btn small" data-go="menu">← Back</button>
+          <h2>How to play</h2>
+          <span></span>
+        </header>
+        <div class="howto-body">
+          <h3>🎲 Rules</h3>
+          <ul>
+            <li>Tap the dice in the middle of the board to roll. Roll a <b>6</b> to bring a token out of base.</li>
+            <li>Rolling a 6, capturing a token, or getting a token home gives you <b>another turn</b>.</li>
+            <li>Three 6s in a row and you lose your turn.</li>
+            <li>Land on an opponent to send their token back to base. The ★ squares and coloured start squares are <b>safe</b>.</li>
+            <li>You need the <b>exact roll</b> to reach home. Get all 4 tokens home to win.</li>
+            <li>You have <b>30 seconds</b> per turn, then the game moves for you.</li>
+          </ul>
+          <h3>👥 Modes</h3>
+          <ul>
+            <li><b>2 Players:</b> head-to-head from opposite corners.</li>
+            <li><b>4 Players:</b> the classic board.</li>
+            <li><b>6 Players:</b> a hexagon board with a longer track.</li>
+          </ul>
+          <p>The host picks the mode in the lobby. Bots can fill empty seats.</p>
+          <h3>🪙 Coins</h3>
+          <ul>
+            <li>Finish a game to earn coins: <b>100</b> for 1st, 60 for 2nd, 40 for 3rd, then 30 / 25 / 20.</li>
+            <li><b>+10</b> for every token you capture.</li>
+            <li>Games where you're the only human pay half.</li>
+            <li>Spend coins in the shop on tokens, dice, boards and emotes. The host's board theme is the one everyone sees.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Lobby + game -->
+      <main id="game" class="screen hidden">
         <section class="board-wrap">
           <canvas id="board"></canvas>
+          <div id="turn-pop" class="turn-pop hidden">Your turn!</div>
           <div id="banner" class="banner hidden"></div>
         </section>
 
         <aside class="panel">
           <header class="panel-head">
-            <h1>Ludo</h1>
+            <button class="btn small" data-go="menu">← Menu</button>
             <span id="phase-tag" class="tag"></span>
+            <span class="coins small"><span class="coin"></span><b>0</b></span>
           </header>
 
+          <div id="mode-picker" class="mode-picker"></div>
           <div id="seats" class="seats"></div>
 
           <div id="lobby-controls" class="controls hidden">
+            <button id="fill-btn" class="btn">🤖 Fill empty seats with bots</button>
             <button id="start-btn" class="btn primary">Start game</button>
             <p id="lobby-hint" class="hint"></p>
           </div>
 
           <div id="play-controls" class="controls hidden">
-            <div class="dice-row">
-              <button id="dice" class="dice" aria-label="Roll dice"></button>
-              <div>
-                <div id="turn-text" class="turn-text"></div>
-                <div id="timer" class="timer"><div id="timer-bar"></div></div>
-              </div>
-            </div>
+            <div id="turn-text" class="turn-text"></div>
+            <div id="timer" class="timer"><div id="timer-bar"></div></div>
           </div>
 
           <div id="finish-controls" class="controls hidden">
             <button id="again-btn" class="btn primary">Back to lobby</button>
           </div>
 
+          <div id="emote-bar" class="emote-bar"></div>
           <ul id="log" class="log"></ul>
         </aside>
       </main>
