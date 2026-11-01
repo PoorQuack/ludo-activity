@@ -204,6 +204,7 @@ test('a real choice is left to the player', async () => {
   assert.deepEqual(room.tokens[0], [5, 10, -1, -1]);
   room.move(a, 1);
   assert.deepEqual(room.tokens[0], [5, 13, -1, -1]);
+  assert.equal(room.log.at(-1), 'A rolled a 3 and moved a token'); // every move shows in the log
   room.destroy();
 });
 

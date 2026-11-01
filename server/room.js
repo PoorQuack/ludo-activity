@@ -366,10 +366,13 @@ export class Room {
     this.movable = [];
     this.captures[seat] += result.captured.length;
 
+    // One line for every move, then any capture.
+    if (result.finishedToken) this.addLog(`${name} rolled a ${this.dice} and brought a token home!`);
+    else if (result.from < 0) this.addLog(`${name} rolled a 6 and brought a token out`);
+    else this.addLog(`${name} rolled a ${this.dice} and moved a token`);
     for (const c of result.captured) {
       this.addLog(`${name} captured ${this.seats[c.seat].name}'s token!`);
     }
-    if (result.finishedToken) this.addLog(`${name} brought a token home!`);
 
     if (result.allHome) {
       this.winners.push(seat);
