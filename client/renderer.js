@@ -113,8 +113,9 @@ export class BoardRenderer {
     // Track squares
     board.track.forEach((sq, i) => {
       const startSeat = board.startIndex.indexOf(i);
-      drawSquare(ctx, sq, startSeat >= 0 ? COLOR_HEX[board.colors[startSeat]] : theme.cell, theme.line, lw);
-      if (board.safe.has(i)) drawStar(ctx, sq.x, sq.y, 0.32, startSeat >= 0 ? 'rgba(255,255,255,0.75)' : theme.star);
+      const fill = startSeat >= 0 ? COLOR_HEX[board.colors[startSeat]] : board.safe.has(i) ? theme.safe : theme.cell;
+      drawSquare(ctx, sq, fill, theme.line, lw);
+      if (board.safe.has(i)) drawStar(ctx, sq.x, sq.y, 0.34, startSeat >= 0 ? 'rgba(255,255,255,0.8)' : theme.star);
     });
 
     // Home columns
@@ -162,8 +163,8 @@ export class BoardRenderer {
 
     const placed = this.layout(view, now);
     this.lastLayout = placed;
-    // Resting tokens first, then highlighted ones, then the ones in motion.
-    const order = [...placed].sort((p, q) => p.hl - q.hl || p.moving - q.moving);
+    // Back to front (so nearer pawns overlap farther ones), with moving pawns on top.
+    const order = [...placed].sort((p, q) => p.moving - q.moving || p.y - q.y);
     for (const p of order) this.drawPlaced(p, now);
 
     this.drawFinishedCounts(view);
@@ -221,10 +222,12 @@ export class BoardRenderer {
     const s = this.cell;
     const x = this.px(p.x);
     const y = this.px(p.y);
-    const r = s * 0.36 * p.scale * (p.moving ? 1.1 : 1);
+    const r = s * 0.4 * p.scale * (p.moving ? 1.1 : 1);
     if (p.hl) {
       const pulse = 0.5 + 0.5 * Math.sin(now / 180);
-      circle(ctx, x, y, r + s * (0.1 + 0.08 * pulse));
+      const grow = s * (0.12 + 0.08 * pulse);
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.2, r * 1.05 + grow, r * 0.45 + grow * 0.5, 0, 0, TAU);
       ctx.fillStyle = `rgba(255,255,255,${0.55 + 0.35 * pulse})`;
       ctx.fill();
       ctx.lineWidth = 2;
@@ -270,27 +273,31 @@ export class BoardRenderer {
     const cx = this.px(0);
     const cy = this.px(0);
     let scale = 1;
-    let angle = 0;
+    let spin = IDENTITY;
     let alpha = 1;
     let hop = 0;
     let value = d.value;
     if (d.mode === 'ready') {
+      // Unrolled: "?" on every face, turning slowly
       scale = easeOutBack(Math.min(1, d.t / 320));
       hop = (0.5 + 0.5 * Math.sin(now / 260)) * size * 0.08;
+      spin = mul(rotY(now / 900), rotX(Math.sin(now / 700) * 0.25));
       value = null;
     } else if (d.mode === 'spin') {
+      // Tumbles end over end and settles with the rolled face towards you
       const k = Math.min(1, d.t / SPIN_MS);
-      angle = (1 - easeOutCubic(k)) * 3 * TAU;
+      const left = 1 - easeOutCubic(k);
+      const [ax, ay] = d.axes || [2.5, 1.5];
+      spin = mul(rotX(ax * TAU * left), rotY(ay * TAU * left));
       hop = Math.sin(Math.PI * k) * size * 0.55;
-      scale = 1 + 0.2 * Math.sin(Math.PI * k);
-      if (k < 0.8) value = 1 + ((Math.floor(now / 65) * 2654435761) >>> 0) % 6;
+      scale = 1 + 0.15 * Math.sin(Math.PI * k);
     } else if (d.mode === 'shown') {
       scale = 1 + 0.1 * Math.sin(Math.min(1, d.t / 220) * Math.PI);
     } else if (d.mode === 'leave') {
       const k = Math.min(1, d.t / LEAVE_MS);
       scale = 1 - 0.7 * k * k;
       alpha = 1 - k;
-      angle = k * 0.6;
+      spin = rotX(k * 1.2);
     }
 
     // Shadow stays on the board while the dice hops
@@ -315,7 +322,7 @@ export class BoardRenderer {
     }
 
     drawDice(ctx, cx, cy - hop, size * scale, value, d.style, {
-      angle,
+      spin,
       alpha,
       glow: d.mode === 'ready' ? d.color : null,
     });
@@ -445,13 +452,18 @@ export class BoardRenderer {
     let bestDist = 0.75;
     for (const p of this.lastLayout) {
       if (p.seat !== seat || !allowed.includes(p.token)) continue;
-      const d = Math.hypot(p.x - x, p.y - y);
+      const d = Math.hypot(p.x - x, p.y - 0.25 - y); // pawns stand up from their square
       if (d < bestDist) {
         bestDist = d;
         best = p.token;
       }
     }
     return best;
+  }
+
+  // Screen point of a pawn's body, for tapping it.
+  tokenPoint(item) {
+    return this.toClient(item.x, item.y - 0.25);
   }
 
   hitDice(clientX, clientY) {
@@ -462,129 +474,160 @@ export class BoardRenderer {
 
 // ---------- tokens ----------
 
-// Draws one token standing at (x, y). `lift` raises it (px), `squash` < 1 flattens it.
+// Draws one 3D pawn standing on (x, y). `lift` raises it (px), `squash` < 1 flattens it on landing.
 export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1 } = {}) {
+  const gy = y + r * 0.2; // the pawn's base sits on the centre of its square
   const shrink = 1 - Math.min(0.45, lift / (r * 4));
   ctx.beginPath();
-  ctx.ellipse(x, y + r * 0.55, r * 0.9 * shrink, r * 0.45 * shrink, 0, 0, TAU);
-  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.ellipse(x, gy, r * 0.95 * shrink, r * 0.4 * shrink, 0, 0, TAU);
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
   ctx.fill();
 
   ctx.save();
-  ctx.translate(x, y - lift + r);
+  ctx.translate(x, gy - lift);
   ctx.scale(1 / squash, squash);
-  ctx.translate(0, -r);
-  (TOKEN_PAINTERS[skin] || TOKEN_PAINTERS['token-classic'])(ctx, r, hex);
+  paintPawn(ctx, r, hex, PAWN_STYLES[skin] || PAWN_STYLES['token-classic']);
   ctx.restore();
 }
 
-const TOKEN_PAINTERS = {
-  'token-classic'(ctx, r, hex) {
-    disc(ctx, r, bodyGradient(ctx, r, hex), mix(hex, '#000000', 0.35), Math.max(1.5, r * 0.14));
-    circle(ctx, 0, 0, r * 0.5);
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-    ctx.lineWidth = Math.max(1.5, r * 0.14);
-    ctx.stroke();
-  },
-  'token-star'(ctx, r, hex) {
-    disc(ctx, r, bodyGradient(ctx, r, hex), mix(hex, '#000000', 0.35), Math.max(1.5, r * 0.14));
-    drawStar(ctx, 0, 0, r * 0.62, '#ffffff');
-  },
-  'token-gem'(ctx, r, hex) {
-    const outer = polygon(6, r * 1.05);
-    const inner = polygon(6, r * 0.5);
-    const g = ctx.createLinearGradient(-r, -r, r, r);
-    g.addColorStop(0, mix(hex, '#ffffff', 0.55));
+// What each token skin changes about the pawn.
+const PAWN_STYLES = {
+  'token-classic': {},
+  'token-star': { star: true },
+  'token-gem': { gem: true },
+  'token-neon': { neon: true },
+  'token-candy': { stripes: true },
+  'token-crown': { gold: true, crown: true },
+};
+
+const GOLD = '#f6cf57';
+const GOLD_DARK = '#9a6f00';
+
+// A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
+function paintPawn(ctx, r, hex, style) {
+  const body = style.neon ? '#1c1c26' : hex;
+  const edge = style.neon ? hex : mix(hex, '#000000', 0.5);
+  const trim = style.gold ? GOLD : mix(body, '#ffffff', 0.25);
+  ctx.lineWidth = Math.max(1, r * (style.neon ? 0.12 : 0.07));
+  ctx.strokeStyle = edge;
+  ctx.lineJoin = 'round';
+  if (style.neon) {
+    ctx.shadowColor = hex;
+    ctx.shadowBlur = r * 0.7;
+  }
+
+  // Base: a short cylinder with a lighter top
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 0.08, r * 0.9, r * 0.34, 0, 0, Math.PI);
+  ctx.lineTo(-r * 0.9, -r * 0.3);
+  ctx.ellipse(0, -r * 0.3, r * 0.9, r * 0.34, 0, Math.PI, TAU);
+  ctx.closePath();
+  ctx.fillStyle = cylinder(ctx, r * 0.9, body);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 0.3, r * 0.9, r * 0.34, 0, 0, TAU);
+  ctx.fillStyle = trim;
+  ctx.fill();
+  ctx.stroke();
+
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.68, -r * 0.32);
+  ctx.quadraticCurveTo(-r * 0.56, -r * 0.95, -r * 0.27, -r * 1.3);
+  ctx.lineTo(r * 0.27, -r * 1.3);
+  ctx.quadraticCurveTo(r * 0.56, -r * 0.95, r * 0.68, -r * 0.32);
+  ctx.ellipse(0, -r * 0.32, r * 0.68, r * 0.22, 0, 0, Math.PI);
+  ctx.closePath();
+  ctx.fillStyle = cylinder(ctx, r * 0.68, body);
+  ctx.fill();
+  if (style.stripes) {
+    ctx.save();
+    ctx.clip();
+    ctx.rotate(-Math.PI / 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let i = -4; i <= 4; i++) ctx.fillRect(i * r * 0.36 - r * 0.08, -r * 2.5, r * 0.16, r * 3);
+    ctx.restore();
+  }
+  ctx.stroke();
+
+  // Collar
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 1.3, r * 0.38, r * 0.12, 0, 0, TAU);
+  ctx.fillStyle = trim;
+  ctx.fill();
+  ctx.stroke();
+
+  // Head
+  const hy = -r * 1.68;
+  if (style.gem) {
+    const outer = polygon(6, r * 0.5).map(([x, y]) => [x, y + hy]);
+    const inner = polygon(6, r * 0.22).map(([x, y]) => [x - r * 0.04, y + hy - r * 0.04]);
+    const g = ctx.createLinearGradient(-r * 0.5, hy - r * 0.5, r * 0.5, hy + r * 0.5);
+    g.addColorStop(0, mix(hex, '#ffffff', 0.6));
     g.addColorStop(0.5, hex);
     g.addColorStop(1, mix(hex, '#000000', 0.4));
     path(ctx, outer);
     ctx.fillStyle = g;
     ctx.fill();
-    ctx.lineWidth = Math.max(1.5, r * 0.12);
-    ctx.strokeStyle = mix(hex, '#000000', 0.45);
     ctx.stroke();
     ctx.beginPath();
     outer.forEach(([x, y], i) => {
       ctx.moveTo(x, y);
       ctx.lineTo(...inner[i]);
     });
-    ctx.lineWidth = Math.max(1, r * 0.06);
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
     ctx.stroke();
     path(ctx, inner);
-    ctx.fillStyle = mix(hex, '#ffffff', 0.35);
+    ctx.fillStyle = mix(hex, '#ffffff', 0.45);
     ctx.fill();
-  },
-  'token-neon'(ctx, r, hex) {
-    disc(ctx, r, '#14141c');
-    ctx.shadowColor = hex;
-    ctx.shadowBlur = r * 0.9;
-    circle(ctx, 0, 0, r * 0.8);
-    ctx.lineWidth = r * 0.24;
-    ctx.strokeStyle = hex;
+  } else {
+    const g = ctx.createRadialGradient(-r * 0.15, hy - r * 0.16, r * 0.04, 0, hy, r * 0.44);
+    g.addColorStop(0, mix(body, '#ffffff', 0.6));
+    g.addColorStop(0.55, body);
+    g.addColorStop(1, mix(body, '#000000', 0.35));
+    circle(ctx, 0, hy, r * 0.46);
+    ctx.fillStyle = g;
+    ctx.fill();
     ctx.stroke();
-    circle(ctx, 0, 0, r * 0.26);
+  }
+  if (style.neon) {
+    circle(ctx, 0, hy, r * 0.2);
     ctx.fillStyle = hex;
     ctx.fill();
-    ctx.shadowBlur = 0;
-  },
-  'token-candy'(ctx, r, hex) {
-    ctx.save();
-    circle(ctx, 0, 0, r);
-    ctx.clip();
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(-r, -r, r * 2, r * 2);
-    ctx.rotate(-Math.PI / 4);
-    ctx.fillStyle = hex;
-    for (let i = -3; i <= 3; i++) ctx.fillRect(i * r * 0.55 - r * 0.14, -r * 1.5, r * 0.28, r * 3);
-    ctx.restore();
-    const gloss = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.05, 0, 0, r);
-    gloss.addColorStop(0, 'rgba(255,255,255,0.7)');
-    gloss.addColorStop(0.6, 'rgba(255,255,255,0)');
-    disc(ctx, r, gloss, mix(hex, '#000000', 0.35), Math.max(1.5, r * 0.14));
-  },
-  'token-crown'(ctx, r, hex) {
-    disc(ctx, r, bodyGradient(ctx, r, hex), '#9a6f00', Math.max(1.5, r * 0.1));
-    circle(ctx, 0, 0, r * 0.86);
-    ctx.lineWidth = r * 0.16;
-    ctx.strokeStyle = '#f6cf57';
-    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  if (style.star) drawStar(ctx, 0, hy, r * 0.3, '#ffffff');
+  if (style.crown) {
     path(ctx, [
-      [-0.48, 0.28],
-      [-0.48, -0.18],
-      [-0.24, 0.04],
-      [0, -0.36],
-      [0.24, 0.04],
-      [0.48, -0.18],
-      [0.48, 0.28],
-    ].map(([x, y]) => [x * r, y * r]));
-    ctx.fillStyle = '#f6cf57';
+      [-0.3, -0.38],
+      [-0.3, -0.62],
+      [-0.15, -0.5],
+      [0, -0.72],
+      [0.15, -0.5],
+      [0.3, -0.62],
+      [0.3, -0.38],
+    ].map(([x, y]) => [x * r, hy + y * r]));
+    ctx.fillStyle = GOLD;
     ctx.fill();
-    ctx.lineWidth = Math.max(1, r * 0.06);
-    ctx.strokeStyle = '#9a6f00';
-    ctx.stroke();
-  },
-};
-
-function bodyGradient(ctx, r, hex) {
-  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r);
-  g.addColorStop(0, mix(hex, '#ffffff', 0.45));
-  g.addColorStop(1, hex);
-  return g;
-}
-
-function disc(ctx, r, fill, stroke, width) {
-  circle(ctx, 0, 0, r);
-  ctx.fillStyle = fill;
-  ctx.fill();
-  if (stroke) {
-    ctx.lineWidth = width;
-    ctx.strokeStyle = stroke;
+    ctx.lineWidth = Math.max(1, r * 0.05);
+    ctx.strokeStyle = GOLD_DARK;
     ctx.stroke();
   }
 }
 
+// Left-to-right shading that makes a flat shape look round.
+function cylinder(ctx, w, color) {
+  const g = ctx.createLinearGradient(-w, 0, w, 0);
+  g.addColorStop(0, mix(color, '#000000', 0.35));
+  g.addColorStop(0.32, mix(color, '#ffffff', 0.35));
+  g.addColorStop(0.55, color);
+  g.addColorStop(1, mix(color, '#000000', 0.45));
+  return g;
+}
+
 // ---------- dice ----------
+// The dice is a real cube: it is rotated in 3D and the faces turned towards you are drawn.
 
 const PIPS = {
   1: [[0, 0]],
@@ -595,59 +638,114 @@ const PIPS = {
   6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
 };
 
-// Draws a dice centred on (cx, cy). `value` null shows a "?".
-export function drawDice(ctx, cx, cy, size, value, styleId, { angle = 0, alpha = 1, glow = null } = {}) {
+// Each face: its value, outward normal and two in-face axes (y points down). Opposite faces add up to 7.
+const FACES = [
+  { value: 1, n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
+  { value: 6, n: [0, 0, -1], u: [-1, 0, 0], v: [0, 1, 0] },
+  { value: 2, n: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0] },
+  { value: 5, n: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] },
+  { value: 3, n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] },
+  { value: 4, n: [0, 1, 0], u: [1, 0, 0], v: [0, 0, -1] },
+];
+// Rotation that turns a value's face towards the viewer.
+const FACE_FRONT = {
+  1: rotY(0),
+  6: rotY(Math.PI),
+  2: rotY(-Math.PI / 2),
+  5: rotY(Math.PI / 2),
+  3: rotX(-Math.PI / 2),
+  4: rotX(Math.PI / 2),
+};
+// A slight tilt, so the top and right faces show as well.
+const TILT = mul(rotX(-0.42), rotY(-0.5));
+const LIGHT = [-0.35, -0.6, 0.72].map((c, _, a) => c / Math.hypot(...a));
+
+// Draws a dice centred on (cx, cy), with the `value` face towards you after `spin`.
+// `value` null shows "?" on every face.
+export function drawDice(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, alpha = 1, glow = null } = {}) {
   const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
-  const h = size / 2;
-  const rad = size * 0.2;
+  const R = mul(TILT, mul(spin, FACE_FRONT[value || 1]));
+  const h = size * 0.4; // half the cube's edge
   ctx.save();
   ctx.globalAlpha *= alpha;
   ctx.translate(cx, cy);
-  ctx.rotate(angle);
-  if (glow) {
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = size * 0.45;
-  }
-  ctx.fillStyle = st.edge;
-  roundRect(ctx, -h, -h + size * 0.07, size, size, rad);
-  ctx.fill();
-  ctx.shadowBlur = 0;
+  ctx.lineJoin = 'round';
+  for (const f of FACES) {
+    const n = apply(R, f.n);
+    if (n[2] <= 0.01) continue; // facing away
+    const u = apply(R, f.u);
+    const v = apply(R, f.v);
+    const light = 0.62 + 0.38 * Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]);
 
-  let face = st.face;
-  if (st.shine) {
-    face = ctx.createLinearGradient(-h, -h, h, h);
-    face.addColorStop(0, st.shine);
-    face.addColorStop(1, st.face);
-  }
-  ctx.fillStyle = face;
-  roundRect(ctx, -h, -h, size, size, rad);
-  ctx.fill();
-  if (st.outline) {
-    ctx.lineWidth = Math.max(1.5, size * 0.04);
-    ctx.strokeStyle = st.outline;
-    ctx.shadowColor = st.outline;
-    ctx.shadowBlur = size * 0.2;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  }
-
-  ctx.fillStyle = st.pip;
-  if (st.outline) {
-    ctx.shadowColor = st.pip;
-    ctx.shadowBlur = size * 0.15;
-  }
-  if (value) {
-    for (const [px, py] of PIPS[value]) {
-      circle(ctx, px * size * 0.27, py * size * 0.27, size * 0.085);
-      ctx.fill();
+    // Draw the face in its own flat coordinates, -50..50 on each side.
+    ctx.save();
+    ctx.transform((u[0] * h) / 50, (u[1] * h) / 50, (v[0] * h) / 50, (v[1] * h) / 50, n[0] * h, n[1] * h);
+    let fill = mix(st.face, '#000000', 1 - light);
+    if (st.shine) {
+      const g = ctx.createLinearGradient(-50, -50, 50, 50);
+      g.addColorStop(0, mix(st.shine, '#000000', 1 - light));
+      g.addColorStop(1, fill);
+      fill = g;
     }
-  } else {
-    ctx.font = `800 ${size * 0.5}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('?', 0, size * 0.03);
+    if (glow) {
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = size * 0.35;
+    }
+    roundRect(ctx, -50, -50, 100, 100, 14);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (st.outline) {
+      ctx.shadowColor = st.outline;
+      ctx.shadowBlur = size * 0.15;
+    }
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = st.edge;
+    ctx.stroke();
+
+    ctx.fillStyle = st.pip;
+    if (value) {
+      for (const [px, py] of PIPS[f.value]) {
+        circle(ctx, px * 27, py * 27, 10);
+        ctx.fill();
+      }
+    } else {
+      ctx.font = '800 64px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', 0, 5);
+    }
+    ctx.restore();
   }
   ctx.restore();
+}
+
+// ---------- 3D maths (row-major 3x3 matrices) ----------
+
+const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+function rotX(a) {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [1, 0, 0, 0, c, -s, 0, s, c];
+}
+
+function rotY(a) {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [c, 0, s, 0, 1, 0, -s, 0, c];
+}
+
+function mul(a, b) {
+  const m = [];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) m.push(a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j]);
+  }
+  return m;
+}
+
+function apply(m, [x, y, z]) {
+  return [m[0] * x + m[1] * y + m[2] * z, m[3] * x + m[4] * y + m[5] * z, m[6] * x + m[7] * y + m[8] * z];
 }
 
 // ---------- drawing helpers ----------

@@ -65,7 +65,7 @@ function playToEnd(setup, options = {}) {
   let room;
   const done = new Promise((resolve) => {
     room = new Room('t', {
-      delays: { bot: 0, noMove: 0, timeout: 0 },
+      delays: { bot: 0, noMove: 0, autoMove: 0, timeout: 0 },
       onChange: (r) => r.phase === 'finished' && resolve(),
       ...options,
     });
@@ -145,6 +145,76 @@ test('shop: buying needs coins, equipping needs ownership', () => {
   assert.throws(() => store.buy('u', 'token-gem'), /already own/);
   store.equip('u', 'token-classic');
   assert.equal(store.peek('u').equipped.token, 'token-classic');
+});
+
+// A room with two connected humans in seats 0 and 2, game started, seat 0 to play.
+function twoPlayerRoom(rolls = []) {
+  const room = new Room('t', {
+    rng: () => rolls.shift() ?? 1,
+    delays: { bot: 10_000, noMove: 10_000, autoMove: 20, timeout: 60_000 },
+  });
+  const a = { id: 'a', name: 'A' };
+  const b = { id: 'b', name: 'B' };
+  room.connect(a);
+  room.connect(b);
+  room.sit(a, 0);
+  room.sit(b, 2);
+  room.start(a);
+  room.turn = 0;
+  return { room, a, b };
+}
+
+test('the only possible move is made automatically', async () => {
+  const { room, a } = twoPlayerRoom([6]);
+  room.roll(a); // all four pawns in base: every choice is the same
+  assert.equal(room.movable.length, 4);
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal(room.tokens[0].filter((p) => p === 0).length, 1);
+  room.destroy();
+});
+
+test('a real choice is left to the player', async () => {
+  const { room, a } = twoPlayerRoom([3]);
+  room.tokens[0] = [5, 10, -1, -1];
+  room.roll(a);
+  await new Promise((r) => setTimeout(r, 60));
+  assert.deepEqual(room.tokens[0], [5, 10, -1, -1]);
+  room.move(a, 1);
+  assert.deepEqual(room.tokens[0], [5, 13, -1, -1]);
+  room.destroy();
+});
+
+test('surrendering ends a two-player game and pays the winner only', () => {
+  const store = new ProfileStore(null);
+  const { room, a } = twoPlayerRoom();
+  room.profiles = store;
+  room.surrender(a);
+  assert.equal(room.phase, 'finished');
+  assert.deepEqual(room.winners, [2, 0]);
+  assert.equal(room.rewards[0], undefined);
+  assert.equal(room.rewards[2], 100);
+  room.destroy();
+});
+
+test('surrendering on your turn passes the turn; game goes on with the rest', () => {
+  const { room, a } = twoPlayerRoom();
+  room.seats[1] = { userId: 'c', name: 'C', bot: false, connected: true };
+  room.surrender(a);
+  assert.equal(room.phase, 'playing');
+  assert.notEqual(room.turn, 0);
+  assert.throws(() => room.surrender(a), /not playing/);
+  room.destroy();
+});
+
+test('only the host can end a running game, anyone can reset a finished one', () => {
+  const { room, a, b } = twoPlayerRoom();
+  assert.throws(() => room.newGame(b), /Only the host/);
+  room.surrender(b);
+  assert.equal(room.phase, 'finished');
+  room.newGame(b);
+  assert.equal(room.phase, 'lobby');
+  assert.ok(room.seats.filter(Boolean).every((s) => !s.surrendered));
+  room.destroy();
 });
 
 test('emotes need a seat and ownership', () => {

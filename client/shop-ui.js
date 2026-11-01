@@ -76,9 +76,9 @@ function preview(item) {
   ctx.scale(dpr, dpr);
 
   if (item.type === 'token') {
-    ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 56, 12, COLOR_HEX[c], item.id));
+    ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 68, 14, COLOR_HEX[c], item.id));
   } else if (item.type === 'dice') {
-    drawDice(ctx, W / 2, H / 2 - 3, 52, 5, item.id, { angle: -0.15 });
+    drawDice(ctx, W / 2, H / 2, 56, 5, item.id);
   } else if (item.type === 'board') {
     const size = H - 8;
     const off = document.createElement('canvas');

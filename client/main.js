@@ -22,6 +22,8 @@ const els = {
   menuName: $('menu-name'),
   menuStatus: $('menu-status'),
   playBtn: $('play-btn'),
+  newGameBtn: $('new-game-btn'),
+  surrenderBtn: $('surrender-btn'),
   shopTabs: $('shop-tabs'),
   shopGrid: $('shop-grid'),
   coins: [...document.querySelectorAll('.coins')],
@@ -258,7 +260,15 @@ function renderMenu() {
   els.menuName.textContent = me ? `👋 ${me.name}` : '';
   const seat = mySeat();
   els.playBtn.textContent =
-    state.phase === 'lobby' ? '▶ Play' : seat >= 0 ? '▶ Back to game' : '👀 Watch game';
+    state.phase === 'lobby'
+      ? '▶ Play'
+      : state.phase === 'finished'
+        ? '🏆 See results'
+        : seat >= 0
+          ? '▶ Back to game'
+          : '👀 Watch game';
+  // A finished game can be reset by anyone; a running one only by the host.
+  els.newGameBtn.classList.toggle('hidden', !(state.phase === 'finished' || (state.phase === 'playing' && isHost())));
   const n = state.spectators;
   const what =
     state.phase === 'lobby'
@@ -313,6 +323,7 @@ function renderPanel() {
     sub.className = 'seat-sub';
     if (!s) sub.textContent = 'Empty seat';
     else if (phase === 'lobby') sub.textContent = s.bot ? 'Bot' : s.userId === state.hostId ? 'Host' : 'Ready';
+    else if (s.surrendered) sub.textContent = '🏳️ Surrendered';
     else {
       const home = state.tokens[i].filter((p) => p >= board.finished).length;
       const place = state.winners.indexOf(i);
@@ -340,7 +351,7 @@ function renderPanel() {
   // Controls
   els.lobbyControls.classList.toggle('hidden', phase !== 'lobby');
   els.playControls.classList.toggle('hidden', phase !== 'playing');
-  els.finishControls.classList.toggle('hidden', phase !== 'finished' || !isHost());
+  els.finishControls.classList.toggle('hidden', phase !== 'finished');
 
   if (phase === 'lobby') {
     const count = state.seats.filter(Boolean).length;
@@ -365,6 +376,8 @@ function renderPanel() {
     else if (myTurn) els.turnText.textContent = 'No moves this time';
     else els.turnText.textContent = `${cur.name}'s turn`;
     els.turnText.style.color = COLOR_HEX[board.colors[state.turn]];
+    const racing = seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
+    els.surrenderBtn.classList.toggle('hidden', !racing);
   }
 
   if (phase !== 'finished') els.banner.classList.add('hidden');
@@ -418,6 +431,8 @@ function stepAnimations(now, dt) {
     if (current.elapsed >= current.duration) endEvent(current, now);
   }
   updateDice(now);
+  // Changes that aren't moves (e.g. a surrender clears that player's pawns) show once nothing is animating.
+  if (idle()) shownTokens = latestTokens;
 
   if (state.phase === 'finished' && idle() && !celebrated) {
     celebrated = true;
@@ -431,7 +446,9 @@ function startEvent(ev, now) {
   ev.elapsed = 0;
   if (ev.type === 'roll') {
     ev.duration = SPIN_MS + 120;
-    dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now };
+    // A different tumble each roll: 2–3 turns one way, 1–2 the other.
+    const axes = [(2 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), 1 + Math.random()];
+    dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes };
     return;
   }
   const { move } = ev;
@@ -604,6 +621,7 @@ function diceView(now, board) {
     mode: dice.mode,
     t: now - dice.t0,
     value: dice.value,
+    axes: dice.axes,
     style: state.seats[dice.seat]?.skins.dice,
     color: COLOR_HEX[board.colors[dice.seat]],
     mine: dice.seat === mySeat(),
@@ -617,6 +635,39 @@ els.playBtn.addEventListener('click', () => showScreen('game'));
 els.startBtn.addEventListener('click', () => send('start'));
 els.fillBtn.addEventListener('click', () => send('fillBots'));
 els.againBtn.addEventListener('click', () => send('newGame'));
+confirmTap(els.surrenderBtn, 'Tap again to surrender', () => send('surrender'));
+confirmTap(
+  els.newGameBtn,
+  'Tap again to end this game',
+  () => {
+    send('newGame');
+    showScreen('game');
+  },
+  () => state.phase === 'playing', // only ask twice when a game is still running
+);
+
+// Buttons that need a second tap within 3 seconds, so they aren't hit by accident.
+function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
+  let timer = null;
+  let label = btn.textContent;
+  const reset = () => {
+    clearTimeout(timer);
+    timer = null;
+    btn.textContent = label;
+    btn.classList.remove('danger');
+  };
+  btn.addEventListener('click', () => {
+    if (timer || !needsConfirm()) {
+      reset();
+      action();
+      return;
+    }
+    label = btn.textContent;
+    btn.textContent = confirmLabel;
+    btn.classList.add('danger');
+    timer = setTimeout(reset, 3000);
+  });
+}
 
 els.canvas.addEventListener('pointerdown', (e) => {
   if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return send('roll');
@@ -698,7 +749,7 @@ window.__ludoMovablePoint = () => {
   if (!canMove() || !renderer.lastLayout) return null;
   const seat = mySeat();
   const p = renderer.lastLayout.find((it) => it.seat === seat && state.movable.includes(it.token));
-  return p ? renderer.toClient(p.x, p.y) : null;
+  return p ? renderer.tokenPoint(p) : null;
 };
 window.__ludoDicePoint = () => (canRoll() ? renderer.toClient(0, 0) : null);
 

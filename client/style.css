@@ -55,6 +55,8 @@ html, body {
 .btn.primary { background: var(--accent); width: 100%; padding: 12px; font-size: 15px; }
 .btn.small { padding: 5px 8px; font-size: 12px; }
 .btn.big { padding: 14px; font-size: 16px; border-radius: 12px; }
+.btn.danger { background: #c62f3a; color: #fff; }
+.btn.surrender { align-self: flex-end; margin-top: 2px; }
 
 /* ---------- coins ---------- */
 .coins {

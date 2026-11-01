@@ -6,6 +6,7 @@ import { newTokens, legalMoves, applyMove, chooseBotMove } from './rules.js';
 
 const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
+const AUTO_MOVE_MS = 1100; // lets the dice finish spinning before the forced move
 const TURN_TIMEOUT_MS = 30_000;
 const EMOTE_COOLDOWN_MS = 1200;
 const EMOTE_TTL_MS = 3000;
@@ -17,7 +18,13 @@ export class Room {
     this.id = id;
     this.onChange = onChange || (() => {});
     this.rng = rng;
-    this.delays = { bot: BOT_DELAY_MS, noMove: NO_MOVE_DELAY_MS, timeout: TURN_TIMEOUT_MS, ...delays };
+    this.delays = {
+      bot: BOT_DELAY_MS,
+      noMove: NO_MOVE_DELAY_MS,
+      autoMove: AUTO_MOVE_MS,
+      timeout: TURN_TIMEOUT_MS,
+      ...delays,
+    };
     this.profiles = profiles; // ProfileStore (optional): skins, emotes and coin rewards
     this.clients = new Set(); // sockets
     this.connected = new Map(); // userId -> connection count
@@ -33,6 +40,7 @@ export class Room {
     this.movable = [];
     this.sixCount = 0;
     this.winners = [];
+    this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
     this.rewards = null; // seat -> coins, once a game is over
     this.lastMove = null;
@@ -102,6 +110,7 @@ export class Room {
       case 'roll': return this.roll(user);
       case 'move': return this.move(user, msg.token);
       case 'emote': return this.emote(user, msg.item);
+      case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
       default: throw new Error('Unknown action');
     }
@@ -188,6 +197,8 @@ export class Room {
     this.phase = 'playing';
     this.tokens = newTokens(this.board.arms);
     this.winners = [];
+    this.forfeited = [];
+    for (const i of active) delete this.seats[i].surrendered;
     this.captures = Array(this.board.arms).fill(0);
     this.rewards = null;
     this.lastMove = null;
@@ -205,7 +216,27 @@ export class Room {
 
   move(user, token) {
     this.requireTurn(user);
+    if (!this.rolled) throw new Error('Roll first');
+    if (!this.movable.includes(token)) throw new Error("That token can't move");
+    this.clearTimer(); // cancels a pending auto-move
     this.doMove(token);
+  }
+
+  surrender(user) {
+    this.requirePhase('playing');
+    const seat = this.seatOf(user.id);
+    if (seat < 0 || !this.inPlay().includes(seat)) throw new Error("You're not playing in this game");
+    this.forfeited.push(seat);
+    this.seats[seat].surrendered = true;
+    this.tokens[seat] = [-1, -1, -1, -1];
+    this.addLog(`🏳️ ${this.seats[seat].name} surrendered.`);
+    if (this.endIfOver()) return;
+    if (this.turn === seat) {
+      this.clearTimer();
+      this.nextTurn();
+    } else {
+      this.changed();
+    }
   }
 
   emote(user, itemId) {
@@ -222,9 +253,10 @@ export class Room {
     this.onChange(this); // nothing in the game changed, so skip automate()
   }
 
+  // The host can end a game at any time; once a game is over, anyone can start the next one.
   newGame(user) {
-    this.requireHost(user);
     if (this.phase === 'lobby') return;
+    if (this.phase === 'playing') this.requireHost(user);
     this.clearTimer();
     this.phase = 'lobby';
     // Drop disconnected humans, keep everyone else seated.
@@ -235,6 +267,8 @@ export class Room {
     this.movable = [];
     this.lastMove = null;
     this.winners = [];
+    this.forfeited = [];
+    for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
     this.turnDeadline = null;
     this.changed();
@@ -270,6 +304,15 @@ export class Room {
       this.schedule(this.delays.noMove, () => this.nextTurn());
       return;
     }
+    // Only one real choice (one token, or tokens that would all end up in the same place)?
+    // Make the move for the player once the dice has landed.
+    if (new Set(this.movable.map((t) => this.tokens[seat][t])).size === 1) {
+      this.changed();
+      this.schedule(this.delays.autoMove, () => {
+        if (this.phase === 'playing' && this.rolled) this.doMove(this.movable[0]);
+      });
+      return;
+    }
     this.changed();
   }
 
@@ -292,13 +335,7 @@ export class Room {
     if (result.allHome) {
       this.winners.push(seat);
       this.addLog(`🏆 ${name} finished ${PLACES[this.winners.length - 1]}!`);
-      const left = this.activeSeats().filter((s) => !this.winners.includes(s));
-      if (left.length <= 1) {
-        this.winners.push(...left);
-        this.finish();
-        return;
-      }
-      this.nextTurn();
+      if (!this.endIfOver()) this.nextTurn();
       return;
     }
 
@@ -313,6 +350,23 @@ export class Room {
     }
   }
 
+  // Seats still racing: not finished and not surrendered.
+  inPlay() {
+    return this.activeSeats().filter((s) => !this.winners.includes(s) && !this.forfeited.includes(s));
+  }
+
+  // The game ends when at most one player is left racing, or only bots are.
+  // Anyone left is ranked by how far their tokens got; those who surrendered come last.
+  endIfOver() {
+    const left = this.inPlay();
+    if (left.length > 1 && left.some((s) => !this.seats[s].bot)) return false;
+    const progress = (s) => this.tokens[s].reduce((sum, p) => sum + p + 1, 0);
+    left.sort((a, b) => progress(b) - progress(a));
+    this.winners.push(...left, ...[...this.forfeited].reverse());
+    this.finish();
+    return true;
+  }
+
   finish() {
     this.phase = 'finished';
     this.rolled = false;
@@ -322,14 +376,14 @@ export class Room {
     this.changed();
   }
 
-  // Coins for every human: by finishing place, plus a bonus per capture.
+  // Coins for every human who didn't surrender: by finishing place, plus a bonus per capture.
   giveRewards() {
     const humans = this.winners.filter((s) => !this.seats[s].bot);
     const factor = humans.length >= 2 ? 1 : REWARDS.soloFactor;
     this.rewards = {};
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
-      if (seat.bot) return;
+      if (seat.bot || this.forfeited.includes(s)) return;
       const coins = Math.round((REWARDS.place[place] + this.captures[s] * REWARDS.capture) * factor);
       this.rewards[s] = coins;
       this.profiles?.addCoins(seat.userId, coins);
@@ -341,7 +395,7 @@ export class Room {
     const n = this.seats.length;
     for (let i = 1; i <= n; i++) {
       const s = (this.turn + i) % n;
-      if (this.seats[s] && !this.winners.includes(s)) {
+      if (this.seats[s] && !this.winners.includes(s) && !this.forfeited.includes(s)) {
         this.turn = s;
         break;
       }
