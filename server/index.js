@@ -15,13 +15,15 @@ const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
 const ALLOW_GUESTS = (process.env.ALLOW_GUESTS ?? 'true') === 'true';
+// For testing skins: every shop item costs 0 coins.
+const FREE_SHOP = process.env.FREE_SHOP === 'true';
 const ROOM_IDLE_MS = 5 * 60_000;
 
 const app = express();
 app.use(express.json());
 
 app.get('/api/config', (_req, res) => {
-  res.json({ clientId: CLIENT_ID, allowGuests: ALLOW_GUESTS });
+  res.json({ clientId: CLIENT_ID, allowGuests: ALLOW_GUESTS, freeShop: FREE_SHOP });
 });
 
 // Exchange the OAuth code from the Embedded App SDK for an access token.
@@ -65,7 +67,7 @@ const rooms = new Map();
 const idleTimers = new Map();
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const userSockets = new Map();
-const store = new ProfileStore(DATA_FILE, { onChange: sendProfile });
+const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, freeShop: FREE_SHOP });
 
 function sendProfile(userId) {
   const msg = JSON.stringify({ type: 'profile', profile: store.peek(userId) });
@@ -191,4 +193,5 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
 server.listen(PORT, () => {
   console.log(`Ludo server running on http://localhost:${PORT}`);
   if (!CLIENT_ID) console.log('⚠  DISCORD_CLIENT_ID is not set — only guest (browser) mode will work.');
+  if (FREE_SHOP) console.log('🛒 FREE_SHOP is on — every shop item costs 0 coins.');
 });

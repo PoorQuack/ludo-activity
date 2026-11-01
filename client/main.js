@@ -59,6 +59,7 @@ let clockOffset = 0;
 let reconnectDelay = 500;
 let screen = 'loading';
 let shopTab = 'token';
+let freeShop = false; // server is in testing mode: everything costs 0
 
 // Server updates become a queue of rolls and moves that play one at a time,
 // so nothing is skipped when several arrive close together.
@@ -80,6 +81,7 @@ let uiDirty = false; // the panel waits for the board to catch up, so both tell 
 async function main() {
   try {
     const config = await fetch(`${BASE}/api/config`).then((r) => r.json());
+    freeShop = !!config.freeShop;
     if (inDiscord) {
       hello = await discordLogin(config.clientId);
     } else {
@@ -239,12 +241,15 @@ function drawShop() {
     {
       tab: shopTab,
       profile,
+      freeShop,
       onTab: (t) => {
         shopTab = t;
         drawShop();
       },
       onBuy: (item) => {
-        if ((profile?.coins ?? 0) < item.price) return toast(`You need ${item.price - profile.coins} more coins`);
+        if (!freeShop && (profile?.coins ?? 0) < item.price) {
+          return toast(`You need ${item.price - profile.coins} more coins`);
+        }
         sendShop('buy', item.id);
         toast(`Bought ${item.name}!`, 'ok');
       },

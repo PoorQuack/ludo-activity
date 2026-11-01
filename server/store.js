@@ -7,9 +7,10 @@ import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, ownsItem } from '../shared/sho
 const SAVE_DELAY_MS = 1000;
 
 export class ProfileStore {
-  constructor(file, { onChange } = {}) {
+  constructor(file, { onChange, freeShop = false } = {}) {
     this.file = file;
     this.onChange = onChange || (() => {});
+    this.freeShop = freeShop; // testing: everything costs 0
     this.profiles = new Map();
     this.saveTimer = null;
     if (file) this.load();
@@ -49,8 +50,9 @@ export class ProfileStore {
     if (!item) throw new Error('Unknown item');
     const p = this.get(id);
     if (ownsItem(p, itemId)) throw new Error('You already own that');
-    if (p.coins < item.price) throw new Error('Not enough coins');
-    p.coins -= item.price;
+    const price = this.freeShop ? 0 : item.price;
+    if (p.coins < price) throw new Error('Not enough coins');
+    p.coins -= price;
     p.owned.push(itemId);
     if (item.type !== 'emote') p.equipped[item.type] = itemId;
     this.changed(id);

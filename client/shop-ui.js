@@ -12,7 +12,7 @@ export const SHOP_TABS = [
   { type: 'emote', label: 'Emotes' },
 ];
 
-export function renderShop({ tabs, grid }, { tab, profile, onTab, onBuy, onEquip }) {
+export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onTab, onBuy, onEquip }) {
   tabs.innerHTML = '';
   for (const t of SHOP_TABS) {
     const b = document.createElement('button');
@@ -46,6 +46,10 @@ export function renderShop({ tabs, grid }, { tab, profile, onTab, onBuy, onEquip
     } else if (owned) {
       btn.textContent = 'Equip';
       btn.addEventListener('click', () => onEquip(item));
+    } else if (freeShop) {
+      btn.innerHTML = `Get free <s>${item.price}</s>`;
+      btn.classList.add('buy');
+      btn.addEventListener('click', () => onBuy(item));
     } else {
       btn.innerHTML = `<span class="coin"></span>${item.price}`;
       btn.classList.add('buy');
