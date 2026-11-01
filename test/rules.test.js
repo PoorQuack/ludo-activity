@@ -55,6 +55,15 @@ test('capture sends opponent home, but not on safe squares', () => {
   assert.equal(res.captured.length, 1);
   assert.equal(t[1][0], -1);
 
+  // two tokens on one square: only one is captured
+  const t3 = newTokens();
+  t3[1][0] = greenP;
+  t3[1][1] = greenP;
+  t3[0][0] = 2;
+  const res3 = applyMove(t3, 0, 0, 3, [0, 1]);
+  assert.equal(res3.captured.length, 1);
+  assert.equal(t3[1].filter((p) => p === greenP).length, 1);
+
   // star square (index 8) is safe
   const t2 = newTokens();
   t2[1][0] = (8 - 13 + 52) % 52;
@@ -170,6 +179,18 @@ test('the only possible move is made automatically', async () => {
   assert.equal(room.movable.length, 4);
   await new Promise((r) => setTimeout(r, 60));
   assert.equal(room.tokens[0].filter((p) => p === 0).length, 1);
+  room.destroy();
+});
+
+test('rolling 6s keeps the turn, however many in a row', async () => {
+  const { room, a } = twoPlayerRoom([6, 6, 6, 6]);
+  room.tokens[0] = [5, 10, -1, -1];
+  for (let i = 0; i < 4; i++) {
+    room.roll(a);
+    room.move(a, 0);
+    assert.equal(room.turn, 0);
+  }
+  assert.equal(room.tokens[0][0], 29);
   room.destroy();
 });
 

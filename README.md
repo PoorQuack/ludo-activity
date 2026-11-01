@@ -13,8 +13,7 @@ Multiplayer Ludo that runs inside Discord as an Activity.
 
 - Roll a **6** to move a token out of base.
 - Rolling a 6, capturing a token, or getting a token home gives you **another turn**.
-- If you roll **three 6s in a row**, you lose your turn.
-- Landing on an opponent sends their token back to base. The ★ squares and the coloured start squares are **safe**, so nobody can be captured there.
+- Landing on an opponent sends their token back to base. If two tokens share the square, only one goes back. The ★ squares and the coloured start squares are **safe**, so nobody can be captured there.
 - You need the **exact roll** to reach home.
 - You have **30 seconds** per turn. After that, the game moves for you. If a player disconnects, a bot plays for them until they come back.
 

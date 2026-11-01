@@ -6,7 +6,7 @@ import { newTokens, legalMoves, applyMove, chooseBotMove } from './rules.js';
 
 const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
-const AUTO_MOVE_MS = 1600; // the dice spins, then stays readable, before a bot or forced move
+const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot or forced move
 const TURN_TIMEOUT_MS = 30_000;
 const EMOTE_COOLDOWN_MS = 1200;
 const EMOTE_TTL_MS = 3000;
@@ -38,7 +38,6 @@ export class Room {
     this.dice = null;
     this.rolled = false;
     this.movable = [];
-    this.sixCount = 0;
     this.winners = [];
     this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
@@ -286,17 +285,6 @@ export class Room {
     this.lastMove = null;
     const name = this.seats[seat].name;
 
-    if (dice === 6) this.sixCount++;
-    else this.sixCount = 0;
-
-    if (this.sixCount === 3) {
-      this.addLog(`${name} rolled three 6s in a row — turn lost!`);
-      this.movable = [];
-      this.changed();
-      this.schedule(this.delays.noMove, () => this.nextTurn());
-      return;
-    }
-
     this.movable = legalMoves(this.tokens, seat, dice, this.board);
     if (this.movable.length === 0) {
       this.addLog(`${name} rolled a ${dice} — no moves.`);
@@ -342,7 +330,6 @@ export class Room {
     const bonus = this.dice === 6 || result.captured.length > 0 || result.finishedToken;
     if (bonus) {
       this.rolled = false;
-      if (this.dice !== 6) this.sixCount = 0;
       this.turnDeadline = Date.now() + this.delays.timeout;
       this.changed();
     } else {
@@ -407,7 +394,6 @@ export class Room {
   resetTurn() {
     this.rolled = false;
     this.movable = [];
-    this.sixCount = 0;
     this.turnDeadline = Date.now() + this.delays.timeout;
   }
 

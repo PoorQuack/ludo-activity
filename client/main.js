@@ -11,7 +11,7 @@ const BASE = inDiscord ? '/.proxy' : '';
 const STEP_MS = 170; // one square of movement
 const EXIT_MS = 450; // jumping out of base
 const CAPTURE_MS = 650; // a captured token flying home
-const HOLD_MS = 800; // how long a landed dice stays readable before the move plays
+const HOLD_MS = 350; // how long a landed dice stays readable before the move plays
 const MAX_QUEUE = 6; // further behind than this, skip animations to catch up
 const MEDALS = ['🥇', '🥈', '🥉'];
 

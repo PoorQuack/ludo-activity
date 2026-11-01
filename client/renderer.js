@@ -3,7 +3,7 @@
 import { COLOR_HEX } from '../shared/board.js';
 import { BOARD_THEMES, DICE_STYLES } from './skins.js';
 
-export const SPIN_MS = 750;
+export const SPIN_MS = 600;
 export const LEAVE_MS = 260;
 export const EMOTE_MS = 2400;
 const TAU = Math.PI * 2;
@@ -98,15 +98,6 @@ export class BoardRenderer {
         ctx.fillStyle = theme.baseInner;
         circle(ctx, b.x, b.y, b.size * 0.8);
         ctx.fill();
-      }
-      for (let t = 0; t < 4; t++) {
-        const p = board.tokenCenter(seat, -1, t);
-        circle(ctx, p.x, p.y, b.square ? 0.52 : 0.4);
-        ctx.fillStyle = mix(hex, theme.baseInner, 0.72);
-        ctx.fill();
-        ctx.lineWidth = 2 * lw;
-        ctx.strokeStyle = hex;
-        ctx.stroke();
       }
     });
 
