@@ -92,6 +92,23 @@ If you ever commit the secret by accident, click **Reset Secret** in the Develop
 
 ## 6. Host on an Oracle Cloud VM (1 GB, Ubuntu)
 
+### Quick setup (one command)
+
+On the VM (it can already be running other apps; Ludo gets its own folder, port and pm2 names):
+
+```bash
+git clone https://github.com/YOUR_NAME/ludo-activity.git
+cd ludo-activity
+bash scripts/setup-vm.sh
+```
+
+It installs what's missing, asks for your Discord Client ID and secret, starts the game and an HTTPS
+tunnel with pm2, and prints the address to put in **Activities → URL Mappings**. The tunnel address
+changes if the VM restarts; get the new one with `bash scripts/tunnel-url.sh`. To update later:
+`git pull && bash scripts/setup-vm.sh`.
+
+The sections below explain the same steps by hand, plus a permanent address with your own domain.
+
 ### Basics
 
 ```bash
