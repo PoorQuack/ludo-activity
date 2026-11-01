@@ -299,8 +299,7 @@ export class BoardRenderer {
     } else if (d.mode === 'leave') {
       const k = Math.min(1, d.t / LEAVE_MS);
       scale = 1 - 0.7 * k * k;
-      alpha = 1 - k;
-      spin = rotX(k * 1.2);
+      alpha = 1 - k; // shrinks away still showing the rolled face
     }
 
     // Shadow stays on the board while the dice hops

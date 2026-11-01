@@ -11,6 +11,7 @@ const BASE = inDiscord ? '/.proxy' : '';
 const STEP_MS = 170; // one square of movement
 const EXIT_MS = 450; // jumping out of base
 const CAPTURE_MS = 650; // a captured token flying home
+const HOLD_MS = 800; // how long a landed dice stays readable before the move plays
 const MAX_QUEUE = 6; // further behind than this, skip animations to catch up
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -72,6 +73,7 @@ let floaters = []; // emotes rising over the board
 let dice = { mode: 'hidden' };
 let celebrated = false;
 let lastFrame = 0;
+let uiDirty = false; // the panel waits for the board to catch up, so both tell the same story
 
 // ---------------- startup ----------------
 
@@ -208,7 +210,9 @@ function onState(next) {
     floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
   }
 
-  renderUI();
+  // While rolls and moves are still playing out, hold the panel back until they finish.
+  if (idle()) renderUI();
+  else uiDirty = true;
 }
 
 function mySeat() {
@@ -372,8 +376,11 @@ function renderPanel() {
     const cur = state.seats[state.turn];
     const myTurn = seat === state.turn;
     if (myTurn && !state.rolled) els.turnText.textContent = 'Your turn — tap the dice!';
-    else if (myTurn && state.movable.length) els.turnText.textContent = 'Tap a glowing token';
-    else if (myTurn) els.turnText.textContent = 'No moves this time';
+    else if (myTurn && new Set(state.movable.map((t) => state.tokens[seat][t])).size === 1)
+      els.turnText.textContent = `You rolled a ${state.dice} — moving your token…`; // the server moves it
+    else if (myTurn && state.movable.length) els.turnText.textContent = `You rolled a ${state.dice} — tap a glowing token`;
+    else if (myTurn) els.turnText.textContent = `You rolled a ${state.dice} — no moves this time`;
+    else if (state.rolled) els.turnText.textContent = `${cur.name} rolled a ${state.dice}`;
     else els.turnText.textContent = `${cur.name}'s turn`;
     els.turnText.style.color = COLOR_HEX[board.colors[state.turn]];
     const racing = seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
@@ -424,15 +431,24 @@ const idle = () => !current && events.length === 0;
 
 function stepAnimations(now, dt) {
   if (events.length > MAX_QUEUE) skipAnimations();
-  if (!current && events.length) startEvent(events.shift(), now);
+  // Leave a landed dice on screen long enough to read before the move plays.
+  const holding =
+    events[0]?.type === 'move' && dice.mode === 'shown' && now - dice.t0 < HOLD_MS && events.length < 3;
+  if (!current && events.length && !holding) startEvent(events.shift(), now);
   if (current) {
-    current.elapsed += dt * (events.length ? 2 : 1); // hurry when more is waiting
+    current.elapsed += dt * (events.length >= 2 ? 2 : 1); // hurry when falling behind
     if (current.type === 'move') current.overrides = moveOverrides(current);
     if (current.elapsed >= current.duration) endEvent(current, now);
   }
   updateDice(now);
   // Changes that aren't moves (e.g. a surrender clears that player's pawns) show once nothing is animating.
-  if (idle()) shownTokens = latestTokens;
+  if (idle()) {
+    shownTokens = latestTokens;
+    if (uiDirty) {
+      uiDirty = false;
+      renderUI();
+    }
+  }
 
   if (state.phase === 'finished' && idle() && !celebrated) {
     celebrated = true;
@@ -445,7 +461,7 @@ function startEvent(ev, now) {
   current = ev;
   ev.elapsed = 0;
   if (ev.type === 'roll') {
-    ev.duration = SPIN_MS + 120;
+    ev.duration = SPIN_MS;
     // A different tumble each roll: 2–3 turns one way, 1–2 the other.
     const axes = [(2 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), 1 + Math.random()];
     dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes };

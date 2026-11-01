@@ -6,7 +6,7 @@ import { newTokens, legalMoves, applyMove, chooseBotMove } from './rules.js';
 
 const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
-const AUTO_MOVE_MS = 1100; // lets the dice finish spinning before the forced move
+const AUTO_MOVE_MS = 1600; // the dice spins, then stays readable, before a bot or forced move
 const TURN_TIMEOUT_MS = 30_000;
 const EMOTE_COOLDOWN_MS = 1200;
 const EMOTE_TTL_MS = 3000;
@@ -417,7 +417,9 @@ export class Room {
     if (this.phase !== 'playing') return;
     const seat = this.seats[this.turn];
     const auto = seat.bot || !seat.connected;
-    const delay = auto ? this.delays.bot : Math.max(0, this.turnDeadline - Date.now());
+    // Bots roll after a short pause, and move once everyone has seen the dice.
+    const botDelay = this.rolled ? this.delays.autoMove : this.delays.bot;
+    const delay = auto ? botDelay : Math.max(0, this.turnDeadline - Date.now());
     this.timer = setTimeout(() => {
       this.timer = null;
       try {
