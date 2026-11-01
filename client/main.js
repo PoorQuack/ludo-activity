@@ -78,7 +78,9 @@ let floaters = []; // emotes rising over the board
 let dice = { mode: 'hidden' };
 let celebrated = false;
 let lastFrame = 0;
-let uiDirty = false; // the panel waits for the board to catch up, so both tell the same story
+// The server state the panel shows. It follows the board: each animation carries the state
+// that arrived with (or after) it, and the panel moves on to that state when it finishes.
+let view = null;
 
 // ---------------- startup ----------------
 
@@ -216,9 +218,11 @@ function onState(next) {
     floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
   }
 
-  // While rolls and moves are still playing out, hold the panel back until they finish.
-  if (idle()) renderUI();
-  else uiDirty = true;
+  // While rolls and moves are still playing out, the panel catches up when the last one ends.
+  const waiting = events[events.length - 1] || current;
+  if (waiting) waiting.after = next;
+  else view = next;
+  renderUI();
 }
 
 function mySeat() {
@@ -270,8 +274,15 @@ function drawShop() {
 function renderUI() {
   if (!state) return;
   for (const el of els.coins) el.querySelector('b').textContent = profile ? profile.coins : '…';
-  renderMenu();
-  renderPanel();
+  // Draw the menu and panel from the state the board has reached, not the newest one.
+  const live = state;
+  state = view || live;
+  try {
+    renderMenu();
+    renderPanel();
+  } finally {
+    state = live;
+  }
 }
 
 // What the menu's main button does right now.
@@ -514,8 +525,8 @@ function stepAnimations(now, dt) {
   // Changes that aren't moves (e.g. a surrender clears that player's pawns) show once nothing is animating.
   if (idle()) {
     shownTokens = latestTokens;
-    if (uiDirty) {
-      uiDirty = false;
+    if (view !== state) {
+      view = state;
       renderUI();
     }
   }
@@ -557,12 +568,19 @@ function endEvent(ev, now) {
     shownTokens = ev.final;
   }
   current = null;
+  // The panel catches up to where the board now is.
+  if (ev.after) {
+    view = ev.after;
+    renderUI();
+  }
 }
 
 function skipAnimations() {
   events = [];
   current = null;
   shownTokens = latestTokens;
+  view = state;
+  renderUI();
   dice = state.phase === 'playing' && state.rolled ? { mode: 'shown', seat: state.turn, value: state.dice, t0: 0 } : { mode: 'hidden' };
 }
 
