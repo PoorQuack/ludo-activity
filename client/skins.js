@@ -14,6 +14,7 @@ export const DICE_STYLES = {
   'dice-midnight': { face: '#3a3b45', edge: '#0f0f13', pip: '#f1f1f4' },
   'dice-wood': { face: '#c8945a', edge: '#7a5230', pip: '#3b2412' },
   'dice-ruby': { face: '#e5484d', edge: '#8e1f2b', pip: '#ffffff', shine: '#ff9aa0' },
-  'dice-neon': { face: '#101018', edge: '#39ff9c', pip: '#39ff9c', outline: '#39ff9c' },
+  // Glows in the colour of whoever is rolling (green in shop previews).
+  'dice-neon': { face: '#101018', edge: '#39ff9c', pip: '#39ff9c', outline: '#39ff9c', playerColor: true },
   'dice-gold': { face: '#e9b632', edge: '#9a6f00', pip: '#5a3d00', shine: '#fff1b0' },
 };

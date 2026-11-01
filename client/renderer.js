@@ -319,6 +319,7 @@ export class BoardRenderer {
       tilt,
       alpha,
       glow: d.mode === 'ready' ? d.color : null,
+      color: d.color,
     });
 
     if (d.mode === 'ready' && d.mine) {
@@ -654,9 +655,16 @@ const FACE_FRONT = {
 const tiltBy = (t) => mul(rotX(-0.42 * t), rotY(-0.5 * t));
 const LIGHT = [-0.35, -0.6, 0.72].map((c, _, a) => c / Math.hypot(...a));
 
-// Draws a flat dice centred on (cx, cy) showing one face. `value` null shows "?".
-export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null } = {}) {
+// A dice skin's colours; skins with `playerColor` take on the roller's colour.
+function diceStyle(styleId, color) {
   const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
+  if (!st.playerColor || !color) return st;
+  return { ...st, edge: color, pip: color, outline: color };
+}
+
+// Draws a flat dice centred on (cx, cy) showing one face. `value` null shows "?".
+export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null, color = null } = {}) {
+  const st = diceStyle(styleId, color);
   const s = size * 0.96; // same size as the cube's face when it lands
   const h = s / 2;
   ctx.save();
@@ -711,8 +719,8 @@ export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = 
 
 // Draws the dice as a tumbling 3D cube, with the `value` face towards you after `spin`.
 // As `tilt` reaches 0 only that face shows, so it hands over smoothly to the flat dice.
-function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null } = {}) {
-  const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
+function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null, color = null } = {}) {
+  const st = diceStyle(styleId, color);
   const R = mul(tiltBy(tilt), mul(spin, FACE_FRONT[value || 1]));
   const h = size * (0.48 - 0.08 * tilt); // half the cube's edge; a flat face is drawn a little bigger
   ctx.save();
