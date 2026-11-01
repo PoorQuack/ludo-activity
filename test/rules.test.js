@@ -309,6 +309,26 @@ test('someone hosts, others join; the lobby closes when the host leaves alone', 
   room.destroy();
 });
 
+test('chat: anyone can talk, messages are cleaned, limited and rate-limited', () => {
+  const room = new Room('t');
+  const w = { id: 'w', name: 'Watcher' };
+  room.connect(w); // not seated, not hosting
+  room.say(w, '  hello\nthere  ');
+  assert.deepEqual(room.chat.map((m) => [m.name, m.text]), [['Watcher', 'hello there']]);
+  assert.throws(() => room.say(w, 'again'), /Slow down/);
+  room.lastChat.set('w', 0);
+  room.say(w, 'x'.repeat(500));
+  assert.equal(room.chat.at(-1).text.length, 200);
+  room.say(w, '   '); // empty: ignored
+  assert.equal(room.chat.length, 2);
+  for (let i = 0; i < 50; i++) {
+    room.lastChat.set('w', 0);
+    room.say(w, `m${i}`);
+  }
+  assert.equal(room.chat.length, 40);
+  room.destroy();
+});
+
 test('emotes need a seat and ownership', () => {
   const store = new ProfileStore(null);
   const room = new Room('t', { profiles: store });

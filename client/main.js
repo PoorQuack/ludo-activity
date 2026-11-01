@@ -4,6 +4,7 @@ import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor } from './skins.js';
+import { unlockAudio, sfx, setMusic, setSound, audioSettings } from './audio.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
@@ -49,6 +50,8 @@ const els = {
   againBtn: $('again-btn'),
   emoteBar: $('emote-bar'),
   log: $('log'),
+  chats: [...document.querySelectorAll('[data-chat]')],
+  audioToggles: [...document.querySelectorAll('[data-toggle]')],
   toast: $('toast'),
 };
 
@@ -223,7 +226,83 @@ function onState(next) {
   if (waiting) waiting.after = next;
   else view = next;
   renderUI();
+  renderChat(); // chat is live, it doesn't wait for the board
 }
+
+// ---------------- chat ----------------
+
+let shownChatId = 0;
+
+function renderChat() {
+  const msgs = state.chat || [];
+  const latest = msgs.at(-1)?.id || 0;
+  if (latest === shownChatId && els.chats[0].querySelector('li')) return;
+  if (shownChatId && latest > shownChatId && msgs.at(-1).userId !== me?.id) sfx('chat');
+  shownChatId = latest;
+
+  const board = boardFor(state.mode);
+  for (const box of els.chats) {
+    const list = box.querySelector('.chat-log');
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+    list.innerHTML = '';
+    if (!msgs.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No messages yet. Say hi!';
+      list.appendChild(li);
+    }
+    for (const m of msgs) {
+      const li = document.createElement('li');
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.textContent = m.name;
+      // Players' names in their colour; watchers in the normal text colour
+      const seat = state.seats.findIndex((s) => s && !s.bot && s.userId === m.userId);
+      if (seat >= 0) who.style.color = col(board.colors[seat]);
+      li.appendChild(who);
+      li.appendChild(document.createTextNode(m.text));
+      list.appendChild(li);
+    }
+    if (atBottom || !list.dataset.seen) list.scrollTop = list.scrollHeight;
+    list.dataset.seen = '1';
+  }
+}
+
+for (const box of els.chats) {
+  const form = box.querySelector('form');
+  const input = box.querySelector('input');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    send('chat', { text });
+    input.value = '';
+  });
+}
+
+// ---------------- sound ----------------
+
+function renderAudioToggles() {
+  const s = audioSettings();
+  for (const b of els.audioToggles) {
+    const on = s[b.dataset.toggle];
+    b.textContent = `${b.dataset.toggle === 'music' ? 'Music' : 'Sounds'}: ${on ? 'on' : 'off'}`;
+    b.classList.toggle('off', !on);
+  }
+}
+
+for (const b of els.audioToggles) {
+  b.addEventListener('click', () => {
+    const s = audioSettings();
+    if (b.dataset.toggle === 'music') setMusic(!s.music);
+    else setSound(!s.sound);
+    renderAudioToggles();
+  });
+}
+renderAudioToggles();
+
+// Browsers only allow sound after the player interacts with the page.
+for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, unlockAudio, { capture: true });
 
 function mySeat() {
   if (!state || !me) return -1;
@@ -535,6 +614,7 @@ function stepAnimations(now, dt) {
     celebrated = true;
     showFinish();
     renderer.confetti(state.winners.slice(0, 3).map((s) => col(boardFor(state.mode).colors[s])).concat('#ffffff', '#f6cf57'));
+    sfx('win');
   }
 }
 
@@ -546,6 +626,7 @@ function startEvent(ev, now) {
     // A different tumble each roll: 2–3 turns one way, 1–2 the other.
     const axes = [(2 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), 1 + Math.random()];
     dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes };
+    sfx('roll');
     return;
   }
   const { move } = ev;
@@ -564,6 +645,7 @@ function endEvent(ev, now) {
   if (ev.type === 'roll') {
     dice = { ...dice, mode: 'shown', t0: now };
     renderer.ring(0, 0, '#ffffff', 1.2);
+    sfx('land');
   } else {
     shownTokens = ev.final;
   }
@@ -601,6 +683,7 @@ function moveOverrides(ev) {
     if (i !== ev.lastStep) {
       ev.lastStep = i;
       renderer.ring(a.x, a.y, color, 0.45); // little dust ring on each landing
+      sfx('step');
     }
     const k = easeInOut(t);
     map.set(`${seat}-${token}`, {
@@ -616,8 +699,15 @@ function moveOverrides(ev) {
   if (!ev.landed) {
     ev.landed = true;
     renderer.ring(end.x, end.y, color, 0.8);
-    if (captured.length) renderer.burst(end.x, end.y, [color, '#ffffff', '#ffd23f'], { count: 22, speed: 5 });
-    if (ev.move.finishedToken) renderer.burst(end.x, end.y, [color, '#f6cf57', '#ffffff'], { count: 30, speed: 4, life: 900 });
+    sfx('step');
+    if (captured.length) {
+      renderer.burst(end.x, end.y, [color, '#ffffff', '#ffd23f'], { count: 22, speed: 5 });
+      sfx('capture');
+    }
+    if (ev.move.finishedToken) {
+      renderer.burst(end.x, end.y, [color, '#f6cf57', '#ffffff'], { count: 30, speed: 4, life: 900 });
+      sfx('home');
+    }
   }
   const settle = Math.min(1, (e - ev.moveMs) / 160);
   map.set(`${seat}-${token}`, { x: end.x, y: end.y, lift: 0, squash: 0.8 + 0.2 * easeOutBack(settle) });
@@ -786,6 +876,7 @@ els.canvas.addEventListener('pointerdown', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
+  if (e.target instanceof HTMLInputElement) return; // typing in the chat
   if (e.code === 'Space' && screen === 'game' && canRoll()) {
     e.preventDefault();
     send('roll');
@@ -808,6 +899,7 @@ function toast(text, kind = 'error') {
 
 let popTimer = null;
 function showTurnPop() {
+  sfx('turn');
   els.turnPop.classList.remove('hidden');
   els.turnPop.style.animation = 'none';
   void els.turnPop.offsetWidth;

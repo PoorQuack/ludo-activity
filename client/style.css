@@ -301,6 +301,50 @@ html, body {
 .emote:hover { transform: scale(1.12); }
 .emote:active { transform: scale(0.9); }
 
+/* ---------- chat + sound toggles ---------- */
+.chat {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.chat-log {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  height: 130px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.35;
+  user-select: text;
+}
+.chat-log li { overflow-wrap: anywhere; }
+.chat-log .who { font-weight: 700; margin-right: 6px; }
+.chat-log .empty { color: var(--muted); }
+.chat-form { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); }
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  outline: none;
+}
+.chat-form input:focus { border-color: var(--accent); }
+
+.audio-toggles { display: flex; gap: 6px; }
+.audio-toggles .toggle { flex: 1; }
+.toggle.off { color: var(--muted); background: transparent; border: 1px solid var(--line); }
+
 /* ---------- log ---------- */
 .log {
   list-style: none;

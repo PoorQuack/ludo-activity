@@ -10,6 +10,9 @@ const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot o
 const TURN_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
 const EMOTE_COOLDOWN_MS = 1200;
+const CHAT_COOLDOWN_MS = 700;
+const CHAT_KEEP = 40; // messages kept (and sent) per room
+const CHAT_MAX_LEN = 200;
 const EMOTE_TTL_MS = 3000;
 const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -52,6 +55,9 @@ export class Room {
     this.emotes = [];
     this.emoteSeq = 0;
     this.lastEmote = new Map(); // userId -> time
+    this.chat = []; // { id, userId, name, text, at }
+    this.chatSeq = 0;
+    this.lastChat = new Map(); // userId -> time
     this.turnDeadline = null;
     this.timer = null;
   }
@@ -125,6 +131,7 @@ export class Room {
       case 'roll': return this.roll(user);
       case 'move': return this.move(user, msg.token);
       case 'emote': return this.emote(user, msg.item);
+      case 'chat': return this.say(user, msg.text);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
       default: throw new Error('Unknown action');
@@ -304,6 +311,21 @@ export class Room {
   }
 
   // The host can end a game at any time; once a game is over, anyone can start the next one.
+  // Chat is open to everyone in the Activity, players and watchers alike.
+  say(user, text) {
+    const clean = String(text ?? '')
+      .replace(/[\u0000-\u001f\u007f]/g, ' ')
+      .trim()
+      .slice(0, CHAT_MAX_LEN);
+    if (!clean) return;
+    const now = Date.now();
+    if (now - (this.lastChat.get(user.id) || 0) < CHAT_COOLDOWN_MS) throw new Error('Slow down a little');
+    this.lastChat.set(user.id, now);
+    this.chat.push({ id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now });
+    if (this.chat.length > CHAT_KEEP) this.chat.shift();
+    this.onChange(this); // nothing in the game changed, so skip automate()
+  }
+
   newGame(user) {
     if (this.phase === 'lobby') return;
     if (this.phase === 'playing') this.requireHost(user);
@@ -575,6 +597,7 @@ export class Room {
       serverNow: now,
       spectators: this.connected.size,
       people: [...this.people].map(([id, name]) => ({ id, name })),
+      chat: this.chat,
     };
   }
 }
