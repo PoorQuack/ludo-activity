@@ -274,6 +274,7 @@ export class BoardRenderer {
     const cy = this.px(0);
     let scale = 1;
     let spin = IDENTITY;
+    let tilt = 0; // landed dice sit flat, showing just the rolled face
     let alpha = 1;
     let hop = 0;
     let value = d.value;
@@ -282,6 +283,7 @@ export class BoardRenderer {
       scale = easeOutBack(Math.min(1, d.t / 320));
       hop = (0.5 + 0.5 * Math.sin(now / 260)) * size * 0.08;
       spin = mul(rotY(now / 900), rotX(Math.sin(now / 700) * 0.25));
+      tilt = 1;
       value = null;
     } else if (d.mode === 'spin') {
       // Tumbles end over end and settles with the rolled face towards you
@@ -289,6 +291,7 @@ export class BoardRenderer {
       const left = 1 - easeOutCubic(k);
       const [ax, ay] = d.axes || [2.5, 1.5];
       spin = mul(rotX(ax * TAU * left), rotY(ay * TAU * left));
+      tilt = Math.min(1, left * 2); // straightens out over the last part of the roll
       hop = Math.sin(Math.PI * k) * size * 0.55;
       scale = 1 + 0.15 * Math.sin(Math.PI * k);
     } else if (d.mode === 'shown') {
@@ -323,6 +326,7 @@ export class BoardRenderer {
 
     drawDice(ctx, cx, cy - hop, size * scale, value, d.style, {
       spin,
+      tilt,
       alpha,
       glow: d.mode === 'ready' ? d.color : null,
     });
@@ -656,16 +660,17 @@ const FACE_FRONT = {
   3: rotX(-Math.PI / 2),
   4: rotX(Math.PI / 2),
 };
-// A slight tilt, so the top and right faces show as well.
-const TILT = mul(rotX(-0.42), rotY(-0.5));
+// A slight tilt (0 = flat, 1 = full), so the top and right faces show as well.
+const tiltBy = (t) => mul(rotX(-0.42 * t), rotY(-0.5 * t));
 const LIGHT = [-0.35, -0.6, 0.72].map((c, _, a) => c / Math.hypot(...a));
 
 // Draws a dice centred on (cx, cy), with the `value` face towards you after `spin`.
+// With `tilt` 0 only that face shows, so the result is easy to read.
 // `value` null shows "?" on every face.
-export function drawDice(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, alpha = 1, glow = null } = {}) {
+export function drawDice(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null } = {}) {
   const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
-  const R = mul(TILT, mul(spin, FACE_FRONT[value || 1]));
-  const h = size * 0.4; // half the cube's edge
+  const R = mul(tiltBy(tilt), mul(spin, FACE_FRONT[value || 1]));
+  const h = size * (0.48 - 0.08 * tilt); // half the cube's edge; a flat face is drawn a little bigger
   ctx.save();
   ctx.globalAlpha *= alpha;
   ctx.translate(cx, cy);
