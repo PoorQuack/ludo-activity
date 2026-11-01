@@ -81,6 +81,7 @@ function playToEnd(setup, options = {}) {
   });
   const human = { id: 'h', name: 'Human' };
   room.connect(human);
+  room.host(human);
   setup(room, human);
   room.start(human);
   room.disconnect(human); // seat goes on autopilot
@@ -113,6 +114,7 @@ test('switching mode keeps humans seated and drops bots first', () => {
   const b = { id: 'b', name: 'B' };
   room.connect(a);
   room.connect(b);
+  room.host(a);
   room.sit(a, 1);
   room.sit(b, 3);
   room.addBot(a, 0);
@@ -166,7 +168,7 @@ function twoPlayerRoom(rolls = []) {
   const b = { id: 'b', name: 'B' };
   room.connect(a);
   room.connect(b);
-  room.sit(a, 0);
+  room.host(a);
   room.sit(b, 2);
   room.start(a);
   room.turn = 0;
@@ -238,7 +240,7 @@ test('running out of time 3 turns in a row removes you', async () => {
     const b = { id: 'b', name: 'B' };
     room.connect(a);
     room.connect(b);
-    room.sit(a, 0);
+    room.host(a);
     room.sit(b, 2);
     room.start(a);
   });
@@ -269,6 +271,43 @@ test('only the host can end a running game, anyone can reset a finished one', ()
   room.destroy();
 });
 
+test('someone hosts, others join; the lobby closes when the host leaves alone', () => {
+  const room = new Room('t');
+  const a = { id: 'a', name: 'A' };
+  const b = { id: 'b', name: 'B' };
+  room.connect(a);
+  room.connect(b);
+  assert.equal(room.hostId, null);
+  assert.throws(() => room.join(b), /Nobody is hosting/);
+  assert.throws(() => room.sit(b, 1), /Nobody is hosting/);
+
+  room.host(a);
+  assert.equal(room.hostId, 'a');
+  assert.equal(room.seatOf('a'), 0);
+  assert.throws(() => room.host(b), /A is already hosting/);
+  room.join(b);
+  assert.equal(room.seatOf('b'), 1);
+  assert.deepEqual(room.snapshot().people.map((p) => p.name), ['A', 'B']);
+
+  // Host leaves: the other player in the lobby takes over
+  room.disconnect(a);
+  assert.equal(room.hostId, 'b');
+  // Last player leaves: nobody hosts
+  room.disconnect(b);
+  assert.equal(room.hostId, null);
+
+  // A full lobby can't be joined
+  const c = { id: 'c', name: 'C' };
+  const d = { id: 'd', name: 'D' };
+  room.connect(c);
+  room.connect(d);
+  room.host(c);
+  room.setMode(c, '2p');
+  room.fillBots(c);
+  assert.throws(() => room.join(d), /full/);
+  room.destroy();
+});
+
 test('emotes need a seat and ownership', () => {
   const store = new ProfileStore(null);
   const room = new Room('t', { profiles: store });
@@ -276,7 +315,7 @@ test('emotes need a seat and ownership', () => {
   store.get('u');
   room.connect(u);
   assert.throws(() => room.emote(u, 'emote-thumbs'), /Take a seat/);
-  room.sit(u, 0);
+  room.host(u);
   room.emote(u, 'emote-thumbs');
   assert.equal(room.emotes.length, 1);
   assert.throws(() => room.emote(u, 'emote-crown'), /don't own/);

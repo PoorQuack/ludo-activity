@@ -16,21 +16,28 @@
       <!-- Main menu -->
       <section id="menu" class="screen hidden">
         <div class="menu-card">
-          <div class="logo">
-            <div class="logo-dots">
-              <i style="--c: var(--red)"></i><i style="--c: var(--green)"></i><i style="--c: var(--yellow)"></i><i style="--c: var(--blue)"></i>
+          <header class="menu-top">
+            <div class="wordmark">
+              <span class="wordmark-dots"><i></i><i></i><i></i><i></i></span>
+              <h1>Ludo</h1>
             </div>
-            <h1>LUDO</h1>
-          </div>
-          <div class="profile-row">
-            <span id="menu-name" class="menu-name"></span>
             <span class="coins"><span class="coin"></span><b>0</b></span>
-          </div>
-          <button id="play-btn" class="btn primary big">▶ Play</button>
-          <button id="new-game-btn" class="btn big hidden">🔄 Start new game</button>
+          </header>
+          <p id="menu-name" class="menu-name"></p>
+
+          <section class="game-card">
+            <div class="game-card-head">
+              <h2 id="game-title"></h2>
+              <span id="game-mode" class="tag"></span>
+            </div>
+            <ul id="game-players" class="game-players"></ul>
+            <button id="play-btn" class="btn primary big">Host a game</button>
+            <button id="new-game-btn" class="btn big hidden">Start new game</button>
+          </section>
+
           <div class="menu-row">
-            <button class="btn big" data-go="shop">🛒 Shop</button>
-            <button class="btn big" data-go="howto">📖 How to play</button>
+            <button class="btn" data-go="shop">Shop</button>
+            <button class="btn" data-go="howto">How to play</button>
           </div>
           <p id="menu-status" class="hint"></p>
         </div>

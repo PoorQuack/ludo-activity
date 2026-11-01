@@ -1,7 +1,8 @@
 // The shop screen: tabs plus a grid of item cards with drawn previews.
 import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
-import { BOARDS, COLOR_HEX } from '../shared/board.js';
+import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
+import { playerColor } from './skins.js';
 
 const IN_BASE = [0, 1, 2, 3].map(() => [-1, -1, -1, -1]);
 
@@ -28,7 +29,7 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     const equipped = profile?.equipped[item.type] === item.id;
     const card = document.createElement('div');
     card.className = `item${equipped ? ' equipped' : ''}`;
-    card.appendChild(preview(item));
+    card.appendChild(preview(item, profile?.equipped.board || 'board-classic'));
 
     const name = document.createElement('div');
     name.className = 'item-name';
@@ -64,7 +65,8 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
 const W = 150;
 const H = 100;
 
-function preview(item) {
+// Tokens are shown in the colours of your equipped board, so you see how they'll really look.
+function preview(item, theme) {
   if (item.type === 'emote') {
     const d = document.createElement('div');
     d.className = 'preview emoji';
@@ -80,7 +82,7 @@ function preview(item) {
   ctx.scale(dpr, dpr);
 
   if (item.type === 'token') {
-    ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 68, 14, COLOR_HEX[c], item.id));
+    ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 68, 14, playerColor(theme, c), item.id));
   } else if (item.type === 'dice') {
     drawDice(ctx, W / 2, H / 2, 56, 5, item.id);
   } else if (item.type === 'board') {

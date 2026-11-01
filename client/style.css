@@ -7,10 +7,12 @@
   --accent: #5865f2;
   --gold: #f6cf57;
   --ok: #2f9e5f;
-  --red: #e5484d;
-  --green: #30a46c;
-  --yellow: #f5b301;
-  --blue: #3e63dd;
+  --line: #2c2d35;
+  /* same as the Classic board's player colours */
+  --red: #d24d47;
+  --green: #2f9467;
+  --yellow: #e2a92a;
+  --blue: #3a68c8;
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -89,43 +91,51 @@ html, body {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background:
-    radial-gradient(circle at 20% 15%, rgba(229, 72, 77, 0.18), transparent 40%),
-    radial-gradient(circle at 85% 20%, rgba(48, 164, 108, 0.16), transparent 40%),
-    radial-gradient(circle at 80% 85%, rgba(245, 179, 1, 0.14), transparent 40%),
-    radial-gradient(circle at 15% 85%, rgba(62, 99, 221, 0.18), transparent 40%);
 }
 .menu-card {
-  width: min(380px, 100%);
-  background: var(--panel);
-  border-radius: 20px;
-  padding: 28px 24px 20px;
+  width: min(400px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  gap: 12px;
 }
-.logo { text-align: center; }
-.logo h1 { margin: 6px 0 0; font-size: 46px; letter-spacing: 8px; font-weight: 900; }
-.logo-dots { display: flex; justify-content: center; gap: 10px; height: 34px; align-items: flex-end; }
-.logo-dots i {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff8, var(--c) 55%);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
-  animation: hop 1.6s ease-in-out infinite;
+.menu-top { display: flex; align-items: center; justify-content: space-between; }
+.wordmark { display: flex; align-items: center; gap: 10px; }
+.wordmark h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+.wordmark-dots { display: grid; grid-template-columns: 9px 9px; gap: 3px; }
+.wordmark-dots i { width: 9px; height: 9px; border-radius: 2px; }
+.wordmark-dots i:nth-child(1) { background: var(--red); }
+.wordmark-dots i:nth-child(2) { background: var(--green); }
+.wordmark-dots i:nth-child(3) { background: var(--blue); }
+.wordmark-dots i:nth-child(4) { background: var(--yellow); }
+.menu-name { margin: -4px 0 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.menu-row .btn { padding: 11px; }
+
+.game-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.logo-dots i:nth-child(2) { animation-delay: 0.15s; }
-.logo-dots i:nth-child(3) { animation-delay: 0.3s; }
-.logo-dots i:nth-child(4) { animation-delay: 0.45s; }
-@keyframes hop {
-  0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
-  20% { transform: translateY(-12px) scale(0.95, 1.05); }
-  40% { transform: translateY(0) scale(1.1, 0.88); }
+.game-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.game-card-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.game-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.game-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
 }
-.profile-row { display: flex; justify-content: space-between; align-items: center; }
-.menu-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-#play-btn { font-size: 18px; padding: 16px; border-radius: 12px; }
+.game-players li:first-child { border-top: none; }
+.game-players li.muted { color: var(--muted); font-size: 13px; }
+.game-players .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.game-players .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#play-btn { font-size: 16px; padding: 13px; border-radius: 10px; }
 
 /* ---------- shop + how to play pages ---------- */
 .page { display: flex; flex-direction: column; padding: 16px; gap: 12px; max-width: 760px; margin: 0 auto; }
@@ -203,8 +213,7 @@ html, body {
 }
 
 #board {
-  border-radius: 14px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
   touch-action: manipulation;
 }
 

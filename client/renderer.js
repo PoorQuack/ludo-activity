@@ -1,6 +1,5 @@
 // Draws the board, tokens, dice and effects on a <canvas>.
 // Board positions come in board units (one square = 1, centre = 0,0); see shared/board.js.
-import { COLOR_HEX } from '../shared/board.js';
 import { BOARD_THEMES, DICE_STYLES } from './skins.js';
 
 export const SPIN_MS = 600;
@@ -77,46 +76,49 @@ export class BoardRenderer {
     ctx.clearRect(0, 0, this.layer.width, this.layer.height);
     ctx.setTransform(k, 0, 0, k, mid, mid);
 
+    // Flat tiles with small gaps, so the board colour shows through as clean grout lines.
     ctx.fillStyle = theme.bg;
-    roundRect(ctx, -half, -half, this.span, this.span, 14 * lw);
+    roundRect(ctx, -half, -half, this.span, this.span, 12 * lw);
     ctx.fill();
+    const color = (seat) => theme.players[board.colors[seat]];
 
-    // Bases
+    // Bases: a solid block of the player's colour with a plain panel inside
     board.bases.forEach((b, seat) => {
-      const hex = COLOR_HEX[board.colors[seat]];
-      ctx.fillStyle = hex;
+      ctx.fillStyle = color(seat);
       if (b.square) {
-        roundRect(ctx, b.x - b.size + lw, b.y - b.size + lw, b.size * 2 - 2 * lw, b.size * 2 - 2 * lw, 0.5);
+        const outer = b.size - 0.1;
+        roundRect(ctx, b.x - outer, b.y - outer, outer * 2, outer * 2, 0.5);
         ctx.fill();
-        const inner = b.size * 0.73;
+        const inner = b.size * 0.7;
         ctx.fillStyle = theme.baseInner;
-        roundRect(ctx, b.x - inner, b.y - inner, inner * 2, inner * 2, 0.6);
+        roundRect(ctx, b.x - inner, b.y - inner, inner * 2, inner * 2, 0.4);
         ctx.fill();
       } else {
         circle(ctx, b.x, b.y, b.size);
         ctx.fill();
         ctx.fillStyle = theme.baseInner;
-        circle(ctx, b.x, b.y, b.size * 0.8);
+        circle(ctx, b.x, b.y, b.size * 0.78);
         ctx.fill();
       }
     });
 
-    // Track squares
+    // Track: start squares in the player's colour, safe squares tinted with a star
     board.track.forEach((sq, i) => {
       const startSeat = board.startIndex.indexOf(i);
-      const fill = startSeat >= 0 ? COLOR_HEX[board.colors[startSeat]] : board.safe.has(i) ? theme.safe : theme.cell;
-      drawSquare(ctx, sq, fill, theme.line, lw);
-      if (board.safe.has(i)) drawStar(ctx, sq.x, sq.y, 0.34, startSeat >= 0 ? 'rgba(255,255,255,0.8)' : theme.star);
+      const safe = board.safe.has(i);
+      drawTile(ctx, sq, startSeat >= 0 ? color(startSeat) : safe ? theme.safe : theme.cell);
+      if (startSeat >= 0) drawStar(ctx, sq.x, sq.y, 0.26, 'rgba(255,255,255,0.9)');
+      else if (safe) drawStar(ctx, sq.x, sq.y, 0.26, theme.star);
     });
 
     // Home columns
     board.homeColumns.forEach((col, seat) => {
-      for (const sq of col) drawSquare(ctx, sq, COLOR_HEX[board.colors[seat]], theme.line, lw);
+      for (const sq of col) drawTile(ctx, sq, color(seat));
     });
 
-    // Centre: one triangle per seat, pointing at its home column
+    // Centre: one triangle per seat pointing at its home column, with thin gaps between
     const n = board.arms;
-    const R = board.hub / Math.cos(Math.PI / n);
+    const R = board.hub / Math.cos(Math.PI / n) - 0.05;
     for (let s = 0; s < n; s++) {
       const a = board.armAngle(s);
       ctx.beginPath();
@@ -124,10 +126,11 @@ export class BoardRenderer {
       ctx.lineTo(Math.cos(a - Math.PI / n) * R, Math.sin(a - Math.PI / n) * R);
       ctx.lineTo(Math.cos(a + Math.PI / n) * R, Math.sin(a + Math.PI / n) * R);
       ctx.closePath();
-      ctx.fillStyle = COLOR_HEX[board.colors[s]];
+      ctx.fillStyle = color(s);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-      ctx.lineWidth = lw;
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 0.1;
+      ctx.strokeStyle = theme.bg;
       ctx.stroke();
     }
   }
@@ -226,7 +229,7 @@ export class BoardRenderer {
       ctx.strokeStyle = '#111';
       ctx.stroke();
     }
-    const hex = COLOR_HEX[this.board.colors[p.seat]];
+    const hex = this.theme.players[this.board.colors[p.seat]];
     // A coloured ring on the square under a pawn on the track, so you can see whose it is and where it stands.
     if (p.onBoard) {
       ctx.beginPath();
@@ -493,7 +496,7 @@ export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1 } = {}
   const shrink = 1 - Math.min(0.45, lift / (r * 4));
   ctx.beginPath();
   ctx.ellipse(x, gy, r * 0.95 * shrink, r * 0.4 * shrink, 0, 0, TAU);
-  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.fill();
 
   ctx.save();
@@ -519,9 +522,9 @@ const GOLD_DARK = '#9a6f00';
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
 function paintPawn(ctx, r, hex, style) {
   const body = style.neon ? '#1c1c26' : hex;
-  const edge = style.neon ? hex : mix(hex, '#000000', 0.5);
-  const trim = style.gold ? GOLD : mix(body, '#ffffff', 0.25);
-  ctx.lineWidth = Math.max(1, r * (style.neon ? 0.12 : 0.07));
+  const edge = style.neon ? hex : mix(hex, '#000000', 0.38);
+  const trim = style.gold ? GOLD : mix(body, '#ffffff', 0.22);
+  ctx.lineWidth = Math.max(1, r * (style.neon ? 0.1 : 0.05));
   ctx.strokeStyle = edge;
   ctx.lineJoin = 'round';
   if (style.neon) {
@@ -632,10 +635,10 @@ function paintPawn(ctx, r, hex, style) {
 // Left-to-right shading that makes a flat shape look round.
 function cylinder(ctx, w, color) {
   const g = ctx.createLinearGradient(-w, 0, w, 0);
-  g.addColorStop(0, mix(color, '#000000', 0.35));
-  g.addColorStop(0.32, mix(color, '#ffffff', 0.35));
+  g.addColorStop(0, mix(color, '#000000', 0.22));
+  g.addColorStop(0.3, mix(color, '#ffffff', 0.28));
   g.addColorStop(0.55, color);
-  g.addColorStop(1, mix(color, '#000000', 0.45));
+  g.addColorStop(1, mix(color, '#000000', 0.3));
   return g;
 }
 
@@ -804,15 +807,14 @@ function apply(m, [x, y, z]) {
 
 // ---------- drawing helpers ----------
 
-function drawSquare(ctx, sq, fill, line, lw) {
+// One square of the track: a slightly rounded tile, a little smaller than its cell.
+function drawTile(ctx, sq, fill) {
   ctx.save();
   ctx.translate(sq.x, sq.y);
   ctx.rotate(sq.angle);
   ctx.fillStyle = fill;
-  ctx.fillRect(-0.5, -0.5, 1, 1);
-  ctx.strokeStyle = line;
-  ctx.lineWidth = lw;
-  ctx.strokeRect(-0.5 + lw / 2, -0.5 + lw / 2, 1 - lw, 1 - lw);
+  roundRect(ctx, -0.45, -0.45, 0.9, 0.9, 0.12);
+  ctx.fill();
   ctx.restore();
 }
 

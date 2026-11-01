@@ -29,6 +29,7 @@ export class Room {
     this.profiles = profiles; // ProfileStore (optional): skins, emotes and coin rewards
     this.clients = new Set(); // sockets
     this.connected = new Map(); // userId -> connection count
+    this.people = new Map(); // userId -> name, everyone in the Activity
     this.mode = '4p';
     this.board = boardFor(this.mode);
     this.seats = Array(this.board.arms).fill(null); // { userId, name, bot, connected }
@@ -59,7 +60,9 @@ export class Room {
 
   connect(user) {
     this.connected.set(user.id, (this.connected.get(user.id) || 0) + 1);
-    if (!this.hostId) this.hostId = user.id;
+    this.people.set(user.id, user.name);
+    // Nobody hosts until someone asks to, except a game already running needs someone in charge.
+    if (!this.hostId && this.phase !== 'lobby') this.hostId = user.id;
     const seat = this.seatOf(user.id);
     if (seat >= 0) {
       this.seats[seat].connected = true;
@@ -75,15 +78,23 @@ export class Room {
       return;
     }
     this.connected.delete(user.id);
+    this.people.delete(user.id);
     const seat = this.seatOf(user.id);
     if (seat >= 0) {
       if (this.phase === 'lobby') this.seats[seat] = null;
       else this.seats[seat].connected = false;
     }
-    if (this.hostId === user.id) {
-      this.hostId = this.connected.keys().next().value ?? null;
-    }
+    if (this.hostId === user.id) this.hostId = this.nextHost();
     this.changed();
+  }
+
+  // When the host leaves: another player in the game takes over. In the lobby, if nobody
+  // has joined, the game closes and anyone can host a new one.
+  nextHost() {
+    const seated = this.seats.find((s) => s && !s.bot && this.connected.has(s.userId));
+    if (seated) return seated.userId;
+    if (this.phase === 'lobby') return null;
+    return this.connected.keys().next().value ?? null;
   }
 
   get empty() {
@@ -102,6 +113,8 @@ export class Room {
 
   handle(user, msg) {
     switch (msg.action) {
+      case 'host': return this.host(user);
+      case 'join': return this.join(user);
       case 'sit': return this.sit(user, msg.seat);
       case 'stand': return this.stand(user);
       case 'addBot': return this.addBot(user, msg.seat);
@@ -118,9 +131,36 @@ export class Room {
     }
   }
 
+  // Opens a game: the host takes the first free seat and others can join.
+  host(user) {
+    this.requirePhase('lobby');
+    if (this.hostId && this.hostId !== user.id) {
+      throw new Error(`${this.people.get(this.hostId) || 'Someone'} is already hosting — join their game`);
+    }
+    this.hostId = user.id;
+    if (this.seatOf(user.id) < 0) this.takeFreeSeat(user);
+    this.changed();
+  }
+
+  join(user) {
+    this.requirePhase('lobby');
+    if (!this.hostId) throw new Error('Nobody is hosting yet');
+    if (this.seatOf(user.id) >= 0) return;
+    this.takeFreeSeat(user);
+    this.changed();
+  }
+
+  takeFreeSeat(user) {
+    const free = MODES[this.mode].seats.find((i) => !this.seats[i]);
+    if (free === undefined) throw new Error('The game is full');
+    this.seats[free] = { userId: user.id, name: user.name, bot: false, connected: true };
+  }
+
   sit(user, seat) {
     this.requirePhase('lobby');
+    if (!this.hostId) throw new Error('Nobody is hosting yet');
     if (!this.validSeat(seat)) throw new Error('Bad seat');
+    if (this.seatOf(user.id) === seat) return;
     if (this.seats[seat]) throw new Error('That seat is taken');
     const current = this.seatOf(user.id);
     if (current >= 0) this.seats[current] = null;
@@ -531,6 +571,7 @@ export class Room {
       turnTimeout: this.delays.timeout,
       serverNow: now,
       spectators: this.connected.size,
+      people: [...this.people].map(([id, name]) => ({ id, name })),
     };
   }
 }

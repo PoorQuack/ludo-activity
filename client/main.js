@@ -1,8 +1,9 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
-import { COLOR_HEX, MODES, boardFor } from '../shared/board.js';
+import { MODES, boardFor } from '../shared/board.js';
 import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS } from './renderer.js';
 import { renderShop } from './shop-ui.js';
+import { playerColor } from './skins.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
@@ -22,6 +23,9 @@ const els = {
   screens: { menu: $('menu'), shop: $('shop'), howto: $('howto'), game: $('game') },
   menuName: $('menu-name'),
   menuStatus: $('menu-status'),
+  gameTitle: $('game-title'),
+  gameMode: $('game-mode'),
+  gamePlayers: $('game-players'),
   playBtn: $('play-btn'),
   newGameBtn: $('new-game-btn'),
   surrenderBtn: $('surrender-btn'),
@@ -222,6 +226,11 @@ function mySeat() {
   return state.seats.findIndex((s) => s && !s.bot && s.userId === me.id);
 }
 
+// A player colour ('red', …) as it looks on the current board theme.
+function col(name) {
+  return playerColor(state.theme, name);
+}
+
 function isHost() {
   return state && me && state.hostId === me.id;
 }
@@ -265,27 +274,78 @@ function renderUI() {
   renderPanel();
 }
 
-function renderMenu() {
-  els.menuName.textContent = me ? `👋 ${me.name}` : '';
+// What the menu's main button does right now.
+function menuAction() {
   const seat = mySeat();
-  els.playBtn.textContent =
-    state.phase === 'lobby'
-      ? '▶ Play'
+  if (state.phase === 'playing') return seat >= 0 ? 'Back to game' : 'Watch game';
+  if (state.phase === 'finished') return 'See results';
+  if (!state.hostId) return 'Host a game';
+  if (seat >= 0) return 'Open lobby';
+  const full = state.seatsAllowed.every((i) => state.seats[i]);
+  return full ? 'Watch lobby' : 'Join game';
+}
+
+function renderMenu() {
+  els.menuName.textContent = me ? `Signed in as ${me.name}` : '';
+  const board = boardFor(state.mode);
+  const hostName = state.people.find((p) => p.id === state.hostId)?.name;
+
+  els.gameTitle.textContent =
+    state.phase === 'playing'
+      ? 'Game in progress'
       : state.phase === 'finished'
-        ? '🏆 See results'
-        : seat >= 0
-          ? '▶ Back to game'
-          : '👀 Watch game';
+        ? 'Game over'
+        : hostName
+          ? `${hostName}'s game`
+          : 'No game yet';
+  els.gameMode.textContent = MODES[state.mode].label;
+  els.gameMode.classList.toggle('hidden', state.phase === 'lobby' && !state.hostId);
+
+  // Everyone who has joined, with their colour
+  els.gamePlayers.innerHTML = '';
+  const joined = state.seatsAllowed.filter((i) => state.seats[i]);
+  if (state.phase === 'lobby' && !state.hostId) {
+    els.gamePlayers.appendChild(listItem(null, 'Host a game and your friends can join from here.', '', true));
+  } else {
+    for (const i of joined) {
+      const s = state.seats[i];
+      const tag = s.userId === state.hostId ? 'Host' : s.bot ? 'Bot' : s.surrendered ? 'Out' : me && s.userId === me.id ? 'You' : '';
+      els.gamePlayers.appendChild(listItem(playerColor(state.theme, board.colors[i]), s.name, tag));
+    }
+    const open = state.seatsAllowed.length - joined.length;
+    if (state.phase === 'lobby' && open > 0) {
+      els.gamePlayers.appendChild(listItem(null, `${open} open seat${open === 1 ? '' : 's'}`, '', true));
+    }
+  }
+
+  els.playBtn.textContent = menuAction();
   // A finished game can be reset by anyone; a running one only by the host.
   els.newGameBtn.classList.toggle('hidden', !(state.phase === 'finished' || (state.phase === 'playing' && isHost())));
-  const n = state.spectators;
-  const what =
-    state.phase === 'lobby'
-      ? `lobby is set to ${MODES[state.mode].label}`
-      : state.phase === 'playing'
-        ? 'a game is in progress'
-        : 'the game just finished';
-  els.menuStatus.textContent = `${n} ${n === 1 ? 'person' : 'people'} here · ${what}`;
+
+  const names = state.people.map((p) => p.name);
+  els.menuStatus.textContent = `In this activity: ${names.join(', ')}`;
+}
+
+function listItem(color, text, tag, muted = false) {
+  const li = document.createElement('li');
+  if (muted) li.className = 'muted';
+  if (color) {
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = color;
+    li.appendChild(dot);
+  }
+  const name = document.createElement('span');
+  name.className = 'name';
+  name.textContent = text;
+  li.appendChild(name);
+  if (tag) {
+    const t = document.createElement('span');
+    t.className = 'tag';
+    t.textContent = tag;
+    li.appendChild(t);
+  }
+  return li;
 }
 
 function renderPanel() {
@@ -317,7 +377,7 @@ function renderPanel() {
     const colorName = board.colors[i];
     const card = document.createElement('div');
     card.className = 'seat';
-    card.style.setProperty('--seat-color', COLOR_HEX[colorName]);
+    card.style.setProperty('--seat-color', col(colorName));
     if (phase === 'playing' && state.turn === i) card.classList.add('turn');
     if (s && !s.bot && me && s.userId === me.id) card.classList.add('me');
     if (s && !s.connected) card.classList.add('offline');
@@ -344,7 +404,7 @@ function renderPanel() {
     }
     card.appendChild(sub);
 
-    if (phase === 'lobby') {
+    if (phase === 'lobby' && state.hostId) {
       const actions = document.createElement('div');
       actions.className = 'seat-actions';
       if (!s) {
@@ -372,7 +432,9 @@ function renderPanel() {
     els.fillBtn.classList.toggle('hidden', !isHost() || !empty);
     els.startBtn.disabled = count < 2;
     const hostName = state.seats.find((s) => s && s.userId === state.hostId)?.name;
-    if (isHost()) {
+    if (!state.hostId) {
+      els.lobbyHint.textContent = 'Nobody is hosting yet. Go back to the menu to host a game.';
+    } else if (isHost()) {
       els.lobbyHint.textContent =
         count < 2 ? 'Pick a seat, then wait for friends or add a bot.' : `${count} players ready.`;
     } else {
@@ -390,7 +452,7 @@ function renderPanel() {
     else if (myTurn) els.turnText.textContent = `You rolled a ${state.dice} — no moves this time`;
     else if (state.rolled) els.turnText.textContent = `${cur.name} rolled a ${state.dice}`;
     else els.turnText.textContent = `${cur.name}'s turn`;
-    els.turnText.style.color = COLOR_HEX[board.colors[state.turn]];
+    els.turnText.style.color = col(board.colors[state.turn]);
     const racing = seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
     els.surrenderBtn.classList.toggle('hidden', !racing);
   }
@@ -461,7 +523,7 @@ function stepAnimations(now, dt) {
   if (state.phase === 'finished' && idle() && !celebrated) {
     celebrated = true;
     showFinish();
-    renderer.confetti(state.winners.slice(0, 3).map((s) => COLOR_HEX[boardFor(state.mode).colors[s]]).concat('#ffffff', '#f6cf57'));
+    renderer.confetti(state.winners.slice(0, 3).map((s) => col(boardFor(state.mode).colors[s])).concat('#ffffff', '#f6cf57'));
   }
 }
 
@@ -508,7 +570,7 @@ function skipAnimations() {
 function moveOverrides(ev) {
   const board = boardFor(state.mode);
   const { seat, token, captured } = ev.move;
-  const color = COLOR_HEX[board.colors[seat]];
+  const color = col(board.colors[seat]);
   const map = new Map();
   const e = ev.elapsed;
 
@@ -635,7 +697,7 @@ function frame(now) {
     const left = state.turnDeadline - (Date.now() + clockOffset);
     const pct = Math.max(0, Math.min(1, left / state.turnTimeout));
     els.timerBar.style.width = `${pct * 100}%`;
-    els.timerBar.style.background = COLOR_HEX[board.colors[state.turn]];
+    els.timerBar.style.background = col(board.colors[state.turn]);
   }
 }
 
@@ -647,7 +709,7 @@ function diceView(now, board) {
     value: dice.value,
     axes: dice.axes,
     style: state.seats[dice.seat]?.skins.dice,
-    color: COLOR_HEX[board.colors[dice.seat]],
+    color: col(board.colors[dice.seat]),
     mine: dice.seat === mySeat(),
   };
 }
@@ -655,7 +717,12 @@ function diceView(now, board) {
 // ---------------- input ----------------
 
 for (const b of document.querySelectorAll('[data-go]')) b.addEventListener('click', () => showScreen(b.dataset.go));
-els.playBtn.addEventListener('click', () => showScreen('game'));
+els.playBtn.addEventListener('click', () => {
+  const action = menuAction();
+  if (action === 'Host a game') send('host');
+  else if (action === 'Join game') send('join');
+  showScreen('game');
+});
 els.startBtn.addEventListener('click', () => send('start'));
 els.fillBtn.addEventListener('click', () => send('fillBots'));
 els.againBtn.addEventListener('click', () => send('newGame'));
