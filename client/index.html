@@ -48,9 +48,16 @@
             </form>
           </section>
 
-          <div class="audio-toggles" data-audio>
-            <button class="btn small toggle" data-toggle="music"></button>
-            <button class="btn small toggle" data-toggle="sound"></button>
+          <div class="audio" data-audio>
+            <label class="volume">
+              <span>Volume</span>
+              <input type="range" min="0" max="100" step="1" data-volume aria-label="Volume" />
+              <b data-volume-value></b>
+            </label>
+            <div class="audio-toggles">
+              <button class="btn small toggle" data-toggle="music"></button>
+              <button class="btn small toggle" data-toggle="sound"></button>
+            </div>
           </div>
           <p id="menu-status" class="hint"></p>
         </div>
@@ -145,9 +152,16 @@
             </form>
           </section>
 
-          <div class="audio-toggles" data-audio>
-            <button class="btn small toggle" data-toggle="music"></button>
-            <button class="btn small toggle" data-toggle="sound"></button>
+          <div class="audio" data-audio>
+            <label class="volume">
+              <span>Volume</span>
+              <input type="range" min="0" max="100" step="1" data-volume aria-label="Volume" />
+              <b data-volume-value></b>
+            </label>
+            <div class="audio-toggles">
+              <button class="btn small toggle" data-toggle="music"></button>
+              <button class="btn small toggle" data-toggle="sound"></button>
+            </div>
           </div>
         </aside>
       </main>

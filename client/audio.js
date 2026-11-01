@@ -1,9 +1,13 @@
-// Background music and sound effects, made with the Web Audio API: no audio files to
-// download and nothing copyrighted. Browsers only allow sound after the player has
-// clicked or pressed a key, so everything starts on the first interaction.
+// Background music and sound effects with the Web Audio API.
+//
+// Real recordings are used when they exist: list them in client/public/sounds/sounds.json,
+// e.g. { "roll": "dice-roll.ogg", "step": "pin-tap.ogg", "music": "music.mp3" }.
+// Anything not listed falls back to a sound generated here, so the game never goes quiet.
+// Browsers only allow sound after the player has clicked or pressed a key, so everything
+// starts on the first interaction.
 
 const SETTINGS_KEY = 'ludo-audio';
-const settings = { music: true, sound: true };
+const settings = { music: true, sound: true, volume: 0.5 };
 try {
   Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
 } catch {
@@ -11,15 +15,18 @@ try {
 }
 
 let ctx = null;
+let master = null;
 let musicGain = null;
 let sfxGain = null;
 let noiseBuffer = null;
 let musicTimer = null;
+let musicTrack = null; // <audio> playing a music file, when one is provided
 let nextNote = 0;
 let step = 0;
+const samples = {}; // effect name -> decoded AudioBuffer
 
 const MUSIC_VOLUME = 0.32;
-const SFX_VOLUME = 0.5;
+const SFX_VOLUME = 0.6;
 
 export function audioSettings() {
   return { ...settings };
@@ -31,7 +38,8 @@ export function unlockAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
-    const master = ctx.createGain();
+    master = ctx.createGain();
+    master.gain.value = settings.volume;
     master.connect(ctx.destination);
     musicGain = ctx.createGain();
     sfxGain = ctx.createGain();
@@ -40,9 +48,17 @@ export function unlockAudio() {
     musicGain.gain.value = settings.music ? MUSIC_VOLUME : 0;
     sfxGain.gain.value = settings.sound ? SFX_VOLUME : 0;
     noiseBuffer = makeNoise();
+    loadFiles();
   }
   if (ctx.state === 'suspended') ctx.resume();
   if (settings.music) startMusic();
+}
+
+// Overall volume, 0..1 (the slider).
+export function setVolume(v) {
+  settings.volume = Math.max(0, Math.min(1, v));
+  save();
+  if (master) master.gain.setTargetAtTime(settings.volume, ctx.currentTime, 0.05);
 }
 
 export function setMusic(on) {
@@ -52,6 +68,43 @@ export function setMusic(on) {
   musicGain.gain.setTargetAtTime(on ? MUSIC_VOLUME : 0, ctx.currentTime, 0.2);
   if (on) startMusic();
   else setTimeout(() => !settings.music && stopMusic(), 800);
+}
+
+// Loads the recordings listed in sounds/sounds.json, if there is one.
+async function loadFiles() {
+  let list;
+  try {
+    const res = await fetch('sounds/sounds.json');
+    if (!res.ok) return;
+    list = await res.json();
+  } catch {
+    return; // no list: generated sounds only
+  }
+  for (const [name, file] of Object.entries(list)) {
+    if (name === 'music') {
+      useMusicFile(`sounds/${file}`);
+      continue;
+    }
+    // A name can list several files; one is picked at random each time, for variety.
+    const files = Array.isArray(file) ? file : [file];
+    samples[name] = [];
+    for (const f of files) {
+      try {
+        const data = await fetch(`sounds/${f}`).then((r) => r.arrayBuffer());
+        samples[name].push(await ctx.decodeAudioData(data));
+      } catch (err) {
+        console.warn(`Could not load sound ${f}`, err);
+      }
+    }
+  }
+}
+
+function useMusicFile(url) {
+  musicTrack = new Audio(url);
+  musicTrack.loop = true;
+  ctx.createMediaElementSource(musicTrack).connect(musicGain);
+  stopMusic(); // swap the generated loop for the file
+  if (settings.music) startMusic();
 }
 
 export function setSound(on) {
@@ -81,7 +134,12 @@ const CHORDS = [
 const ARP = [0, 1, 2, 1, 0, 2, 1, null]; // eighth notes per bar; null = rest
 
 function startMusic() {
-  if (musicTimer || !ctx) return;
+  if (!ctx) return;
+  if (musicTrack) {
+    musicTrack.play().catch(() => {});
+    return;
+  }
+  if (musicTimer) return;
   nextNote = ctx.currentTime + 0.1;
   musicTimer = setInterval(scheduleMusic, 100);
 }
@@ -89,6 +147,7 @@ function startMusic() {
 function stopMusic() {
   clearInterval(musicTimer);
   musicTimer = null;
+  musicTrack?.pause();
 }
 
 // Schedules the notes for the next ~300 ms, so timing stays steady.
@@ -186,7 +245,18 @@ const EFFECTS = {
 
 export function sfx(name) {
   if (!ctx || !settings.sound || ctx.state !== 'running') return;
-  EFFECTS[name]?.();
+  const recorded = samples[name];
+  if (recorded?.length) playSample(recorded[Math.floor(Math.random() * recorded.length)], name === 'step');
+  else EFFECTS[name]?.();
+}
+
+// `vary`: nudge the pitch a little so repeated taps don't sound identical.
+function playSample(buffer, vary) {
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  if (vary) src.playbackRate.value = 0.92 + Math.random() * 0.16;
+  src.connect(sfxGain);
+  src.start();
 }
 
 function tone(f, t, len, type, vol, endFreq = null) {

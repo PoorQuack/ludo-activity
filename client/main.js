@@ -4,7 +4,7 @@ import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor } from './skins.js';
-import { unlockAudio, sfx, setMusic, setSound, audioSettings } from './audio.js';
+import { unlockAudio, sfx, setMusic, setSound, setVolume, audioSettings } from './audio.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
@@ -52,6 +52,8 @@ const els = {
   log: $('log'),
   chats: [...document.querySelectorAll('[data-chat]')],
   audioToggles: [...document.querySelectorAll('[data-toggle]')],
+  volumes: [...document.querySelectorAll('[data-volume]')],
+  volumeValues: [...document.querySelectorAll('[data-volume-value]')],
   toast: $('toast'),
 };
 
@@ -289,6 +291,18 @@ function renderAudioToggles() {
     b.textContent = `${b.dataset.toggle === 'music' ? 'Music' : 'Sounds'}: ${on ? 'on' : 'off'}`;
     b.classList.toggle('off', !on);
   }
+  // The menu and the game panel each have a slider; keep both in step.
+  const pct = Math.round(s.volume * 100);
+  for (const input of els.volumes) if (Number(input.value) !== pct) input.value = pct;
+  for (const el of els.volumeValues) el.textContent = `${pct}%`;
+}
+
+for (const input of els.volumes) {
+  input.addEventListener('input', () => {
+    setVolume(Number(input.value) / 100);
+    renderAudioToggles();
+  });
+  input.addEventListener('change', () => sfx('step')); // a tap to hear the new level
 }
 
 for (const b of els.audioToggles) {
