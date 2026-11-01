@@ -69,9 +69,10 @@ export function makeBoard(n) {
   // Start squares + star squares are safe: no captures there.
   const safe = new Set(startIndex.flatMap((i) => [i, i + 8]));
   const homeColumns = seats.map((s) => [5, 4, 3, 2, 1].map((d) => square(s, d, 0)));
+  // Finished pins stand near the outer edge of their triangle, clear of the dice in the middle.
   const finishSpots = seats.map((s) => ({
-    x: Math.cos(armAngle(s)) * hub * 0.45,
-    y: Math.sin(armAngle(s)) * hub * 0.45,
+    x: Math.cos(armAngle(s)) * hub * 0.78,
+    y: Math.sin(armAngle(s)) * hub * 0.78,
   }));
 
   // Bases sit in the gap between a seat's arm and the next one, beside its start square.

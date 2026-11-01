@@ -161,7 +161,6 @@ export class BoardRenderer {
     const order = [...placed].sort((p, q) => p.moving - q.moving || p.y - q.y);
     for (const p of order) this.drawPlaced(p, now);
 
-    this.drawFinishedCounts(view);
     this.drawCenterDice(view.dice, now);
     this.drawParticles(now);
     this.drawEmotes(view.emotes, now);
@@ -197,16 +196,25 @@ export class BoardRenderer {
         groups.get(key).push(item);
       }
     }
-    // Spread out tokens that share a square
     for (const [key, group] of groups) {
-      if (group.length < 2) continue;
       const n = group.length;
-      const finish = key.startsWith('finish');
+      if (key.startsWith('finish')) {
+        // Finished pins stand in a small 2×2 cluster in their triangle, so you can count them.
+        const spots = n === 1 ? [[0, 0]] : [[-0.21, -0.14], [0.21, -0.14], [-0.21, 0.14], [0.21, 0.14]];
+        group.forEach((it, i) => {
+          it.x += spots[i][0];
+          it.y += spots[i][1];
+          it.scale = 0.68;
+        });
+        continue;
+      }
+      // Spread out tokens that share a square
+      if (n < 2) continue;
       group.forEach((it, i) => {
         const ang = (i / n) * TAU - Math.PI / 4;
-        it.x += finish ? 0 : Math.cos(ang) * 0.2;
-        it.y += finish ? 0 : Math.sin(ang) * 0.2;
-        it.scale = finish ? 0.8 : n > 2 ? 0.66 : 0.78;
+        it.x += Math.cos(ang) * 0.2;
+        it.y += Math.sin(ang) * 0.2;
+        it.scale = n > 2 ? 0.66 : 0.78;
       });
     }
     return items;
@@ -259,21 +267,6 @@ export class BoardRenderer {
     if (b.square) roundRect(ctx, this.px(b.x - b.size) + 4, this.px(b.y - b.size) + 4, b.size * 2 * s - 8, b.size * 2 * s - 8, s * 0.45);
     else circle(ctx, this.px(b.x), this.px(b.y), b.size * s - 3);
     ctx.stroke();
-  }
-
-  drawFinishedCounts(view) {
-    const ctx = this.ctx;
-    const s = this.cell;
-    for (const seat of view.active) {
-      const done = view.tokens[seat].filter((p) => p >= this.board.finished).length;
-      if (done < 2) continue;
-      const p = this.board.finishSpots[seat];
-      ctx.fillStyle = '#111';
-      ctx.font = `700 ${s * 0.38}px system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`×${done}`, this.px(p.x) + s * 0.38, this.px(p.y) - s * 0.38);
-    }
   }
 
   // The dice lives in the middle of the board: it pops in for whoever's turn it is,
