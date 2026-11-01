@@ -11,7 +11,7 @@ export const BOARD_THEMES = {
 
 export const DICE_STYLES = {
   'dice-classic': { face: '#ffffff', edge: '#b9b9c4', pip: '#222222' },
-  'dice-midnight': { face: '#3a3b45', edge: '#0f0f13', pip: '#f1f1f4' },
+  'dice-midnight': { face: '#3a3b45', edge: '#5c5e6b', pip: '#f1f1f4' }, // light edge: visible on dark boards
   'dice-wood': { face: '#c8945a', edge: '#7a5230', pip: '#3b2412' },
   'dice-ruby': { face: '#e5484d', edge: '#8e1f2b', pip: '#ffffff', shine: '#ff9aa0' },
   // Glows in the colour of whoever is rolling (green in shop previews).

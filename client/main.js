@@ -336,8 +336,11 @@ function renderPanel() {
     else {
       const home = state.tokens[i].filter((p) => p >= board.finished).length;
       const place = state.winners.indexOf(i);
+      const missed = state.timeouts?.[i] || 0;
       sub.textContent =
-        place >= 0 ? `🏆 ${ordinal(place + 1)} place` : `${home}/4 home${s.connected ? '' : ' · offline (auto)'}`;
+        place >= 0
+          ? `🏆 ${ordinal(place + 1)} place`
+          : `${home}/4 home${s.connected ? '' : ' · offline (auto)'}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
     }
     card.appendChild(sub);
 

@@ -8,6 +8,7 @@ const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
 const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot or forced move
 const TURN_TIMEOUT_MS = 30_000;
+const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
 const EMOTE_COOLDOWN_MS = 1200;
 const EMOTE_TTL_MS = 3000;
 const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
@@ -41,6 +42,8 @@ export class Room {
     this.winners = [];
     this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
+    this.timeouts = []; // seat -> turns in a row that ran out
+    this.turnTimedOut = false;
     this.rewards = null; // seat -> coins, once a game is over
     this.lastMove = null;
     this.seq = 0;
@@ -199,6 +202,7 @@ export class Room {
     this.forfeited = [];
     for (const i of active) delete this.seats[i].surrendered;
     this.captures = Array(this.board.arms).fill(0);
+    this.timeouts = Array(this.board.arms).fill(0);
     this.rewards = null;
     this.lastMove = null;
     this.log = [];
@@ -210,6 +214,7 @@ export class Room {
 
   roll(user) {
     this.requireTurn(user);
+    this.timeouts[this.turn] = 0; // they're here: forget earlier timeouts
     this.doRoll();
   }
 
@@ -217,6 +222,7 @@ export class Room {
     this.requireTurn(user);
     if (!this.rolled) throw new Error('Roll first');
     if (!this.movable.includes(token)) throw new Error("That token can't move");
+    this.timeouts[this.turn] = 0;
     this.clearTimer(); // cancels a pending auto-move
     this.doMove(token);
   }
@@ -225,10 +231,15 @@ export class Room {
     this.requirePhase('playing');
     const seat = this.seatOf(user.id);
     if (seat < 0 || !this.inPlay().includes(seat)) throw new Error("You're not playing in this game");
+    this.forfeit(seat, `🏳️ ${this.seats[seat].name} surrendered.`);
+  }
+
+  // Takes a seat out of the game: its pawns leave the board and it places last.
+  forfeit(seat, message) {
     this.forfeited.push(seat);
     this.seats[seat].surrendered = true;
     this.tokens[seat] = [-1, -1, -1, -1];
-    this.addLog(`🏳️ ${this.seats[seat].name} surrendered.`);
+    this.addLog(message);
     if (this.endIfOver()) return;
     if (this.turn === seat) {
       this.clearTimer();
@@ -394,6 +405,7 @@ export class Room {
   resetTurn() {
     this.rolled = false;
     this.movable = [];
+    this.turnTimedOut = false;
     this.turnDeadline = Date.now() + this.delays.timeout;
   }
 
@@ -408,6 +420,17 @@ export class Room {
     const delay = auto ? botDelay : Math.max(0, this.turnDeadline - Date.now());
     this.timer = setTimeout(() => {
       this.timer = null;
+      // A connected player let the clock run out: count it once per turn, and
+      // take them out of the game after too many turns in a row.
+      if (!auto && !this.turnTimedOut) {
+        this.turnTimedOut = true;
+        const s = this.turn;
+        this.timeouts[s] = (this.timeouts[s] || 0) + 1;
+        if (this.timeouts[s] >= MAX_TIMEOUTS) {
+          this.forfeit(s, `⏰ ${this.seats[s].name} ran out of time ${MAX_TIMEOUTS} turns in a row and was removed.`);
+          return;
+        }
+      }
       try {
         if (!this.rolled) this.doRoll();
         else {
@@ -498,6 +521,8 @@ export class Room {
       movable: this.movable,
       winners: this.winners,
       rewards: this.rewards,
+      timeouts: this.timeouts,
+      maxTimeouts: MAX_TIMEOUTS,
       lastMove: this.lastMove,
       seq: this.seq,
       log: this.log.slice(-8),

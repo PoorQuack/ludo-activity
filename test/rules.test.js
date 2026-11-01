@@ -227,6 +227,37 @@ test('surrendering on your turn passes the turn; game goes on with the rest', ()
   room.destroy();
 });
 
+test('running out of time 3 turns in a row removes you', async () => {
+  const done = new Promise((resolve) => {
+    const room = new Room('t', {
+      rng: () => 1, // never a 6: every turn is "no moves", so only the clock moves things on
+      delays: { bot: 0, noMove: 0, autoMove: 0, timeout: 5 },
+      onChange: (r) => r.phase === 'finished' && resolve(r),
+    });
+    const a = { id: 'a', name: 'A' };
+    const b = { id: 'b', name: 'B' };
+    room.connect(a);
+    room.connect(b);
+    room.sit(a, 0);
+    room.sit(b, 2);
+    room.start(a);
+  });
+  const room = await done;
+  const out = room.winners[1];
+  assert.equal(room.timeouts[out], 3);
+  assert.ok(room.seats[out].surrendered);
+  assert.match(room.log.join('\n'), /ran out of time 3 turns in a row/);
+  room.destroy();
+});
+
+test('acting yourself resets the timeout count', () => {
+  const { room, a } = twoPlayerRoom([1]);
+  room.timeouts[0] = 2;
+  room.roll(a);
+  assert.equal(room.timeouts[0], 0);
+  room.destroy();
+});
+
 test('only the host can end a running game, anyone can reset a finished one', () => {
   const { room, a, b } = twoPlayerRoom();
   assert.throws(() => room.newGame(b), /Only the host/);

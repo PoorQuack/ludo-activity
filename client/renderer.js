@@ -183,6 +183,7 @@ export class BoardRenderer {
           squash: o?.squash || 1,
           hl,
           moving: o ? 1 : 0,
+          onBoard: !o && progress >= 0,
           scale: 1,
           skin: view.skins[seat],
         };
@@ -225,7 +226,24 @@ export class BoardRenderer {
       ctx.strokeStyle = '#111';
       ctx.stroke();
     }
-    drawToken(ctx, x, y, r, COLOR_HEX[this.board.colors[p.seat]], p.skin, { lift: p.lift * s, squash: p.squash });
+    const hex = COLOR_HEX[this.board.colors[p.seat]];
+    // A coloured ring on the square under a pawn on the track, so you can see whose it is and where it stands.
+    if (p.onBoard) {
+      ctx.beginPath();
+      ctx.ellipse(x, y + r * 0.2, r * 1.0, r * 0.46, 0, 0, TAU);
+      ctx.fillStyle = mix(hex, '#ffffff', 0.55);
+      ctx.globalAlpha = 0.75;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      // White outside the coloured ring, so it still shows on squares of the same colour
+      ctx.lineWidth = Math.max(3, s * 0.1);
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+      ctx.lineWidth = Math.max(1.5, s * 0.05);
+      ctx.strokeStyle = hex;
+      ctx.stroke();
+    }
+    drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash });
   }
 
   drawTurnGlow(seat, now) {
@@ -287,8 +305,8 @@ export class BoardRenderer {
       scale = 1 + 0.1 * Math.sin(Math.min(1, d.t / 220) * Math.PI);
     } else if (d.mode === 'leave') {
       const k = Math.min(1, d.t / LEAVE_MS);
-      scale = 1 - 0.7 * k * k;
-      alpha = 1 - k; // shrinks away still showing the rolled face
+      // Shrinks away still showing the rolled face (fading would let the edge show through)
+      scale = 1 - easeOutCubic(k) * 0.999;
     }
 
     // Shadow stays on the board while the dice hops
@@ -662,58 +680,68 @@ function diceStyle(styleId, color) {
   return { ...st, edge: color, pip: color, outline: color };
 }
 
-// Draws a flat dice centred on (cx, cy) showing one face. `value` null shows "?".
-export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null, color = null } = {}) {
-  const st = diceStyle(styleId, color);
-  const s = size * 0.96; // same size as the cube's face when it lands
-  const h = s / 2;
-  ctx.save();
-  ctx.globalAlpha *= alpha;
-  ctx.translate(cx, cy);
+// One face of the dice in its own coordinates (-50..50). The flat dice and every face of the
+// 3D cube use this, so the cube's front face looks exactly like the flat dice it turns into.
+// `light` < 1 darkens faces turned away from you; `px` is one face unit in pixels.
+function paintFace(ctx, st, value, { light = 1, pips = true, glow = null, px = 1 } = {}) {
+  const shade = (c) => (light < 1 ? mix(c, '#000000', 1 - light) : c);
+  let fill = shade(st.face);
+  if (st.shine) {
+    fill = ctx.createLinearGradient(-50, -50, 50, 50);
+    fill.addColorStop(0, shade(st.shine));
+    fill.addColorStop(1, shade(st.face));
+  }
   if (glow) {
     ctx.shadowColor = glow;
-    ctx.shadowBlur = s * 0.45;
+    ctx.shadowBlur = 45 * px;
   }
-  // A darker edge underneath gives it a little thickness
-  ctx.fillStyle = st.edge;
-  roundRect(ctx, -h, -h + s * 0.07, s, s, s * 0.16);
+  roundRect(ctx, -50, -50, 100, 100, 16);
+  ctx.fillStyle = fill;
   ctx.fill();
   ctx.shadowBlur = 0;
-
-  let face = st.face;
-  if (st.shine) {
-    face = ctx.createLinearGradient(-h, -h, h, h);
-    face.addColorStop(0, st.shine);
-    face.addColorStop(1, st.face);
-  }
-  ctx.fillStyle = face;
-  roundRect(ctx, -h, -h, s, s, s * 0.16);
-  ctx.fill();
   if (st.outline) {
-    ctx.lineWidth = Math.max(1.5, s * 0.04);
-    ctx.strokeStyle = st.outline;
     ctx.shadowColor = st.outline;
-    ctx.shadowBlur = s * 0.2;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = 20 * px;
   }
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = st.outline || st.edge;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  if (!pips) return;
 
   ctx.fillStyle = st.pip;
   if (st.outline) {
     ctx.shadowColor = st.pip;
-    ctx.shadowBlur = s * 0.15;
+    ctx.shadowBlur = 15 * px;
   }
   if (value) {
-    for (const [px, py] of PIPS[value]) {
-      circle(ctx, px * s * 0.27, py * s * 0.27, s * 0.1);
+    for (const [x, y] of PIPS[value]) {
+      circle(ctx, x * 27, y * 27, 10);
       ctx.fill();
     }
   } else {
-    ctx.font = `800 ${s * 0.55}px system-ui, sans-serif`;
+    ctx.font = '800 58px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('?', 0, s * 0.03);
+    ctx.fillText('?', 0, 3);
   }
+  ctx.shadowBlur = 0;
+}
+
+// Draws a flat dice centred on (cx, cy) showing one face. `value` null shows "?".
+export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null, color = null } = {}) {
+  const st = diceStyle(styleId, color);
+  const k = (size * 0.96) / 100; // same size as the cube's face when it lands
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.translate(cx, cy);
+  ctx.scale(k, k);
+  ctx.lineJoin = 'round';
+  // A darker edge underneath gives it a little thickness
+  ctx.fillStyle = st.edge;
+  roundRect(ctx, -50, -43, 100, 100, 16);
+  ctx.fill();
+  paintFace(ctx, st, value, { glow, px: k });
   ctx.restore();
 }
 
@@ -732,46 +760,15 @@ function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt
     if (n[2] <= 0.01) continue; // facing away
     const u = apply(R, f.u);
     const v = apply(R, f.v);
-    const light = 0.62 + 0.38 * Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]);
+    // Full brightness when facing you, darker as it turns away (from the top-left light).
+    const side = Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1]);
+    const light = Math.min(1, 0.58 + 0.42 * n[2] + 0.12 * side);
 
     // Draw the face in its own flat coordinates, -50..50 on each side.
     ctx.save();
     ctx.transform((u[0] * h) / 50, (u[1] * h) / 50, (v[0] * h) / 50, (v[1] * h) / 50, n[0] * h, n[1] * h);
-    let fill = mix(st.face, '#000000', 1 - light);
-    if (st.shine) {
-      const g = ctx.createLinearGradient(-50, -50, 50, 50);
-      g.addColorStop(0, mix(st.shine, '#000000', 1 - light));
-      g.addColorStop(1, fill);
-      fill = g;
-    }
-    if (glow) {
-      ctx.shadowColor = glow;
-      ctx.shadowBlur = size * 0.35;
-    }
-    roundRect(ctx, -50, -50, 100, 100, 14);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    if (st.outline) {
-      ctx.shadowColor = st.outline;
-      ctx.shadowBlur = size * 0.15;
-    }
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = st.edge;
-    ctx.stroke();
-
-    ctx.fillStyle = st.pip;
-    if (value) {
-      for (const [px, py] of PIPS[f.value]) {
-        circle(ctx, px * 27, py * 27, 10);
-        ctx.fill();
-      }
-    } else {
-      ctx.font = '800 64px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('?', 0, 5);
-    }
+    // Faces seen almost edge-on get no pips: squashed pips just look like stripes.
+    paintFace(ctx, st, value ? f.value : null, { light, pips: n[2] > 0.3, glow, px: h / 50 });
     ctx.restore();
   }
   ctx.restore();
