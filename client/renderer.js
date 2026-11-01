@@ -279,11 +279,9 @@ export class BoardRenderer {
     let hop = 0;
     let value = d.value;
     if (d.mode === 'ready') {
-      // Unrolled: "?" on every face, turning slowly
+      // Unrolled: a flat dice with "?", bobbing gently
       scale = easeOutBack(Math.min(1, d.t / 320));
       hop = (0.5 + 0.5 * Math.sin(now / 260)) * size * 0.08;
-      spin = mul(rotY(now / 900), rotX(Math.sin(now / 700) * 0.25));
-      tilt = 1;
       value = null;
     } else if (d.mode === 'spin') {
       // Tumbles end over end and settles with the rolled face towards you
@@ -323,7 +321,9 @@ export class BoardRenderer {
       ctx.restore();
     }
 
-    drawDice(ctx, cx, cy - hop, size * scale, value, d.style, {
+    // 3D while it tumbles; flat with a single number before the roll and once it lands.
+    const draw = d.mode === 'spin' ? drawDiceCube : drawDice;
+    draw(ctx, cx, cy - hop, size * scale, value, d.style, {
       spin,
       tilt,
       alpha,
@@ -663,10 +663,64 @@ const FACE_FRONT = {
 const tiltBy = (t) => mul(rotX(-0.42 * t), rotY(-0.5 * t));
 const LIGHT = [-0.35, -0.6, 0.72].map((c, _, a) => c / Math.hypot(...a));
 
-// Draws a dice centred on (cx, cy), with the `value` face towards you after `spin`.
-// With `tilt` 0 only that face shows, so the result is easy to read.
-// `value` null shows "?" on every face.
-export function drawDice(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null } = {}) {
+// Draws a flat dice centred on (cx, cy) showing one face. `value` null shows "?".
+export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null } = {}) {
+  const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
+  const s = size * 0.96; // same size as the cube's face when it lands
+  const h = s / 2;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.translate(cx, cy);
+  if (glow) {
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = s * 0.45;
+  }
+  // A darker edge underneath gives it a little thickness
+  ctx.fillStyle = st.edge;
+  roundRect(ctx, -h, -h + s * 0.07, s, s, s * 0.16);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  let face = st.face;
+  if (st.shine) {
+    face = ctx.createLinearGradient(-h, -h, h, h);
+    face.addColorStop(0, st.shine);
+    face.addColorStop(1, st.face);
+  }
+  ctx.fillStyle = face;
+  roundRect(ctx, -h, -h, s, s, s * 0.16);
+  ctx.fill();
+  if (st.outline) {
+    ctx.lineWidth = Math.max(1.5, s * 0.04);
+    ctx.strokeStyle = st.outline;
+    ctx.shadowColor = st.outline;
+    ctx.shadowBlur = s * 0.2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.fillStyle = st.pip;
+  if (st.outline) {
+    ctx.shadowColor = st.pip;
+    ctx.shadowBlur = s * 0.15;
+  }
+  if (value) {
+    for (const [px, py] of PIPS[value]) {
+      circle(ctx, px * s * 0.27, py * s * 0.27, s * 0.1);
+      ctx.fill();
+    }
+  } else {
+    ctx.font = `800 ${s * 0.55}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', 0, s * 0.03);
+  }
+  ctx.restore();
+}
+
+// Draws the dice as a tumbling 3D cube, with the `value` face towards you after `spin`.
+// As `tilt` reaches 0 only that face shows, so it hands over smoothly to the flat dice.
+function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null } = {}) {
   const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
   const R = mul(tiltBy(tilt), mul(spin, FACE_FRONT[value || 1]));
   const h = size * (0.48 - 0.08 * tilt); // half the cube's edge; a flat face is drawn a little bigger
