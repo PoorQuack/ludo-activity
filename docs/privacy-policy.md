@@ -1,6 +1,6 @@
 # Privacy Policy — Ludo (Discord Activity)
 
-_Last updated: October 31, 2026_
+_Last updated: November 2, 2026_
 
 This Privacy Policy explains what information **Ludo**, a board game that runs as an Activity inside Discord (the "Game"), collects, how it is used, and what choices you have. The Game is an independent hobby project and is not operated by Discord Inc.
 
@@ -16,13 +16,15 @@ We do **not** request or receive your email address, password, friends list, mes
 While you play, the Game also creates and stores:
 
 - **Game profile:** your coin balance, the shop items you own, and which items you have equipped. This is saved and linked to your Discord user ID.
-- **Game session data:** your seat, moves, dice rolls and emotes in the current game. This is kept only in the server's memory while the game is running, and is deleted after the session ends and the room has been empty for a few minutes.
+- **Game session data:** your seat, moves, dice rolls, emotes and **chat messages** in the room you are in. This is kept only in the server's memory while the room is open, and is deleted once the room has been empty for a couple of minutes.
+
+**Chat is visible to everyone in the same room.** Rooms can be **public**, which means other players you do not know can join them and read and send messages there. Chat is filtered for common swear words, you can mute anyone, and the room's host can remove people, but please do not share personal information in chat. If someone behaves badly, you can also report them to Discord.
 
 ## 2. How we use it
 
 We use this information only to run the Game:
 
-- to show your name to the other players in your game;
+- to show your name and chat messages to the other people in your room;
 - to know which seat and tokens are yours;
 - to save and show your coins and shop items between sessions.
 

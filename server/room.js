@@ -1,8 +1,9 @@
-// One game room per Discord Activity instance.
+// One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove } from './rules.js';
+import { cleanText } from './filter.js';
 
 const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
@@ -19,8 +20,17 @@ const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 export class Room {
-  constructor(id, { onChange, rng = () => randomInt(1, 7), delays = {}, profiles = null } = {}) {
+  constructor(
+    id,
+    { onChange, onKick, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
+  ) {
     this.id = id;
+    this.code = code; // short code anyone can join with, e.g. "K7QX"
+    this.visibility = visibility; // 'public': listed for everyone; 'private': your Discord call or the code
+    this.instanceId = instanceId; // the Discord call it was created in
+    this.chatOn = true; // the host can turn typed chat off (emotes still work)
+    this.banned = new Set(); // userIds the host kicked: they can't come back
+    this.onKick = onKick || (() => {}); // the server takes a kicked player out of the room
     this.onChange = onChange || (() => {});
     this.rng = rng;
     this.delays = {
@@ -33,7 +43,7 @@ export class Room {
     this.profiles = profiles; // ProfileStore (optional): skins, emotes and coin rewards
     this.clients = new Set(); // sockets
     this.connected = new Map(); // userId -> connection count
-    this.people = new Map(); // userId -> name, everyone in the Activity
+    this.people = new Map(); // userId -> name, everyone in the room (players and watchers)
     this.mode = '4p';
     this.board = boardFor(this.mode);
     this.seats = Array(this.board.arms).fill(null); // { userId, name, bot, connected }
@@ -100,13 +110,35 @@ export class Room {
     this.changed();
   }
 
-  // When the host leaves: another player in the game takes over. In the lobby, if nobody
-  // has joined, the game closes and anyone can host a new one.
+  // When the host leaves: another player takes over, or failing that anyone still watching.
+  // A room nobody is in has no host (and the server soon closes it).
   nextHost() {
     const seated = this.seats.find((s) => s && !s.bot && this.connected.has(s.userId));
     if (seated) return seated.userId;
-    if (this.phase === 'lobby') return null;
     return this.connected.keys().next().value ?? null;
+  }
+
+  // "Mr.Quack's room"
+  get name() {
+    const host = this.people.get(this.hostId) || this.seats.find((s) => s && !s.bot)?.name;
+    return host ? `${host}'s room` : 'Open room';
+  }
+
+  // One line in the room list.
+  summary(instanceId) {
+    const taken = MODES[this.mode].seats.filter((i) => this.seats[i]).length;
+    return {
+      id: this.id,
+      name: this.name,
+      mode: this.mode,
+      label: MODES[this.mode].label,
+      players: taken,
+      seats: MODES[this.mode].seats.length,
+      people: this.connected.size,
+      phase: this.phase,
+      visibility: this.visibility,
+      sameCall: !!instanceId && instanceId === this.instanceId,
+    };
   }
 
   get empty() {
@@ -140,6 +172,9 @@ export class Room {
       case 'chat': return this.say(user, msg.text);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
+      case 'setVisibility': return this.setVisibility(user, msg.visibility);
+      case 'setChat': return this.setChat(user, msg.on);
+      case 'kick': return this.kick(user, msg.userId);
       default: throw new Error('Unknown action');
     }
   }
@@ -321,10 +356,13 @@ export class Room {
   // The host can end a game at any time; once a game is over, anyone can start the next one.
   // Chat is open to everyone in the Activity, players and watchers alike.
   say(user, text) {
-    const clean = String(text ?? '')
-      .replace(/[\u0000-\u001f\u007f]/g, ' ')
-      .trim()
-      .slice(0, CHAT_MAX_LEN);
+    if (!this.chatOn) throw new Error('The host turned chat off in this room');
+    const clean = cleanText(
+      String(text ?? '')
+        .replace(/[\u0000-\u001f\u007f]/g, ' ')
+        .trim()
+        .slice(0, CHAT_MAX_LEN),
+    );
     if (!clean) return;
     const now = Date.now();
     if (now - (this.lastChat.get(user.id) || 0) < CHAT_COOLDOWN_MS) throw new Error('Slow down a little');
@@ -332,6 +370,43 @@ export class Room {
     this.chat.push({ id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now });
     if (this.chat.length > CHAT_KEEP) this.chat.shift();
     this.onChange(this); // nothing in the game changed, so skip automate()
+  }
+
+  // ---------- room settings (host only) ----------
+
+  setVisibility(user, visibility) {
+    this.requireHost(user);
+    if (visibility !== 'public' && visibility !== 'private') throw new Error('Unknown setting');
+    this.visibility = visibility;
+    this.changed();
+  }
+
+  setChat(user, on) {
+    this.requireHost(user);
+    this.chatOn = !!on;
+    this.changed();
+  }
+
+  // Removes someone from the room for good: their seat is freed (or, mid-game, they're
+  // surrendered) and they can't rejoin. The server closes their connection to the room.
+  kick(user, userId) {
+    this.requireHost(user);
+    if (userId === user.id) throw new Error("You can't kick yourself");
+    if (!this.people.has(userId) && this.seatOf(userId) < 0) throw new Error("They're not in this room");
+    const name = this.people.get(userId) || this.seats[this.seatOf(userId)]?.name || 'Someone';
+    this.banned.add(userId);
+    const seat = this.seatOf(userId);
+    this.addLog(`🚫 ${name} was removed by the host.`);
+    if (seat >= 0) {
+      if (this.phase === 'lobby') this.seats[seat] = null;
+      else if (this.phase === 'playing' && this.inPlay().includes(seat)) {
+        this.onKick(userId);
+        this.forfeit(seat, `🏳️ ${name} is out of the game.`);
+        return;
+      }
+    }
+    this.onKick(userId);
+    this.changed();
   }
 
   newGame(user) {
@@ -632,6 +707,11 @@ export class Room {
   snapshot() {
     const now = Date.now();
     return {
+      roomId: this.id,
+      roomName: this.name,
+      code: this.code,
+      visibility: this.visibility,
+      chatOn: this.chatOn,
       mode: this.mode,
       seatsAllowed: MODES[this.mode].seats,
       phase: this.phase,

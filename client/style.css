@@ -536,3 +536,54 @@ html, body {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 6px) !important;
   }
 }
+
+/* ---------- rooms ---------- */
+.card-title { margin: 0; font-size: 17px; font-weight: 700; }
+.room-info { margin: 0; font-size: 12.5px; color: var(--muted); }
+#room-info { margin-top: -4px; }
+
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
+.segmented .btn { background: transparent; color: var(--muted); }
+.segmented .btn.active { background: var(--accent); color: #fff; }
+
+.code-form { display: flex; gap: 6px; }
+.code-form input {
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 9px 11px;
+  outline: none;
+}
+.code-form input:focus { border-color: var(--accent); }
+.code-form input::placeholder { letter-spacing: 0; }
+
+.room-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+.room-list li { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); }
+.room-list li:first-child { border-top: none; }
+.room-list li.empty { color: var(--muted); font-size: 13px; justify-content: center; padding: 14px 4px; }
+.room-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.room-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-text span { font-size: 12px; color: var(--muted); }
+.room-list .btn { flex: none; min-width: 64px; }
+
+.room-settings { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.room-settings #visibility-btn { min-width: 92px; }
+
+.people { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.people-head { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.people-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.people-list li { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.people-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-list .name.is-muted { color: var(--muted); text-decoration: line-through; }
+.people-list .btn.kick { color: #ec6a64; }
+.chat-form input:disabled { opacity: 0.6; }
+
+/* The menu has more on it now: let it scroll on short screens */
+#menu { align-items: flex-start; overflow-y: auto; }
+.menu-card { margin: auto 0; padding-bottom: 8px; }

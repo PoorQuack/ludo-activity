@@ -25,28 +25,47 @@
           </header>
           <p id="menu-name" class="menu-name"></p>
 
-          <section class="game-card">
+          <!-- The room you're in (when you're in one) -->
+          <section id="my-room" class="game-card hidden">
             <div class="game-card-head">
               <h2 id="game-title"></h2>
               <span id="game-mode" class="tag"></span>
             </div>
+            <p id="my-room-info" class="room-info"></p>
             <ul id="game-players" class="game-players"></ul>
-            <button id="play-btn" class="btn primary big">Host a game</button>
+            <button id="play-btn" class="btn primary big">Back to room</button>
             <button id="new-game-btn" class="btn big hidden">Start new game</button>
+            <button id="leave-btn" class="btn big">Leave room</button>
+          </section>
+
+          <!-- Make a room -->
+          <section id="create-card" class="game-card">
+            <h2 class="card-title">Create a room</h2>
+            <div id="visibility-picker" class="segmented">
+              <button class="btn active" data-visibility="public">🌐 Public</button>
+              <button class="btn" data-visibility="private">🔒 Private</button>
+            </div>
+            <p id="visibility-hint" class="room-info"></p>
+            <button id="create-btn" class="btn primary big">Create room</button>
+          </section>
+
+          <!-- Find a room -->
+          <section class="game-card">
+            <div class="game-card-head">
+              <h2>Rooms</h2>
+              <span id="rooms-count" class="tag"></span>
+            </div>
+            <form id="code-form" class="code-form">
+              <input id="code-input" type="text" maxlength="4" placeholder="Have a code? e.g. K7QX" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+              <button class="btn" type="submit">Join</button>
+            </form>
+            <ul id="room-list" class="room-list"></ul>
           </section>
 
           <div class="menu-row">
             <button class="btn" data-go="shop">Shop</button>
             <button class="btn" data-go="howto">How to play</button>
           </div>
-
-          <section class="chat" data-chat>
-            <ul class="chat-log"></ul>
-            <form class="chat-form">
-              <input type="text" maxlength="100" placeholder="Say something…" autocomplete="off" />
-              <button class="btn small" type="submit">Send</button>
-            </form>
-          </section>
 
           <div class="audio" data-audio>
             <div class="volume">
@@ -66,7 +85,6 @@
               <button class="btn small toggle" data-cb></button>
             </div>
           </div>
-          <p id="menu-status" class="hint"></p>
         </div>
       </section>
 
@@ -89,6 +107,12 @@
           <span></span>
         </header>
         <div class="howto-body">
+          <h3>🚪 Rooms</h3>
+          <ul>
+            <li><b>Create room</b> on the menu: <b>public</b> rooms show up for everyone, <b>private</b> ones only for people in your Discord call.</li>
+            <li>Anyone else can join with the room's <b>4-letter code</b> (shown under the board).</li>
+            <li>Under <b>☰</b> in a room: <b>mute</b> anyone (just for you). The host can also <b>kick</b> people and turn typed chat off.</li>
+          </ul>
           <h3>🎲 Rules</h3>
           <ul>
             <li>Tap the dice in the middle of the board to roll. Roll a <b>6</b> to bring a token out of base.</li>
@@ -131,11 +155,34 @@
             <span class="coins small"><span class="coin"></span><b>0</b></span>
             <button id="drawer-btn" class="btn small icon-btn" aria-label="Menu" aria-expanded="false">☰</button>
           </header>
+          <p id="room-info" class="room-info"></p>
 
           <!-- ☰: everything you don't need every turn -->
           <div id="drawer" class="drawer hidden">
-            <button class="btn" data-go="menu">← Main menu</button>
+            <div class="menu-row">
+              <button class="btn" data-go="menu">← Main menu</button>
+              <button id="leave-room-btn" class="btn">🚪 Leave room</button>
+            </div>
             <button id="surrender-btn" class="btn surrender">🏳️ Surrender</button>
+
+            <!-- Host only -->
+            <div id="room-settings" class="room-settings">
+              <div class="setting">
+                <span>Room <small id="visibility-note"></small></span>
+                <button id="visibility-btn" class="btn small"></button>
+              </div>
+              <div class="setting">
+                <span>Typed chat</span>
+                <button id="chat-toggle" class="btn small toggle"></button>
+              </div>
+            </div>
+
+            <!-- Everyone in the room: mute anyone, and the host can kick -->
+            <div class="people">
+              <div class="people-head">People in this room</div>
+              <ul id="people-list" class="people-list"></ul>
+            </div>
+
             <div class="audio" data-audio>
               <div class="volume">
                 <span>Music</span>

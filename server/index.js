@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { Room } from './room.js';
+import { RoomDirectory } from './rooms.js';
 import { ProfileStore } from './store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,7 +17,8 @@ const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const ALLOW_GUESTS = (process.env.ALLOW_GUESTS ?? 'true') === 'true';
 // For testing skins: every shop item costs 0 coins.
 const FREE_SHOP = process.env.FREE_SHOP === 'true';
-const ROOM_IDLE_MS = 5 * 60_000;
+const ROOM_IDLE_MS = 2 * 60_000; // an empty room waits this long (for a refresh to rejoin) before closing
+const LIST_EVERY_MS = 1000; // the room list in everyone's menu refreshes at most this often
 
 const app = express();
 app.use(express.json());
@@ -75,32 +76,96 @@ app.get('*', (_req, res) => {
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-/** @type {Map<string, Room>} */
-const rooms = new Map();
-const idleTimers = new Map();
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const userSockets = new Map();
 const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, freeShop: FREE_SHOP });
+const directory = new RoomDirectory({
+  idleMs: ROOM_IDLE_MS,
+  roomOptions: {
+    profiles: store,
+    onChange: (room) => {
+      broadcast(room);
+      listsChanged();
+    },
+  },
+  onRemove: listsChanged,
+});
 
 function sendProfile(userId) {
   const msg = JSON.stringify({ type: 'profile', profile: store.peek(userId) });
   for (const ws of userSockets.get(userId) || []) if (ws.readyState === 1) ws.send(msg);
 }
 
-function getRoom(id) {
-  let room = rooms.get(id);
-  if (!room) {
-    room = new Room(id, { onChange: broadcast, profiles: store });
-    rooms.set(id, room);
-  }
-  clearTimeout(idleTimers.get(id));
-  idleTimers.delete(id);
-  return room;
-}
-
 function broadcast(room) {
   const msg = JSON.stringify({ type: 'state', state: room.snapshot() });
   for (const ws of room.clients) if (ws.readyState === 1) ws.send(msg);
+}
+
+// Everyone's room list (in the menu) is sent again at most once a second after any change.
+let listTimer = null;
+function listsChanged() {
+  if (listTimer) return;
+  listTimer = setTimeout(() => {
+    listTimer = null;
+    for (const ws of wss.clients) if (ws.ctx?.user) sendList(ws);
+  }, LIST_EVERY_MS);
+}
+
+function sendList(ws) {
+  if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'rooms', rooms: directory.list(ws.ctx.instanceId) }));
+}
+
+// ---------- moving between rooms ----------
+
+function enterRoom(ws, room) {
+  ws.ctx.room = room;
+  room.clients.add(ws);
+  broadcast(room); // the newcomer gets the room's state (everyone else already did)
+  listsChanged();
+}
+
+function leaveRoom(ws, message = null) {
+  const { room, user } = ws.ctx;
+  if (!room) return;
+  ws.ctx.room = null;
+  room.clients.delete(ws);
+  room.disconnect(user);
+  directory.left(room);
+  if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'left', message }));
+  listsChanged();
+}
+
+// The host kicked someone: every connection they have to that room goes back to the menu.
+function kickFromRoom(room, userId) {
+  for (const ws of [...room.clients]) {
+    if (ws.ctx.user.id === userId) leaveRoom(ws, `You were removed from ${room.name}`);
+  }
+}
+
+function handleLobby(ws, msg) {
+  const { user, instanceId } = ws.ctx;
+  if (msg.op === 'create') {
+    leaveRoom(ws);
+    const room = directory.create(user, {
+      visibility: msg.visibility,
+      mode: msg.mode,
+      instanceId,
+      extra: { onKick: (userId) => kickFromRoom(room, userId) },
+    });
+    return enterRoom(ws, room);
+  }
+  if (msg.op === 'join') {
+    const withCode = !!msg.code;
+    const room = withCode ? directory.findCode(msg.code) : directory.get(String(msg.id || ''));
+    if (!room) throw new Error(withCode ? 'No room with that code' : 'That room has closed');
+    if (room === ws.ctx.room) return broadcast(room);
+    directory.check(room, user, { instanceId, withCode });
+    leaveRoom(ws);
+    directory.join(room, user, { instanceId, withCode });
+    return enterRoom(ws, room);
+  }
+  if (msg.op === 'leave') return leaveRoom(ws);
+  if (msg.op === 'list') return sendList(ws);
 }
 
 async function resolveUser(hello) {
@@ -119,8 +184,8 @@ async function resolveUser(hello) {
 }
 
 wss.on('connection', (ws) => {
-  let user = null;
-  let room = null;
+  // user: who this is; instanceId: their Discord call ('local' in a browser); room: where they are
+  ws.ctx = { user: null, instanceId: null, room: null };
   ws.isAlive = true;
   ws.on('pong', () => (ws.isAlive = true));
 
@@ -134,28 +199,44 @@ wss.on('connection', (ws) => {
       return;
     }
     try {
+      const { ctx } = ws;
       if (msg.type === 'hello') {
-        if (user) return;
-        user = await resolveUser(msg);
+        if (ctx.user) return;
+        const user = await resolveUser(msg);
         if (ws.readyState !== 1) return; // closed while we were checking with Discord
-        const roomId = String(msg.instanceId || 'local').slice(0, 100);
-        room = getRoom(roomId);
-        room.clients.add(ws);
+        ctx.user = user;
+        ctx.instanceId = String(msg.instanceId || 'local').slice(0, 100);
         if (!userSockets.has(user.id)) userSockets.set(user.id, new Set());
         userSockets.get(user.id).add(ws);
         store.get(user.id);
         send({ type: 'welcome', you: user });
         sendProfile(user.id);
-        room.connect(user);
+        sendList(ws);
+        // Back after a refresh or a dropped connection: return to the same room if it's still open
+        const room = msg.rejoin && directory.findCode(msg.rejoin);
+        if (room) {
+          try {
+            directory.join(room, user, { instanceId: ctx.instanceId, withCode: true });
+            enterRoom(ws, room);
+          } catch (err) {
+            send({ type: 'left', message: err.message });
+          }
+        } else if (msg.rejoin) {
+          send({ type: 'left', message: null }); // it closed while they were away
+        }
         return;
       }
-      if (!user || !room) return send({ type: 'error', message: 'Not connected yet' });
-      if (msg.type === 'action') room.handle(user, msg);
+      if (!ctx.user) return send({ type: 'error', message: 'Not connected yet' });
+      if (msg.type === 'lobby') return handleLobby(ws, msg);
+      if (msg.type === 'action') {
+        if (!ctx.room) throw new Error('Join a room first');
+        return ctx.room.handle(ctx.user, msg);
+      }
       if (msg.type === 'shop') {
-        if (msg.op === 'buy') store.buy(user.id, msg.item);
-        else if (msg.op === 'equip') store.equip(user.id, msg.item);
+        if (msg.op === 'buy') store.buy(ctx.user.id, msg.item);
+        else if (msg.op === 'equip') store.equip(ctx.user.id, msg.item);
         else return;
-        broadcast(room); // skins and themes are visible to everyone
+        if (ctx.room) broadcast(ctx.room); // skins and themes are visible to everyone
       }
     } catch (err) {
       send({ type: 'error', message: err.message || 'Something went wrong' });
@@ -163,22 +244,17 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    if (!room || !user) return;
-    room.clients.delete(ws);
+    const { user, room } = ws.ctx;
+    if (!user) return;
     const sockets = userSockets.get(user.id);
     sockets?.delete(ws);
     if (sockets?.size === 0) userSockets.delete(user.id);
-    room.disconnect(user);
-    if (room.empty) {
-      const id = room.id;
-      idleTimers.set(
-        id,
-        setTimeout(() => {
-          rooms.get(id)?.destroy();
-          rooms.delete(id);
-          idleTimers.delete(id);
-        }, ROOM_IDLE_MS),
-      );
+    if (room) {
+      ws.ctx.room = null;
+      room.clients.delete(ws);
+      room.disconnect(user);
+      directory.left(room);
+      listsChanged();
     }
   });
 });

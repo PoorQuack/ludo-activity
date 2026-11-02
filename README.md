@@ -3,7 +3,9 @@
 Multiplayer Ludo that runs inside Discord as an Activity.
 
 - **Modes:** 2 players, 4 players, or 6 players on a hexagon board. Bots can fill empty seats.
-- **Main menu** with Play, Shop and How to play.
+- **Rooms:** create a **public** room anyone can find in the room list, or a **private** one that only people in your Discord call see (anyone else joins with its 4-letter code). Rooms close once everyone has left.
+- **Room chat** with a swear filter. Anyone can **mute** someone just for themselves; the host can **kick** people and turn typed chat off.
+- **Main menu** with the room list, Shop and How to play.
 - **Colour-blind mode** (per player, in the menu and the in-game ☰): colours that stay distinct for the common kinds of colour blindness, plus a shape for every player (▲ ■ ● ◆ ✚ ✖) on pins, bases, home columns, seat cards, chat and turn text.
 - **Coins and shop:** players earn coins by finishing games and spend them on token skins, dice skins, board themes and emotes. Coins are saved on the server in `data/profiles.json`.
 
@@ -69,7 +71,7 @@ The command prints a URL like `https://random-words.trycloudflare.com`.
 2. Find your app and launch it.
 3. Ask friends in the same channel to join the Activity.
 
-Each Activity session gets its own game. The first person in is the **host**: they can add bots and start the game.
+Tap **Create room** (public or private) and you are its **host**: you can add bots, pick the mode and start the game. Friends in your Discord call see your room in their list; anyone else joins with the room code shown under the board (or finds it in the list if it is public).
 
 > If friends can't see or launch the app while it's still in development, add them under **App Testers** in the Developer Portal.
 
@@ -188,8 +190,8 @@ cd ludo-activity && git pull && npm ci && npm run build && pm2 restart ludo
 
 ```
 client/      main.js = screens + animations, renderer.js = canvas drawing, shop-ui.js, skins.js
-server/      index.js = HTTP + WebSocket server, room.js = game flow, rules.js = Ludo rules + bot,
-             store.js = saved coins and shop items
+server/      index.js = HTTP + WebSocket server, rooms.js = room list + codes, room.js = one room's game,
+             rules.js = Ludo rules + bot, filter.js = chat swear filter, store.js = saved coins and items
 shared/      board.js = 4- and 6-arm board geometry, shop.js = shop items, prices and rewards
 test/        rule tests: npm test
 ```

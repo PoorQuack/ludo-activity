@@ -24,12 +24,29 @@ const els = {
   loadingText: $('loading-text'),
   screens: { menu: $('menu'), shop: $('shop'), howto: $('howto'), game: $('game') },
   menuName: $('menu-name'),
-  menuStatus: $('menu-status'),
+  myRoom: $('my-room'),
+  myRoomInfo: $('my-room-info'),
   gameTitle: $('game-title'),
   gameMode: $('game-mode'),
   gamePlayers: $('game-players'),
   playBtn: $('play-btn'),
   newGameBtn: $('new-game-btn'),
+  leaveBtn: $('leave-btn'),
+  createCard: $('create-card'),
+  visibilityPicker: $('visibility-picker'),
+  visibilityHint: $('visibility-hint'),
+  createBtn: $('create-btn'),
+  roomsCount: $('rooms-count'),
+  codeForm: $('code-form'),
+  codeInput: $('code-input'),
+  roomList: $('room-list'),
+  roomInfo: $('room-info'),
+  leaveRoomBtn: $('leave-room-btn'),
+  roomSettings: $('room-settings'),
+  visibilityNote: $('visibility-note'),
+  visibilityBtn: $('visibility-btn'),
+  chatToggle: $('chat-toggle'),
+  peopleList: $('people-list'),
   surrenderBtn: $('surrender-btn'),
   shopTabs: $('shop-tabs'),
   shopGrid: $('shop-grid'),
@@ -65,7 +82,9 @@ let ws = null;
 let hello = null;
 let me = null;
 let profile = null;
-let state = null;
+let state = null; // the room you're in (null when you're not in one)
+let roomList = []; // rooms you could join, from the server
+let newVisibility = 'public'; // the Public/Private choice for "Create room"
 let clockOffset = 0;
 let reconnectDelay = 500;
 let screen = 'loading';
@@ -151,13 +170,21 @@ function connect() {
   ws = new WebSocket(`${proto}://${location.host}${BASE}/ws`);
   ws.onopen = () => {
     reconnectDelay = 500;
-    ws.send(JSON.stringify(hello));
+    // After a refresh or a dropped connection, go back to the room we were in
+    ws.send(JSON.stringify({ ...hello, rejoin: savedRoom() }));
   };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.type === 'welcome') me = msg.you;
-    else if (msg.type === 'profile') onProfile(msg.profile);
-    else if (msg.type === 'state') onState(msg.state);
+    if (msg.type === 'welcome') {
+      me = msg.you;
+      els.loading.classList.add('hidden');
+      if (screen === 'loading') showScreen('menu');
+    } else if (msg.type === 'profile') onProfile(msg.profile);
+    else if (msg.type === 'rooms') {
+      roomList = msg.rooms;
+      renderUI();
+    } else if (msg.type === 'state') onState(msg.state);
+    else if (msg.type === 'left') onLeft(msg.message);
     else if (msg.type === 'error') toast(msg.message);
   };
   ws.onclose = () => {
@@ -169,6 +196,29 @@ function connect() {
 
 function send(action, extra = {}) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'action', action, ...extra }));
+}
+
+// Creating, joining and leaving rooms.
+function sendLobby(op, extra = {}) {
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'lobby', op, ...extra }));
+}
+
+// The code of the room we're in, kept for this tab so a refresh can rejoin it.
+function savedRoom() {
+  try {
+    return sessionStorage.getItem('ludo-room') || null;
+  } catch {
+    return null;
+  }
+}
+
+function saveRoom(code) {
+  try {
+    if (code) sessionStorage.setItem('ludo-room', code);
+    else sessionStorage.removeItem('ludo-room');
+  } catch {
+    // not saved: a refresh just goes back to the menu
+  }
 }
 
 function sendShop(op, item) {
@@ -188,12 +238,35 @@ function onProfile(next) {
   renderUI();
 }
 
+// We left the room (or were removed, or it closed while we were away): back to the menu.
+function onLeft(message) {
+  saveRoom(null);
+  state = view = null;
+  events = [];
+  current = null;
+  dice = { mode: 'hidden' };
+  floaters = [];
+  closeChooser();
+  if (screen === 'game') showScreen('menu');
+  else renderUI();
+  if (message) toast(message);
+}
+
 function onState(next) {
-  const prev = state;
+  const prev = state?.roomId === next.roomId ? state : null; // a different room starts from scratch
   state = next;
   clockOffset = next.serverNow - Date.now();
   els.loading.classList.add('hidden');
-  if (screen === 'loading') showScreen('menu');
+  saveRoom(next.code);
+  if (!prev) {
+    // Just created or joined a room: go to it, with a clean chat and no old emotes
+    shownChatId = 0;
+    chatVersion++;
+    lastEmoteId = Math.max(0, ...next.emotes.map((e) => e.id));
+    floaters = [];
+    closeChooser();
+    showScreen('game');
+  }
 
   // New board or new game: start fresh. (playing → finished keeps going so the winning move animates.)
   const reset = !prev || prev.mode !== next.mode || (prev.phase !== next.phase && next.phase !== 'finished');
@@ -231,6 +304,7 @@ function onState(next) {
   for (const e of next.emotes) {
     if (e.id <= lastEmoteId) continue;
     lastEmoteId = e.id;
+    if (muted.has(next.seats[e.seat]?.userId)) continue; // you muted them
     floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
   }
 
@@ -244,12 +318,45 @@ function onState(next) {
 
 // ---------------- chat ----------------
 
-let shownChatId = 0;
+let shownChatId = 0; // newest message shown (for the chat sound)
+let chatVersion = 0; // bumped when the chat must redraw anyway: a new room, a mute, colour-blind mode
+let shownChatKey = '';
+
+// People you muted: their chat and emotes are hidden, only for you. Kept on this device.
+const muted = new Set(loadMuted());
+function loadMuted() {
+  try {
+    return JSON.parse(localStorage.getItem('ludo-muted') || '[]');
+  } catch {
+    return [];
+  }
+}
+function toggleMute(userId) {
+  if (muted.has(userId)) muted.delete(userId);
+  else muted.add(userId);
+  try {
+    localStorage.setItem('ludo-muted', JSON.stringify([...muted]));
+  } catch {
+    // not saved: the mute lasts until the page closes
+  }
+  chatVersion++; // redraw the chat without (or with) them
+  renderChat();
+  renderUI();
+}
 
 function renderChat() {
-  const msgs = state.chat || [];
+  if (!state) return;
+  // Typed chat can be turned off by the host; emotes still work
+  for (const box of els.chats) {
+    const input = box.querySelector('input');
+    input.disabled = !state.chatOn;
+    input.placeholder = state.chatOn ? 'Say something…' : 'The host turned chat off';
+  }
+  const msgs = (state.chat || []).filter((m) => !muted.has(m.userId));
   const latest = msgs.at(-1)?.id || 0;
-  if (latest === shownChatId && els.chats[0].querySelector('li')) return;
+  const key = `${chatVersion}|${latest}`;
+  if (key === shownChatKey) return;
+  shownChatKey = key;
   if (shownChatId && latest > shownChatId && msgs.at(-1).userId !== me?.id) sfx('chat');
   shownChatId = latest;
 
@@ -354,7 +461,7 @@ for (const b of cbButtons) {
     setColorBlind(!isColorBlind());
     renderColorBlindToggles();
     // Everything with player colours redraws: the board (next frame), panel, chat and shop
-    shownChatId = 0;
+    chatVersion++;
     if (state) {
       renderUI();
       renderChat();
@@ -384,7 +491,7 @@ function sym(name) {
 
 // Board themes are just looks, so everyone sees the one they equipped (watchers without one: the host's).
 function myTheme() {
-  return profile?.equipped?.board || state.theme;
+  return profile?.equipped?.board || state?.theme;
 }
 
 function isHost() {
@@ -424,69 +531,142 @@ function drawShop() {
 }
 
 function renderUI() {
-  if (!state) return;
   for (const el of els.coins) el.querySelector('b').textContent = profile ? profile.coins : '…';
-  // Draw the menu and panel from the state the board has reached, not the newest one.
+  renderMenu();
+  if (!state) return;
+  // Draw the panel from the state the board has reached, not the newest one.
   const live = state;
   state = view || live;
   try {
-    renderMenu();
+    renderMyRoom();
     renderPanel();
   } finally {
     state = live;
   }
 }
 
-// What the menu's main button does right now.
-function menuAction() {
-  const seat = mySeat();
-  if (state.phase === 'playing') return seat >= 0 ? 'Back to game' : 'Watch game';
-  if (state.phase === 'finished') return 'See results';
-  if (!state.hostId) return 'Host a game';
-  if (seat >= 0) return 'Open lobby';
-  const full = state.seatsAllowed.every((i) => state.seats[i]);
-  return full ? 'Watch lobby' : 'Join game';
-}
+// ---------------- menu: create a room, find a room ----------------
 
 function renderMenu() {
   els.menuName.textContent = me ? `Signed in as ${me.name}` : '';
-  const board = boardFor(state.mode);
-  const hostName = state.people.find((p) => p.id === state.hostId)?.name;
+  els.myRoom.classList.toggle('hidden', !state);
+  els.createCard.classList.toggle('hidden', !!state); // one room at a time: leave yours to make another
 
-  els.gameTitle.textContent =
-    state.phase === 'playing'
-      ? 'Game in progress'
-      : state.phase === 'finished'
-        ? 'Game over'
-        : hostName
-          ? `${hostName}'s game`
-          : 'No game yet';
+  for (const b of els.visibilityPicker.querySelectorAll('[data-visibility]')) {
+    b.classList.toggle('active', b.dataset.visibility === newVisibility);
+  }
+  els.visibilityHint.textContent =
+    newVisibility === 'public'
+      ? 'Anyone can find it in the room list and join.'
+      : 'Only people in your Discord call see it. Others join with its code.';
+
+  // The room list: your call's rooms first, then public rooms from anywhere
+  const others = roomList.filter((r) => r.id !== state?.roomId);
+  els.roomsCount.textContent = `${others.length} open`;
+  els.roomList.innerHTML = '';
+  if (!others.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = state ? 'No other rooms right now.' : 'No rooms right now. Create one and invite people!';
+    els.roomList.appendChild(li);
+  }
+  for (const r of others) {
+    const li = document.createElement('li');
+    const info = document.createElement('div');
+    info.className = 'room-text';
+    const name = document.createElement('b');
+    name.textContent = `${r.visibility === 'private' ? '🔒' : '🌐'} ${r.name}`;
+    const sub = document.createElement('span');
+    const status = r.phase === 'lobby' ? (r.players < r.seats ? 'Waiting for players' : 'Full') : r.phase === 'playing' ? 'Playing' : 'Game over';
+    sub.textContent = `${r.label} · ${r.players}/${r.seats} seats · ${status}${r.sameCall ? ' · In your call' : ''}`;
+    info.append(name, sub);
+    const canSit = r.phase === 'lobby' && r.players < r.seats;
+    const join = button(canSit ? 'Join' : 'Watch', () => sendLobby('join', { id: r.id }));
+    if (canSit) join.classList.add('primary');
+    li.append(info, join);
+    els.roomList.appendChild(li);
+  }
+}
+
+// The card for the room you're in, at the top of the menu.
+function renderMyRoom() {
+  const board = boardFor(state.mode);
+  els.gameTitle.textContent = state.roomName;
   els.gameMode.textContent = MODES[state.mode].label;
-  els.gameMode.classList.toggle('hidden', state.phase === 'lobby' && !state.hostId);
+  els.myRoomInfo.textContent = roomInfoText();
 
   // Everyone who has joined, with their colour
   els.gamePlayers.innerHTML = '';
   const joined = state.seatsAllowed.filter((i) => state.seats[i]);
-  if (state.phase === 'lobby' && !state.hostId) {
-    els.gamePlayers.appendChild(listItem(null, 'Host a game and your friends can join from here.', '', true));
-  } else {
-    for (const i of joined) {
-      const s = state.seats[i];
-      const tag = s.userId === state.hostId ? 'Host' : s.bot ? 'Bot' : s.surrendered ? 'Out' : me && s.userId === me.id ? 'You' : '';
-      els.gamePlayers.appendChild(listItem(playerColor(myTheme(), board.colors[i]), sym(board.colors[i]) + s.name, tag));
-    }
-    const open = state.seatsAllowed.length - joined.length;
-    if (state.phase === 'lobby' && open > 0) {
-      els.gamePlayers.appendChild(listItem(null, `${open} open seat${open === 1 ? '' : 's'}`, '', true));
-    }
+  for (const i of joined) {
+    const s = state.seats[i];
+    const tag = s.userId === state.hostId ? 'Host' : s.bot ? 'Bot' : s.surrendered ? 'Out' : me && s.userId === me.id ? 'You' : '';
+    els.gamePlayers.appendChild(listItem(playerColor(myTheme(), board.colors[i]), sym(board.colors[i]) + s.name, tag));
+  }
+  const open = state.seatsAllowed.length - joined.length;
+  if (state.phase === 'lobby' && open > 0) {
+    els.gamePlayers.appendChild(listItem(null, `${open} open seat${open === 1 ? '' : 's'}`, '', true));
   }
 
-  els.playBtn.textContent = menuAction();
+  els.playBtn.textContent = state.phase === 'playing' ? (mySeat() >= 0 ? 'Back to game' : 'Watch game') : 'Back to room';
   // A finished game can be reset by anyone; a running one only by the host.
   els.newGameBtn.classList.toggle('hidden', !(state.phase === 'finished' || (state.phase === 'playing' && isHost())));
+}
 
-  const names = state.people.map((p) => p.name);
-  els.menuStatus.textContent = `In this activity: ${names.join(', ')}`;
+// "🔒 Private · code K7QX" — the code is what friends type to join.
+function roomInfoText() {
+  const kind = state.visibility === 'private' ? '🔒 Private' : '🌐 Public';
+  return `${kind} · code ${state.code}${state.chatOn ? '' : ' · chat off'}`;
+}
+
+// ☰ → room settings: only the host can change them.
+function renderRoomSettings() {
+  els.roomSettings.classList.toggle('hidden', !isHost());
+  const pub = state.visibility === 'public';
+  els.visibilityBtn.textContent = pub ? '🌐 Public' : '🔒 Private';
+  els.visibilityNote.textContent = pub ? '(listed for everyone)' : '(your call or the code)';
+  els.chatToggle.textContent = state.chatOn ? 'On' : 'Off';
+  els.chatToggle.classList.toggle('off', !state.chatOn);
+}
+
+// ☰ → everyone in the room. Mute is just for you; Kick (host only) removes them for good.
+let kickArmed = null; // a Kick needs a second tap within 3 s
+let kickTimer = null;
+function renderPeople() {
+  els.peopleList.innerHTML = '';
+  const seated = new Map(state.seats.filter((s) => s && !s.bot).map((s) => [s.userId, s]));
+  for (const p of state.people) {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.className = 'name';
+    const roles = [p.id === state.hostId && 'host', p.id === me?.id && 'you', !seated.has(p.id) && 'watching'].filter(Boolean);
+    name.textContent = p.name + (roles.length ? ` (${roles.join(', ')})` : '');
+    if (muted.has(p.id)) name.classList.add('is-muted');
+    li.appendChild(name);
+    if (p.id !== me?.id) {
+      li.appendChild(button(muted.has(p.id) ? 'Unmute' : 'Mute', () => toggleMute(p.id)));
+      if (isHost()) {
+        const armed = kickArmed === p.id;
+        const kick = button(armed ? 'Sure?' : 'Kick', () => {
+          if (kickArmed === p.id) {
+            kickArmed = null;
+            send('kick', { userId: p.id });
+          } else {
+            kickArmed = p.id;
+            clearTimeout(kickTimer);
+            kickTimer = setTimeout(() => {
+              kickArmed = null;
+              renderPeople();
+            }, 3000);
+          }
+          renderPeople();
+        });
+        kick.classList.add(armed ? 'danger' : 'kick');
+        li.appendChild(kick);
+      }
+    }
+    els.peopleList.appendChild(li);
+  }
 }
 
 function listItem(color, text, tag, muted = false) {
@@ -517,6 +697,9 @@ function renderPanel() {
   const board = boardFor(state.mode);
   els.phaseTag.textContent =
     phase === 'lobby' ? `Lobby · ${MODES[state.mode].label}` : phase === 'playing' ? 'In game' : 'Game over';
+  els.roomInfo.textContent = roomInfoText();
+  renderRoomSettings();
+  renderPeople();
 
   // Mode picker (host only, lobby only)
   els.modePicker.classList.toggle('hidden', phase !== 'lobby');
@@ -975,12 +1158,35 @@ function diceView(now, board) {
 // ---------------- input ----------------
 
 for (const b of document.querySelectorAll('[data-go]')) b.addEventListener('click', () => showScreen(b.dataset.go));
-els.playBtn.addEventListener('click', () => {
-  const action = menuAction();
-  if (action === 'Host a game') send('host');
-  else if (action === 'Join game') send('join');
-  showScreen('game');
+els.playBtn.addEventListener('click', () => showScreen('game'));
+
+// Rooms: create one, join with a code, leave
+for (const b of els.visibilityPicker.querySelectorAll('[data-visibility]')) {
+  b.addEventListener('click', () => {
+    newVisibility = b.dataset.visibility;
+    renderMenu();
+  });
+}
+els.createBtn.addEventListener('click', () => sendLobby('create', { visibility: newVisibility }));
+els.codeInput.addEventListener('input', () => {
+  els.codeInput.value = els.codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 });
+els.codeForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const code = els.codeInput.value.trim();
+  if (code.length !== 4) return toast('Room codes are 4 letters or numbers');
+  sendLobby('join', { code });
+  els.codeInput.value = '';
+});
+els.leaveBtn.addEventListener('click', () => sendLobby('leave'));
+els.leaveRoomBtn.addEventListener('click', () => {
+  setDrawer(false);
+  sendLobby('leave');
+});
+els.visibilityBtn.addEventListener('click', () =>
+  send('setVisibility', { visibility: state.visibility === 'public' ? 'private' : 'public' }),
+);
+els.chatToggle.addEventListener('click', () => send('setChat', { on: !state.chatOn }));
 els.startBtn.addEventListener('click', () => send('start'));
 els.fillBtn.addEventListener('click', () => send('fillBots'));
 els.againBtn.addEventListener('click', () => send('newGame'));
