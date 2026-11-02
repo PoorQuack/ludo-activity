@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Ludo</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
@@ -43,19 +43,22 @@
           <section class="chat" data-chat>
             <ul class="chat-log"></ul>
             <form class="chat-form">
-              <input type="text" maxlength="200" placeholder="Say something…" autocomplete="off" />
+              <input type="text" maxlength="100" placeholder="Say something…" autocomplete="off" />
               <button class="btn small" type="submit">Send</button>
             </form>
           </section>
 
           <div class="audio" data-audio>
-            <label class="volume">
-              <span>Volume</span>
-              <input type="range" min="0" max="100" step="1" data-volume aria-label="Volume" />
-              <b data-volume-value></b>
-            </label>
-            <div class="audio-toggles">
+            <div class="volume">
+              <span>Music</span>
+              <input type="range" min="0" max="100" step="1" data-volume="music" aria-label="Music volume" />
+              <b data-volume-value="music"></b>
               <button class="btn small toggle" data-toggle="music"></button>
+            </div>
+            <div class="volume">
+              <span>Sounds</span>
+              <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
+              <b data-volume-value="sound"></b>
               <button class="btn small toggle" data-toggle="sound"></button>
             </div>
           </div>
@@ -85,7 +88,7 @@
           <h3>🎲 Rules</h3>
           <ul>
             <li>Tap the dice in the middle of the board to roll. Roll a <b>6</b> to bring a token out of base.</li>
-            <li>Roll a <b>6</b> and you keep it and <b>roll again</b>. Then you play every roll: tap a small dice to choose which one to use.</li>
+            <li>Roll a <b>6</b> and you keep it and <b>roll again</b>, but <b>three 6s in a row</b> skips your turn. Then you play every roll: tap a pin and pick which dice to move it with.</li>
             <li>Capturing a token or getting a token home gives you <b>another turn</b>, on top of any 6s.</li>
             <li>Land on an opponent to send their token back to base. If two tokens share a square, only one goes back. The ★ squares and coloured start squares are <b>safe</b>.</li>
             <li>You need the <b>exact roll</b> to reach home. Get all 4 tokens home to win.</li>
@@ -113,15 +116,36 @@
         <section class="board-wrap">
           <canvas id="board"></canvas>
           <div id="turn-pop" class="turn-pop hidden">Your turn!</div>
+          <div id="roll-chooser" class="roll-chooser hidden"></div>
           <div id="banner" class="banner hidden"></div>
         </section>
 
         <aside class="panel">
           <header class="panel-head">
-            <button class="btn small" data-go="menu">← Menu</button>
             <span id="phase-tag" class="tag"></span>
             <span class="coins small"><span class="coin"></span><b>0</b></span>
+            <button id="drawer-btn" class="btn small icon-btn" aria-label="Menu" aria-expanded="false">☰</button>
           </header>
+
+          <!-- ☰: everything you don't need every turn -->
+          <div id="drawer" class="drawer hidden">
+            <button class="btn" data-go="menu">← Main menu</button>
+            <button id="surrender-btn" class="btn surrender">🏳️ Surrender</button>
+            <div class="audio" data-audio>
+              <div class="volume">
+                <span>Music</span>
+                <input type="range" min="0" max="100" step="1" data-volume="music" aria-label="Music volume" />
+                <b data-volume-value="music"></b>
+                <button class="btn small toggle" data-toggle="music"></button>
+              </div>
+              <div class="volume">
+                <span>Sounds</span>
+                <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
+                <b data-volume-value="sound"></b>
+                <button class="btn small toggle" data-toggle="sound"></button>
+              </div>
+            </div>
+          </div>
 
           <div id="mode-picker" class="mode-picker"></div>
           <div id="seats" class="seats"></div>
@@ -135,7 +159,6 @@
           <div id="play-controls" class="controls hidden">
             <div id="turn-text" class="turn-text"></div>
             <div id="timer" class="timer"><div id="timer-bar"></div></div>
-            <button id="surrender-btn" class="btn small surrender">🏳️ Surrender</button>
           </div>
 
           <div id="finish-controls" class="controls hidden">
@@ -143,27 +166,21 @@
           </div>
 
           <div id="emote-bar" class="emote-bar"></div>
+
+          <!-- On phones only one of the log and the chat shows at a time -->
+          <div class="feed-tabs">
+            <button class="btn small active" data-feed="chat">Chat</button>
+            <button class="btn small" data-feed="log">Log</button>
+          </div>
           <ul id="log" class="log"></ul>
 
           <section class="chat" data-chat>
             <ul class="chat-log"></ul>
             <form class="chat-form">
-              <input type="text" maxlength="200" placeholder="Say something…" autocomplete="off" />
+              <input type="text" maxlength="100" placeholder="Say something…" autocomplete="off" />
               <button class="btn small" type="submit">Send</button>
             </form>
           </section>
-
-          <div class="audio" data-audio>
-            <label class="volume">
-              <span>Volume</span>
-              <input type="range" min="0" max="100" step="1" data-volume aria-label="Volume" />
-              <b data-volume-value></b>
-            </label>
-            <div class="audio-toggles">
-              <button class="btn small toggle" data-toggle="music"></button>
-              <button class="btn small toggle" data-toggle="sound"></button>
-            </div>
-          </div>
         </aside>
       </main>
 

@@ -9,10 +9,11 @@ const NO_MOVE_DELAY_MS = 1400;
 const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot or forced move
 const TURN_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
+const MAX_SIXES = 3; // this many 6s in a row loses the turn
 const EMOTE_COOLDOWN_MS = 1200;
 const CHAT_COOLDOWN_MS = 700;
 const CHAT_KEEP = 40; // messages kept (and sent) per room
-const CHAT_MAX_LEN = 200;
+const CHAT_MAX_LEN = 100;
 const EMOTE_TTL_MS = 3000;
 const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -46,6 +47,7 @@ export class Room {
     this.options = []; // for each roll: the tokens it can move
     this.movable = []; // every token at least one roll can move
     this.extraTurns = 0; // turns earned by captures and tokens reaching home
+    this.skipped = false; // three 6s in a row: the turn is lost
     this.lastRoll = null;
     this.winners = [];
     this.forfeited = []; // seats that surrendered, in order
@@ -364,6 +366,18 @@ export class Room {
     this.seq++;
     this.lastRoll = { seq: this.seq, seat, value: dice };
     this.lastMove = null;
+    // Three 6s in a row: the whole turn is lost, kept 6s and earned extra turns included.
+    if (dice === 6 && this.rolls.length >= MAX_SIXES) {
+      this.addLog(`${this.seats[seat].name} rolled three 6s — turn skipped!`);
+      this.rolled = true;
+      this.skipped = true;
+      this.rolls = [];
+      this.options = [];
+      this.movable = [];
+      this.changed();
+      this.schedule(this.delays.noMove, () => this.nextTurn());
+      return;
+    }
     if (dice === 6) {
       this.addLog(`${this.seats[seat].name} rolled a 6 — rolls again`);
       this.turnDeadline = Date.now() + this.delays.timeout;
@@ -520,6 +534,7 @@ export class Room {
     this.options = [];
     this.movable = [];
     this.extraTurns = 0;
+    this.skipped = false;
     this.turnTimedOut = false;
     this.turnDeadline = Date.now() + this.delays.timeout;
   }
@@ -639,6 +654,7 @@ export class Room {
       options: this.options,
       movable: this.movable,
       extraTurns: this.extraTurns,
+      skipped: this.skipped,
       lastRoll: this.lastRoll,
       winners: this.winners,
       rewards: this.rewards,

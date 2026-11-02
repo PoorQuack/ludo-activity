@@ -12,7 +12,7 @@ Multiplayer Ludo that runs inside Discord as an Activity.
 ## Rules
 
 - Roll a **6** to move a token out of base.
-- Rolling a **6** means you keep it and **roll again** (as many times as you keep rolling 6s). Then you play every roll, in any order, on any tokens. For example, after 6 + 4 you can bring a token out with the 6 and move it 4.
+- Rolling a **6** means you keep it and **roll again**. Roll **three 6s in a row** and your turn is skipped, kept 6s and all. Otherwise you play every roll, in any order, on any tokens. For example, after 6 + 4 you can bring a token out with the 6 and move it 4.
 - Capturing a token or getting a token home gives you **another turn**, on top of any 6s. Capturing with a 6 gets you both: the extra roll for the 6, then another turn for the capture.
 - Landing on an opponent sends their token back to base. If two tokens share the square, only one goes back. The ★ squares and the coloured start squares are **safe**, so nobody can be captured there.
 - You need the **exact roll** to reach home.

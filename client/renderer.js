@@ -500,16 +500,15 @@ export class BoardRenderer {
   }
 
   // The turn's other rolls (6s kept for later, or rolls still to play) sit in a row of small
-  // dice above the big one. While you're moving you can tap one to use it instead.
+  // dice above the big one.
   drawBank(d, size, cx, cy) {
-    this.lastBank = [];
-    // Equal rolls are interchangeable, so they share one dice with a "×N" count
+    // Equal rolls share one dice with a "×N" count
     const groups = [];
-    (d.bank || []).forEach((value, i) => {
+    for (const value of d.bank || []) {
       const g = groups.find((g) => g.value === value);
       if (g) g.count++;
-      else groups.push({ value, count: 1, index: d.bankIndex?.[i] ?? i });
-    });
+      else groups.push({ value, count: 1 });
+    }
     if (!groups.length) return;
     const ctx = this.ctx;
     const small = size * 0.4;
@@ -517,7 +516,7 @@ export class BoardRenderer {
     const y = cy - size * 0.5 - small * 0.75;
     groups.forEach((g, i) => {
       const x = cx + (i - (groups.length - 1) / 2) * slot - (g.count > 1 ? small * 0.3 : 0);
-      drawDice(ctx, x, y, small, g.value, d.style, { color: d.color, glow: d.pickable ? d.color : null });
+      drawDice(ctx, x, y, small, g.value, d.style, { color: d.color });
       if (g.count > 1) {
         ctx.font = `800 ${Math.max(10, small * 0.5)}px system-ui, sans-serif`;
         ctx.textAlign = 'left';
@@ -528,20 +527,10 @@ export class BoardRenderer {
         ctx.fillStyle = '#fff';
         ctx.fillText(`×${g.count}`, x + small * 0.58, y);
       }
-      this.lastBank.push({ x, y, r: small * 0.75, index: g.index });
     });
   }
 
   // ---------- hit tests ----------
-
-  // Which small dice (as an index into the turn's rolls) is at a click position, if any.
-  hitBank(clientX, clientY) {
-    const rect = this.canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    const hit = (this.lastBank || []).find((b) => Math.hypot(b.x - x, b.y - y) < b.r);
-    return hit ? hit.index : null;
-  }
 
   // Returns the token index (of `seat`) at a click position, preferring highlighted ones.
   hitToken(clientX, clientY, seat, allowed) {

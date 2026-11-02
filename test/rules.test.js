@@ -203,6 +203,24 @@ test('a 6 is kept and rolled again, then every roll is played', () => {
   room.destroy();
 });
 
+test('three 6s in a row skips the whole turn, extra turns included', async () => {
+  const { room, a } = twoPlayerRoom([6, 6, 6]);
+  room.delays.noMove = 20;
+  room.tokens[0] = [5, -1, -1, -1];
+  room.extraTurns = 1; // e.g. from a capture earlier this turn
+  room.roll(a);
+  room.roll(a);
+  room.roll(a);
+  assert.equal(room.skipped, true);
+  assert.deepEqual(room.rolls, []);
+  assert.throws(() => room.move(a, 0), /can't move/);
+  assert.equal(room.log.at(-1), 'A rolled three 6s — turn skipped!');
+  await new Promise((r) => setTimeout(r, 80));
+  assert.equal(room.turn, 2);
+  assert.deepEqual(room.tokens[0], [5, -1, -1, -1]); // nothing moved
+  room.destroy();
+});
+
 test('capturing with a 6: the 6 rolls again, and the capture earns another turn', async () => {
   const { room, a } = twoPlayerRoom([6, 2]);
   room.tokens[0] = [5, -1, -1, -1];
@@ -342,7 +360,7 @@ test('chat: anyone can talk, messages are cleaned, limited and rate-limited', ()
   assert.throws(() => room.say(w, 'again'), /Slow down/);
   room.lastChat.set('w', 0);
   room.say(w, 'x'.repeat(500));
-  assert.equal(room.chat.at(-1).text.length, 200);
+  assert.equal(room.chat.at(-1).text.length, 100);
   room.say(w, '   '); // empty: ignored
   assert.equal(room.chat.length, 2);
   for (let i = 0; i < 50; i++) {

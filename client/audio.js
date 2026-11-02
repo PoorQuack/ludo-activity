@@ -7,15 +7,21 @@
 // starts on the first interaction.
 
 const SETTINGS_KEY = 'ludo-audio';
-const settings = { music: true, sound: true, volume: 0.5 };
+const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5 };
 try {
-  Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'));
+  const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+  // Older versions had one volume for both: carry it over to each
+  if (saved.volume !== undefined) {
+    saved.musicVolume ??= saved.volume;
+    saved.soundVolume ??= saved.volume;
+    delete saved.volume;
+  }
+  Object.assign(settings, saved);
 } catch {
   // storage unavailable: keep the defaults
 }
 
 let ctx = null;
-let master = null;
 let musicGain = null;
 let sfxGain = null;
 let noiseBuffer = null;
@@ -38,15 +44,12 @@ export function unlockAudio() {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
-    master = ctx.createGain();
-    master.gain.value = settings.volume;
-    master.connect(ctx.destination);
     musicGain = ctx.createGain();
     sfxGain = ctx.createGain();
-    musicGain.connect(master);
-    sfxGain.connect(master);
-    musicGain.gain.value = settings.music ? MUSIC_VOLUME : 0;
-    sfxGain.gain.value = settings.sound ? SFX_VOLUME : 0;
+    musicGain.connect(ctx.destination);
+    sfxGain.connect(ctx.destination);
+    musicGain.gain.value = musicLevel();
+    sfxGain.gain.value = soundLevel();
     noiseBuffer = makeNoise();
     loadFiles();
   }
@@ -54,18 +57,24 @@ export function unlockAudio() {
   if (settings.music) startMusic();
 }
 
-// Overall volume, 0..1 (the slider).
-export function setVolume(v) {
-  settings.volume = Math.max(0, Math.min(1, v));
+// How loud each part plays: its on/off switch times its slider.
+const musicLevel = () => (settings.music ? MUSIC_VOLUME * settings.musicVolume : 0);
+const soundLevel = () => (settings.sound ? SFX_VOLUME * settings.soundVolume : 0);
+
+// The music or sound slider, 0..1.
+export function setVolume(kind, v) {
+  settings[kind === 'music' ? 'musicVolume' : 'soundVolume'] = Math.max(0, Math.min(1, v));
   save();
-  if (master) master.gain.setTargetAtTime(settings.volume, ctx.currentTime, 0.05);
+  if (!ctx) return;
+  musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.05);
+  sfxGain.gain.setTargetAtTime(soundLevel(), ctx.currentTime, 0.05);
 }
 
 export function setMusic(on) {
   settings.music = on;
   save();
   if (!ctx) return;
-  musicGain.gain.setTargetAtTime(on ? MUSIC_VOLUME : 0, ctx.currentTime, 0.2);
+  musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2);
   if (on) startMusic();
   else setTimeout(() => !settings.music && stopMusic(), 800);
 }
@@ -110,7 +119,7 @@ function useMusicFile(url) {
 export function setSound(on) {
   settings.sound = on;
   save();
-  if (ctx) sfxGain.gain.setTargetAtTime(on ? SFX_VOLUME : 0, ctx.currentTime, 0.05);
+  if (ctx) sfxGain.gain.setTargetAtTime(soundLevel(), ctx.currentTime, 0.05);
 }
 
 function save() {

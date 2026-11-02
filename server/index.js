@@ -56,8 +56,21 @@ app.post('/api/token', async (req, res) => {
 app.get('/healthz', (_req, res) => res.send('ok'));
 
 const dist = path.join(__dirname, '..', 'dist');
-app.use(express.static(dist));
-app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+// The page itself is never cached, so players always get the newest version after an update.
+// Built files have a hash in their name that changes with every build, so those can be kept.
+const noCache = (res) => res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+app.use(
+  express.static(dist, {
+    setHeaders(res, file) {
+      if (file.endsWith('.html')) noCache(res);
+      else if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    },
+  }),
+);
+app.get('*', (_req, res) => {
+  noCache(res);
+  res.sendFile(path.join(dist, 'index.html'));
+});
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });

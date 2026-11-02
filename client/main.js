@@ -1,7 +1,7 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
 import { MODES, boardFor } from '../shared/board.js';
 import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
-import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS } from './renderer.js';
+import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor } from './skins.js';
 import { unlockAudio, sfx, setMusic, setSound, setVolume, audioSettings } from './audio.js';
@@ -37,6 +37,7 @@ const els = {
   canvas: $('board'),
   banner: $('banner'),
   turnPop: $('turn-pop'),
+  rollChooser: $('roll-chooser'),
   phaseTag: $('phase-tag'),
   modePicker: $('mode-picker'),
   seats: $('seats'),
@@ -79,8 +80,7 @@ let shownTokens = null; // board after the last finished animation
 let latestTokens = null; // board in the latest server update
 let lastRollSeq = 0;
 let lastMoveSeq = 0;
-let pick = 0; // which of your rolls the glowing tokens are for (tap a small dice to change it)
-let pickKey = '';
+let rollKey = ''; // changes with every roll and move: an open roll chooser is then out of date
 let lastEmoteId = 0;
 let floaters = []; // emotes rising over the board
 let dice = { mode: 'hidden' };
@@ -222,11 +222,10 @@ function onState(next) {
     }
     latestTokens = next.tokens;
   }
-  // New rolls to play: point at the first one that can move something.
-  const key = `${next.lastRoll?.seq}:${next.lastMove?.seq}`;
-  if (key !== pickKey || !next.options?.[pick]?.length) {
-    pickKey = key;
-    pick = Math.max(0, next.options?.findLastIndex((o) => o.length > 0) ?? 0); // the roll just made, if it can move
+  const key = `${next.phase}:${next.lastRoll?.seq}:${next.lastMove?.seq}`;
+  if (key !== rollKey) {
+    rollKey = key;
+    closeChooser();
   }
 
   for (const e of next.emotes) {
@@ -285,12 +284,25 @@ function renderChat() {
 for (const box of els.chats) {
   const form = box.querySelector('form');
   const input = box.querySelector('input');
+  // "0/100" beside the box: yellow when nearly full, red at the limit
+  const count = document.createElement('span');
+  count.className = 'chat-count';
+  form.insertBefore(count, form.querySelector('button'));
+  const updateCount = () => {
+    const n = input.value.length;
+    count.textContent = `${n}/${input.maxLength}`;
+    count.classList.toggle('near', n >= input.maxLength * 0.8 && n < input.maxLength);
+    count.classList.toggle('full', n >= input.maxLength);
+  };
+  input.addEventListener('input', updateCount);
+  updateCount();
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = input.value.trim();
     if (!text) return;
     send('chat', { text });
     input.value = '';
+    updateCount();
   });
 }
 
@@ -300,21 +312,22 @@ function renderAudioToggles() {
   const s = audioSettings();
   for (const b of els.audioToggles) {
     const on = s[b.dataset.toggle];
-    b.textContent = `${b.dataset.toggle === 'music' ? 'Music' : 'Sounds'}: ${on ? 'on' : 'off'}`;
+    b.textContent = on ? 'On' : 'Off';
     b.classList.toggle('off', !on);
   }
-  // The menu and the game panel each have a slider; keep both in step.
-  const pct = Math.round(s.volume * 100);
-  for (const input of els.volumes) if (Number(input.value) !== pct) input.value = pct;
-  for (const el of els.volumeValues) el.textContent = `${pct}%`;
+  // The menu and the game panel each have both sliders; keep them in step.
+  const pct = (kind) => Math.round(s[kind === 'music' ? 'musicVolume' : 'soundVolume'] * 100);
+  for (const input of els.volumes) if (Number(input.value) !== pct(input.dataset.volume)) input.value = pct(input.dataset.volume);
+  for (const el of els.volumeValues) el.textContent = `${pct(el.dataset.volumeValue)}%`;
 }
 
 for (const input of els.volumes) {
   input.addEventListener('input', () => {
-    setVolume(Number(input.value) / 100);
+    setVolume(input.dataset.volume, Number(input.value) / 100);
     renderAudioToggles();
   });
-  input.addEventListener('change', () => sfx('step')); // a tap to hear the new level
+  // A tap to hear the new sound level (the music is playing anyway)
+  if (input.dataset.volume === 'sound') input.addEventListener('change', () => sfx('step'));
 }
 
 for (const b of els.audioToggles) {
@@ -572,11 +585,12 @@ function renderPanel() {
     const choices = new Set();
     (state.options || []).forEach((o, i) => o.forEach((t) => choices.add(`${rolls[i]}:${state.tokens[seat]?.[t]}`)));
     let text;
-    if (myTurn && sixes) text = `You rolled ${rolls.length > 1 ? `${rolls.length} sixes` : 'a 6'} — roll again!`;
+    if (state.skipped) text = myTurn ? 'Three 6s — your turn is skipped!' : `${cur.name} rolled three 6s — turn skipped`;
+    else if (myTurn && sixes) text = `You rolled ${rolls.length > 1 ? `${rolls.length} sixes` : 'a 6'} — roll again!`;
     else if (myTurn && !state.rolled) text = 'Your turn — tap the dice!';
     else if (myTurn && choices.size === 1) text = `You rolled ${rolls.join(' + ')} — moving your token…`; // the server moves it
     else if (myTurn && state.movable.length && rolls.length > 1)
-      text = `Use your ${rolls[pick]} — tap a glowing token, or a small dice to switch`;
+      text = `You have ${rolls.join(' + ')} — tap a glowing token, then pick a dice`;
     else if (myTurn && state.movable.length) text = `You rolled a ${rolls[0]} — tap a glowing token`;
     else if (myTurn) text = `You rolled a ${state.dice} — no moves this time`;
     else if (sixes) text = `${cur.name} rolled a 6 — rolling again`;
@@ -584,9 +598,10 @@ function renderPanel() {
     else text = `${cur.name}'s turn`;
     els.turnText.textContent = text + extra;
     els.turnText.style.color = col(board.colors[state.turn]);
-    const racing = seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
-    els.surrenderBtn.classList.toggle('hidden', !racing);
   }
+  const racing = phase === 'playing' && seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
+  els.surrenderBtn.classList.toggle('hidden', !racing);
+  els.screens.game.dataset.phase = phase; // the phone layout hides the seat cards while playing
 
   if (phase !== 'finished') els.banner.classList.add('hidden');
 
@@ -802,15 +817,57 @@ function canMove() {
     state?.phase === 'playing' &&
     mySeat() === state.turn &&
     state.rolled &&
-    pickable().length > 0 &&
+    state.movable.length > 0 &&
     dice.mode === 'shown' &&
     idle()
   );
 }
 
-// Tokens the picked roll can move.
-function pickable() {
-  return state?.options?.[pick] || [];
+// ---------------- choosing a roll ----------------
+
+// You tapped a pin: with one usable roll it just moves; with several, a small
+// chooser pops up above the pin showing the dice you can use on it.
+function tapToken(token, layoutItem) {
+  const rolls = state.rolls;
+  const usable = [];
+  state.options.forEach((tokens, i) => {
+    if (tokens.includes(token) && !usable.some((j) => rolls[j] === rolls[i])) usable.push(i);
+  });
+  if (usable.length === 0) return;
+  if (usable.length === 1) return send('move', { token, roll: usable[0] });
+
+  const box = els.rollChooser;
+  box.innerHTML = '<span class="label">Use</span>';
+  const board = boardFor(state.mode);
+  for (const i of usable) {
+    const b = document.createElement('button');
+    b.title = `Move ${rolls[i]}`;
+    const c = document.createElement('canvas');
+    const dpr = window.devicePixelRatio || 1;
+    c.width = c.height = 40 * dpr;
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+    drawDice(ctx, 20, 19, 34, rolls[i], state.seats[state.turn]?.skins.dice, { color: col(board.colors[state.turn]) });
+    b.appendChild(c);
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeChooser();
+      send('move', { token, roll: i });
+    });
+    box.appendChild(b);
+  }
+  const p = renderer.tokenPoint(layoutItem);
+  const wrap = els.canvas.parentElement.getBoundingClientRect();
+  const half = 30 + usable.length * 23; // keep it inside the board
+  box.style.left = `${Math.min(wrap.width - half, Math.max(half, p.x - wrap.left))}px`;
+  box.style.top = `${p.y - wrap.top}px`;
+  box.classList.toggle('below', p.y - wrap.top < 80); // no room above a pin at the top edge
+  box.classList.remove('hidden');
+  sfx('step');
+}
+
+function closeChooser() {
+  els.rollChooser?.classList.add('hidden');
 }
 
 // ---------------- frame loop ----------------
@@ -840,7 +897,7 @@ function frame(now) {
       active,
       skins: state.seats.map((s) => s?.skins.token),
       overrides: current?.type === 'move' ? current.overrides : null,
-      highlight: canMove() ? { seat, tokens: pickable() } : null,
+      highlight: canMove() ? { seat, tokens: state.movable } : null,
       turn: state.phase === 'playing' ? state.turn : null,
       dice: diceView(now, board),
       emotes: floaters,
@@ -862,21 +919,17 @@ function diceView(now, board) {
   const rolls = state.rolls || [];
   let value = dice.value;
   let bank = dice.mode === 'spin' || dice.mode === 'shown' ? dice.bank || [] : [];
-  let bankIndex = null;
   if (dice.mode === 'ready' && !state.rolled) bank = rolls; // the 6s kept so far
   if (dice.mode === 'shown' && state.rolled && idle() && rolls.length) {
-    // The big dice is the roll you're about to use; the others wait beside it
-    value = rolls[pick] ?? value;
-    bankIndex = rolls.map((_, i) => i).filter((i) => i !== pick);
-    bank = bankIndex.map((i) => rolls[i]);
+    // The rolls still to play: the latest is the big dice, the rest wait above it
+    value = rolls.at(-1);
+    bank = rolls.slice(0, -1);
   }
   return {
     mode: dice.mode,
     t: now - dice.t0,
     value,
     bank,
-    bankIndex,
-    pickable: canMove() && bank.length > 0,
     axes: dice.axes,
     style: state.seats[dice.seat]?.skins.dice,
     color: col(board.colors[dice.seat]),
@@ -896,7 +949,29 @@ els.playBtn.addEventListener('click', () => {
 els.startBtn.addEventListener('click', () => send('start'));
 els.fillBtn.addEventListener('click', () => send('fillBots'));
 els.againBtn.addEventListener('click', () => send('newGame'));
-confirmTap(els.surrenderBtn, 'Tap again to surrender', () => send('surrender'));
+confirmTap(els.surrenderBtn, 'Tap again to surrender', () => {
+  send('surrender');
+  setDrawer(false);
+});
+
+// ☰ opens and closes the drawer with the menu button, surrender and sound settings
+const drawer = $('drawer');
+const drawerBtn = $('drawer-btn');
+function setDrawer(open) {
+  drawer.classList.toggle('hidden', !open);
+  drawerBtn.setAttribute('aria-expanded', String(open));
+}
+drawerBtn.addEventListener('click', () => setDrawer(drawer.classList.contains('hidden')));
+for (const b of drawer.querySelectorAll('[data-go]')) b.addEventListener('click', () => setDrawer(false));
+
+// Phones show the chat or the log, not both
+const panel = drawer.closest('.panel');
+function setFeed(feed) {
+  panel.dataset.feed = feed;
+  for (const b of document.querySelectorAll('[data-feed]')) b.classList.toggle('active', b.dataset.feed === feed);
+}
+for (const b of document.querySelectorAll('[data-feed]')) b.addEventListener('click', () => setFeed(b.dataset.feed));
+setFeed('chat');
 confirmTap(
   els.newGameBtn,
   'Tap again to end this game',
@@ -932,15 +1007,12 @@ function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
 
 els.canvas.addEventListener('pointerdown', (e) => {
   if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return send('roll');
+  closeChooser(); // tapping anywhere else on the board cancels it
   if (!canMove()) return;
-  const roll = renderer.hitBank(e.clientX, e.clientY);
-  if (roll !== null) {
-    pick = roll;
-    sfx('step');
-    return renderUI();
-  }
-  const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), pickable());
-  if (token !== null) send('move', { token, roll: pick });
+  const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), state.movable);
+  if (token === null) return;
+  const item = renderer.lastLayout.find((it) => it.seat === mySeat() && it.token === token);
+  tapToken(token, item);
 });
 
 window.addEventListener('keydown', (e) => {
@@ -992,8 +1064,11 @@ function button(label, onClick) {
   return b;
 }
 
-// Seat cards laid out like the seats' corners on the board: top row first, left to right.
+// Seat cards laid out like the seats on the board, two to a row. Four seats: top row first,
+// left to right. Six seats: clockwise from the top left, the left side down the left column
+// (0, 5, 4) and the right side down the right column (1, 2, 3).
 function seatOrder(board, seats) {
+  if (board.arms === 6) return [0, 1, 5, 2, 4, 3].filter((s) => seats.includes(s));
   return [...seats].sort((a, b) => {
     const A = board.bases[a];
     const B = board.bases[b];
@@ -1026,7 +1101,7 @@ function easeOutBack(k) {
 window.__ludoMovablePoint = () => {
   if (!canMove() || !renderer.lastLayout) return null;
   const seat = mySeat();
-  const p = renderer.lastLayout.find((it) => it.seat === seat && pickable().includes(it.token));
+  const p = renderer.lastLayout.find((it) => it.seat === seat && state.movable.includes(it.token));
   return p ? renderer.tokenPoint(p) : null;
 };
 window.__ludoDicePoint = () => (canRoll() ? renderer.toClient(0, 0) : null);
