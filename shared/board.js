@@ -76,13 +76,16 @@ export function makeBoard(n) {
   }));
 
   // Bases sit in the gap between a seat's arm and the next one, beside its start square.
+  // On the hexagon board that gap is a triangle (6 squares a side) pointing at the hub's corner:
+  // the base is a circle in the middle of it.
   const square4 = n === 4;
+  const corner = 1.5 / Math.sin(Math.PI / n); // centre → hub corner
   const bases = seats.map((s) => {
     const a = armAngle(s) + Math.PI / n;
-    const dist = square4 ? 4.5 * Math.SQRT2 : 6.7;
-    return { x: Math.cos(a) * dist, y: Math.sin(a) * dist, size: square4 ? 3 : 1.75, square: square4 };
+    const dist = square4 ? 4.5 * Math.SQRT2 : corner + 6 / Math.sqrt(3);
+    return { x: Math.cos(a) * dist, y: Math.sin(a) * dist, size: square4 ? 3 : 1.45, square: square4, angle: a };
   });
-  const baseSpread = square4 ? 1 : 0.72;
+  const baseSpread = square4 ? 1 : 0.68;
 
   const trackIndex = (seat, progress) => (startIndex[seat] + progress) % trackLen;
 
@@ -123,6 +126,7 @@ export function makeBoard(n) {
     arms: n,
     colors: PALETTES[n],
     hub,
+    corner,
     armAngle,
     track,
     trackLen,

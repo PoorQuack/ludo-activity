@@ -40,9 +40,13 @@ export class Room {
     this.phase = 'lobby';
     this.tokens = newTokens(this.board.arms);
     this.turn = 0;
-    this.dice = null;
-    this.rolled = false;
-    this.movable = [];
+    this.dice = null; // the latest roll
+    this.rolled = false; // true once the rolling is done and the rolls are being played
+    this.rolls = []; // rolls still to play this turn (a 6 is kept and rolled again)
+    this.options = []; // for each roll: the tokens it can move
+    this.movable = []; // every token at least one roll can move
+    this.extraTurns = 0; // turns earned by captures and tokens reaching home
+    this.lastRoll = null;
     this.winners = [];
     this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
@@ -129,7 +133,7 @@ export class Room {
       case 'setMode': return this.setMode(user, msg.mode);
       case 'start': return this.start(user);
       case 'roll': return this.roll(user);
-      case 'move': return this.move(user, msg.token);
+      case 'move': return this.move(user, msg.token, msg.roll);
       case 'emote': return this.emote(user, msg.item);
       case 'chat': return this.say(user, msg.text);
       case 'surrender': return this.surrender(user);
@@ -265,13 +269,15 @@ export class Room {
     this.doRoll();
   }
 
-  move(user, token) {
+  // `roll` is which of the turn's rolls to use; without it, the first one that can move the token.
+  move(user, token, roll) {
     this.requireTurn(user);
     if (!this.rolled) throw new Error('Roll first');
-    if (!this.movable.includes(token)) throw new Error("That token can't move");
+    const idx = Number.isInteger(roll) ? roll : this.options.findIndex((o) => o.includes(token));
+    if (!this.options[idx]?.includes(token)) throw new Error("That token can't move");
     this.timeouts[this.turn] = 0;
     this.clearTimer(); // cancels a pending auto-move
-    this.doMove(token);
+    this.doMove(token, idx);
   }
 
   surrender(user) {
@@ -335,8 +341,8 @@ export class Room {
     this.seats = this.seats.map((s) => (s && (s.bot || s.connected) ? s : null));
     this.tokens = newTokens(this.board.arms);
     this.dice = null;
-    this.rolled = false;
-    this.movable = [];
+    this.lastRoll = null;
+    this.resetTurn();
     this.lastMove = null;
     this.winners = [];
     this.forfeited = [];
@@ -348,50 +354,91 @@ export class Room {
 
   // ---------- game flow ----------
 
+  // A 6 is kept and you roll again; once you roll something else, you play all the rolls.
   doRoll() {
     if (this.rolled) throw new Error('Already rolled');
     const seat = this.turn;
     const dice = this.rng();
     this.dice = dice;
-    this.rolled = true;
+    this.rolls.push(dice);
     this.seq++;
+    this.lastRoll = { seq: this.seq, seat, value: dice };
     this.lastMove = null;
-    const name = this.seats[seat].name;
-
-    this.movable = legalMoves(this.tokens, seat, dice, this.board);
-    if (this.movable.length === 0) {
-      this.addLog(`${name} rolled a ${dice} — no moves.`);
+    if (dice === 6) {
+      this.addLog(`${this.seats[seat].name} rolled a 6 — rolls again`);
+      this.turnDeadline = Date.now() + this.delays.timeout;
       this.changed();
-      this.schedule(this.delays.noMove, () => this.nextTurn());
       return;
     }
-    // Only one real choice (one token, or tokens that would all end up in the same place)?
+    this.rolled = true;
+    this.playRolls();
+  }
+
+  // Works out what the rolls left can do, and moves for the player when there's no real choice.
+  playRolls() {
+    const seat = this.turn;
+    const name = this.seats[seat].name;
+    this.options = this.rolls.map((v) => legalMoves(this.tokens, seat, v, this.board));
+    this.movable = [...new Set(this.options.flat())];
+    if (this.movable.length === 0) {
+      const left = this.rolls.join(' and ');
+      this.addLog(this.lastMove ? `${name} can't use the ${left}.` : `${name} rolled a ${left} — no moves.`);
+      // After a move the board is animating anyway; with nothing moved, give people time to read the dice.
+      const wait = this.lastMove ? this.delays.autoMove : this.delays.noMove;
+      this.rolls = [];
+      this.options = [];
+      this.changed();
+      this.schedule(wait, () => this.endRolls());
+      return;
+    }
+    // Only one real choice (one roll value, and tokens that would all end up in the same place)?
     // Make the move for the player once the dice has landed.
-    if (new Set(this.movable.map((t) => this.tokens[seat][t])).size === 1) {
+    const choices = new Set();
+    this.options.forEach((tokens, i) => {
+      for (const t of tokens) choices.add(`${this.rolls[i]}:${this.tokens[seat][t]}`);
+    });
+    if (choices.size === 1) {
+      const idx = this.options.findIndex((o) => o.length > 0);
       this.changed();
       this.schedule(this.delays.autoMove, () => {
-        if (this.phase === 'playing' && this.rolled) this.doMove(this.movable[0]);
+        if (this.phase === 'playing' && this.rolled) this.doMove(this.options[idx][0], idx);
       });
       return;
     }
     this.changed();
   }
 
-  doMove(token) {
+  // Every roll is played: take an earned extra turn, or pass the dice on.
+  endRolls() {
+    if (this.phase !== 'playing') return;
+    if (this.extraTurns === 0) return this.nextTurn();
+    this.extraTurns--;
+    this.rolled = false;
+    this.rolls = [];
+    this.options = [];
+    this.movable = [];
+    this.turnDeadline = Date.now() + this.delays.timeout;
+    this.changed();
+  }
+
+  doMove(token, idx) {
     if (!this.rolled) throw new Error('Roll first');
-    if (!this.movable.includes(token)) throw new Error("That token can't move");
+    if (!this.options[idx]?.includes(token)) throw new Error("That token can't move");
     const seat = this.turn;
     const name = this.seats[seat].name;
-    const result = applyMove(this.tokens, seat, token, this.dice, this.activeSeats(), this.board);
+    const value = this.rolls[idx];
+    const result = applyMove(this.tokens, seat, token, value, this.activeSeats(), this.board);
+    this.rolls.splice(idx, 1);
     this.seq++;
-    this.lastMove = { ...result, seq: this.seq };
+    this.lastMove = { ...result, dice: value, seq: this.seq };
+    this.options = [];
     this.movable = [];
     this.captures[seat] += result.captured.length;
 
     // One line for every move, then any capture.
-    if (result.finishedToken) this.addLog(`${name} rolled a ${this.dice} and brought a token home!`);
-    else if (result.from < 0) this.addLog(`${name} rolled a 6 and brought a token out`);
-    else this.addLog(`${name} rolled a ${this.dice} and moved a token`);
+    if (result.finishedToken) this.addLog(`${name} used a ${value} and brought a token home!`);
+    else if (result.from < 0) this.addLog(`${name} used a 6 to bring a token out`);
+    else this.addLog(`${name} moved a token ${value}`);
     for (const c of result.captured) {
       this.addLog(`${name} captured ${this.seats[c.seat].name}'s token!`);
     }
@@ -403,14 +450,14 @@ export class Room {
       return;
     }
 
-    const bonus = this.dice === 6 || result.captured.length > 0 || result.finishedToken;
-    if (bonus) {
-      this.rolled = false;
-      this.turnDeadline = Date.now() + this.delays.timeout;
-      this.changed();
-    } else {
-      this.nextTurn();
+    // Each capture and each token home earns a turn of its own, on top of the 6s already rolled.
+    const earned = result.captured.length + (result.finishedToken ? 1 : 0);
+    if (earned) {
+      this.extraTurns += earned;
+      this.addLog(`${name} earned ${earned === 1 ? 'an extra turn' : `${earned} extra turns`}`);
     }
+    if (this.rolls.length) this.playRolls();
+    else this.endRolls();
   }
 
   // Seats still racing: not finished and not surrendered.
@@ -469,7 +516,10 @@ export class Room {
 
   resetTurn() {
     this.rolled = false;
+    this.rolls = [];
+    this.options = [];
     this.movable = [];
+    this.extraTurns = 0;
     this.turnTimedOut = false;
     this.turnDeadline = Date.now() + this.delays.timeout;
   }
@@ -499,8 +549,10 @@ export class Room {
       try {
         if (!this.rolled) this.doRoll();
         else {
-          const t = chooseBotMove(this.tokens, this.turn, this.dice, this.activeSeats(), this.board);
-          if (t !== null) this.doMove(t);
+          // Plays the rolls in order, each on its best token.
+          const idx = this.options.findIndex((o) => o.length > 0);
+          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.activeSeats(), this.board);
+          if (t !== null) this.doMove(t, idx);
         }
       } catch (err) {
         console.error('automation error', err);
@@ -569,7 +621,7 @@ export class Room {
       seatsAllowed: MODES[this.mode].seats,
       phase: this.phase,
       hostId: this.hostId,
-      // Everyone sees the host's board theme.
+      // Players see their own board theme; this is the fallback for watchers who haven't picked one.
       theme: this.equipped(this.hostId).board,
       seats: this.seats.map(
         (s, i) =>
@@ -583,7 +635,11 @@ export class Room {
       turn: this.turn,
       dice: this.dice,
       rolled: this.rolled,
+      rolls: this.rolls,
+      options: this.options,
       movable: this.movable,
+      extraTurns: this.extraTurns,
+      lastRoll: this.lastRoll,
       winners: this.winners,
       rewards: this.rewards,
       timeouts: this.timeouts,

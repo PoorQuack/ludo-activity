@@ -264,6 +264,7 @@ html, body {
   min-height: 70px;
   transition: border-color 0.2s, transform 0.2s;
 }
+.seats.six { grid-template-columns: repeat(3, 1fr); } /* three seats along the top, three along the bottom */
 .seats.six .seat { min-height: 62px; }
 .seat.turn { border-color: var(--seat-color); transform: scale(1.03); box-shadow: 0 0 16px -4px var(--seat-color); }
 .seat.me .seat-name::after { content: ' (you)'; color: var(--muted); font-weight: 400; }

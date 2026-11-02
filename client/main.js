@@ -14,6 +14,7 @@ const STEP_MS = 170; // one square of movement
 const EXIT_MS = 450; // jumping out of base
 const CAPTURE_MS = 650; // a captured token flying home
 const HOLD_MS = 350; // how long a landed dice stays readable before the move plays
+const SIX_HOLD_MS = 700; // how long a kept 6 shows before the dice comes back to roll again
 const MAX_QUEUE = 6; // further behind than this, skip animations to catch up
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -78,6 +79,8 @@ let shownTokens = null; // board after the last finished animation
 let latestTokens = null; // board in the latest server update
 let lastRollSeq = 0;
 let lastMoveSeq = 0;
+let pick = 0; // which of your rolls the glowing tokens are for (tap a small dice to change it)
+let pickKey = '';
 let lastEmoteId = 0;
 let floaters = []; // emotes rising over the board
 let dice = { mode: 'hidden' };
@@ -199,7 +202,7 @@ function onState(next) {
     current = null;
     shownTokens = latestTokens = next.tokens;
     lastMoveSeq = next.lastMove?.seq ?? 0;
-    lastRollSeq = next.seq;
+    lastRollSeq = next.lastRoll?.seq ?? 0;
     dice = { mode: 'hidden' };
     celebrated = false;
     if (next.phase === 'finished') {
@@ -210,11 +213,20 @@ function onState(next) {
     if (next.lastMove && next.lastMove.seq > lastMoveSeq) {
       events.push({ type: 'move', move: next.lastMove, start: latestTokens, final: next.tokens });
       lastMoveSeq = next.lastMove.seq;
-    } else if (next.rolled && !next.lastMove && next.seq !== lastRollSeq) {
-      events.push({ type: 'roll', seat: next.turn, value: next.dice });
-      lastRollSeq = next.seq;
+    }
+    if (next.lastRoll && next.lastRoll.seq > lastRollSeq) {
+      // 6s already kept this turn stay on show while the next roll tumbles
+      const bank = prev.turn === next.turn && !prev.rolled ? prev.rolls || [] : [];
+      events.push({ type: 'roll', seat: next.lastRoll.seat, value: next.lastRoll.value, bank });
+      lastRollSeq = next.lastRoll.seq;
     }
     latestTokens = next.tokens;
+  }
+  // New rolls to play: point at the first one that can move something.
+  const key = `${next.lastRoll?.seq}:${next.lastMove?.seq}`;
+  if (key !== pickKey || !next.options?.[pick]?.length) {
+    pickKey = key;
+    pick = Math.max(0, next.options?.findLastIndex((o) => o.length > 0) ?? 0); // the roll just made, if it can move
   }
 
   for (const e of next.emotes) {
@@ -325,7 +337,12 @@ function mySeat() {
 
 // A player colour ('red', …) as it looks on the current board theme.
 function col(name) {
-  return playerColor(state.theme, name);
+  return playerColor(myTheme(), name);
+}
+
+// Board themes are just looks, so everyone sees the one they equipped (watchers without one: the host's).
+function myTheme() {
+  return profile?.equipped?.board || state.theme;
 }
 
 function isHost() {
@@ -414,7 +431,7 @@ function renderMenu() {
     for (const i of joined) {
       const s = state.seats[i];
       const tag = s.userId === state.hostId ? 'Host' : s.bot ? 'Bot' : s.surrendered ? 'Out' : me && s.userId === me.id ? 'You' : '';
-      els.gamePlayers.appendChild(listItem(playerColor(state.theme, board.colors[i]), s.name, tag));
+      els.gamePlayers.appendChild(listItem(playerColor(myTheme(), board.colors[i]), s.name, tag));
     }
     const open = state.seatsAllowed.length - joined.length;
     if (state.phase === 'lobby' && open > 0) {
@@ -476,7 +493,7 @@ function renderPanel() {
   // Seats
   els.seats.innerHTML = '';
   els.seats.classList.toggle('six', state.seatsAllowed.length > 4);
-  for (const i of state.seatsAllowed) {
+  for (const i of seatOrder(board, state.seatsAllowed)) {
     const s = state.seats[i];
     const colorName = board.colors[i];
     const card = document.createElement('div');
@@ -549,13 +566,23 @@ function renderPanel() {
   if (phase === 'playing') {
     const cur = state.seats[state.turn];
     const myTurn = seat === state.turn;
-    if (myTurn && !state.rolled) els.turnText.textContent = 'Your turn — tap the dice!';
-    else if (myTurn && new Set(state.movable.map((t) => state.tokens[seat][t])).size === 1)
-      els.turnText.textContent = `You rolled a ${state.dice} — moving your token…`; // the server moves it
-    else if (myTurn && state.movable.length) els.turnText.textContent = `You rolled a ${state.dice} — tap a glowing token`;
-    else if (myTurn) els.turnText.textContent = `You rolled a ${state.dice} — no moves this time`;
-    else if (state.rolled) els.turnText.textContent = `${cur.name} rolled a ${state.dice}`;
-    else els.turnText.textContent = `${cur.name}'s turn`;
+    const rolls = state.rolls || [];
+    const sixes = !state.rolled && rolls.length; // 6s kept, waiting for the next roll
+    const extra = state.extraTurns ? ` (+${state.extraTurns} extra turn${state.extraTurns > 1 ? 's' : ''})` : '';
+    const choices = new Set();
+    (state.options || []).forEach((o, i) => o.forEach((t) => choices.add(`${rolls[i]}:${state.tokens[seat]?.[t]}`)));
+    let text;
+    if (myTurn && sixes) text = `You rolled ${rolls.length > 1 ? `${rolls.length} sixes` : 'a 6'} — roll again!`;
+    else if (myTurn && !state.rolled) text = 'Your turn — tap the dice!';
+    else if (myTurn && choices.size === 1) text = `You rolled ${rolls.join(' + ')} — moving your token…`; // the server moves it
+    else if (myTurn && state.movable.length && rolls.length > 1)
+      text = `Use your ${rolls[pick]} — tap a glowing token, or a small dice to switch`;
+    else if (myTurn && state.movable.length) text = `You rolled a ${rolls[0]} — tap a glowing token`;
+    else if (myTurn) text = `You rolled a ${state.dice} — no moves this time`;
+    else if (sixes) text = `${cur.name} rolled a 6 — rolling again`;
+    else if (state.rolled) text = `${cur.name} rolled ${rolls.length ? rolls.join(' + ') : `a ${state.dice}`}`;
+    else text = `${cur.name}'s turn`;
+    els.turnText.textContent = text + extra;
     els.turnText.style.color = col(board.colors[state.turn]);
     const racing = seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
     els.surrenderBtn.classList.toggle('hidden', !racing);
@@ -639,7 +666,7 @@ function startEvent(ev, now) {
     ev.duration = SPIN_MS;
     // A different tumble each roll: 2–3 turns one way, 1–2 the other.
     const axes = [(2 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), 1 + Math.random()];
-    dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes };
+    dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes, bank: ev.bank };
     sfx('roll');
     return;
   }
@@ -753,14 +780,16 @@ function updateDice(now) {
     return;
   }
   if (state.rolled) {
-    // e.g. joined mid-turn: just show the roll
+    // Back after a move with rolls still to play, or joined mid-turn: show the roll to use
     if (dice.mode === 'hidden' || dice.mode === 'ready') dice = { mode: 'shown', seat: state.turn, value: state.dice, t0: now };
     return;
   }
+  // A 6 that was kept stays readable for a moment before the dice comes back for the next roll
+  if (dice.mode === 'shown' && state.rolls?.length && now - dice.t0 < SIX_HOLD_MS) return;
   if (dice.mode === 'shown' || (dice.mode === 'ready' && dice.seat !== state.turn)) leave();
   else if (dice.mode === 'hidden') {
     dice = { mode: 'ready', seat: state.turn, t0: now };
-    if (state.turn === mySeat()) showTurnPop();
+    if (state.turn === mySeat() && !state.rolls?.length) showTurnPop(); // not again after each 6
   }
 }
 
@@ -773,10 +802,15 @@ function canMove() {
     state?.phase === 'playing' &&
     mySeat() === state.turn &&
     state.rolled &&
-    state.movable.length > 0 &&
+    pickable().length > 0 &&
     dice.mode === 'shown' &&
     idle()
   );
+}
+
+// Tokens the picked roll can move.
+function pickable() {
+  return state?.options?.[pick] || [];
 }
 
 // ---------------- frame loop ----------------
@@ -791,7 +825,7 @@ function frame(now) {
   if (screen !== 'game') return;
 
   const board = boardFor(state.mode);
-  renderer.setBoard(board, state.theme);
+  renderer.setBoard(board, myTheme());
   const wrap = els.canvas.parentElement.getBoundingClientRect();
   renderer.resize(Math.max(200, Math.min(wrap.width, wrap.height)));
 
@@ -806,7 +840,7 @@ function frame(now) {
       active,
       skins: state.seats.map((s) => s?.skins.token),
       overrides: current?.type === 'move' ? current.overrides : null,
-      highlight: canMove() ? { seat, tokens: state.movable } : null,
+      highlight: canMove() ? { seat, tokens: pickable() } : null,
       turn: state.phase === 'playing' ? state.turn : null,
       dice: diceView(now, board),
       emotes: floaters,
@@ -825,10 +859,24 @@ function frame(now) {
 
 function diceView(now, board) {
   if (dice.mode === 'hidden') return null;
+  const rolls = state.rolls || [];
+  let value = dice.value;
+  let bank = dice.mode === 'spin' || dice.mode === 'shown' ? dice.bank || [] : [];
+  let bankIndex = null;
+  if (dice.mode === 'ready' && !state.rolled) bank = rolls; // the 6s kept so far
+  if (dice.mode === 'shown' && state.rolled && idle() && rolls.length) {
+    // The big dice is the roll you're about to use; the others wait beside it
+    value = rolls[pick] ?? value;
+    bankIndex = rolls.map((_, i) => i).filter((i) => i !== pick);
+    bank = bankIndex.map((i) => rolls[i]);
+  }
   return {
     mode: dice.mode,
     t: now - dice.t0,
-    value: dice.value,
+    value,
+    bank,
+    bankIndex,
+    pickable: canMove() && bank.length > 0,
     axes: dice.axes,
     style: state.seats[dice.seat]?.skins.dice,
     color: col(board.colors[dice.seat]),
@@ -885,8 +933,14 @@ function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
 els.canvas.addEventListener('pointerdown', (e) => {
   if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return send('roll');
   if (!canMove()) return;
-  const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), state.movable);
-  if (token !== null) send('move', { token });
+  const roll = renderer.hitBank(e.clientX, e.clientY);
+  if (roll !== null) {
+    pick = roll;
+    sfx('step');
+    return renderUI();
+  }
+  const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), pickable());
+  if (token !== null) send('move', { token, roll: pick });
 });
 
 window.addEventListener('keydown', (e) => {
@@ -938,6 +992,15 @@ function button(label, onClick) {
   return b;
 }
 
+// Seat cards laid out like the seats' corners on the board: top row first, left to right.
+function seatOrder(board, seats) {
+  return [...seats].sort((a, b) => {
+    const A = board.bases[a];
+    const B = board.bases[b];
+    return Math.sign(A.y) - Math.sign(B.y) || A.x - B.x;
+  });
+}
+
 function capitalize(s) {
   return s[0].toUpperCase() + s.slice(1);
 }
@@ -963,7 +1026,7 @@ function easeOutBack(k) {
 window.__ludoMovablePoint = () => {
   if (!canMove() || !renderer.lastLayout) return null;
   const seat = mySeat();
-  const p = renderer.lastLayout.find((it) => it.seat === seat && state.movable.includes(it.token));
+  const p = renderer.lastLayout.find((it) => it.seat === seat && pickable().includes(it.token));
   return p ? renderer.tokenPoint(p) : null;
 };
 window.__ludoDicePoint = () => (canRoll() ? renderer.toClient(0, 0) : null);

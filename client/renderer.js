@@ -77,8 +77,24 @@ export class BoardRenderer {
     ctx.setTransform(k, 0, 0, k, mid, mid);
 
     // Flat tiles with small gaps, so the board colour shows through as clean grout lines.
+    const n = board.arms;
     ctx.fillStyle = theme.bg;
-    roundRect(ctx, -half, -half, this.span, this.span, 12 * lw);
+    if (n === 4) {
+      roundRect(ctx, -half, -half, this.span, this.span, 12 * lw);
+    } else {
+      // The hexagon board's outline: the outer corners of every arm, a little grout beyond them
+      ctx.beginPath();
+      const r = board.hub + 6 + 0.12;
+      for (let s = 0; s < n; s++) {
+        const a = board.armAngle(s);
+        for (const v of [-1.62, 1.62]) ctx.lineTo(Math.cos(a) * r - Math.sin(a) * v, Math.sin(a) * r + Math.cos(a) * v);
+      }
+      ctx.closePath();
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 0.3;
+      ctx.strokeStyle = theme.bg;
+      ctx.stroke();
+    }
     ctx.fill();
     const color = (seat) => theme.players[board.colors[seat]];
 
@@ -94,11 +110,28 @@ export class BoardRenderer {
         roundRect(ctx, b.x - inner, b.y - inner, inner * 2, inner * 2, 0.4);
         ctx.fill();
       } else {
-        circle(ctx, b.x, b.y, b.size);
+        // The whole triangle between two arms in the player's colour, a plain circle inside,
+        // and a faint spot for each pin to stand on
+        const apex = { x: Math.cos(b.angle) * board.corner, y: Math.sin(b.angle) * board.corner };
+        const pts = [apex, ...[-1, 1].map((d) => ({
+          x: apex.x + Math.cos(b.angle + (d * Math.PI) / n) * 6,
+          y: apex.y + Math.sin(b.angle + (d * Math.PI) / n) * 6,
+        }))];
+        ctx.beginPath();
+        for (const p of pts) ctx.lineTo(b.x + (p.x - b.x) * 0.975, b.y + (p.y - b.y) * 0.975);
+        ctx.closePath();
         ctx.fill();
         ctx.fillStyle = theme.baseInner;
-        circle(ctx, b.x, b.y, b.size * 0.78);
+        circle(ctx, b.x, b.y, b.size);
         ctx.fill();
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = color(seat);
+        for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+          circle(ctx, b.x + ox * board.baseSpread, b.y + oy * board.baseSpread, 0.42);
+          ctx.fill();
+        }
+        ctx.restore();
       }
     });
 
@@ -117,7 +150,6 @@ export class BoardRenderer {
     });
 
     // Centre: one triangle per seat pointing at its home column, with thin gaps between
-    const n = board.arms;
     const R = board.hub / Math.cos(Math.PI / n) - 0.05;
     for (let s = 0; s < n; s++) {
       const a = board.armAngle(s);
@@ -129,6 +161,20 @@ export class BoardRenderer {
       ctx.fillStyle = color(s);
       ctx.fill();
       ctx.lineJoin = 'round';
+      ctx.lineWidth = 0.1;
+      ctx.strokeStyle = theme.bg;
+      ctx.stroke();
+    }
+    // The hexagon board has a dark well in the middle for the dice
+    if (n !== 4) {
+      ctx.beginPath();
+      for (let s = 0; s < n; s++) {
+        const a = board.armAngle(s) + Math.PI / n;
+        ctx.lineTo(Math.cos(a) * 1.5, Math.sin(a) * 1.5);
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#2a2030';
+      ctx.fill();
       ctx.lineWidth = 0.1;
       ctx.strokeStyle = theme.bg;
       ctx.stroke();
@@ -336,6 +382,8 @@ export class BoardRenderer {
       color: d.color,
     });
 
+    this.drawBank(d, size, cx, cy - hop);
+
     if (d.mode === 'ready' && d.mine) {
       ctx.font = `800 ${Math.max(11, size * 0.2)}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
@@ -451,7 +499,49 @@ export class BoardRenderer {
     ctx.globalAlpha = 1;
   }
 
+  // The turn's other rolls (6s kept for later, or rolls still to play) sit in a row of small
+  // dice above the big one. While you're moving you can tap one to use it instead.
+  drawBank(d, size, cx, cy) {
+    this.lastBank = [];
+    // Equal rolls are interchangeable, so they share one dice with a "×N" count
+    const groups = [];
+    (d.bank || []).forEach((value, i) => {
+      const g = groups.find((g) => g.value === value);
+      if (g) g.count++;
+      else groups.push({ value, count: 1, index: d.bankIndex?.[i] ?? i });
+    });
+    if (!groups.length) return;
+    const ctx = this.ctx;
+    const small = size * 0.4;
+    const slot = small * 1.9; // room for the count beside each dice
+    const y = cy - size * 0.5 - small * 0.75;
+    groups.forEach((g, i) => {
+      const x = cx + (i - (groups.length - 1) / 2) * slot - (g.count > 1 ? small * 0.3 : 0);
+      drawDice(ctx, x, y, small, g.value, d.style, { color: d.color, glow: d.pickable ? d.color : null });
+      if (g.count > 1) {
+        ctx.font = `800 ${Math.max(10, small * 0.5)}px system-ui, sans-serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+        ctx.strokeText(`×${g.count}`, x + small * 0.58, y);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(`×${g.count}`, x + small * 0.58, y);
+      }
+      this.lastBank.push({ x, y, r: small * 0.75, index: g.index });
+    });
+  }
+
   // ---------- hit tests ----------
+
+  // Which small dice (as an index into the turn's rolls) is at a click position, if any.
+  hitBank(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const hit = (this.lastBank || []).find((b) => Math.hypot(b.x - x, b.y - y) < b.r);
+    return hit ? hit.index : null;
+  }
 
   // Returns the token index (of `seat`) at a click position, preferring highlighted ones.
   hitToken(clientX, clientY, seat, allowed) {

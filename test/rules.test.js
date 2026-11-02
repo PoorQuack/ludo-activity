@@ -176,23 +176,47 @@ function twoPlayerRoom(rolls = []) {
 }
 
 test('the only possible move is made automatically', async () => {
-  const { room, a } = twoPlayerRoom([6]);
-  room.roll(a); // all four pawns in base: every choice is the same
+  const { room, a } = twoPlayerRoom([6, 1]);
+  room.roll(a);
+  room.roll(a); // all four pawns in base: every choice for the 6 is the same, then the 1 has one token
   assert.equal(room.movable.length, 4);
-  await new Promise((r) => setTimeout(r, 60));
-  assert.equal(room.tokens[0].filter((p) => p === 0).length, 1);
+  await new Promise((r) => setTimeout(r, 100));
+  assert.deepEqual([...room.tokens[0]].sort(), [-1, -1, -1, 1]);
   room.destroy();
 });
 
-test('rolling 6s keeps the turn, however many in a row', async () => {
-  const { room, a } = twoPlayerRoom([6, 6, 6, 6]);
+test('a 6 is kept and rolled again, then every roll is played', () => {
+  const { room, a } = twoPlayerRoom([6, 6, 3]);
   room.tokens[0] = [5, 10, -1, -1];
-  for (let i = 0; i < 4; i++) {
-    room.roll(a);
-    room.move(a, 0);
-    assert.equal(room.turn, 0);
-  }
-  assert.equal(room.tokens[0][0], 29);
+  room.roll(a);
+  assert.equal(room.rolled, false); // rolls again
+  assert.throws(() => room.move(a, 0), /Roll first/);
+  room.roll(a);
+  room.roll(a);
+  assert.deepEqual(room.rolls, [6, 6, 3]);
+  room.move(a, 0, 2); // the 3 first
+  room.move(a, 0, 0); // then a 6
+  assert.equal(room.turn, 0);
+  room.move(a, 1, 0); // the other 6 on another token
+  assert.deepEqual(room.tokens[0], [14, 16, -1, -1]);
+  assert.equal(room.turn, 2); // 6s don't give a turn after the rolls are used
+  room.destroy();
+});
+
+test('capturing with a 6: the 6 rolls again, and the capture earns another turn', async () => {
+  const { room, a } = twoPlayerRoom([6, 2]);
+  room.tokens[0] = [5, -1, -1, -1];
+  room.tokens[2] = [37, -1, -1, -1]; // seat 2's progress 37 is seat 0's square 11
+  room.roll(a);
+  room.roll(a);
+  room.move(a, 0, 0); // 5 + 6 = 11: capture
+  assert.equal(room.tokens[2][0], -1);
+  assert.equal(room.extraTurns, 1);
+  await new Promise((r) => setTimeout(r, 100)); // the 2 is the only move left: played for you
+  assert.equal(room.tokens[0][0], 13);
+  assert.equal(room.turn, 0);
+  assert.equal(room.rolled, false);
+  assert.equal(room.extraTurns, 0);
   room.destroy();
 });
 
@@ -204,7 +228,7 @@ test('a real choice is left to the player', async () => {
   assert.deepEqual(room.tokens[0], [5, 10, -1, -1]);
   room.move(a, 1);
   assert.deepEqual(room.tokens[0], [5, 13, -1, -1]);
-  assert.equal(room.log.at(-1), 'A rolled a 3 and moved a token'); // every move shows in the log
+  assert.equal(room.log.at(-1), 'A moved a token 3'); // every move shows in the log
   room.destroy();
 });
 
