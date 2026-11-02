@@ -1,6 +1,6 @@
 // Draws the board, tokens, dice and effects on a <canvas>.
 // Board positions come in board units (one square = 1, centre = 0,0); see shared/board.js.
-import { BOARD_THEMES, DICE_STYLES } from './skins.js';
+import { BOARD_THEMES, DICE_STYLES, CB_COLORS, SHAPES, isColorBlind } from './skins.js';
 
 export const SPIN_MS = 600;
 export const LEAVE_MS = 260;
@@ -22,10 +22,22 @@ export class BoardRenderer {
 
   setBoard(board, themeId) {
     const theme = BOARD_THEMES[themeId] || BOARD_THEMES['board-classic'];
-    if (board === this.board && theme === this.theme) return;
+    const cb = isColorBlind();
+    if (board === this.board && theme === this.theme && cb === this.cb) return;
     this.board = board;
     this.theme = theme;
+    this.cb = cb; // colour-blind mode: safe colours plus a shape for each player
     this.size = 0; // redraw the static layer on the next resize()
+  }
+
+  // A seat's colour on this board (the colour-blind palette when that's on).
+  seatColor(seat) {
+    const name = this.board.colors[seat];
+    return this.cb ? CB_COLORS[name] : this.theme.players[name];
+  }
+
+  seatShape(seat) {
+    return SHAPES[this.board.colors[seat]];
   }
 
   resize(cssSize) {
@@ -96,7 +108,8 @@ export class BoardRenderer {
       ctx.stroke();
     }
     ctx.fill();
-    const color = (seat) => theme.players[board.colors[seat]];
+    const color = (seat) => this.seatColor(seat);
+    const cb = this.cb;
 
     // Bases: a solid block of the player's colour with a plain panel inside
     board.bases.forEach((b, seat) => {
@@ -133,6 +146,8 @@ export class BoardRenderer {
         }
         ctx.restore();
       }
+      // Colour-blind mode: the player's shape in the middle of their base
+      if (cb) drawShape(ctx, this.seatShape(seat), b.x, b.y, b.square ? 0.6 : 0.42, color(seat), 'rgba(0,0,0,0.35)', 0.08);
     });
 
     // Track: start squares in the player's colour, safe squares tinted with a star
@@ -140,13 +155,21 @@ export class BoardRenderer {
       const startSeat = board.startIndex.indexOf(i);
       const safe = board.safe.has(i);
       drawTile(ctx, sq, startSeat >= 0 ? color(startSeat) : safe ? theme.safe : theme.cell);
-      if (startSeat >= 0) drawStar(ctx, sq.x, sq.y, 0.26, 'rgba(255,255,255,0.9)');
+      // (in colour-blind mode the start square shows its player's shape instead of the star)
+      if (startSeat >= 0 && cb) {
+        const ink = inkOn(color(startSeat));
+        drawShape(ctx, this.seatShape(startSeat), sq.x, sq.y, 0.27, ink.fill, ink.edge, 0.05);
+      }
+      else if (startSeat >= 0) drawStar(ctx, sq.x, sq.y, 0.26, 'rgba(255,255,255,0.9)');
       else if (safe) drawStar(ctx, sq.x, sq.y, 0.26, theme.star);
     });
 
     // Home columns
     board.homeColumns.forEach((col, seat) => {
-      for (const sq of col) drawTile(ctx, sq, color(seat));
+      for (const sq of col) {
+        drawTile(ctx, sq, color(seat));
+        if (cb) drawShape(ctx, this.seatShape(seat), sq.x, sq.y, 0.17, inkOn(color(seat)).fill, null);
+      }
     });
 
     // Centre: one triangle per seat pointing at its home column, with thin gaps between
@@ -164,6 +187,11 @@ export class BoardRenderer {
       ctx.lineWidth = 0.1;
       ctx.strokeStyle = theme.bg;
       ctx.stroke();
+      if (cb) {
+        const d = n === 4 ? R * 0.62 : R * 0.72; // the wide part of the wedge (clear of the dice well)
+        const ink = inkOn(color(s));
+        drawShape(ctx, this.seatShape(s), Math.cos(a) * d, Math.sin(a) * d, 0.22, ink.fill, ink.edge, 0.05);
+      }
     }
     // The hexagon board has a dark well in the middle for the dice
     if (n !== 4) {
@@ -283,7 +311,7 @@ export class BoardRenderer {
       ctx.strokeStyle = '#111';
       ctx.stroke();
     }
-    const hex = this.theme.players[this.board.colors[p.seat]];
+    const hex = this.seatColor(p.seat);
     // A coloured ring on the square under a pawn on the track, so you can see whose it is and where it stands.
     if (p.onBoard) {
       ctx.beginPath();
@@ -301,6 +329,11 @@ export class BoardRenderer {
       ctx.stroke();
     }
     drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash });
+    // Colour-blind mode: the player's shape on the pawn's body
+    if (this.cb) {
+      const by = y + r * 0.2 - p.lift * s - r * 0.82 * p.squash;
+      drawShape(ctx, this.seatShape(p.seat), x, by, r * 0.36, '#ffffff', '#111111', Math.max(1.2, r * 0.08));
+    }
   }
 
   drawTurnGlow(seat, now) {
@@ -902,6 +935,49 @@ function drawStar(ctx, cx, cy, r, color) {
   ctx.fill();
 }
 
+// A player's shape (colour-blind mode), centred on (x, y) and about `r` from centre to edge.
+// `stroke` (optional) outlines it with `lineWidth`, so it reads on any background.
+export function drawShape(ctx, shape, x, y, r, fill, stroke, lineWidth = 1) {
+  ctx.beginPath();
+  if (shape === 'circle') {
+    ctx.arc(x, y, r * 0.85, 0, TAU);
+  } else if (shape === 'square') {
+    const h = r * 0.75;
+    ctx.rect(x - h, y - h, h * 2, h * 2);
+  } else if (shape === 'diamond') {
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r * 0.8, y);
+    ctx.lineTo(x, y + r);
+    ctx.lineTo(x - r * 0.8, y);
+  } else if (shape === 'triangle') {
+    ctx.moveTo(x, y - r);
+    ctx.lineTo(x + r * 0.95, y + r * 0.7);
+    ctx.lineTo(x - r * 0.95, y + r * 0.7);
+  } else {
+    // plus, or a plus turned 45° for the cross
+    const t = r * 0.34;
+    const pts = [[-t, -r], [t, -r], [t, -t], [r, -t], [r, t], [t, t], [t, r], [-t, r], [-t, t], [-r, t], [-r, -t], [-t, -t]];
+    const turn = shape === 'cross' ? Math.PI / 4 : 0;
+    const c = Math.cos(turn);
+    const sn = Math.sin(turn);
+    pts.forEach(([px, py], i) => {
+      const qx = x + (px * c - py * sn) * 0.9;
+      const qy = y + (px * sn + py * c) * 0.9;
+      if (i) ctx.lineTo(qx, qy);
+      else ctx.moveTo(qx, qy);
+    });
+  }
+  ctx.closePath();
+  ctx.lineJoin = 'round';
+  if (stroke) {
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+  }
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
 function circle(ctx, x, y, r) {
   ctx.beginPath();
   ctx.arc(x, y, Math.max(0, r), 0, TAU);
@@ -931,6 +1007,13 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // Blends two #rrggbb colours: t = 0 gives `a`, t = 1 gives `b`.
+// A shape colour that stands out on a tile of colour `hex`: dark on light colours (like yellow), white otherwise.
+function inkOn(hex) {
+  const p = parseInt(hex.slice(1), 16);
+  const lum = (0.299 * ((p >> 16) & 255) + 0.587 * ((p >> 8) & 255) + 0.114 * (p & 255)) / 255;
+  return lum > 0.6 ? { fill: 'rgba(0,0,0,0.62)', edge: null } : { fill: '#ffffff', edge: 'rgba(0,0,0,0.5)' };
+}
+
 function mix(a, b, t) {
   const pa = parseInt(a.slice(1), 16);
   const pb = parseInt(b.slice(1), 16);

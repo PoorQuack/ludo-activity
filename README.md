@@ -4,6 +4,7 @@ Multiplayer Ludo that runs inside Discord as an Activity.
 
 - **Modes:** 2 players, 4 players, or 6 players on a hexagon board. Bots can fill empty seats.
 - **Main menu** with Play, Shop and How to play.
+- **Colour-blind mode** (per player, in the menu and the in-game ☰): colours that stay distinct for the common kinds of colour blindness, plus a shape for every player (▲ ■ ● ◆ ✚ ✖) on pins, bases, home columns, seat cards, chat and turn text.
 - **Coins and shop:** players earn coins by finishing games and spend them on token skins, dice skins, board themes and emotes. Coins are saved on the server in `data/profiles.json`.
 
 - **Server:** Node.js, Express and WebSockets. The server enforces the rules, so players can't cheat.

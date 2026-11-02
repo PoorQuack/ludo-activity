@@ -3,7 +3,7 @@ import { MODES, boardFor } from '../shared/board.js';
 import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop } from './shop-ui.js';
-import { playerColor } from './skins.js';
+import { playerColor, SYMBOLS, isColorBlind, setColorBlind } from './skins.js';
 import { unlockAudio, sfx, setMusic, setSound, setVolume, audioSettings } from './audio.js';
 
 const params = new URLSearchParams(location.search);
@@ -268,9 +268,9 @@ function renderChat() {
       const li = document.createElement('li');
       const who = document.createElement('span');
       who.className = 'who';
-      who.textContent = m.name;
-      // Players' names in their colour; watchers in the normal text colour
+      // Players' names in their colour (and shape); watchers in the normal text colour
       const seat = state.seats.findIndex((s) => s && !s.bot && s.userId === m.userId);
+      who.textContent = (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
       if (seat >= 0) who.style.color = col(board.colors[seat]);
       li.appendChild(who);
       li.appendChild(document.createTextNode(m.text));
@@ -340,6 +340,30 @@ for (const b of els.audioToggles) {
 }
 renderAudioToggles();
 
+// ---------------- colour-blind mode ----------------
+
+const cbButtons = [...document.querySelectorAll('[data-cb]')];
+function renderColorBlindToggles() {
+  for (const b of cbButtons) {
+    b.textContent = isColorBlind() ? 'On' : 'Off';
+    b.classList.toggle('off', !isColorBlind());
+  }
+}
+for (const b of cbButtons) {
+  b.addEventListener('click', () => {
+    setColorBlind(!isColorBlind());
+    renderColorBlindToggles();
+    // Everything with player colours redraws: the board (next frame), panel, chat and shop
+    shownChatId = 0;
+    if (state) {
+      renderUI();
+      renderChat();
+      if (screen === 'shop') drawShop();
+    }
+  });
+}
+renderColorBlindToggles();
+
 // Browsers only allow sound after the player interacts with the page.
 for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, unlockAudio, { capture: true });
 
@@ -351,6 +375,11 @@ function mySeat() {
 // A player colour ('red', …) as it looks on the current board theme.
 function col(name) {
   return playerColor(myTheme(), name);
+}
+
+// In colour-blind mode, a player colour's shape to put before a name ('▲ '); otherwise nothing.
+function sym(name) {
+  return isColorBlind() ? `${SYMBOLS[name]} ` : '';
 }
 
 // Board themes are just looks, so everyone sees the one they equipped (watchers without one: the host's).
@@ -444,7 +473,7 @@ function renderMenu() {
     for (const i of joined) {
       const s = state.seats[i];
       const tag = s.userId === state.hostId ? 'Host' : s.bot ? 'Bot' : s.surrendered ? 'Out' : me && s.userId === me.id ? 'You' : '';
-      els.gamePlayers.appendChild(listItem(playerColor(myTheme(), board.colors[i]), s.name, tag));
+      els.gamePlayers.appendChild(listItem(playerColor(myTheme(), board.colors[i]), sym(board.colors[i]) + s.name, tag));
     }
     const open = state.seatsAllowed.length - joined.length;
     if (state.phase === 'lobby' && open > 0) {
@@ -520,6 +549,12 @@ function renderPanel() {
     top.className = 'seat-top';
     top.innerHTML = `<span class="seat-dot"></span><span class="seat-name"></span>`;
     top.querySelector('.seat-name').textContent = s ? s.name : capitalize(colorName);
+    if (isColorBlind()) {
+      // The seat's shape in place of the plain dot
+      const dot = top.querySelector('.seat-dot');
+      dot.classList.add('sym');
+      dot.textContent = SYMBOLS[colorName];
+    }
     card.appendChild(top);
 
     const sub = document.createElement('div');
@@ -596,7 +631,7 @@ function renderPanel() {
     else if (sixes) text = `${cur.name} rolled a 6 — rolling again`;
     else if (state.rolled) text = `${cur.name} rolled ${rolls.length ? rolls.join(' + ') : `a ${state.dice}`}`;
     else text = `${cur.name}'s turn`;
-    els.turnText.textContent = text + extra;
+    els.turnText.textContent = sym(board.colors[state.turn]) + text + extra;
     els.turnText.style.color = col(board.colors[state.turn]);
   }
   const racing = phase === 'playing' && seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);

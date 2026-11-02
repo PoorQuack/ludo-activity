@@ -47,8 +47,45 @@ export const BOARD_THEMES = {
   },
 };
 
+// ---------- colour-blind mode ----------
+// Each player can switch it on for themselves. Every board theme then uses the Okabe–Ito colours,
+// which stay apart for the common kinds of colour blindness, and every player gets a shape
+// too, so colour is never the only way to tell players apart.
+export const CB_COLORS = {
+  red: '#d55e00',
+  green: '#009e73',
+  yellow: '#f0e442',
+  blue: '#0072b2',
+  purple: '#cc79a7',
+  orange: '#e69f00',
+};
+export const SHAPES = { red: 'triangle', green: 'square', yellow: 'circle', blue: 'diamond', purple: 'plus', orange: 'cross' };
+export const SYMBOLS = { red: '▲', green: '■', yellow: '●', blue: '◆', purple: '✚', orange: '✖' };
+
+const A11Y_KEY = 'ludo-a11y';
+let colorBlind = false;
+try {
+  colorBlind = JSON.parse(localStorage.getItem(A11Y_KEY) || '{}').colorBlind === true;
+} catch {
+  // storage unavailable: off
+}
+
+export function isColorBlind() {
+  return colorBlind;
+}
+
+export function setColorBlind(on) {
+  colorBlind = on;
+  try {
+    localStorage.setItem(A11Y_KEY, JSON.stringify({ colorBlind: on }));
+  } catch {
+    // not saved: fine, it's only a preference
+  }
+}
+
 // A player's colour on a board theme (e.g. 'red' on 'board-neon').
 export function playerColor(themeId, name) {
+  if (colorBlind) return CB_COLORS[name];
   return (BOARD_THEMES[themeId] || BOARD_THEMES['board-classic']).players[name];
 }
 
