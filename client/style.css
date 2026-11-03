@@ -307,6 +307,15 @@ html, body {
   touch-action: manipulation;
 }
 
+/* Lobby: no game is running yet — the empty board gives way so the room gets the space. */
+#game[data-phase='lobby'] .board-wrap { display: none; }
+#game[data-phase='lobby'] .panel {
+  width: min(560px, 100%);
+  flex: none;
+  margin: 0 auto;
+}
+#game[data-phase='lobby'] #room-info { font-size: 14px; color: var(--text); }
+
 .panel {
   width: 300px;
   flex-shrink: 0;
@@ -330,6 +339,7 @@ html, body {
   #game[data-phase='playing'] .seats { display: none; }
   /* The chat stretches into whatever space is left under the board */
   .panel .chat { flex: 1 0 150px; }
+  #game[data-phase='lobby'] .panel { width: 100%; flex: 1; }
   .panel .chat-log { flex: 1; height: auto; min-height: 0; }
   .emote { width: 36px; height: 36px; font-size: 18px; }
 }
