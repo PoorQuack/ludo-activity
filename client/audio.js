@@ -149,15 +149,8 @@ function loadTrack(track) {
   if (!track) return;
   if (!musicEl) {
     musicEl = new Audio();
-    // Tracks play through like a playlist: the next one starts when this one ends.
-    musicEl.addEventListener('ended', () => {
-      const next = tracks[(tracks.indexOf(currentTrack()) + 1) % tracks.length];
-      if (!next) return;
-      settings.musicTrack = next.id;
-      save();
-      loadTrack(next);
-      emitChange();
-    });
+    // A track loops so the mood stays — mood changes only happen when the player picks one.
+    musicEl.loop = true;
     // A missing/broken file shouldn't leave the game silent: fall back to the generated loop.
     musicEl.addEventListener('error', () => {
       console.warn('Could not load music file, using generated music instead');
