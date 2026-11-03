@@ -4,7 +4,7 @@ import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor, SYMBOLS, isColorBlind, setColorBlind } from './skins.js';
-import { unlockAudio, sfx, setMusic, setSound, setVolume, setMusicStyle, audioSettings } from './audio.js';
+import { unlockAudio, sfx, setMusic, setSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
@@ -73,8 +73,12 @@ const els = {
   audioToggles: [...document.querySelectorAll('[data-toggle]')],
   volumes: [...document.querySelectorAll('[data-volume]')],
   volumeValues: [...document.querySelectorAll('[data-volume-value]')],
-  musicStyles: [...document.querySelectorAll('[data-music-style]')],
-  musicStyleRows: [...document.querySelectorAll('[data-music-style-row]')],
+  playerBtns: [...document.querySelectorAll('[data-player-btn]')],
+  playerPop: $('player-pop'),
+  playerLabel: $('player-label'),
+  playerTitle: $('player-title'),
+  playerPlay: $('player-play'),
+  playerList: $('player-list'),
   toast: $('toast'),
 };
 
@@ -428,18 +432,6 @@ function renderAudioToggles() {
   const pct = (kind) => Math.round(s[kind === 'music' ? 'musicVolume' : 'soundVolume'] * 100);
   for (const input of els.volumes) if (Number(input.value) !== pct(input.dataset.volume)) input.value = pct(input.dataset.volume);
   for (const el of els.volumeValues) el.textContent = `${pct(el.dataset.volumeValue)}%`;
-  // The style picker appears once sounds.json has told us what tracks exist.
-  const styles = s.musicStyles || [];
-  const styleNames = { jazz: 'Slow jazz', lofi: 'Lo-fi', energetic: 'Energetic' };
-  for (const row of els.musicStyleRows) row.hidden = styles.length === 0;
-  for (const sel of els.musicStyles) {
-    if (sel.dataset.loaded !== styles.join()) {
-      sel.innerHTML = '';
-      for (const st of styles) sel.add(new Option(styleNames[st] || st, st));
-      sel.dataset.loaded = styles.join();
-    }
-    sel.value = s.musicStyle;
-  }
 }
 
 for (const input of els.volumes) {
@@ -460,15 +452,71 @@ for (const b of els.audioToggles) {
   });
 }
 
-for (const sel of els.musicStyles) {
-  sel.addEventListener('change', () => {
-    setMusicStyle(sel.value);
-    renderAudioToggles();
-  });
+// ---------------- music player ----------------
+
+const popOpenFor = { btn: null };
+
+function renderPlayer() {
+  const s = audioSettings();
+  const list = s.tracks || [];
+  for (const b of els.playerBtns) b.hidden = list.length === 0;
+  const cur = list.find((t) => t.id === s.musicTrack) || list[0];
+  els.playerLabel.textContent = cur ? cur.label : '';
+  els.playerTitle.textContent = cur ? [cur.title, cur.artist].filter(Boolean).join(' — ') : '';
+  els.playerPlay.textContent = s.music ? '⏸' : '▶';
+  els.playerList.innerHTML = '';
+  for (const t of list) {
+    const b = document.createElement('button');
+    b.className = t === cur ? 'active' : '';
+    b.innerHTML = `${escapeHtml(t.label)}<small>${escapeHtml([t.title, t.artist].filter(Boolean).join(' — '))}</small>`;
+    b.addEventListener('click', () => playTrack(t.id));
+    els.playerList.appendChild(b);
+  }
 }
 
-window.addEventListener('ludo-audio-ready', renderAudioToggles); // styles arrive after sounds.json loads
+function closePlayer() {
+  els.playerPop.classList.add('hidden');
+  popOpenFor.btn?.setAttribute('aria-expanded', 'false');
+  popOpenFor.btn = null;
+}
+
+function openPlayer(btn) {
+  const r = btn.getBoundingClientRect();
+  els.playerPop.style.top = `${r.bottom + 6}px`;
+  els.playerPop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  els.playerPop.classList.remove('hidden');
+  btn.setAttribute('aria-expanded', 'true');
+  popOpenFor.btn = btn;
+}
+
+for (const b of els.playerBtns) {
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (els.playerPop.classList.contains('hidden')) openPlayer(b);
+    else if (popOpenFor.btn === b) closePlayer();
+    else {
+      popOpenFor.btn?.setAttribute('aria-expanded', 'false');
+      openPlayer(b);
+    }
+  });
+}
+document.addEventListener('pointerdown', (e) => {
+  if (!els.playerPop.classList.contains('hidden') && !els.playerPop.contains(e.target) && !e.target.closest('[data-player-btn]')) {
+    closePlayer();
+  }
+});
+window.addEventListener('keydown', (e) => e.key === 'Escape' && closePlayer());
+$('player-prev').addEventListener('click', prevTrack);
+$('player-next').addEventListener('click', nextTrack);
+els.playerPlay.addEventListener('click', () => setMusic(!audioSettings().music));
+
+window.addEventListener('ludo-audio-change', renderPlayer);
+window.addEventListener('ludo-audio-ready', () => {
+  renderAudioToggles();
+  renderPlayer(); // the 🎵 buttons appear once the playlist is known
+});
 renderAudioToggles();
+renderPlayer();
 
 // ---------------- colour-blind mode ----------------
 

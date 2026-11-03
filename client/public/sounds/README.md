@@ -5,26 +5,25 @@ Audio files here (`.mp3` works everywhere — iOS doesn't play `.ogg`) are liste
 
 ```json
 {
-  "roll": ["roll-1.mp3", "roll-2.mp3", "roll-3.mp3"],
-  "land": "land.mp3",
-  "step": ["step-1.mp3", "step-2.mp3", "step-3.mp3"],
-  "capture": "capture.mp3",
-  "home": "home.mp3",
-  "turn": "turn.mp3",
-  "win": "win.mp3",
-  "chat": "chat.mp3",
-  "music": {
-    "jazz": "music-jazz.mp3",
-    "lofi": "music-lofi.mp3",
-    "energetic": "music-energetic.mp3"
-  }
+  "music": [
+    { "id": "lofi", "label": "Lo-fi", "title": "Deliberate Thought", "artist": "Kevin MacLeod", "file": "music-lofi.mp3" },
+    { "id": "jazz", "label": "Slow jazz", "title": "Wallpaper", "artist": "Kevin MacLeod", "file": "music-jazz.mp3" },
+    { "id": "energetic", "label": "Energetic", "title": "Faster Does It", "artist": "Kevin MacLeod", "file": "music-energetic.mp3" }
+  ]
 }
 ```
 
-A list picks one file at random each time, so repeated sounds don't feel robotic.
-`music` can be one filename (all players get it) or an object of named styles the
-player picks between in the audio settings — only the selected track is loaded.
-Keep files small: effects ~96 kbps mono with the leading silence trimmed; music
-~128 kbps stereo. See `CREDITS.md` for where these files came from — only use
-sounds you're allowed to use (CC0, or CC-BY with in-game attribution).
-Run `npm run build` after changing anything here.
+`music` is an ordered playlist: tracks play one after another (wrapping around),
+the player's pick is remembered, and only the current track's file is loaded.
+Older formats still work too: a plain filename (`"music": "song.mp3"`) plays for
+everyone, and `{ "jazz": "j.mp3" }` becomes a playlist keyed on the style names.
+
+Effect names (`roll`, `land`, `step`, `capture`, `home`, `turn`, `win`, `chat`)
+can each be a filename or a list — a list picks one file at random each time, so
+repeated sounds don't feel robotic. Keep effects small: ~96 kbps mono with the
+leading silence trimmed; music ~128 kbps stereo.
+
+`sounds.json` itself is served no-cache, but the mp3s are cached for a week —
+to replace a track's audio, use a NEW file name. See `CREDITS.md` for where
+these files came from — only use sounds you're allowed to use (CC0, or CC-BY
+with in-game attribution). Run `npm run build` after changing anything here.

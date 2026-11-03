@@ -95,7 +95,7 @@ const noCache = (res) => res.setHeader('Cache-Control', 'no-cache, no-store, mus
 app.use(
   express.static(dist, {
     setHeaders(res, file) {
-      if (file.endsWith('.html')) noCache(res);
+      if (file.endsWith('.html') || file.endsWith('sounds.json')) noCache(res); // playlist edits must apply at once
       else if (file.includes(`${path.sep}sounds${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=604800'); // a week: sound names aren't hashed
       else if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     },

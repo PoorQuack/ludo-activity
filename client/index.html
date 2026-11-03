@@ -21,7 +21,10 @@
               <span class="wordmark-dots"><i></i><i></i><i></i><i></i></span>
               <h1>Ludo</h1>
             </div>
-            <span class="coins"><span class="coin"></span><b>0</b></span>
+            <div class="menu-tools">
+              <button class="btn small icon-btn" data-player-btn hidden aria-label="Music player" aria-expanded="false">🎵</button>
+              <span class="coins"><span class="coin"></span><b>0</b></span>
+            </div>
           </header>
           <p id="menu-name" class="menu-name"></p>
 
@@ -79,10 +82,6 @@
               <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
               <b data-volume-value="sound"></b>
               <button class="btn small toggle" data-toggle="sound"></button>
-            </div>
-            <div class="setting" data-music-style-row hidden>
-              <span>Music</span>
-              <select class="btn small" data-music-style aria-label="Music style"></select>
             </div>
             <div class="setting">
               <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
@@ -145,7 +144,7 @@
           <p>
             Music: “Wallpaper”, “Deliberate Thought”, “Faster Does It” — Kevin MacLeod (incompetech.com),
             <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY 4.0</a>.
-            Sound effects: Kenney asset packs (kenney.nl), CC0. Full list in <code>sounds/CREDITS.md</code>.
+            Full list in <code>sounds/CREDITS.md</code>.
           </p>
         </div>
       </section>
@@ -163,6 +162,7 @@
           <header class="panel-head">
             <span id="phase-tag" class="tag"></span>
             <span class="coins small"><span class="coin"></span><b>0</b></span>
+            <button class="btn small icon-btn" data-player-btn hidden aria-label="Music player" aria-expanded="false">🎵</button>
             <button id="drawer-btn" class="btn small icon-btn" aria-label="Menu" aria-expanded="false">☰</button>
           </header>
           <p id="room-info" class="room-info"></p>
@@ -205,10 +205,6 @@
                 <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
                 <b data-volume-value="sound"></b>
                 <button class="btn small toggle" data-toggle="sound"></button>
-              </div>
-              <div class="setting" data-music-style-row hidden>
-                <span>Music</span>
-                <select class="btn small" data-music-style aria-label="Music style"></select>
               </div>
               <div class="setting">
                 <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
@@ -253,6 +249,20 @@
           </section>
         </aside>
       </main>
+
+      <!-- Music player popover (shared: opened from the 🎵 header buttons) -->
+      <div id="player-pop" class="player-pop hidden">
+        <div class="player-now">
+          <b id="player-label"></b>
+          <span id="player-title"></span>
+        </div>
+        <div class="player-controls">
+          <button class="btn small icon-btn" id="player-prev" aria-label="Previous track">⏮</button>
+          <button class="btn small icon-btn" id="player-play" aria-label="Play or pause">▶</button>
+          <button class="btn small icon-btn" id="player-next" aria-label="Next track">⏭</button>
+        </div>
+        <div id="player-list" class="player-list"></div>
+      </div>
 
       <div id="toast" class="toast hidden"></div>
     </div>

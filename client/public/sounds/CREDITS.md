@@ -11,19 +11,12 @@
 Attribution line (also shown in game, "How to play" → Music & sounds):
 "Wallpaper", "Deliberate Thought", "Faster Does It" — Kevin MacLeod (incompetech.com), CC-BY 4.0.
 
-## Sound effects — Kenney (kenney.nl), licensed [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
+## Sound effects
 
-| File | Source file | Pack | License |
-|------|-------------|------|---------|
-| roll-1.mp3, roll-2.mp3, roll-3.mp3 | dice-shake-1/2/3.ogg | https://kenney.nl/assets/casino-audio | CC0 |
-| land.mp3 | dice-throw-1.ogg | https://kenney.nl/assets/casino-audio | CC0 |
-| step-1.mp3, step-2.mp3, step-3.mp3 | chip-lay-1/2/3.ogg | https://kenney.nl/assets/casino-audio | CC0 |
-| capture.mp3 | impactPunch_medium_001.ogg | https://kenney.nl/assets/impact-sounds | CC0 |
-| home.mp3 | glass_001.ogg | https://kenney.nl/assets/interface-sounds | CC0 |
-| turn.mp3 | confirmation_001.ogg | https://kenney.nl/assets/interface-sounds | CC0 |
-| chat.mp3 | drop_001.ogg | https://kenney.nl/assets/interface-sounds | CC0 |
-| win.mp3 | jingles_PIZZI02.ogg | https://kenney.nl/assets/music-jingles | CC0 |
+None — the game synthesises dice, moves and other effects with the Web Audio API
+(see client/audio.js). To add recordings later, list them in `sounds.json`
+(CC0 or CC-BY only; CC-BY also needs a credit line here and in game).
 
-All files were converted to MP3 (music: 128 kbps stereo, loudness-normalised to about -20 LUFS;
-effects: 96 kbps mono, about -16 LUFS, leading silence trimmed). No changes were made to the
-underlying works beyond format conversion, trimming and loudness adjustment.
+Files were converted to MP3 (128 kbps stereo, loudness-normalised to about -20 LUFS).
+No changes were made to the underlying works beyond format conversion, trimming and
+loudness adjustment.

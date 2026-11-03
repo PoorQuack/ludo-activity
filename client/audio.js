@@ -7,7 +7,7 @@
 // starts on the first interaction.
 
 const SETTINGS_KEY = 'ludo-audio';
-const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicStyle: 'lofi' };
+const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicTrack: '' };
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   // Older versions had one volume for both: carry it over to each
@@ -15,6 +15,11 @@ try {
     saved.musicVolume ??= saved.volume;
     saved.soundVolume ??= saved.volume;
     delete saved.volume;
+  }
+  // And a style instead of a track id.
+  if (saved.musicStyle !== undefined) {
+    saved.musicTrack ??= saved.musicStyle;
+    delete saved.musicStyle;
   }
   Object.assign(settings, saved);
 } catch {
@@ -26,9 +31,8 @@ let musicGain = null;
 let sfxGain = null;
 let noiseBuffer = null;
 let musicTimer = null;
-let musicTrack = null; // the one <audio> element for music files (its src changes with the style)
-let musicFiles = null; // style -> url, from sounds.json ("music" as a string becomes the '' style)
-let musicStyles = []; // the styles the player can pick (keys of "music")
+let musicEl = null; // the one <audio> element for music files (its src changes with the track)
+let tracks = []; // the playlist from sounds.json: { id, label, title, artist, file }
 let musicFileFailed = false; // the file wouldn't load: fall back to the generated loop
 let nextNote = 0;
 let step = 0;
@@ -38,7 +42,11 @@ const MUSIC_VOLUME = 0.32;
 const SFX_VOLUME = 0.6;
 
 export function audioSettings() {
-  return { ...settings, musicStyles: [...musicStyles] };
+  return { ...settings, tracks: tracks.map(({ id, label, title, artist }) => ({ id, label, title, artist })) };
+}
+
+function emitChange() {
+  window.dispatchEvent(new Event('ludo-audio-change'));
 }
 
 // Call on the first click/keypress; safe to call again.
@@ -76,10 +84,12 @@ export function setVolume(kind, v) {
 export function setMusic(on) {
   settings.music = on;
   save();
-  if (!ctx) return;
-  musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2);
-  if (on) startMusic();
-  else setTimeout(() => !settings.music && stopMusic(), 800);
+  if (ctx) {
+    musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2);
+    if (on) startMusic();
+    else setTimeout(() => !settings.music && stopMusic(), 800);
+  }
+  emitChange();
 }
 
 // Loads the recordings listed in sounds/sounds.json, if there is one.
@@ -94,12 +104,20 @@ async function loadFiles() {
   }
   for (const [name, file] of Object.entries(list)) {
     if (name === 'music') {
-      // "music": "one.mp3" plays for everyone; { jazz: "…", lofi: "…" } gives the player a style picker.
-      musicFiles =
-        typeof file === 'string'
-          ? { '': `sounds/${file}` }
-          : Object.fromEntries(Object.entries(file).map(([style, f]) => [style, `sounds/${f}`]));
-      musicStyles = Object.keys(musicFiles);
+      // Preferred: an ordered playlist [{ id, label, title, artist, file }]. Still fine:
+      // "one.mp3" for everyone, or { style: "file.mp3" } (id/label = the style key, title = file name).
+      if (typeof file === 'string') tracks = [{ id: 'music', label: 'Music', title: file, artist: '', file: `sounds/${file}` }];
+      else if (Array.isArray(file)) {
+        tracks = file.map((t) => ({
+          id: t.id || t.file,
+          label: t.label || t.id || t.title || t.file,
+          title: t.title || t.file,
+          artist: t.artist || '',
+          file: `sounds/${t.file}`,
+        }));
+      } else {
+        tracks = Object.entries(file).map(([id, f]) => ({ id, label: id, title: f, artist: '', file: `sounds/${f}` }));
+      }
       continue;
     }
     // A name can list several files; one is picked at random each time, for variety.
@@ -114,50 +132,68 @@ async function loadFiles() {
       }
     }
   }
-  if (musicFiles) useMusicFile(trackUrl());
+  if (tracks.length) loadTrack(currentTrack());
   window.dispatchEvent(new Event('ludo-audio-ready'));
+  emitChange();
 }
 
-// The url for the selected style — or the only file there is, if the saved style isn't offered.
-function trackUrl() {
-  return musicFiles[settings.musicStyle] ?? musicFiles[''] ?? Object.values(musicFiles)[0];
+// The saved track — or the first one, when the saved id isn't in the playlist.
+function currentTrack() {
+  return tracks.find((t) => t.id === settings.musicTrack) || tracks[0];
 }
 
-// Only the selected style's file is ever loaded.
-function useMusicFile(url) {
-  if (!url) return;
-  if (!musicTrack) {
-    musicTrack = new Audio();
-    musicTrack.loop = true;
+// Points the one <audio> element at a track's file — only that file is ever loaded.
+function loadTrack(track) {
+  if (!track) return;
+  if (!musicEl) {
+    musicEl = new Audio();
+    // Tracks play through like a playlist: the next one starts when this one ends.
+    musicEl.addEventListener('ended', () => {
+      const next = tracks[(tracks.indexOf(currentTrack()) + 1) % tracks.length];
+      if (!next) return;
+      settings.musicTrack = next.id;
+      save();
+      loadTrack(next);
+      emitChange();
+    });
     // A missing/broken file shouldn't leave the game silent: fall back to the generated loop.
-    musicTrack.addEventListener('error', () => {
-      console.warn(`Could not load music file, using generated music instead`);
+    musicEl.addEventListener('error', () => {
+      console.warn('Could not load music file, using generated music instead');
       musicFileFailed = true;
       stopMusic();
       if (settings.music) startMusic();
     });
-    ctx.createMediaElementSource(musicTrack).connect(musicGain);
+    ctx.createMediaElementSource(musicEl).connect(musicGain);
   }
+  settings.musicTrack = track.id;
+  save();
   musicFileFailed = false;
-  musicTrack.src = url;
+  musicEl.src = track.file;
   stopMusic(); // swap the generated loop for the file
   if (settings.music) startMusic();
 }
 
-// Switch the music style; fades out and back in when something is playing.
-export function setMusicStyle(style) {
-  if (style === settings.musicStyle) return;
-  settings.musicStyle = style;
-  save();
-  const url = musicFiles && trackUrl();
-  if (!ctx || !url) return;
-  if (!settings.music || !musicTrack || musicTrack.paused) return useMusicFile(url);
-  musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.2); // ~0.6s out
-  setTimeout(() => {
-    if (!musicFiles) return;
-    useMusicFile(url);
+// Changes the track, fading out and back in (~0.6s) while music is playing.
+export function playTrack(id) {
+  const track = tracks.find((t) => t.id === id);
+  if (!track || !ctx) return;
+  const fade = () => {
+    loadTrack(track);
     musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2); // and in
-  }, 650);
+  };
+  if (settings.music && musicEl && !musicEl.paused) {
+    musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.2); // ~0.6s out
+    setTimeout(fade, 650);
+  } else fade();
+  emitChange();
+}
+
+export function nextTrack() {
+  if (tracks.length) playTrack(tracks[(tracks.indexOf(currentTrack()) + 1) % tracks.length].id);
+}
+
+export function prevTrack() {
+  if (tracks.length) playTrack(tracks[(tracks.indexOf(currentTrack()) - 1 + tracks.length) % tracks.length].id);
 }
 
 export function setSound(on) {
@@ -188,8 +224,8 @@ const ARP = [0, 1, 2, 1, 0, 2, 1, null]; // eighth notes per bar; null = rest
 
 function startMusic() {
   if (!ctx) return;
-  if (musicTrack && !musicFileFailed) {
-    musicTrack.play().catch(() => {});
+  if (musicEl && !musicFileFailed) {
+    musicEl.play().catch(() => {});
     return;
   }
   if (musicTimer) return;
@@ -200,7 +236,7 @@ function startMusic() {
 function stopMusic() {
   clearInterval(musicTimer);
   musicTimer = null;
-  musicTrack?.pause();
+  musicEl?.pause();
 }
 
 // Schedules the notes for the next ~300 ms, so timing stays steady.
