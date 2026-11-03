@@ -1,13 +1,15 @@
 :root {
-  --bg: #17181c;
-  --panel: #1f2026;
-  --panel-2: #2a2b33;
-  --text: #f1f1f4;
-  --muted: #9a9ba6;
-  --accent: #5865f2;
+  --bg: #0e1510;
+  --panel: #18201a;
+  --panel-2: #232d26;
+  --text: #f0ece0;
+  --muted: #939b8a;
+  --accent: #d2a54e;
+  /* dark ink that sits on top of the brass accent */
+  --on-accent: #16120a;
   --gold: #f6cf57;
   --ok: #2f9e5f;
-  --line: #2c2d35;
+  --line: #2d372e;
   /* same as the Classic board's player colours */
   --red: #d24d47;
   --green: #2f9467;
@@ -46,7 +48,7 @@ html, body {
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  background: #3a3b45;
+  background: #333d30;
   color: var(--text);
   transition: filter 0.15s, transform 0.1s;
   white-space: nowrap;
@@ -54,7 +56,7 @@ html, body {
 .btn:hover { filter: brightness(1.15); }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; }
-.btn.primary { background: var(--accent); width: 100%; padding: 12px; font-size: 15px; }
+.btn.primary { background: var(--accent); color: var(--on-accent); width: 100%; padding: 12px; font-size: 15px; }
 .btn.small { padding: 5px 8px; font-size: 12px; }
 .btn.big { padding: 14px; font-size: 16px; border-radius: 12px; }
 .btn.danger { background: #c62f3a; color: #fff; }
@@ -135,9 +137,9 @@ html, body {
   cursor: pointer;
 }
 .player-list button:hover { background: var(--panel-2); }
-.player-list button.active { background: var(--accent); color: #fff; }
+.player-list button.active { background: var(--accent); color: var(--on-accent); }
 .player-list button small { display: block; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.player-list button.active small { color: rgba(255, 255, 255, 0.85); }
+.player-list button.active small { color: rgba(22, 18, 10, 0.72); }
 .wordmark { display: flex; align-items: center; gap: 10px; }
 .wordmark h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
 .wordmark-dots { display: grid; grid-template-columns: 9px 9px; gap: 3px; }
@@ -316,7 +318,7 @@ html, body {
 .panel-head { display: flex; align-items: center; gap: 8px; }
 .panel-head .coins { margin-left: auto; }
 .icon-btn { font-size: 16px; line-height: 1; padding: 6px 11px; }
-.icon-btn[aria-expanded='true'] { background: var(--accent); color: #fff; }
+.icon-btn[aria-expanded='true'] { background: var(--accent); color: var(--on-accent); }
 
 .drawer {
   display: flex;
@@ -340,7 +342,7 @@ html, body {
 
 .mode-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
 .mode-picker .btn { background: transparent; color: var(--muted); padding: 7px 4px; }
-.mode-picker .btn.active { background: var(--accent); color: #fff; opacity: 1; }
+.mode-picker .btn.active { background: var(--accent); color: var(--on-accent); opacity: 1; }
 .mode-picker .btn:disabled:not(.active) { opacity: 0.6; }
 
 /* Two seats to a row; minmax(0, …) lets the cards shrink to fit narrow screens instead of overflowing */
@@ -482,7 +484,7 @@ html, body {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(20, 20, 26, 0.94);
+  background: rgba(14, 21, 16, 0.94);
   padding: 22px 30px;
   border-radius: 16px;
   text-align: center;
@@ -508,7 +510,7 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 10px 22px;
   border-radius: 99px;
   font-weight: 800;
@@ -562,7 +564,7 @@ html, body {
 
 .segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
 .segmented .btn { background: transparent; color: var(--muted); }
-.segmented .btn.active { background: var(--accent); color: #fff; }
+.segmented .btn.active { background: var(--accent); color: var(--on-accent); }
 
 .code-form { display: flex; gap: 6px; }
 .code-form input {
@@ -607,9 +609,23 @@ html, body {
 .menu-card { margin: auto 0; padding-bottom: 8px; }
 
 /* ---------- menu polish ---------- */
-/* Soft Ludo-coloured light blobs drifting behind the menu. Radial gradients (no blur()
-   filters on huge elements) and only transform animates, so this stays on the GPU. */
+/* Felt-table ambience: the player colours still drift behind the menu, but muted to a
+   whisper and pulled toward brass so they read as coloured felt under lamplight rather
+   than a rainbow. Radial gradients (no blur() filters on huge elements) and only
+   transform animates, so this stays on the GPU. */
 .menu-bg { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+/* Steady warm glow near the top — the "lamp over the table" */
+.menu-bg::before {
+  content: '';
+  position: absolute;
+  top: -36vmax;
+  left: 50%;
+  width: 85vmax;
+  height: 55vmax;
+  margin-left: -42.5vmax;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 11%, transparent), transparent 70%);
+}
 .menu-bg i {
   position: absolute;
   width: 55vmax;
@@ -619,23 +635,23 @@ html, body {
 }
 .menu-bg i:nth-child(1) {
   top: -24vmax; left: -18vmax;
-  background: radial-gradient(circle, color-mix(in srgb, var(--red) 14%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--red) 45%, var(--accent)) 7%, transparent), transparent 68%);
 }
 .menu-bg i:nth-child(2) {
   top: -20vmax; right: -22vmax;
-  background: radial-gradient(circle, color-mix(in srgb, var(--green) 12%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--green) 50%, var(--accent)) 6%, transparent), transparent 68%);
   animation-name: blob-b;
   animation-duration: 46s;
 }
 .menu-bg i:nth-child(3) {
   bottom: -26vmax; left: -16vmax;
-  background: radial-gradient(circle, color-mix(in srgb, var(--blue) 14%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--blue) 40%, var(--accent)) 7%, transparent), transparent 68%);
   animation-name: blob-b;
   animation-duration: 52s;
 }
 .menu-bg i:nth-child(4) {
   bottom: -20vmax; right: -18vmax;
-  background: radial-gradient(circle, color-mix(in srgb, var(--yellow) 11%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--yellow) 55%, var(--accent)) 6%, transparent), transparent 68%);
   animation-duration: 44s;
 }
 @keyframes blob-a {
