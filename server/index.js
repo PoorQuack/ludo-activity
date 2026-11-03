@@ -124,7 +124,7 @@ const directory = new RoomDirectory({
 });
 
 function sendProfile(userId) {
-  const msg = JSON.stringify({ type: 'profile', profile: store.peek(userId) });
+  const msg = JSON.stringify({ type: 'profile', profile: store.view(userId) });
   for (const ws of userSockets.get(userId) || []) if (ws.readyState === 1) ws.send(msg);
 }
 

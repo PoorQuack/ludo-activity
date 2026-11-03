@@ -109,7 +109,7 @@ bash scripts/setup-vm.sh
 It installs what's missing, asks for your Discord Client ID and secret, starts the game and an HTTPS
 tunnel with pm2, and prints the address to put in **Activities → URL Mappings**. The tunnel address
 changes if the VM restarts; get the new one with `bash scripts/tunnel-url.sh`. To update later:
-`git pull && bash scripts/setup-vm.sh`.
+`bash scripts/deploy.sh` — it backs up the save file, pulls, rebuilds, restarts and rolls back on failure.
 
 The sections below explain the same steps by hand, plus a permanent address with your own domain.
 
@@ -141,7 +141,7 @@ pm2 startup        # run the command it prints
 
 The server uses roughly 50–80 MB of RAM.
 
-Player coins and purchases live in `data/profiles.json` (git ignores it). Back that file up if you rebuild the VM. Set `DATA_FILE` in `.env` to store it somewhere else.
+Player coins and purchases live in `data/profiles.json` (git ignores it) — on the VM, `/home/ubuntu/ludo-data/profiles.json` via `DATA_FILE` in `.env`. The file is versioned; an unreadable file is moved aside to `.corrupt-*` and the last good `.bak` is used instead of ever starting empty. Every save keeps a `.bak`, and `bash scripts/backup.sh [label]` snapshots it into `<data dir>/backups/` (newest 60 kept; on the VM a daily cron runs it, and it uploads to R2 once `r2.env` + `rclone` are set up). Shop item `id`s are permanent save-file keys — never rename or delete one; retire items by hiding them instead.
 
 ### HTTPS on the VM: choose one
 

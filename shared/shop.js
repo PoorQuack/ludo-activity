@@ -9,6 +9,9 @@ export const REWARDS = { place: [25, 15, 10, 8, 6, 5], capture: 2, soloFactor: 0
 // The most coins one player can earn in a single UTC day.
 export const DAILY_COIN_CAP = 120;
 
+// ⚠ Item ids are PERMANENT save-file keys: they are stored in every owning player's
+// profile. Never rename, reuse or delete an id — change `name`/`price` freely, and
+// retire an item by removing it from this list's visibility (players keep ownership).
 export const SHOP_ITEMS = [
   { id: 'token-classic', type: 'token', name: 'Classic', price: 0 },
   { id: 'token-star', type: 'token', name: 'Star', price: 200 },

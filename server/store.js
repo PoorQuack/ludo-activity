@@ -6,6 +6,14 @@ import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem } fro
 
 const SAVE_DELAY_MS = 1000;
 
+export const CURRENT_VERSION = 2;
+
+// Ordered list: MIGRATIONS[v - 1] upgrades a whole parsed save document from
+// version v to version v + 1. To change the format, bump CURRENT_VERSION and
+// append one function — old files then upgrade in order.
+// v1 -> v2: the save file gained its { version, profiles } wrapper; the data didn't change.
+const MIGRATIONS = [(v1) => ({ version: 2, profiles: v1 })];
+
 export class ProfileStore {
   constructor(file, { onChange, freeShop = false, now = Date.now } = {}) {
     this.file = file;
@@ -18,12 +26,39 @@ export class ProfileStore {
   }
 
   load() {
-    try {
-      const data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
-      for (const [id, p] of Object.entries(data)) this.profiles.set(id, normalize(p));
-    } catch (err) {
-      if (err.code !== 'ENOENT') console.error('Could not read profiles', err);
+    const bak = `${this.file}.bak`;
+    if (fs.existsSync(this.file)) {
+      try {
+        return this.applySave(fs.readFileSync(this.file, 'utf8'));
+      } catch (err) {
+        if (err.code === 'SAVE_TOO_NEW') throw err;
+        // Never overwrite data we couldn't read: park the bad file and fall back to .bak.
+        const corrupt = `${this.file}.corrupt-${Date.now()}`;
+        console.error(`Profile file ${this.file} is unreadable (${err.message}) — moving it to ${corrupt}`);
+        fs.renameSync(this.file, corrupt);
+        if (fs.existsSync(bak)) {
+          try {
+            return this.applySave(fs.readFileSync(bak, 'utf8'));
+          } catch (bakErr) {
+            throw new Error(`Profile file is corrupt and the backup is unreadable too: ${bakErr.message}`);
+          }
+        }
+        throw new Error('Profile file is corrupt and no .bak backup exists — refusing to start with empty data');
+      }
     }
+    if (fs.existsSync(bak)) {
+      try {
+        return this.applySave(fs.readFileSync(bak, 'utf8'));
+      } catch (err) {
+        throw new Error(`Only a profile backup exists and it is unreadable: ${err.message}`);
+      }
+    }
+    // No save and no backup: a fresh start.
+  }
+
+  applySave(text) {
+    const doc = migrate(JSON.parse(text));
+    for (const [id, p] of Object.entries(doc.profiles)) this.profiles.set(id, normalize(p));
   }
 
   // Returns the profile, creating it on a player's first visit.
@@ -39,6 +74,13 @@ export class ProfileStore {
 
   peek(id) {
     return this.profiles.get(id) || null;
+  }
+
+  // The profile as the client should see it: owned items that no longer exist
+  // in the shop are kept in the save file but hidden here.
+  view(id) {
+    const p = this.profiles.get(id);
+    return p ? { ...p, owned: p.owned.filter((itemId) => ITEMS[itemId]) } : null;
   }
 
   // Grants up to what's left under the daily earning cap and returns the granted amount.
@@ -89,22 +131,51 @@ export class ProfileStore {
     this.saveTimer = setTimeout(() => this.flush(), SAVE_DELAY_MS);
   }
 
-  // Writes a temp file first, so a crash mid-write can't corrupt the save.
+  // Writes a temp file first so a crash mid-write can't corrupt the save, and
+  // keeps the previous good file as .bak so a bad save is always recoverable.
   flush() {
     clearTimeout(this.saveTimer);
     this.saveTimer = null;
     if (!this.file) return;
-    const data = {};
-    for (const [id, p] of this.profiles) if (!id.startsWith('guest-')) data[id] = p;
+    const doc = { version: CURRENT_VERSION, profiles: {} };
+    for (const [id, p] of this.profiles) if (!id.startsWith('guest-')) doc.profiles[id] = p;
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     const tmp = `${this.file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(data));
+    fs.writeFileSync(tmp, JSON.stringify(doc));
+    if (fs.existsSync(this.file)) fs.copyFileSync(this.file, `${this.file}.bak`);
     fs.renameSync(tmp, this.file);
   }
 }
 
+// Upgrades a parsed save document to CURRENT_VERSION. A flat { id: profile }
+// object is a legacy v1 file. A file newer than us means older code would be
+// running against newer data — refuse to start.
+function migrate(data) {
+  let version = Number.isInteger(data?.version) ? data.version : 1;
+  if (version > CURRENT_VERSION) {
+    const err = new Error(`Profile file is version ${version} but this server only understands up to ${CURRENT_VERSION} — update the server first`);
+    err.code = 'SAVE_TOO_NEW';
+    throw err;
+  }
+  while (version < CURRENT_VERSION) {
+    data = MIGRATIONS[version - 1](data);
+    version += 1;
+  }
+  if (!data.profiles || typeof data.profiles !== 'object') throw new Error('profile file has no profiles object');
+  return data;
+}
+
 function normalize(p) {
-  const owned = Array.isArray(p.owned) ? p.owned.filter((id) => ITEMS[id]) : [];
+  // Owned ids are kept as bought, even ones no longer in the shop — dropping
+  // them would delete purchases on the next save. Unknown ones are just hidden
+  // from the client (see view()).
+  const owned = [];
+  if (Array.isArray(p.owned)) {
+    for (const id of p.owned) {
+      if (typeof id === 'string' && id.length >= 1 && id.length <= 64 && !owned.includes(id)) owned.push(id);
+      if (owned.length >= 500) break;
+    }
+  }
   const earned = /^\d{4}-\d{2}-\d{2}$/.test(p.earned?.day || '') && Number.isFinite(p.earned.coins) && p.earned.coins >= 0
     ? { day: p.earned.day, coins: p.earned.coins }
     : { day: '', coins: 0 };
