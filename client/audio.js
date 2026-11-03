@@ -38,7 +38,7 @@ let nextNote = 0;
 let step = 0;
 const samples = {}; // effect name -> decoded AudioBuffer
 
-const MUSIC_VOLUME = 0.32;
+const MUSIC_VOLUME = 0.6;
 const SFX_VOLUME = 0.6;
 
 export function audioSettings() {

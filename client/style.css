@@ -158,6 +158,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
 }
 .game-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .game-card-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
@@ -604,3 +605,99 @@ html, body {
 /* The menu has more on it now: let it scroll on short screens */
 #menu { align-items: flex-start; overflow-y: auto; }
 .menu-card { margin: auto 0; padding-bottom: 8px; }
+
+/* ---------- menu polish ---------- */
+/* Soft Ludo-coloured light blobs drifting behind the menu. Radial gradients (no blur()
+   filters on huge elements) and only transform animates, so this stays on the GPU. */
+.menu-bg { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.menu-bg i {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  animation: blob-a 38s ease-in-out infinite alternate;
+}
+.menu-bg i:nth-child(1) {
+  top: -24vmax; left: -18vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--red) 14%, transparent), transparent 68%);
+}
+.menu-bg i:nth-child(2) {
+  top: -20vmax; right: -22vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--green) 12%, transparent), transparent 68%);
+  animation-name: blob-b;
+  animation-duration: 46s;
+}
+.menu-bg i:nth-child(3) {
+  bottom: -26vmax; left: -16vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--blue) 14%, transparent), transparent 68%);
+  animation-name: blob-b;
+  animation-duration: 52s;
+}
+.menu-bg i:nth-child(4) {
+  bottom: -20vmax; right: -18vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--yellow) 11%, transparent), transparent 68%);
+  animation-duration: 44s;
+}
+@keyframes blob-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(4vmax, 3vmax, 0) scale(1.12); }
+}
+@keyframes blob-b {
+  from { transform: translate3d(0, 0, 0) scale(1.06); }
+  to { transform: translate3d(-3vmax, -4vmax, 0) scale(0.94); }
+}
+/* The card sits above the drifting blobs */
+.menu-card { position: relative; z-index: 1; }
+
+/* Menu sections fade + rise in with a short stagger as the menu shows */
+.menu-card > * { animation: menu-item-in 0.45s ease-out backwards; }
+.menu-card > *:nth-child(2) { animation-delay: 60ms; }
+.menu-card > *:nth-child(3) { animation-delay: 120ms; }
+.menu-card > *:nth-child(4) { animation-delay: 180ms; }
+.menu-card > *:nth-child(5) { animation-delay: 240ms; }
+.menu-card > *:nth-child(6) { animation-delay: 300ms; }
+.menu-card > *:nth-child(n + 7) { animation-delay: 360ms; }
+@keyframes menu-item-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Wordmark: the four pips pop in one by one */
+.wordmark-dots i { animation: pip-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+.wordmark-dots i:nth-child(2) { animation-delay: 90ms; }
+.wordmark-dots i:nth-child(3) { animation-delay: 180ms; }
+.wordmark-dots i:nth-child(4) { animation-delay: 270ms; }
+@keyframes pip-pop { from { transform: scale(0); } }
+
+.brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.menu-tag { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Primary buttons: a faint sheen sweeps across on hover */
+.btn.primary { position: relative; overflow: hidden; }
+.btn.primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.22) 50%, transparent 62%);
+  transform: translateX(-130%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+/* Micro-interactions — hover-capable devices only: a small lift, a firmer press */
+@media (hover: hover) {
+  .btn { transition: filter 0.15s, transform 0.1s, box-shadow 0.15s; }
+  .btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
+  .btn:not(:disabled):active { transform: scale(0.97); box-shadow: none; }
+  .btn.primary:hover::after { transform: translateX(130%); }
+  .game-card { transition: transform 0.2s, box-shadow 0.2s; }
+  .game-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.34); }
+}
+
+/* Less motion when the player asked for it: no drift, no entrances, no sheen */
+@media (prefers-reduced-motion: reduce) {
+  .menu-bg i,
+  .menu-card > *,
+  .wordmark-dots i { animation: none; }
+  .btn.primary::after { display: none; }
+}
