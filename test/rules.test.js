@@ -304,6 +304,38 @@ test('acting yourself resets the timeout count', () => {
   room.destroy();
 });
 
+test('pity: 5 dead turns with every token in base makes the next roll a 6', () => {
+  const { room } = twoPlayerRoom(); // rng always returns 1
+  for (let t = 0; t < 5; t++) {
+    assert.equal(room.turn, 0);
+    room.doRoll();
+    room.nextTurn();
+    room.doRoll();
+    room.nextTurn();
+  }
+  assert.equal(room.stuck[0], 5);
+  room.doRoll();
+  assert.equal(room.dice, 6); // forced — the rng still returns 1
+  assert.equal(room.stuck[0], 0); // the 6 ends the drought
+  assert.equal(room.rolled, false); // and it rolls again, like any 6
+  room.destroy();
+});
+
+test('no pity once a token is out of base', () => {
+  const { room } = twoPlayerRoom();
+  room.tokens[0][0] = 0; // a token is already on the track
+  for (let t = 0; t < 6; t++) {
+    room.doRoll();
+    room.nextTurn();
+    room.doRoll();
+    room.nextTurn();
+  }
+  assert.equal(room.stuck[0], 0); // never counted — the seat isn't trapped
+  room.doRoll();
+  assert.equal(room.dice, 1); // roll stays random
+  room.destroy();
+});
+
 test('only the host can end a running game, anyone can reset a finished one', () => {
   const { room, a, b } = twoPlayerRoom();
   assert.throws(() => room.newGame(b), /Only the host/);

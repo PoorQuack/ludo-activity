@@ -11,6 +11,7 @@ const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot o
 const TURN_TIMEOUT_MS = 30_000;
 const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
 const MAX_SIXES = 3; // this many 6s in a row loses the turn
+const STUCK_TURNS = 5; // dead turns (no 6) with every token in base before the next roll is a free 6
 const EMOTE_COOLDOWN_MS = 1200;
 const CHAT_COOLDOWN_MS = 700;
 const CHAT_KEEP = 40; // messages kept (and sent) per room
@@ -63,6 +64,7 @@ export class Room {
     this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
     this.timeouts = []; // seat -> turns in a row that ran out
+    this.stuck = []; // seat -> turns in a row with every token in base and no 6
     this.turnTimedOut = false;
     this.rewards = null; // seat -> coins, once a game is over
     this.rewardCapped = []; // seats whose payout was cut by the daily coin cap
@@ -292,6 +294,7 @@ export class Room {
     for (const i of active) delete this.seats[i].surrendered;
     this.captures = Array(this.board.arms).fill(0);
     this.timeouts = Array(this.board.arms).fill(0);
+    this.stuck = Array(this.board.arms).fill(0);
     this.rewards = null;
     this.rewardCapped = [];
     this.lastMove = null;
@@ -428,6 +431,7 @@ export class Room {
     for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
     this.rewardCapped = [];
+    this.stuck = Array(this.board.arms).fill(0);
     this.turnDeadline = null;
     this.changed();
   }
@@ -435,10 +439,19 @@ export class Room {
   // ---------- game flow ----------
 
   // A 6 is kept and you roll again; once you roll something else, you play all the rolls.
+  // Every token still in base?
+  allInBase(seat) {
+    return this.tokens[seat].every((p) => p === -1);
+  }
+
   doRoll() {
     if (this.rolled) throw new Error('Already rolled');
     const seat = this.turn;
-    const dice = this.rng();
+    // Stuck in base for STUCK_TURNS dead turns: this roll is a guaranteed 6.
+    // Random rolls are untouched — only the first roll of such a turn is forced.
+    const pity = this.rolls.length === 0 && this.allInBase(seat) && this.stuck[seat] >= STUCK_TURNS;
+    const dice = pity ? 6 : this.rng();
+    if (dice === 6) this.stuck[seat] = 0; // any 6 ends the drought, forced or not
     this.dice = dice;
     this.rolls.push(dice);
     this.seq++;
@@ -596,6 +609,11 @@ export class Room {
 
   nextTurn() {
     if (this.phase !== 'playing') return;
+    // Count the ending seat's drought: still all in base means another dead turn.
+    const ended = this.turn;
+    if (this.seats[ended]) {
+      this.stuck[ended] = this.allInBase(ended) ? this.stuck[ended] + 1 : 0;
+    }
     const n = this.seats.length;
     for (let i = 1; i <= n; i++) {
       const s = (this.turn + i) % n;
