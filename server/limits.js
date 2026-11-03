@@ -48,3 +48,35 @@ export class KeyedLimiter {
     for (const [key, w] of this.windows) if (t >= w.reset) this.windows.delete(key);
   }
 }
+
+// A small expiring map (e.g. verified Discord tokens). Entries expire `ttlMs` after set;
+// when full, the oldest entry is evicted (Maps iterate in insertion order).
+export class TtlCache {
+  constructor({ ttlMs, maxEntries, now = Date.now }) {
+    this.ttlMs = ttlMs;
+    this.maxEntries = maxEntries;
+    this.now = now;
+    this.entries = new Map(); // key -> { value, expires }
+  }
+
+  get(key) {
+    const e = this.entries.get(key);
+    if (!e) return undefined;
+    if (this.now() >= e.expires) {
+      this.entries.delete(key);
+      return undefined;
+    }
+    return e.value;
+  }
+
+  set(key, value) {
+    this.entries.delete(key); // re-insert so it counts as newest
+    if (this.entries.size >= this.maxEntries) this.entries.delete(this.entries.keys().next().value);
+    this.entries.set(key, { value, expires: this.now() + this.ttlMs });
+  }
+
+  prune() {
+    const t = this.now();
+    for (const [key, e] of this.entries) if (t >= e.expires) this.entries.delete(key);
+  }
+}

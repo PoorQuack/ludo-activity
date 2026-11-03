@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TokenBucket, KeyedLimiter } from '../server/limits.js';
+import { TokenBucket, KeyedLimiter, TtlCache } from '../server/limits.js';
 
 function clock(start = 0) {
   let t = start;
@@ -63,4 +63,38 @@ test('KeyedLimiter prune drops expired keys only', () => {
   l.prune();
   assert.equal(l.windows.has('old'), false);
   assert.equal(l.windows.has('fresh'), true);
+});
+
+test('TtlCache returns values within the TTL, misses after', () => {
+  const c = clock();
+  const cache = new TtlCache({ ttlMs: 1000, maxEntries: 10, now: c.now });
+  cache.set('k', 'v');
+  assert.equal(cache.get('k'), 'v');
+  c.advance(999);
+  assert.equal(cache.get('k'), 'v');
+  c.advance(2);
+  assert.equal(cache.get('k'), undefined);
+});
+
+test('TtlCache evicts the oldest entry when full', () => {
+  const c = clock();
+  const cache = new TtlCache({ ttlMs: 60_000, maxEntries: 3, now: c.now });
+  cache.set('a', 1);
+  cache.set('b', 2);
+  cache.set('c', 3);
+  cache.set('d', 4);
+  assert.equal(cache.get('a'), undefined);
+  assert.equal(cache.get('d'), 4);
+  assert.equal(cache.entries.size, 3);
+});
+
+test('TtlCache prune drops expired entries', () => {
+  const c = clock();
+  const cache = new TtlCache({ ttlMs: 1000, maxEntries: 10, now: c.now });
+  cache.set('old', 1);
+  c.advance(1500);
+  cache.set('fresh', 2);
+  cache.prune();
+  assert.equal(cache.entries.has('old'), false);
+  assert.equal(cache.entries.has('fresh'), true);
 });

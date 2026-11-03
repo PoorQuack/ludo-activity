@@ -1,13 +1,13 @@
 import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
 import { ProfileStore } from './store.js';
-import { TokenBucket, KeyedLimiter } from './limits.js';
+import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -32,16 +32,24 @@ const MAX_MSG_BURST = 20;
 const MSG_PER_SEC = 8;
 const MAX_MSG_DROPS = 60; // ignored this many messages and the socket is cut
 const SLOW_NOTICE_MS = 2000; // 'Slow down' is sent at most this often per socket
-const MAX_SOCKETS_PER_IP = 10;
-const connLimiter = new KeyedLimiter({ max: 30, windowMs: 60_000 }); // new sockets per IP per minute
-const helloLimiter = new KeyedLimiter({ max: 20, windowMs: 60_000 }); // hellos per IP per minute
-const tokenLimiter = new KeyedLimiter({ max: 10, windowMs: 60_000 }); // token exchanges per IP per minute
+// Discord Activities route every player's traffic through Discord's proxy, which hides their IPs —
+// so everyone arrives behind a handful of shared egress addresses. Per-IP numbers are a loose
+// backstop against gross floods only; the real per-person limits are keyed on the user id below.
+const MAX_SOCKETS_PER_IP = 200;
+const MAX_SOCKETS_TOTAL = 1500;
+const connLimiter = new KeyedLimiter({ max: 300, windowMs: 60_000 }); // new sockets per IP per minute
+const helloLimiter = new KeyedLimiter({ max: 300, windowMs: 60_000 }); // hellos per IP per minute
+const tokenLimiter = new KeyedLimiter({ max: 200, windowMs: 60_000 }); // token exchanges per IP per minute
+const MAX_SOCKETS_PER_USER = 5;
 const HELLO_TIMEOUT_MS = 15_000;
 const socketsByIp = new Map(); // ip -> open socket count
+// Verified Discord access tokens (hashed, never stored raw) so repeat hellos skip the Discord API.
+const tokenCache = new TtlCache({ ttlMs: 10 * 60_000, maxEntries: 5000 });
 setInterval(() => {
   connLimiter.prune();
   helloLimiter.prune();
   tokenLimiter.prune();
+  tokenCache.prune();
 }, 60_000).unref();
 
 app.get('/api/config', (_req, res) => {
@@ -194,12 +202,17 @@ function handleLobby(ws, msg) {
 
 async function resolveUser(hello) {
   if (hello.accessToken) {
+    const tokenKey = createHash('sha256').update(hello.accessToken).digest('hex');
+    const cached = tokenCache.get(tokenKey);
+    if (cached) return cached;
     const r = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${hello.accessToken}` },
     });
     if (!r.ok) throw new Error('Discord auth failed');
     const u = await r.json();
-    return { id: u.id, name: u.global_name || u.username };
+    const user = { id: u.id, name: u.global_name || u.username };
+    tokenCache.set(tokenKey, user);
+    return user;
   }
   if (!ALLOW_GUESTS) throw new Error('Open this inside Discord');
   const name = String(hello.guestName || 'Guest').slice(0, 24);
@@ -208,7 +221,11 @@ async function resolveUser(hello) {
 }
 
 wss.on('connection', (ws, req) => {
+  // ws reports oversized frames (and broken sockets) through 'error'; without a listener it crashes
+  // the process — so it's attached before anything can return early.
+  ws.on('error', () => {});
   const ip = clientIp(req);
+  if (wss.clients.size > MAX_SOCKETS_TOTAL) return ws.close(1013, 'Server busy');
   if ((socketsByIp.get(ip) || 0) >= MAX_SOCKETS_PER_IP || !connLimiter.hit(ip)) {
     return ws.close(1008, 'Too many connections');
   }
@@ -218,8 +235,6 @@ wss.on('connection', (ws, req) => {
   ws.ctx = { user: null, instanceId: null, room: null };
   ws.isAlive = true;
   ws.on('pong', () => (ws.isAlive = true));
-  // ws reports oversized frames (and broken sockets) through 'error'; without a listener it crashes the process.
-  ws.on('error', () => {});
 
   const bucket = new TokenBucket({ capacity: MAX_MSG_BURST, refillPerSec: MSG_PER_SEC });
   let drops = 0;
@@ -250,14 +265,24 @@ wss.on('connection', (ws, req) => {
     try {
       const { ctx } = ws;
       if (msg.type === 'hello') {
-        if (ctx.user) return;
+        if (ctx.user || ctx.helloPending) return; // already in, or Discord is being asked right now
         if (!helloLimiter.hit(ip)) {
           send({ type: 'error', message: 'Too many logins' });
           return ws.close(1008, 'Too many logins');
         }
-        const user = await resolveUser(msg);
+        ctx.helloPending = true;
+        let user;
+        try {
+          user = await resolveUser(msg);
+        } finally {
+          ctx.helloPending = false;
+        }
         if (ws.readyState !== 1) return; // closed while we were checking with Discord
         clearTimeout(helloTimer);
+        if ((userSockets.get(user.id)?.size || 0) >= MAX_SOCKETS_PER_USER) {
+          send({ type: 'error', message: 'Too many open connections' });
+          return ws.close(1008, 'Too many open connections');
+        }
         ctx.user = user;
         ctx.instanceId = String(msg.instanceId || 'local').slice(0, 100);
         if (!userSockets.has(user.id)) userSockets.set(user.id, new Set());
