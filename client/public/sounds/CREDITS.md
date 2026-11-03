@@ -1,15 +1,15 @@
 # Audio credits
 
-## Music — Kevin MacLeod (incompetech.com), licensed [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+## Music
 
 | File | Title | Author | Source | License |
 |------|-------|--------|--------|---------|
-| music-jazz.mp3 | Wallpaper | Kevin MacLeod | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3 | CC-BY 4.0 |
-| music-lofi.mp3 | Deliberate Thought | Kevin MacLeod | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Deliberate%20Thought.mp3 | CC-BY 4.0 |
-| music-energetic.mp3 | Faster Does It | Kevin MacLeod | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Faster%20Does%20It.mp3 | CC-BY 4.0 |
+| music-lofi-2.mp3 | lofi hip hop | omfgdude | https://opengameart.org/content/lofi-hip-hop | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| music-jazz.mp3 | Wallpaper | Kevin MacLeod | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3 | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| music-energetic.mp3 | Faster Does It | Kevin MacLeod | https://incompetech.com/music/royalty-free/mp3-royaltyfree/Faster%20Does%20It.mp3 | [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
-Attribution line (also shown in game, "How to play" → Music & sounds):
-"Wallpaper", "Deliberate Thought", "Faster Does It" — Kevin MacLeod (incompetech.com), CC-BY 4.0.
+CC-BY attribution line (also shown in game, "How to play" → Music & sounds):
+"Wallpaper" and "Faster Does It" — Kevin MacLeod (incompetech.com), CC-BY 4.0.
 
 ## Sound effects
 

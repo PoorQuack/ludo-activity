@@ -6,7 +6,7 @@ Audio files here (`.mp3` works everywhere — iOS doesn't play `.ogg`) are liste
 ```json
 {
   "music": [
-    { "id": "lofi", "label": "Lo-fi", "title": "Deliberate Thought", "artist": "Kevin MacLeod", "file": "music-lofi.mp3" },
+    { "id": "lofi", "label": "Lo-fi", "title": "lofi hip hop", "artist": "omfgdude (OpenGameArt)", "file": "music-lofi-2.mp3" },
     { "id": "jazz", "label": "Slow jazz", "title": "Wallpaper", "artist": "Kevin MacLeod", "file": "music-jazz.mp3" },
     { "id": "energetic", "label": "Energetic", "title": "Faster Does It", "artist": "Kevin MacLeod", "file": "music-energetic.mp3" }
   ]

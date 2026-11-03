@@ -96,7 +96,9 @@ export function setMusic(on) {
 async function loadFiles() {
   let list;
   try {
-    const res = await fetch('sounds/sounds.json');
+    // no-store: an earlier build served this list with a week-long cache, so devices kept
+    // playing removed sounds. Always ask the server for the current list.
+    const res = await fetch('sounds/sounds.json', { cache: 'no-store' });
     if (!res.ok) return;
     list = await res.json();
   } catch {
@@ -173,19 +175,27 @@ function loadTrack(track) {
   if (settings.music) startMusic();
 }
 
+let trackSwitchTimer = null; // the pending swap: rapid taps only ever load the last pick
+
 // Changes the track, fading out and back in (~0.6s) while music is playing.
 export function playTrack(id) {
   const track = tracks.find((t) => t.id === id);
   if (!track || !ctx) return;
-  const fade = () => {
+  // The selection changes now, even though the new file fades in a little later.
+  settings.musicTrack = track.id;
+  save();
+  emitChange();
+  clearTimeout(trackSwitchTimer);
+  const swap = () => {
+    trackSwitchTimer = null;
     loadTrack(track);
     musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2); // and in
+    emitChange();
   };
   if (settings.music && musicEl && !musicEl.paused) {
     musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.2); // ~0.6s out
-    setTimeout(fade, 650);
-  } else fade();
-  emitChange();
+    trackSwitchTimer = setTimeout(swap, 650);
+  } else swap();
 }
 
 export function nextTrack() {
