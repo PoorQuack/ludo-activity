@@ -100,6 +100,26 @@ html, body {
   flex-direction: column;
   gap: 12px;
 }
+/* On narrow screens the column wrappers dissolve: every card is a direct flex item,
+   so the menu reads exactly like the old single column. */
+.menu-col-left,
+.menu-col-right { display: contents; }
+/* DOM order puts the settings row inside the left column, so on a single column it would
+   land third — order:10 keeps it at the very end like the old menu had it. (On wide
+   screens it's already the last child of its own column.) */
+.menu-col-left > [data-audio] { order: 10; }
+/* Wide screens: brand on the left, the action cards on the right */
+@media (min-width: 880px) {
+  .menu-card { width: min(880px, 100%); flex-direction: row; gap: 20px; align-items: stretch; }
+  .menu-col-left,
+  .menu-col-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .menu-col-left { flex: 0 0 36%; }
+  .menu-col-right { flex: 1; }
+  /* Two auto margins split the free space evenly: the brand cluster centres itself
+     in the column while the settings row stays pinned to the bottom */
+  .menu-col-left > .menu-top { margin-top: auto; }
+  .menu-col-left > [data-audio] { margin-top: auto; }
+}
 .menu-top { display: flex; align-items: center; justify-content: space-between; }
 .menu-tools { display: flex; align-items: center; gap: 8px; }
 
@@ -312,6 +332,11 @@ html, body {
   .panel .chat { flex: 1 0 150px; }
   .panel .chat-log { flex: 1; height: auto; min-height: 0; }
   .emote { width: 36px; height: 36px; font-size: 18px; }
+}
+
+/* Roomy landscape windows get a wider side panel; the portrait rule above keeps phones at 100% */
+@media (min-width: 1000px) and (min-aspect-ratio: 1/1) {
+  .panel { width: 360px; }
 }
 
 /* ---------- panel ---------- */
@@ -665,14 +690,13 @@ html, body {
 /* The card sits above the drifting blobs */
 .menu-card { position: relative; z-index: 1; }
 
-/* Menu sections fade + rise in with a short stagger as the menu shows */
-.menu-card > * { animation: menu-item-in 0.45s ease-out backwards; }
-.menu-card > *:nth-child(2) { animation-delay: 60ms; }
-.menu-card > *:nth-child(3) { animation-delay: 120ms; }
-.menu-card > *:nth-child(4) { animation-delay: 180ms; }
-.menu-card > *:nth-child(5) { animation-delay: 240ms; }
-.menu-card > *:nth-child(6) { animation-delay: 300ms; }
-.menu-card > *:nth-child(n + 7) { animation-delay: 360ms; }
+/* Menu sections fade + rise in with a short stagger as the menu shows.
+   The stagger runs within each column, so wide and narrow menus feel the same. */
+.menu-col-left > *, .menu-col-right > * { animation: menu-item-in 0.45s ease-out backwards; }
+.menu-col-left > *:nth-child(2), .menu-col-right > *:nth-child(2) { animation-delay: 60ms; }
+.menu-col-left > *:nth-child(3), .menu-col-right > *:nth-child(3) { animation-delay: 120ms; }
+.menu-col-left > *:nth-child(4), .menu-col-right > *:nth-child(4) { animation-delay: 180ms; }
+.menu-col-left > *:nth-child(n + 5), .menu-col-right > *:nth-child(n + 5) { animation-delay: 240ms; }
 @keyframes menu-item-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
@@ -713,7 +737,8 @@ html, body {
 /* Less motion when the player asked for it: no drift, no entrances, no sheen */
 @media (prefers-reduced-motion: reduce) {
   .menu-bg i,
-  .menu-card > *,
+  .menu-col-left > *,
+  .menu-col-right > *,
   .wordmark-dots i { animation: none; }
   .btn.primary::after { display: none; }
 }

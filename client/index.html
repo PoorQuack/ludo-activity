@@ -18,67 +18,73 @@
         <!-- Soft Ludo-coloured light blobs drifting behind the card (CSS only, GPU-cheap) -->
         <div class="menu-bg" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="menu-card">
-          <header class="menu-top">
-            <div class="brand">
-              <div class="wordmark">
-                <span class="wordmark-dots"><i></i><i></i><i></i><i></i></span>
-                <h1>Ludo</h1>
+          <!-- Brand column: wordmark, signed-in name, settings (wide screens sit it beside
+               the action cards; on narrow screens the wrappers dissolve into one column) -->
+          <div class="menu-col-left">
+            <header class="menu-top">
+              <div class="brand">
+                <div class="wordmark">
+                  <span class="wordmark-dots"><i></i><i></i><i></i><i></i></span>
+                  <h1>Ludo</h1>
+                </div>
+                <p class="menu-tag">Play Ludo with friends — right inside Discord</p>
               </div>
-              <p class="menu-tag">Play Ludo with friends — right inside Discord</p>
-            </div>
-            <div class="menu-tools">
-              <button class="btn small icon-btn" data-player-btn aria-label="Music & sound" aria-expanded="false">🎵</button>
-              <span class="coins"><span class="coin"></span><b>0</b></span>
-            </div>
-          </header>
-          <p id="menu-name" class="menu-name"></p>
+              <div class="menu-tools">
+                <button class="btn small icon-btn" data-player-btn aria-label="Music & sound" aria-expanded="false">🎵</button>
+                <span class="coins"><span class="coin"></span><b>0</b></span>
+              </div>
+            </header>
+            <p id="menu-name" class="menu-name"></p>
 
-          <!-- The room you're in (when you're in one) -->
-          <section id="my-room" class="game-card hidden">
-            <div class="game-card-head">
-              <h2 id="game-title"></h2>
-              <span id="game-mode" class="tag"></span>
+            <div class="audio" data-audio>
+              <div class="setting">
+                <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
+                <button class="btn small toggle" data-cb></button>
+              </div>
             </div>
-            <p id="my-room-info" class="room-info"></p>
-            <ul id="game-players" class="game-players"></ul>
-            <button id="play-btn" class="btn primary big">Back to room</button>
-            <button id="new-game-btn" class="btn big hidden">Start new game</button>
-            <button id="leave-btn" class="btn big">Leave room</button>
-          </section>
-
-          <!-- Make a room -->
-          <section id="create-card" class="game-card">
-            <h2 class="card-title">Create a room</h2>
-            <div id="visibility-picker" class="segmented">
-              <button class="btn active" data-visibility="public">🌐 Public</button>
-              <button class="btn" data-visibility="private">🔒 Private</button>
-            </div>
-            <p id="visibility-hint" class="room-info"></p>
-            <button id="create-btn" class="btn primary big">Create room</button>
-          </section>
-
-          <!-- Find a room -->
-          <section class="game-card">
-            <div class="game-card-head">
-              <h2>Rooms</h2>
-              <span id="rooms-count" class="tag"></span>
-            </div>
-            <form id="code-form" class="code-form">
-              <input id="code-input" type="text" maxlength="4" placeholder="Have a code? e.g. K7QX" autocomplete="off" autocapitalize="characters" spellcheck="false" />
-              <button class="btn" type="submit">Join</button>
-            </form>
-            <ul id="room-list" class="room-list"></ul>
-          </section>
-
-          <div class="menu-row">
-            <button class="btn" data-go="shop">Shop</button>
-            <button class="btn" data-go="howto">How to play</button>
           </div>
 
-          <div class="audio" data-audio>
-            <div class="setting">
-              <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
-              <button class="btn small toggle" data-cb></button>
+          <div class="menu-col-right">
+            <!-- The room you're in (when you're in one) -->
+            <section id="my-room" class="game-card hidden">
+              <div class="game-card-head">
+                <h2 id="game-title"></h2>
+                <span id="game-mode" class="tag"></span>
+              </div>
+              <p id="my-room-info" class="room-info"></p>
+              <ul id="game-players" class="game-players"></ul>
+              <button id="play-btn" class="btn primary big">Back to room</button>
+              <button id="new-game-btn" class="btn big hidden">Start new game</button>
+              <button id="leave-btn" class="btn big">Leave room</button>
+            </section>
+
+            <!-- Make a room -->
+            <section id="create-card" class="game-card">
+              <h2 class="card-title">Create a room</h2>
+              <div id="visibility-picker" class="segmented">
+                <button class="btn active" data-visibility="public">🌐 Public</button>
+                <button class="btn" data-visibility="private">🔒 Private</button>
+              </div>
+              <p id="visibility-hint" class="room-info"></p>
+              <button id="create-btn" class="btn primary big">Create room</button>
+            </section>
+
+            <!-- Find a room -->
+            <section class="game-card">
+              <div class="game-card-head">
+                <h2>Rooms</h2>
+                <span id="rooms-count" class="tag"></span>
+              </div>
+              <form id="code-form" class="code-form">
+                <input id="code-input" type="text" maxlength="4" placeholder="Have a code? e.g. K7QX" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+                <button class="btn" type="submit">Join</button>
+              </form>
+              <ul id="room-list" class="room-list"></ul>
+            </section>
+
+            <div class="menu-row">
+              <button class="btn" data-go="shop">Shop</button>
+              <button class="btn" data-go="howto">How to play</button>
             </div>
           </div>
         </div>
