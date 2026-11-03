@@ -22,7 +22,7 @@
               <h1>Ludo</h1>
             </div>
             <div class="menu-tools">
-              <button class="btn small icon-btn" data-player-btn hidden aria-label="Music player" aria-expanded="false">🎵</button>
+              <button class="btn small icon-btn" data-player-btn aria-label="Music & sound" aria-expanded="false">🎵</button>
               <span class="coins"><span class="coin"></span><b>0</b></span>
             </div>
           </header>
@@ -71,18 +71,6 @@
           </div>
 
           <div class="audio" data-audio>
-            <div class="volume">
-              <span>Music</span>
-              <input type="range" min="0" max="100" step="1" data-volume="music" aria-label="Music volume" />
-              <b data-volume-value="music"></b>
-              <button class="btn small toggle" data-toggle="music"></button>
-            </div>
-            <div class="volume">
-              <span>Sounds</span>
-              <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
-              <b data-volume-value="sound"></b>
-              <button class="btn small toggle" data-toggle="sound"></button>
-            </div>
             <div class="setting">
               <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
               <button class="btn small toggle" data-cb></button>
@@ -163,7 +151,7 @@
           <header class="panel-head">
             <span id="phase-tag" class="tag"></span>
             <span class="coins small"><span class="coin"></span><b>0</b></span>
-            <button class="btn small icon-btn" data-player-btn hidden aria-label="Music player" aria-expanded="false">🎵</button>
+            <button class="btn small icon-btn" data-player-btn aria-label="Music & sound" aria-expanded="false">🎵</button>
             <button id="drawer-btn" class="btn small icon-btn" aria-label="Menu" aria-expanded="false">☰</button>
           </header>
           <p id="room-info" class="room-info"></p>
@@ -195,18 +183,6 @@
             </div>
 
             <div class="audio" data-audio>
-              <div class="volume">
-                <span>Music</span>
-                <input type="range" min="0" max="100" step="1" data-volume="music" aria-label="Music volume" />
-                <b data-volume-value="music"></b>
-                <button class="btn small toggle" data-toggle="music"></button>
-              </div>
-              <div class="volume">
-                <span>Sounds</span>
-                <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
-                <b data-volume-value="sound"></b>
-                <button class="btn small toggle" data-toggle="sound"></button>
-              </div>
               <div class="setting">
                 <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
                 <button class="btn small toggle" data-cb></button>
@@ -234,13 +210,6 @@
 
           <div id="emote-bar" class="emote-bar"></div>
 
-          <!-- On phones only one of the log and the chat shows at a time -->
-          <div class="feed-tabs">
-            <button class="btn small active" data-feed="chat">Chat</button>
-            <button class="btn small" data-feed="log">Log</button>
-          </div>
-          <ul id="log" class="log"></ul>
-
           <section class="chat" data-chat>
             <ul class="chat-log"></ul>
             <form class="chat-form">
@@ -253,16 +222,30 @@
 
       <!-- Music player popover (shared: opened from the 🎵 header buttons) -->
       <div id="player-pop" class="player-pop hidden">
-        <div class="player-now">
+        <div class="player-now" id="player-now">
           <b id="player-label"></b>
           <span id="player-title"></span>
         </div>
-        <div class="player-controls">
+        <div class="player-controls" id="player-controls">
           <button class="btn small icon-btn" id="player-prev" aria-label="Previous track">⏮</button>
           <button class="btn small icon-btn" id="player-play" aria-label="Play or pause">▶</button>
           <button class="btn small icon-btn" id="player-next" aria-label="Next track">⏭</button>
         </div>
         <div id="player-list" class="player-list"></div>
+        <div class="player-volumes">
+          <div class="volume">
+            <span>Music</span>
+            <input type="range" min="0" max="100" step="1" data-volume="music" aria-label="Music volume" />
+            <b data-volume-value="music"></b>
+            <button class="btn small toggle" data-toggle="music"></button>
+          </div>
+          <div class="volume">
+            <span>Sounds</span>
+            <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
+            <b data-volume-value="sound"></b>
+            <button class="btn small toggle" data-toggle="sound"></button>
+          </div>
+        </div>
       </div>
 
       <div id="toast" class="toast hidden"></div>

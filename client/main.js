@@ -68,7 +68,6 @@ const els = {
   finishControls: $('finish-controls'),
   againBtn: $('again-btn'),
   emoteBar: $('emote-bar'),
-  log: $('log'),
   chats: [...document.querySelectorAll('[data-chat]')],
   audioToggles: [...document.querySelectorAll('[data-toggle]')],
   volumes: [...document.querySelectorAll('[data-volume]')],
@@ -459,7 +458,8 @@ const popOpenFor = { btn: null };
 function renderPlayer() {
   const s = audioSettings();
   const list = s.tracks || [];
-  for (const b of els.playerBtns) b.hidden = list.length === 0;
+  // The track section only exists once sounds.json has loaded a playlist; the volumes always show.
+  for (const el of [$('player-now'), $('player-controls'), els.playerList]) el.classList.toggle('hidden', list.length === 0);
   const cur = list.find((t) => t.id === s.musicTrack) || list[0];
   els.playerLabel.textContent = cur ? cur.label : '';
   els.playerTitle.textContent = cur ? [cur.title, cur.artist].filter(Boolean).join(' — ') : '';
@@ -484,6 +484,7 @@ function openPlayer(btn) {
   const r = btn.getBoundingClientRect();
   els.playerPop.style.top = `${r.bottom + 6}px`;
   els.playerPop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  els.playerPop.style.maxHeight = `${window.innerHeight - r.bottom - 14}px`; // scrolls rather than running off-screen
   els.playerPop.classList.remove('hidden');
   btn.setAttribute('aria-expanded', 'true');
   popOpenFor.btn = btn;
@@ -911,13 +912,6 @@ function renderPanel() {
       }
     }
   }
-
-  els.log.innerHTML = '';
-  for (const line of [...state.log].reverse()) {
-    const li = document.createElement('li');
-    li.textContent = line;
-    els.log.appendChild(li);
-  }
 }
 
 function showFinish() {
@@ -1277,14 +1271,6 @@ function setDrawer(open) {
 drawerBtn.addEventListener('click', () => setDrawer(drawer.classList.contains('hidden')));
 for (const b of drawer.querySelectorAll('[data-go]')) b.addEventListener('click', () => setDrawer(false));
 
-// Phones show the chat or the log, not both
-const panel = drawer.closest('.panel');
-function setFeed(feed) {
-  panel.dataset.feed = feed;
-  for (const b of document.querySelectorAll('[data-feed]')) b.classList.toggle('active', b.dataset.feed === feed);
-}
-for (const b of document.querySelectorAll('[data-feed]')) b.addEventListener('click', () => setFeed(b.dataset.feed));
-setFeed('chat');
 confirmTap(
   els.newGameBtn,
   'Tap again to end this game',
