@@ -65,6 +65,7 @@ export class Room {
     this.timeouts = []; // seat -> turns in a row that ran out
     this.turnTimedOut = false;
     this.rewards = null; // seat -> coins, once a game is over
+    this.rewardCapped = []; // seats whose payout was cut by the daily coin cap
     this.lastMove = null;
     this.seq = 0;
     this.log = [];
@@ -292,6 +293,7 @@ export class Room {
     this.captures = Array(this.board.arms).fill(0);
     this.timeouts = Array(this.board.arms).fill(0);
     this.rewards = null;
+    this.rewardCapped = [];
     this.lastMove = null;
     this.log = [];
     this.turn = active[randomInt(active.length)];
@@ -425,6 +427,7 @@ export class Room {
     this.forfeited = [];
     for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
+    this.rewardCapped = [];
     this.turnDeadline = null;
     this.changed();
   }
@@ -580,12 +583,14 @@ export class Room {
     const humans = this.winners.filter((s) => !this.seats[s].bot);
     const factor = humans.length >= 2 ? 1 : REWARDS.soloFactor;
     this.rewards = {};
+    this.rewardCapped = [];
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
       const coins = Math.round((REWARDS.place[place] + this.captures[s] * REWARDS.capture) * factor);
-      this.rewards[s] = coins;
-      this.profiles?.addCoins(seat.userId, coins);
+      const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
+      this.rewards[s] = granted;
+      if (granted < coins) this.rewardCapped.push(s);
     });
   }
 
@@ -738,6 +743,7 @@ export class Room {
       lastRoll: this.lastRoll,
       winners: this.winners,
       rewards: this.rewards,
+      rewardCapped: this.rewardCapped,
       timeouts: this.timeouts,
       maxTimeouts: MAX_TIMEOUTS,
       lastMove: this.lastMove,

@@ -852,7 +852,8 @@ function renderPanel() {
 function showFinish() {
   const lines = state.winners.map((s, i) => {
     const coins = state.rewards?.[s];
-    const reward = coins ? ` <span class="reward">+${coins} 🪙</span>` : '';
+    const capped = state.rewardCapped?.includes(s);
+    const reward = coins || capped ? ` <span class="reward">+${coins || 0} 🪙${capped ? ' (daily limit reached)' : ''}</span>` : '';
     return `${MEDALS[i] || `${i + 1}.`} ${escapeHtml(state.seats[s]?.name)}${reward}`;
   });
   els.banner.innerHTML = `<div class="banner-title">Game over!</div>${lines.join('<br>')}`;

@@ -4,7 +4,10 @@ export const STARTING_COINS = 150;
 
 // Coins by finishing place (1st, 2nd, …) plus a bonus per capture.
 // A game with only one human pays `soloFactor` of that, so farming bots is slower.
-export const REWARDS = { place: [100, 60, 40, 30, 25, 20], capture: 10, soloFactor: 0.5 };
+export const REWARDS = { place: [25, 15, 10, 8, 6, 5], capture: 2, soloFactor: 0.5 };
+
+// The most coins one player can earn in a single UTC day.
+export const DAILY_COIN_CAP = 120;
 
 export const SHOP_ITEMS = [
   { id: 'token-classic', type: 'token', name: 'Classic', price: 0 },

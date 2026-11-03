@@ -2,15 +2,16 @@
 // Guests (plain-browser testing) are never written to disk.
 import fs from 'node:fs';
 import path from 'node:path';
-import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, ownsItem } from '../shared/shop.js';
+import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem } from '../shared/shop.js';
 
 const SAVE_DELAY_MS = 1000;
 
 export class ProfileStore {
-  constructor(file, { onChange, freeShop = false } = {}) {
+  constructor(file, { onChange, freeShop = false, now = Date.now } = {}) {
     this.file = file;
     this.onChange = onChange || (() => {});
     this.freeShop = freeShop; // testing: everything costs 0
+    this.now = now;
     this.profiles = new Map();
     this.saveTimer = null;
     if (file) this.load();
@@ -40,9 +41,20 @@ export class ProfileStore {
     return this.profiles.get(id) || null;
   }
 
+  // Grants up to what's left under the daily earning cap and returns the granted amount.
   addCoins(id, coins) {
-    this.get(id).coins += coins;
+    const p = this.get(id);
+    const day = this.dayKey();
+    if (p.earned.day !== day) p.earned = { day, coins: 0 };
+    const granted = Math.max(0, Math.min(coins, DAILY_COIN_CAP - p.earned.coins));
+    p.coins += granted;
+    p.earned.coins += granted;
     this.changed(id);
+    return granted;
+  }
+
+  dayKey() {
+    return new Date(this.now()).toISOString().slice(0, 10); // the UTC day, 'YYYY-MM-DD'
   }
 
   buy(id, itemId) {
@@ -93,7 +105,10 @@ export class ProfileStore {
 
 function normalize(p) {
   const owned = Array.isArray(p.owned) ? p.owned.filter((id) => ITEMS[id]) : [];
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, owned, equipped: { ...DEFAULT_EQUIPPED } };
+  const earned = /^\d{4}-\d{2}-\d{2}$/.test(p.earned?.day || '') && Number.isFinite(p.earned.coins) && p.earned.coins >= 0
+    ? { day: p.earned.day, coins: p.earned.coins }
+    : { day: '', coins: 0 };
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, earned, owned, equipped: { ...DEFAULT_EQUIPPED } };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }

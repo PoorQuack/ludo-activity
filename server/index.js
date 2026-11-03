@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
 import { ProfileStore } from './store.js';
+import { TokenBucket, KeyedLimiter } from './limits.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -21,14 +22,37 @@ const ROOM_IDLE_MS = 2 * 60_000; // an empty room waits this long (for a refresh
 const LIST_EVERY_MS = 1000; // the room list in everyone's menu refreshes at most this often
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '4kb' }));
+
+// The VM only listens behind a Cloudflare tunnel, so this header is trustworthy there; locally it's absent.
+const clientIp = (req) => req.headers['cf-connecting-ip'] || req.socket.remoteAddress || 'unknown';
+
+// Abuse limits: messages per socket, connections per IP, logins (each calls Discord), token exchanges.
+const MAX_MSG_BURST = 20;
+const MSG_PER_SEC = 8;
+const MAX_MSG_DROPS = 60; // ignored this many messages and the socket is cut
+const SLOW_NOTICE_MS = 2000; // 'Slow down' is sent at most this often per socket
+const MAX_SOCKETS_PER_IP = 10;
+const connLimiter = new KeyedLimiter({ max: 30, windowMs: 60_000 }); // new sockets per IP per minute
+const helloLimiter = new KeyedLimiter({ max: 20, windowMs: 60_000 }); // hellos per IP per minute
+const tokenLimiter = new KeyedLimiter({ max: 10, windowMs: 60_000 }); // token exchanges per IP per minute
+const HELLO_TIMEOUT_MS = 15_000;
+const socketsByIp = new Map(); // ip -> open socket count
+setInterval(() => {
+  connLimiter.prune();
+  helloLimiter.prune();
+  tokenLimiter.prune();
+}, 60_000).unref();
 
 app.get('/api/config', (_req, res) => {
   res.json({ clientId: CLIENT_ID, allowGuests: ALLOW_GUESTS, freeShop: FREE_SHOP });
 });
 
 // Exchange the OAuth code from the Embedded App SDK for an access token.
-app.post('/api/token', async (req, res) => {
+app.post('/api/token', (req, res, next) => {
+  if (!tokenLimiter.hit(clientIp(req))) return res.status(429).json({ error: 'Too many requests' });
+  next();
+}, async (req, res) => {
   try {
     const code = req.body?.code;
     if (!code) return res.status(400).json({ error: 'Missing code' });
@@ -74,7 +98,7 @@ app.get('*', (_req, res) => {
 });
 
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
 
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const userSockets = new Map();
@@ -183,15 +207,40 @@ async function resolveUser(hello) {
   return { id, name };
 }
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  const ip = clientIp(req);
+  if ((socketsByIp.get(ip) || 0) >= MAX_SOCKETS_PER_IP || !connLimiter.hit(ip)) {
+    return ws.close(1008, 'Too many connections');
+  }
+  socketsByIp.set(ip, (socketsByIp.get(ip) || 0) + 1);
+
   // user: who this is; instanceId: their Discord call ('local' in a browser); room: where they are
   ws.ctx = { user: null, instanceId: null, room: null };
   ws.isAlive = true;
   ws.on('pong', () => (ws.isAlive = true));
+  // ws reports oversized frames (and broken sockets) through 'error'; without a listener it crashes the process.
+  ws.on('error', () => {});
+
+  const bucket = new TokenBucket({ capacity: MAX_MSG_BURST, refillPerSec: MSG_PER_SEC });
+  let drops = 0;
+  let lastSlowNotice = 0;
+  const helloTimer = setTimeout(() => {
+    if (!ws.ctx.user) ws.close(1008, 'Login timed out');
+  }, HELLO_TIMEOUT_MS);
 
   const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
 
   ws.on('message', async (raw) => {
+    if (!bucket.take()) {
+      drops += 1;
+      const now = Date.now();
+      if (now - lastSlowNotice >= SLOW_NOTICE_MS) {
+        lastSlowNotice = now;
+        send({ type: 'error', message: 'Slow down' });
+      }
+      if (drops >= MAX_MSG_DROPS) ws.close(1008, 'Too many messages');
+      return;
+    }
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -202,8 +251,13 @@ wss.on('connection', (ws) => {
       const { ctx } = ws;
       if (msg.type === 'hello') {
         if (ctx.user) return;
+        if (!helloLimiter.hit(ip)) {
+          send({ type: 'error', message: 'Too many logins' });
+          return ws.close(1008, 'Too many logins');
+        }
         const user = await resolveUser(msg);
         if (ws.readyState !== 1) return; // closed while we were checking with Discord
+        clearTimeout(helloTimer);
         ctx.user = user;
         ctx.instanceId = String(msg.instanceId || 'local').slice(0, 100);
         if (!userSockets.has(user.id)) userSockets.set(user.id, new Set());
@@ -244,6 +298,10 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    clearTimeout(helloTimer);
+    const n = (socketsByIp.get(ip) || 1) - 1;
+    if (n > 0) socketsByIp.set(ip, n);
+    else socketsByIp.delete(ip);
     const { user, room } = ws.ctx;
     if (!user) return;
     const sockets = userSockets.get(user.id);

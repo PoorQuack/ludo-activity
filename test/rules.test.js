@@ -4,6 +4,7 @@ import { newTokens, legalMoves, applyMove, capturesAt } from '../server/rules.js
 import { Room } from '../server/room.js';
 import { ProfileStore } from '../server/store.js';
 import { BOARDS } from '../shared/board.js';
+import { REWARDS } from '../shared/shop.js';
 
 const B4 = BOARDS[4];
 const B6 = BOARDS[6];
@@ -139,7 +140,7 @@ test('finishing a game pays coins (half when you are the only human)', async () 
     { profiles: store },
   );
   const place = room.winners.indexOf(0);
-  assert.ok(room.rewards[0] >= [100, 60][place] / 2);
+  assert.equal(room.rewards[0], Math.round((REWARDS.place[place] + room.captures[0] * REWARDS.capture) * REWARDS.soloFactor));
   assert.equal(store.peek('h').coins, 150 + room.rewards[0]);
   room.destroy();
 });
@@ -149,9 +150,9 @@ test('shop: buying needs coins, equipping needs ownership', () => {
   assert.equal(store.get('u').coins, 150);
   assert.throws(() => store.buy('u', 'token-gem'), /Not enough coins/);
   assert.throws(() => store.equip('u', 'dice-gold'), /don't own/);
-  store.addCoins('u', 200);
+  store.addCoins('u', 200); // capped at DAILY_COIN_CAP (120): only 120 lands
   store.buy('u', 'token-gem');
-  assert.equal(store.peek('u').coins, 100);
+  assert.equal(store.peek('u').coins, 20);
   assert.equal(store.peek('u').equipped.token, 'token-gem');
   assert.throws(() => store.buy('u', 'token-gem'), /already own/);
   store.equip('u', 'token-classic');
@@ -258,7 +259,7 @@ test('surrendering ends a two-player game and pays the winner only', () => {
   assert.equal(room.phase, 'finished');
   assert.deepEqual(room.winners, [2, 0]);
   assert.equal(room.rewards[0], undefined);
-  assert.equal(room.rewards[2], 100);
+  assert.equal(room.rewards[2], 25);
   room.destroy();
 });
 
