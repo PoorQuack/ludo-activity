@@ -80,6 +80,10 @@
               <b data-volume-value="sound"></b>
               <button class="btn small toggle" data-toggle="sound"></button>
             </div>
+            <div class="setting" data-music-style-row hidden>
+              <span>Music</span>
+              <select class="btn small" data-music-style aria-label="Music style"></select>
+            </div>
             <div class="setting">
               <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
               <button class="btn small toggle" data-cb></button>
@@ -131,12 +135,18 @@
           <p>The host picks the mode in the lobby. Bots can fill empty seats.</p>
           <h3>🪙 Coins</h3>
           <ul>
-            <li>Finish a game to earn coins: <b>100</b> for 1st, 60 for 2nd, 40 for 3rd, then 30 / 25 / 20.</li>
-            <li><b>+10</b> for every token you capture.</li>
-            <li>Games where you're the only human pay half.</li>
+            <li>Finish a game to earn coins: <b>25</b> for 1st, 15 for 2nd, 10 for 3rd, then 8 / 6 / 5.</li>
+            <li><b>+2</b> for every token you capture.</li>
+            <li>Games where you're the only human pay half. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).</li>
             <li>Spend coins in the shop on tokens, dice, boards and emotes. Your board theme is just for you: everyone plays on the board they picked.</li>
             <li>Colour-blind? Turn on <b>Colour-blind mode</b> on the menu or under ☰ in a game: every player gets safer colours and a shape of their own.</li>
           </ul>
+          <h3>🎵 Music &amp; sounds</h3>
+          <p>
+            Music: “Wallpaper”, “Deliberate Thought”, “Faster Does It” — Kevin MacLeod (incompetech.com),
+            <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC-BY 4.0</a>.
+            Sound effects: Kenney asset packs (kenney.nl), CC0. Full list in <code>sounds/CREDITS.md</code>.
+          </p>
         </div>
       </section>
 
@@ -195,6 +205,10 @@
                 <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
                 <b data-volume-value="sound"></b>
                 <button class="btn small toggle" data-toggle="sound"></button>
+              </div>
+              <div class="setting" data-music-style-row hidden>
+                <span>Music</span>
+                <select class="btn small" data-music-style aria-label="Music style"></select>
               </div>
               <div class="setting">
                 <span>Colour-blind mode <small>(shapes + safe colours)</small></span>

@@ -96,6 +96,7 @@ app.use(
   express.static(dist, {
     setHeaders(res, file) {
       if (file.endsWith('.html')) noCache(res);
+      else if (file.includes(`${path.sep}sounds${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=604800'); // a week: sound names aren't hashed
       else if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     },
   }),

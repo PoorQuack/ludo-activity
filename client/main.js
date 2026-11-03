@@ -4,7 +4,7 @@ import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor, SYMBOLS, isColorBlind, setColorBlind } from './skins.js';
-import { unlockAudio, sfx, setMusic, setSound, setVolume, audioSettings } from './audio.js';
+import { unlockAudio, sfx, setMusic, setSound, setVolume, setMusicStyle, audioSettings } from './audio.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
@@ -73,6 +73,8 @@ const els = {
   audioToggles: [...document.querySelectorAll('[data-toggle]')],
   volumes: [...document.querySelectorAll('[data-volume]')],
   volumeValues: [...document.querySelectorAll('[data-volume-value]')],
+  musicStyles: [...document.querySelectorAll('[data-music-style]')],
+  musicStyleRows: [...document.querySelectorAll('[data-music-style-row]')],
   toast: $('toast'),
 };
 
@@ -426,6 +428,18 @@ function renderAudioToggles() {
   const pct = (kind) => Math.round(s[kind === 'music' ? 'musicVolume' : 'soundVolume'] * 100);
   for (const input of els.volumes) if (Number(input.value) !== pct(input.dataset.volume)) input.value = pct(input.dataset.volume);
   for (const el of els.volumeValues) el.textContent = `${pct(el.dataset.volumeValue)}%`;
+  // The style picker appears once sounds.json has told us what tracks exist.
+  const styles = s.musicStyles || [];
+  const styleNames = { jazz: 'Slow jazz', lofi: 'Lo-fi', energetic: 'Energetic' };
+  for (const row of els.musicStyleRows) row.hidden = styles.length === 0;
+  for (const sel of els.musicStyles) {
+    if (sel.dataset.loaded !== styles.join()) {
+      sel.innerHTML = '';
+      for (const st of styles) sel.add(new Option(styleNames[st] || st, st));
+      sel.dataset.loaded = styles.join();
+    }
+    sel.value = s.musicStyle;
+  }
 }
 
 for (const input of els.volumes) {
@@ -445,6 +459,15 @@ for (const b of els.audioToggles) {
     renderAudioToggles();
   });
 }
+
+for (const sel of els.musicStyles) {
+  sel.addEventListener('change', () => {
+    setMusicStyle(sel.value);
+    renderAudioToggles();
+  });
+}
+
+window.addEventListener('ludo-audio-ready', renderAudioToggles); // styles arrive after sounds.json loads
 renderAudioToggles();
 
 // ---------------- colour-blind mode ----------------

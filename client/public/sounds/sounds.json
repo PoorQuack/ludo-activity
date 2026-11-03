@@ -1,0 +1,15 @@
+{
+  "roll": ["roll-1.mp3", "roll-2.mp3", "roll-3.mp3"],
+  "land": "land.mp3",
+  "step": ["step-1.mp3", "step-2.mp3", "step-3.mp3"],
+  "capture": "capture.mp3",
+  "home": "home.mp3",
+  "turn": "turn.mp3",
+  "win": "win.mp3",
+  "chat": "chat.mp3",
+  "music": {
+    "jazz": "music-jazz.mp3",
+    "lofi": "music-lofi.mp3",
+    "energetic": "music-energetic.mp3"
+  }
+}

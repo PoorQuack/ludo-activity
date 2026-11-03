@@ -7,7 +7,7 @@
 // starts on the first interaction.
 
 const SETTINGS_KEY = 'ludo-audio';
-const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5 };
+const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicStyle: 'lofi' };
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   // Older versions had one volume for both: carry it over to each
@@ -26,7 +26,10 @@ let musicGain = null;
 let sfxGain = null;
 let noiseBuffer = null;
 let musicTimer = null;
-let musicTrack = null; // <audio> playing a music file, when one is provided
+let musicTrack = null; // the one <audio> element for music files (its src changes with the style)
+let musicFiles = null; // style -> url, from sounds.json ("music" as a string becomes the '' style)
+let musicStyles = []; // the styles the player can pick (keys of "music")
+let musicFileFailed = false; // the file wouldn't load: fall back to the generated loop
 let nextNote = 0;
 let step = 0;
 const samples = {}; // effect name -> decoded AudioBuffer
@@ -35,7 +38,7 @@ const MUSIC_VOLUME = 0.32;
 const SFX_VOLUME = 0.6;
 
 export function audioSettings() {
-  return { ...settings };
+  return { ...settings, musicStyles: [...musicStyles] };
 }
 
 // Call on the first click/keypress; safe to call again.
@@ -91,7 +94,12 @@ async function loadFiles() {
   }
   for (const [name, file] of Object.entries(list)) {
     if (name === 'music') {
-      useMusicFile(`sounds/${file}`);
+      // "music": "one.mp3" plays for everyone; { jazz: "…", lofi: "…" } gives the player a style picker.
+      musicFiles =
+        typeof file === 'string'
+          ? { '': `sounds/${file}` }
+          : Object.fromEntries(Object.entries(file).map(([style, f]) => [style, `sounds/${f}`]));
+      musicStyles = Object.keys(musicFiles);
       continue;
     }
     // A name can list several files; one is picked at random each time, for variety.
@@ -106,14 +114,50 @@ async function loadFiles() {
       }
     }
   }
+  if (musicFiles) useMusicFile(trackUrl());
+  window.dispatchEvent(new Event('ludo-audio-ready'));
 }
 
+// The url for the selected style — or the only file there is, if the saved style isn't offered.
+function trackUrl() {
+  return musicFiles[settings.musicStyle] ?? musicFiles[''] ?? Object.values(musicFiles)[0];
+}
+
+// Only the selected style's file is ever loaded.
 function useMusicFile(url) {
-  musicTrack = new Audio(url);
-  musicTrack.loop = true;
-  ctx.createMediaElementSource(musicTrack).connect(musicGain);
+  if (!url) return;
+  if (!musicTrack) {
+    musicTrack = new Audio();
+    musicTrack.loop = true;
+    // A missing/broken file shouldn't leave the game silent: fall back to the generated loop.
+    musicTrack.addEventListener('error', () => {
+      console.warn(`Could not load music file, using generated music instead`);
+      musicFileFailed = true;
+      stopMusic();
+      if (settings.music) startMusic();
+    });
+    ctx.createMediaElementSource(musicTrack).connect(musicGain);
+  }
+  musicFileFailed = false;
+  musicTrack.src = url;
   stopMusic(); // swap the generated loop for the file
   if (settings.music) startMusic();
+}
+
+// Switch the music style; fades out and back in when something is playing.
+export function setMusicStyle(style) {
+  if (style === settings.musicStyle) return;
+  settings.musicStyle = style;
+  save();
+  const url = musicFiles && trackUrl();
+  if (!ctx || !url) return;
+  if (!settings.music || !musicTrack || musicTrack.paused) return useMusicFile(url);
+  musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.2); // ~0.6s out
+  setTimeout(() => {
+    if (!musicFiles) return;
+    useMusicFile(url);
+    musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2); // and in
+  }, 650);
 }
 
 export function setSound(on) {
@@ -144,7 +188,7 @@ const ARP = [0, 1, 2, 1, 0, 2, 1, null]; // eighth notes per bar; null = rest
 
 function startMusic() {
   if (!ctx) return;
-  if (musicTrack) {
+  if (musicTrack && !musicFileFailed) {
     musicTrack.play().catch(() => {});
     return;
   }
