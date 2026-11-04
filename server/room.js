@@ -79,6 +79,7 @@ export class Room {
     this.chat = []; // { id, userId, name, text, at }
     this.chatSeq = 0;
     this.lastChat = new Map(); // userId -> time
+    this.typingAt = new Map(); // userId -> { name, at }
     this.turnDeadline = null;
     this.timer = null;
   }
@@ -174,6 +175,7 @@ export class Room {
       case 'roll': return this.roll(user);
       case 'move': return this.move(user, msg.token, msg.roll);
       case 'emote': return this.emote(user, msg.item, msg.idx);
+      case 'typing': return this.typing(user);
       case 'chat': return this.say(user, msg.text);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
@@ -402,6 +404,15 @@ export class Room {
       this.emotes.push({ id: ++this.emoteSeq, seat, img: EMOTE_SLUGS[solo[1]].img, at: now });
     }
     this.onChange(this); // nothing in the game changed, so skip automate()
+  }
+
+  // A "still typing" ping: throttled server-side so a keymashing client can't flood.
+  typing(user) {
+    const now = Date.now();
+    const prev = this.typingAt.get(user.id)?.at || 0;
+    if (now - prev < 800) return;
+    this.typingAt.set(user.id, { name: this.people.get(user.id) || user.name, at: now });
+    this.onChange(this);
   }
 
   // ---------- room settings (host only) ----------
@@ -803,6 +814,7 @@ export class Room {
       seq: this.seq,
       log: this.log.slice(-8),
       emotes: this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS),
+      typing: [...this.typingAt].filter(([, t]) => now - t.at < 3500).map(([id, t]) => ({ id, name: t.name })),
       turnDeadline: this.turnDeadline,
       turnTimeout: this.delays.timeout,
       serverNow: now,

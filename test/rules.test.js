@@ -453,6 +453,20 @@ test('chat: :slug: codes need the pack owned, unknown codes pass through', () =>
   room.destroy();
 });
 
+test('typing pings show in the snapshot, throttled and expiring', () => {
+  const room = new Room('t');
+  const u = { id: 'u', name: 'U' };
+  room.connect(u);
+  room.typing(u);
+  assert.deepEqual(room.snapshot().typing, [{ id: 'u', name: 'U' }]);
+  const seq = room.chatSeq;
+  room.typing(u); // under the throttle window: silently ignored
+  assert.equal(room.typingAt.get('u').at, room.typingAt.get('u').at);
+  room.typingAt.set('u', { name: 'U', at: Date.now() - 4000 }); // expired
+  assert.deepEqual(room.snapshot().typing, []);
+  room.destroy();
+});
+
 test('chat: anyone can talk, messages are cleaned, limited and rate-limited', () => {
   const room = new Room('t');
   const w = { id: 'w', name: 'Watcher' };

@@ -382,6 +382,13 @@ function renderChat() {
     input.disabled = !state.chatOn;
     box.querySelector('[data-emoji-btn]').disabled = !state.chatOn;
     input.placeholder = state.chatOn ? 'Say something…' : 'The host turned chat off';
+    const typists = (state.typing || []).filter((t) => t.id !== me?.id && !muted.has(t.id)).map((t) => t.name);
+    const line = box.querySelector('.typing-line');
+    const text = typists.length > 1 ? `${typists.join(' & ')} are typing…` : typists.length ? `${typists[0]} is typing…` : '';
+    if (line.textContent !== text) line.textContent = text;
+    // Typing state expires server-side after ~3.5s; if nothing else updates, clear it ourselves.
+    clearTimeout(line._t);
+    if (text) line._t = setTimeout(() => { line.textContent = ''; }, 4000);
   }
   const msgs = (state.chat || []).filter((m) => !muted.has(m.userId));
   const latest = msgs.at(-1)?.id || 0;
@@ -480,6 +487,8 @@ function renderEmojiPops() {
   }
 }
 
+let lastTypingSent = 0;
+
 for (const box of els.chats) {
   const form = box.querySelector('form');
   const input = box.querySelector('input');
@@ -499,7 +508,14 @@ for (const box of els.chats) {
     count.classList.toggle('near', n >= input.maxLength * 0.8 && n < input.maxLength);
     count.classList.toggle('full', n >= input.maxLength);
   };
-  input.addEventListener('input', updateCount);
+  input.addEventListener('input', () => {
+    updateCount();
+    const now = performance.now();
+    if (now - lastTypingSent > 1500) {
+      lastTypingSent = now;
+      send('typing');
+    }
+  });
   updateCount();
   form.addEventListener('submit', (e) => {
     e.preventDefault();
