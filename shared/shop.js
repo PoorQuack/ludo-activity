@@ -33,17 +33,7 @@ export const SHOP_ITEMS = [
   { id: 'board-candy', type: 'board', name: 'Candy', price: 350 },
   { id: 'board-neon', type: 'board', name: 'Neon', price: 500 },
 
-  { id: 'emote-thumbs', type: 'emote', name: 'Thumbs up', emoji: '👍', price: 0 },
-  { id: 'emote-laugh', type: 'emote', name: 'Laugh', emoji: '😂', price: 0 },
-  { id: 'emote-wow', type: 'emote', name: 'Wow', emoji: '😮', price: 0 },
-  { id: 'emote-angry', type: 'emote', name: 'Angry', emoji: '😡', price: 0 },
-  { id: 'emote-fire', type: 'emote', name: 'Fire', emoji: '🔥', price: 100 },
-  { id: 'emote-cool', type: 'emote', name: 'Cool', emoji: '😎', price: 100 },
-  { id: 'emote-cry', type: 'emote', name: 'Cry', emoji: '😭', price: 100 },
-  { id: 'emote-party', type: 'emote', name: 'Party', emoji: '🎉', price: 150 },
-  { id: 'emote-skull', type: 'emote', name: 'Skull', emoji: '💀', price: 150 },
-  { id: 'emote-clown', type: 'emote', name: 'Clown', emoji: '🤡', price: 200 },
-  { id: 'emote-crown', type: 'emote', name: 'Crown', emoji: '👑', price: 300 },
+  // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
   // Emote packs: one purchase unlocks a set of image emotes, served from /emotes/.
   // Sending one carries the pack id plus the entry index.
   {

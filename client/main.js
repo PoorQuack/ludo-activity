@@ -386,13 +386,15 @@ function renderChat() {
       who.textContent = (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
       if (seat >= 0) who.style.color = col(board.colors[seat]);
       li.appendChild(who);
-      // :slug: codes come back as image emotes (the server already checked ownership)
+      // :slug: codes come back as stickers (the server already checked ownership).
+      // A message of nothing but codes shows them sticker-big; inside text they're small.
+      const stickerOnly = m.text.trim().split(/\s+/).every((t) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(t)?.[1]]);
       for (const part of m.text.split(/(:[a-z0-9-]+:)/g)) {
         const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
         const hit = slug && EMOTE_SLUGS[slug];
         if (hit) {
           const img = document.createElement('img');
-          img.className = 'chat-emote';
+          img.className = stickerOnly ? 'chat-sticker' : 'chat-emote';
           img.src = hit.img;
           img.alt = `:${slug}:`;
           img.title = hit.name;
@@ -412,8 +414,7 @@ function emoteEntries() {
   const entries = [];
   for (const i of SHOP_ITEMS) {
     if (!ownsItem(profile, i.id)) continue;
-    if (i.type === 'emote') entries.push({ emoji: i.emoji, name: i.name, insert: i.emoji });
-    else if (i.type === 'emote-pack') i.emotes.forEach((e) => entries.push({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
+    if (i.type === 'emote-pack') i.emotes.forEach((e) => entries.push({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
   }
   return entries;
 }
@@ -423,7 +424,14 @@ function renderEmojiPops() {
     const pop = box.querySelector('.emoji-pop');
     const input = box.querySelector('input');
     pop.innerHTML = '';
-    for (const e of emoteEntries()) {
+    const entries = emoteEntries();
+    if (!entries.length) {
+      const hint = document.createElement('p');
+      hint.className = 'emoji-empty';
+      hint.textContent = 'No stickers yet — find packs in the Shop';
+      pop.appendChild(hint);
+    }
+    for (const e of entries) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'emote';

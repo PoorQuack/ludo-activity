@@ -479,11 +479,29 @@ test('emotes need a seat and ownership', () => {
   const u = { id: 'u', name: 'U' };
   store.get('u');
   room.connect(u);
-  assert.throws(() => room.emote(u, 'emote-thumbs'), /Take a seat/);
+  assert.throws(() => room.emote(u, 'emote-pack-hamster', 0), /Take a seat/);
   room.host(u);
-  room.emote(u, 'emote-thumbs');
+  assert.throws(() => room.emote(u, 'emote-pack-hamster', 0), /don't own/);
+  store.get('u').owned.push('emote-pack-hamster');
+  room.emote(u, 'emote-pack-hamster', 0);
   assert.equal(room.emotes.length, 1);
-  assert.throws(() => room.emote(u, 'emote-crown'), /don't own/);
+  room.destroy();
+});
+
+test('a sticker-only chat message also floats over your base', () => {
+  const store = new ProfileStore(null);
+  const room = new Room('t', { profiles: store });
+  const u = { id: 'u', name: 'U' };
+  store.get('u').owned.push('emote-pack-hamster');
+  room.connect(u);
+  room.host(u); // seated at 0
+  room.say(u, ':bonk:');
+  assert.equal(room.chat.at(-1).text, ':bonk:');
+  assert.equal(room.emotes.at(-1).img, '/emotes/hamster/bonkhamster.png');
+  assert.equal(room.emotes.at(-1).seat, 0);
+  room.lastChat.clear();
+  room.say(u, 'nice :bonk: move'); // a sticker inside text stays chat-only
+  assert.equal(room.emotes.length, 1);
   room.destroy();
 });
 

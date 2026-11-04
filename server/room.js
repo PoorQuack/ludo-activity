@@ -394,6 +394,13 @@ export class Room {
     this.lastChat.set(user.id, now);
     this.chat.push({ id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now });
     if (this.chat.length > CHAT_KEEP) this.chat.shift();
+    // A message that's just a sticker also floats over the sender's base, like a board reaction.
+    const solo = /^:([a-z0-9-]+):$/.exec(clean);
+    const seat = solo && this.seatOf(user.id);
+    if (solo && EMOTE_SLUGS[solo[1]] && seat >= 0) {
+      this.emotes = this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS);
+      this.emotes.push({ id: ++this.emoteSeq, seat, img: EMOTE_SLUGS[solo[1]].img, at: now });
+    }
     this.onChange(this); // nothing in the game changed, so skip automate()
   }
 
