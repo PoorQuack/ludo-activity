@@ -7,7 +7,7 @@ Multiplayer Ludo that runs inside Discord as an Activity.
 - **Room chat** with a swear filter. Anyone can **mute** someone just for themselves; the host can **kick** people and turn typed chat off.
 - **Main menu** with the room list, Shop and How to play.
 - **Colour-blind mode** (per player, in the menu and the in-game ☰): colours that stay distinct for the common kinds of colour blindness, plus a shape for every player (▲ ■ ● ◆ ✚ ✖) on pins, bases, home columns, seat cards, chat and turn text.
-- **Coins and shop:** players earn coins by finishing games and spend them on token skins, dice skins, board themes and emotes. Coins are saved on the server in `data/profiles.json`.
+- **Coins and shop:** players earn coins by finishing games and spend them on token skins, dice skins, board themes and emotes. Placement pays for how far your tokens got, so a game that ends early (e.g. everyone else surrenders) pays less than a real finish. Coins are saved on the server in `data/profiles.json`.
 
 - **Server:** Node.js, Express and WebSockets. The server enforces the rules, so players can't cheat.
 - **Client:** Plain JavaScript drawing on a canvas, bundled with Vite and using the Discord Embedded App SDK.

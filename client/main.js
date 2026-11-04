@@ -1000,7 +1000,9 @@ function showFinish() {
   const lines = state.winners.map((s, i) => {
     const coins = state.rewards?.[s];
     const capped = state.rewardCapped?.includes(s);
-    const reward = coins || capped ? ` <span class="reward">+${coins || 0} 🪙${capped ? ' (daily limit reached)' : ''}</span>` : '';
+    const partial = state.rewardPartial?.includes(s);
+    const note = [capped ? 'daily limit reached' : '', partial ? 'ended early' : ''].filter(Boolean).join(', ');
+    const reward = coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '';
     return `${MEDALS[i] || `${i + 1}.`} ${escapeHtml(state.seats[s]?.name)}${reward}`;
   });
   els.banner.innerHTML = `<div class="banner-title">Game over!</div>${lines.join('<br>')}`;

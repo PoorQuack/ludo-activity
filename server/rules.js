@@ -8,6 +8,12 @@ export function newTokens(seats = 4) {
   return Array.from({ length: seats }, () => [-1, -1, -1, -1]);
 }
 
+// How far along a seat is: 0 with every token in base, 1 with all four home.
+// Used to shrink payouts when a game ends before anyone finished.
+export function progressShare(tokens, seat, board = DEFAULT_BOARD) {
+  return tokens[seat].reduce((sum, p) => sum + Math.min(p + 1, board.finished), 0) / (4 * board.finished);
+}
+
 // Where token `t` of `seat` would end up with roll `dice`, or null if illegal.
 export function targetProgress(tokens, seat, t, dice, board = DEFAULT_BOARD) {
   const p = tokens[seat][t];

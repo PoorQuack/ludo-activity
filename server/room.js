@@ -2,7 +2,7 @@
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
-import { newTokens, legalMoves, applyMove, chooseBotMove } from './rules.js';
+import { newTokens, legalMoves, applyMove, chooseBotMove, progressShare } from './rules.js';
 import { cleanText } from './filter.js';
 
 const BOT_DELAY_MS = 900;
@@ -68,6 +68,7 @@ export class Room {
     this.turnTimedOut = false;
     this.rewards = null; // seat -> coins, once a game is over
     this.rewardCapped = []; // seats whose payout was cut by the daily coin cap
+    this.rewardPartial = []; // seats whose payout was cut by an early end
     this.lastMove = null;
     this.seq = 0;
     this.log = [];
@@ -297,6 +298,7 @@ export class Room {
     this.stuck = Array(this.board.arms).fill(0);
     this.rewards = null;
     this.rewardCapped = [];
+    this.rewardPartial = [];
     this.lastMove = null;
     this.log = [];
     this.turn = active[randomInt(active.length)];
@@ -434,6 +436,7 @@ export class Room {
     for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
     this.rewardCapped = [];
+    this.rewardPartial = [];
     this.stuck = Array(this.board.arms).fill(0);
     this.turnDeadline = null;
     this.changed();
@@ -600,10 +603,15 @@ export class Room {
     const factor = humans.length >= 2 ? 1 : REWARDS.soloFactor;
     this.rewards = {};
     this.rewardCapped = [];
+    this.rewardPartial = []; // seats whose placement payout was cut by an early end
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
-      const coins = Math.round((REWARDS.place[place] + this.captures[s] * REWARDS.capture) * factor);
+      // The placement pays for how far you got, so a game handed over by a surrender
+      // pays a fraction of a real finish. Captures still pay in full — they're earned.
+      const share = progressShare(this.tokens, s, this.board);
+      if (share < 1) this.rewardPartial.push(s);
+      const coins = Math.round((REWARDS.place[place] * share + this.captures[s] * REWARDS.capture) * factor);
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
@@ -765,6 +773,7 @@ export class Room {
       winners: this.winners,
       rewards: this.rewards,
       rewardCapped: this.rewardCapped,
+      rewardPartial: this.rewardPartial,
       timeouts: this.timeouts,
       maxTimeouts: MAX_TIMEOUTS,
       lastMove: this.lastMove,

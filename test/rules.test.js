@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { newTokens, legalMoves, applyMove, capturesAt } from '../server/rules.js';
+import { newTokens, legalMoves, applyMove, capturesAt, progressShare } from '../server/rules.js';
 import { Room } from '../server/room.js';
 import { ProfileStore } from '../server/store.js';
 import { BOARDS } from '../shared/board.js';
@@ -140,7 +140,8 @@ test('finishing a game pays coins (half when you are the only human)', async () 
     { profiles: store },
   );
   const place = room.winners.indexOf(0);
-  assert.equal(room.rewards[0], Math.round((REWARDS.place[place] + room.captures[0] * REWARDS.capture) * REWARDS.soloFactor));
+  const share = progressShare(room.tokens, 0, room.board);
+  assert.equal(room.rewards[0], Math.round((REWARDS.place[place] * share + room.captures[0] * REWARDS.capture) * REWARDS.soloFactor));
   assert.equal(store.peek('h').coins, 150 + room.rewards[0]);
   room.destroy();
 });
@@ -255,12 +256,32 @@ test('surrendering ends a two-player game and pays the winner only', () => {
   const store = new ProfileStore(null);
   const { room, a } = twoPlayerRoom();
   room.profiles = store;
+  room.tokens[2] = [10, 30, -1, -1]; // the winner got two tokens part-way round
   room.surrender(a);
   assert.equal(room.phase, 'finished');
   assert.deepEqual(room.winners, [2, 0]);
   assert.equal(room.rewards[0], undefined);
-  assert.equal(room.rewards[2], 25);
+  // 42/224 of the way home: the early win pays a fraction of the full 1st-place 25.
+  assert.equal(room.rewards[2], Math.round(REWARDS.place[0] * progressShare(room.tokens, 2, room.board)));
+  assert.deepEqual(room.rewardPartial, [2]);
   room.destroy();
+});
+
+test('an instant surrender pays almost nothing, a real finish pays full', () => {
+  const store = new ProfileStore(null);
+  const { room, a } = twoPlayerRoom();
+  room.profiles = store;
+  room.surrender(a); // nothing moved at all
+  assert.equal(room.rewards[2], 0);
+  room.destroy();
+
+  const done = twoPlayerRoom();
+  done.room.tokens[2] = [56, 56, 56, 56]; // all four home: full payout even if the game ends early
+  done.room.profiles = store;
+  done.room.surrender(done.a);
+  assert.equal(done.room.rewards[2], REWARDS.place[0]);
+  assert.deepEqual(done.room.rewardPartial, []);
+  done.room.destroy();
 });
 
 test('surrendering on your turn passes the turn; game goes on with the rest', () => {
