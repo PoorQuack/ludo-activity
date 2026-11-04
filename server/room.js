@@ -1,7 +1,7 @@
 // One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor } from '../shared/board.js';
-import { DEFAULT_EQUIPPED, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
+import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, progressShare } from './rules.js';
 import { cleanText } from './filter.js';
 
@@ -375,12 +375,19 @@ export class Room {
   // Chat is open to everyone in the Activity, players and watchers alike.
   say(user, text) {
     if (!this.chatOn) throw new Error('The host turned chat off in this room');
-    const clean = cleanText(
+    let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
         .trim()
         .slice(0, CHAT_MAX_LEN),
     );
+    // :slug: codes render as image emotes only when the sender owns the pack —
+    // otherwise they fall back to the plain word so nobody can fake them.
+    clean = clean
+      .replace(/:([a-z0-9-]+):/g, (m, slug) =>
+        EMOTE_SLUGS[slug] && !ownsItem(this.profiles?.peek(user.id), EMOTE_SLUGS[slug].item) ? slug : m,
+      )
+      .trim();
     if (!clean) return;
     const now = Date.now();
     if (now - (this.lastChat.get(user.id) || 0) < CHAT_COOLDOWN_MS) throw new Error('Slow down a little');

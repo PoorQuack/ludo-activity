@@ -53,25 +53,34 @@ export const SHOP_ITEMS = [
     emoji: '🐹',
     price: 600,
     emotes: [
-      { img: '/emotes/hamster/thumbsuphamster.png', name: 'Thumbs up' },
-      { img: '/emotes/hamster/bonkhamster.png', name: 'Bonk' },
-      { img: '/emotes/hamster/celebrationhamster.png', name: 'Celebration' },
-      { img: '/emotes/hamster/chefhamster.png', name: 'Chef' },
-      { img: '/emotes/hamster/goodnight.png', name: 'Goodnight' },
-      { img: '/emotes/hamster/hamsterdespair.png', name: 'Despair' },
-      { img: '/emotes/hamster/hamsterdrool.png', name: 'Drool' },
-      { img: '/emotes/hamster/hamster-shock.gif', name: 'Shock' },
-      { img: '/emotes/hamster/happyhamsta.gif', name: 'Happy' },
-      { img: '/emotes/hamster/oxygenhamster.png', name: 'Oxygen' },
-      { img: '/emotes/hamster/princesshamster.png', name: 'Princess' },
-      { img: '/emotes/hamster/shockedhamster.png', name: 'Shocked' },
-      { img: '/emotes/hamster/skeletonhamster.png', name: 'Skeleton' },
-      { img: '/emotes/hamster/zzzhamster.png', name: 'Sleepy' },
+      { img: '/emotes/hamster/thumbsuphamster.png', slug: 'thumbsup', name: 'Thumbs up' },
+      { img: '/emotes/hamster/bonkhamster.png', slug: 'bonk', name: 'Bonk' },
+      { img: '/emotes/hamster/celebrationhamster.png', slug: 'celebrate', name: 'Celebration' },
+      { img: '/emotes/hamster/chefhamster.png', slug: 'chef', name: 'Chef' },
+      { img: '/emotes/hamster/goodnight.png', slug: 'goodnight', name: 'Goodnight' },
+      { img: '/emotes/hamster/hamsterdespair.png', slug: 'despair', name: 'Despair' },
+      { img: '/emotes/hamster/hamsterdrool.png', slug: 'drool', name: 'Drool' },
+      { img: '/emotes/hamster/hamster-shock.gif', slug: 'shock', name: 'Shock' },
+      { img: '/emotes/hamster/happyhamsta.gif', slug: 'happy', name: 'Happy' },
+      { img: '/emotes/hamster/oxygenhamster.png', slug: 'oxygen', name: 'Oxygen' },
+      { img: '/emotes/hamster/princesshamster.png', slug: 'princess', name: 'Princess' },
+      { img: '/emotes/hamster/shockedhamster.png', slug: 'shocked', name: 'Shocked' },
+      { img: '/emotes/hamster/skeletonhamster.png', slug: 'skeleton', name: 'Skeleton' },
+      { img: '/emotes/hamster/zzzhamster.png', slug: 'sleepy', name: 'Sleepy' },
     ],
   },
 ];
 
 export const ITEMS = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]));
+
+// :slug: codes usable in chat. slug -> { item, idx } so the server can check the sender owns the pack.
+export const EMOTE_SLUGS = {};
+for (const item of SHOP_ITEMS) {
+  if (item.type !== 'emote-pack') continue;
+  item.emotes.forEach((e, idx) => {
+    if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name };
+  });
+}
 
 export const DEFAULT_EQUIPPED = { token: 'token-classic', dice: 'dice-classic', board: 'board-classic' };
 

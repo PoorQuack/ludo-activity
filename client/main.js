@@ -1,6 +1,6 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
 import { MODES, boardFor } from '../shared/board.js';
-import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
+import { SHOP_ITEMS, ownsItem, EMOTE_SLUGS } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor, SYMBOLS, isColorBlind, setColorBlind } from './skins.js';
@@ -67,7 +67,7 @@ const els = {
   timerBar: $('timer-bar'),
   finishControls: $('finish-controls'),
   againBtn: $('again-btn'),
-  emoteBar: $('emote-bar'),
+  emoteBar: $('emote-bar'), // removed from the layout — emotes live in chat now
   chats: [...document.querySelectorAll('[data-chat]')],
   audioToggles: [...document.querySelectorAll('[data-toggle]')],
   volumes: [...document.querySelectorAll('[data-volume]')],
@@ -355,6 +355,7 @@ function renderChat() {
   for (const box of els.chats) {
     const input = box.querySelector('input');
     input.disabled = !state.chatOn;
+    box.querySelector('[data-emoji-btn]').disabled = !state.chatOn;
     input.placeholder = state.chatOn ? 'Say something…' : 'The host turned chat off';
   }
   const msgs = (state.chat || []).filter((m) => !muted.has(m.userId));
@@ -385,7 +386,19 @@ function renderChat() {
       who.textContent = (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
       if (seat >= 0) who.style.color = col(board.colors[seat]);
       li.appendChild(who);
-      li.appendChild(document.createTextNode(m.text));
+      // :slug: codes come back as image emotes (the server already checked ownership)
+      for (const part of m.text.split(/(:[a-z0-9-]+:)/g)) {
+        const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
+        const hit = slug && EMOTE_SLUGS[slug];
+        if (hit) {
+          const img = document.createElement('img');
+          img.className = 'chat-emote';
+          img.src = hit.img;
+          img.alt = `:${slug}:`;
+          img.title = hit.name;
+          li.appendChild(img);
+        } else if (part) li.appendChild(document.createTextNode(part));
+      }
       list.appendChild(li);
     }
     if (atBottom || !list.dataset.seen) list.scrollTop = list.scrollHeight;
@@ -393,9 +406,55 @@ function renderChat() {
   }
 }
 
+// Emotes the current player can pick from: unicode emotes insert the character,
+// pack emotes insert a :slug: code that the server verifies on send.
+function emoteEntries() {
+  const entries = [];
+  for (const i of SHOP_ITEMS) {
+    if (!ownsItem(profile, i.id)) continue;
+    if (i.type === 'emote') entries.push({ emoji: i.emoji, name: i.name, insert: i.emoji });
+    else if (i.type === 'emote-pack') i.emotes.forEach((e) => entries.push({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
+  }
+  return entries;
+}
+
+function renderEmojiPops() {
+  for (const box of els.chats) {
+    const pop = box.querySelector('.emoji-pop');
+    const input = box.querySelector('input');
+    pop.innerHTML = '';
+    for (const e of emoteEntries()) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'emote';
+      b.title = e.name;
+      if (e.img) {
+        const img = document.createElement('img');
+        img.src = e.img;
+        img.alt = e.name;
+        b.appendChild(img);
+      } else b.textContent = e.emoji;
+      b.addEventListener('click', () => {
+        const pos = input.selectionStart ?? input.value.length;
+        input.setRangeText(e.insert, pos, input.selectionEnd ?? pos, 'end');
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+        pop.classList.add('hidden');
+      });
+      pop.appendChild(b);
+    }
+  }
+}
+
 for (const box of els.chats) {
   const form = box.querySelector('form');
   const input = box.querySelector('input');
+  const pop = box.querySelector('.emoji-pop');
+  const emojiBtn = box.querySelector('[data-emoji-btn]');
+  emojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    pop.classList.toggle('hidden');
+  });
   // "0/100" beside the box: yellow when nearly full, red at the limit
   const count = document.createElement('span');
   count.className = 'chat-count';
@@ -505,8 +564,16 @@ document.addEventListener('pointerdown', (e) => {
   if (!els.playerPop.classList.contains('hidden') && !els.playerPop.contains(e.target) && !e.target.closest('[data-player-btn]')) {
     closePlayer();
   }
+  if (!e.target.closest('.emoji-pop') && !e.target.closest('[data-emoji-btn]')) {
+    for (const p of document.querySelectorAll('.emoji-pop:not(.hidden)')) p.classList.add('hidden');
+  }
 });
-window.addEventListener('keydown', (e) => e.key === 'Escape' && closePlayer());
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closePlayer();
+    for (const p of document.querySelectorAll('.emoji-pop:not(.hidden)')) p.classList.add('hidden');
+  }
+});
 $('player-prev').addEventListener('click', prevTrack);
 $('player-next').addEventListener('click', nextTrack);
 els.playerPlay.addEventListener('click', () => setMusic(!audioSettings().music));
@@ -977,33 +1044,8 @@ function renderPanel() {
 
   if (phase !== 'finished') els.banner.classList.add('hidden');
 
-  // Emotes you own (only once you're seated) — unicode emotes plus every entry in owned packs
-  const entries = [];
-  for (const i of SHOP_ITEMS) {
-    if (!ownsItem(profile, i.id)) continue;
-    if (i.type === 'emote') entries.push({ key: i.id, item: i.id, emoji: i.emoji, name: i.name });
-    else if (i.type === 'emote-pack') i.emotes.forEach((e, idx) => entries.push({ key: `${i.id}:${idx}`, item: i.id, idx, img: e.img, name: e.name }));
-  }
-  const emoteKey = seat >= 0 ? entries.map((e) => e.key).join() : '';
-  if (els.emoteBar.dataset.key !== emoteKey) {
-    els.emoteBar.dataset.key = emoteKey;
-    els.emoteBar.innerHTML = '';
-    if (emoteKey) {
-      for (const e of entries) {
-        const b = document.createElement('button');
-        b.className = 'emote';
-        b.title = e.name;
-        if (e.img) {
-          const img = document.createElement('img');
-          img.src = e.img;
-          img.alt = e.name;
-          b.appendChild(img);
-        } else b.textContent = e.emoji;
-        b.addEventListener('click', () => send('emote', { item: e.item, idx: e.idx }));
-        els.emoteBar.appendChild(b);
-      }
-    }
-  }
+  // Emotes live in chat now: the emoji button on the chat form opens the picker.
+  renderEmojiPops();
 }
 
 function showFinish() {

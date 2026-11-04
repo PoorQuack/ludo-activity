@@ -434,6 +434,25 @@ test('someone hosts, others join; the lobby closes when the host leaves alone', 
   room.destroy();
 });
 
+test('chat: :slug: codes need the pack owned, unknown codes pass through', () => {
+  const store = new ProfileStore(null);
+  const room = new Room('t', { profiles: store });
+  const u = { id: 'u', name: 'U' };
+  store.get('u');
+  room.connect(u);
+  room.host(u);
+  room.say(u, 'hello :bonk: there');
+  assert.equal(room.chat.at(-1).text, 'hello bonk there'); // no pack: the code becomes the plain word
+  room.lastChat.clear();
+  room.say(u, ':madeup: stays');
+  assert.equal(room.chat.at(-1).text, ':madeup: stays'); // not a real slug: passes through as text
+  store.get('u').owned.push('emote-pack-hamster');
+  room.lastChat.clear();
+  room.say(u, 'now :bonk: works');
+  assert.equal(room.chat.at(-1).text, 'now :bonk: works'); // owned: the code survives for the client to render
+  room.destroy();
+});
+
 test('chat: anyone can talk, messages are cleaned, limited and rate-limited', () => {
   const room = new Room('t');
   const w = { id: 'w', name: 'Watcher' };

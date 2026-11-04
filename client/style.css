@@ -599,6 +599,41 @@ html, body {
 .emote:hover { transform: scale(1.12); }
 .emote:active { transform: scale(0.9); }
 .emote img { width: 28px; height: 28px; object-fit: contain; display: block; }
+.chat { position: relative; }
+.emoji-btn {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 20px;
+}
+.emoji-btn:hover { color: var(--text); background: var(--panel-2); }
+.emoji-btn:disabled { opacity: 0.4; cursor: default; }
+.emoji-pop {
+  position: absolute;
+  right: 6px;
+  bottom: 54px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(4, 40px);
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.emoji-pop.hidden { display: none; }
+.chat-emote { width: 22px; height: 22px; object-fit: contain; vertical-align: -4px; margin: 0 1px; }
 .preview.pack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: center; justify-items: center; }
 .preview.pack img { width: 36px; height: 36px; object-fit: contain; }
 .preview.pack span { color: var(--muted); font-size: 12px; }

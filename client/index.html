@@ -235,11 +235,13 @@
             <button id="again-btn" class="btn primary">Back to lobby</button>
           </div>
 
-          <div id="emote-bar" class="emote-bar"></div>
-
           <section class="chat" data-chat>
             <ul class="chat-log"></ul>
+            <div class="emoji-pop hidden"></div>
             <form class="chat-form">
+              <button type="button" class="emoji-btn" data-emoji-btn aria-label="Emoji">
+                <svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" /><circle cx="5.8" cy="6.4" r="1" fill="currentColor" stroke="none" /><circle cx="10.2" cy="6.4" r="1" fill="currentColor" stroke="none" /><path d="M5.3 9.7a3.6 3.6 0 0 0 5.4 0" /></svg>
+              </button>
               <input type="text" maxlength="100" placeholder="Say something…" autocomplete="off" />
               <button class="btn small" type="submit">Send</button>
             </form>
