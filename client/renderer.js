@@ -122,6 +122,7 @@ export class BoardRenderer {
         ctx.fillStyle = theme.baseInner;
         roundRect(ctx, b.x - inner, b.y - inner, inner * 2, inner * 2, 0.4);
         ctx.fill();
+        drawPinSpots(ctx, b, board.baseSpread, 0.62, color(seat));
       } else {
         // The whole triangle between two arms in the player's colour, a plain circle inside,
         // and a faint spot for each pin to stand on
@@ -137,14 +138,7 @@ export class BoardRenderer {
         ctx.fillStyle = theme.baseInner;
         circle(ctx, b.x, b.y, b.size);
         ctx.fill();
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = color(seat);
-        for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-          circle(ctx, b.x + ox * board.baseSpread, b.y + oy * board.baseSpread, 0.42);
-          ctx.fill();
-        }
-        ctx.restore();
+        drawPinSpots(ctx, b, board.baseSpread, 0.42, color(seat));
       }
       // Colour-blind mode: the player's shape in the middle of their base
       if (cb) drawShape(ctx, this.seatShape(seat), b.x, b.y, b.square ? 0.6 : 0.42, color(seat), 'rgba(0,0,0,0.35)', 0.08);
@@ -986,6 +980,29 @@ export function drawShape(ctx, shape, x, y, r, fill, stroke, lineWidth = 1) {
 function circle(ctx, x, y, r) {
   ctx.beginPath();
   ctx.arc(x, y, Math.max(0, r), 0, TAU);
+}
+
+// The four spots in a base where pins wait, like the circles on a real Ludo board:
+// a disc in the player's colour with a soft inset rim, so it reads as a hollow to stand in.
+function drawPinSpots(ctx, b, spread, r, color) {
+  for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const x = b.x + ox * spread;
+    const y = b.y + oy * spread;
+    ctx.fillStyle = color;
+    circle(ctx, x, y, r);
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.lineWidth = r * 0.3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+    circle(ctx, x, y - r * 0.08, r);
+    ctx.stroke();
+    ctx.restore();
+    ctx.lineWidth = r * 0.12;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    circle(ctx, x, y, r);
+    ctx.stroke();
+  }
 }
 
 function polygon(n, r) {
