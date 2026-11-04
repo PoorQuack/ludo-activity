@@ -109,7 +109,8 @@ bash scripts/setup-vm.sh
 It installs what's missing, asks for your Discord Client ID and secret, starts the game and an HTTPS
 tunnel with pm2, and prints the address to put in **Activities → URL Mappings**. The tunnel address
 changes if the VM restarts; get the new one with `bash scripts/tunnel-url.sh`. To update later:
-`bash scripts/deploy.sh` — it backs up the save file, pulls, rebuilds, restarts and rolls back on failure.
+`bash scripts/deploy.sh` — it backs up the save file, pulls, builds, tests and goes live without kicking
+anyone out of a game, rolling back on failure (see **Updating** below).
 
 The sections below explain the same steps by hand, plus a permanent address with your own domain.
 
@@ -181,8 +182,17 @@ Then set the Root Mapping in the Developer Portal to `ludo.yourdomain.com`.
 ### Updating
 
 ```bash
-cd ludo-activity && git pull && npm ci && npm run build && pm2 restart ludo
+cd ludo-activity && bash scripts/deploy.sh
 ```
+
+Players stay in their games:
+
+- **Page-only changes** (`client/`, sounds, emotes) go live with no restart; players get them on refresh.
+- **Server changes** (`server/`, `shared/`, packages) restart Ludo. On the way down it saves every open
+  room to `data/rooms.json`, and the new server picks them back up: players see "Reconnecting…" for a
+  moment and carry on. Anyone who doesn't come back within 20 seconds is treated as having left.
+- Use `FORCE_RESTART=1 bash scripts/deploy.sh` to restart anyway (e.g. after editing `.env`).
+- A new field on `Room` that should survive a restart must be added to `SAVED_FIELDS` in `server/room.js`.
 
 ---
 

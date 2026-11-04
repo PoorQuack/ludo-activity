@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'node:http';
 import { randomUUID, createHash } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -12,6 +13,9 @@ import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
 const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'profiles.json');
+// Open rooms are written here when the server stops and read back when it starts, so an
+// update (pm2 restart) doesn't end anyone's game: players reconnect and carry on.
+const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 'rooms.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
@@ -123,6 +127,35 @@ const directory = new RoomDirectory({
   },
   onRemove: listsChanged,
 });
+const roomExtra = (id) => ({ onKick: (userId) => kickFromRoom(directory.get(id), userId) });
+
+// Rooms saved by the last shutdown come back. The file is removed once read, so a room that
+// somehow crashes the server can't be loaded over and over.
+function restoreRooms() {
+  if (!fs.existsSync(ROOMS_FILE)) return;
+  try {
+    const n = directory.restore(JSON.parse(fs.readFileSync(ROOMS_FILE, 'utf8')), { extra: roomExtra });
+    if (n) console.log(`Restored ${n} room${n === 1 ? '' : 's'} from before the restart`);
+  } catch (err) {
+    console.error(`Couldn't read saved rooms (${err.message}) — starting with none`);
+  }
+  try {
+    fs.rmSync(ROOMS_FILE);
+  } catch {
+    // nothing to tidy up
+  }
+}
+
+function saveRooms() {
+  try {
+    fs.mkdirSync(path.dirname(ROOMS_FILE), { recursive: true });
+    const tmp = `${ROOMS_FILE}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(directory.save()));
+    fs.renameSync(tmp, ROOMS_FILE); // all or nothing: never a half-written file
+  } catch (err) {
+    console.error(`Couldn't save rooms: ${err.message}`);
+  }
+}
 
 function sendProfile(userId) {
   const msg = JSON.stringify({ type: 'profile', profile: store.view(userId) });
@@ -355,13 +388,19 @@ setInterval(() => {
   }
 }, 30_000);
 
-// Save coins before exiting.
+// Save coins and open rooms before exiting (pm2 restart sends SIGINT).
+let stopping = false;
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
+    if (stopping) return;
+    stopping = true;
+    saveRooms();
     store.flush();
     process.exit(0);
   });
 }
+
+restoreRooms(); // last, once everything rooms talk to is set up
 
 server.listen(PORT, () => {
   console.log(`Ludo server running on http://localhost:${PORT}`);

@@ -20,6 +20,15 @@ const EMOTE_TTL_MS = 3000;
 const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
+// What toSave() keeps of a room (see "surviving a server restart" below).
+const SAVED_FIELDS = [
+  'id', 'code', 'visibility', 'instanceId', 'chatOn', 'mode', 'seats', 'hostId', 'phase',
+  'tokens', 'turn', 'dice', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
+  'lastRoll', 'winners', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
+  'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
+  'emoteSeq', 'chat', 'chatSeq',
+];
+
 export class Room {
   constructor(
     id,
@@ -736,6 +745,71 @@ export class Room {
 
   destroy() {
     this.clearTimer();
+    clearTimeout(this.graceTimer);
+    this.graceTimer = null;
+  }
+
+  // ---------- surviving a server restart ----------
+
+  // Everything needed to carry on this room after the server restarts: plain data only.
+  // Left out on purpose: sockets and who's connected (players reconnect), timers (restarted
+  // by resume()), floating emotes and typing (they only last a few seconds anyway).
+  toSave() {
+    const keep = {};
+    for (const k of SAVED_FIELDS) keep[k] = this[k];
+    keep.banned = [...this.banned];
+    return keep;
+  }
+
+  // A room rebuilt from toSave(), with the given Room options (onChange, profiles, …).
+  static fromSave(data, options = {}) {
+    if (!data?.id || !MODES[data.mode]) throw new Error('Bad saved room');
+    const room = new Room(data.id, options);
+    for (const k of SAVED_FIELDS) if (data[k] !== undefined) room[k] = data[k];
+    room.banned = new Set(data.banned || []);
+    room.board = boardFor(room.mode);
+    return room;
+  }
+
+  // Starts a restored room again. Nobody is connected yet: players get `graceMs` to come back
+  // before they count as gone (bots take their turns, lobby seats are freed), and whoever's turn
+  // it is gets a fresh turn clock so the restart doesn't eat their time.
+  resume(graceMs = 20_000) {
+    this.turnDeadline = Date.now() + this.delays.timeout;
+    this.graceTimer = setTimeout(() => {
+      this.graceTimer = null;
+      this.dropAbsent();
+    }, graceMs);
+    if (this.phase !== 'playing') return this.onChange(this);
+    // The server may have stopped between steps that run on a timer: pick the turn back up.
+    if (this.rolled) {
+      if (this.skipped) return this.schedule(this.delays.noMove, () => this.nextTurn());
+      if (this.rolls.length === 0 || this.movable.length === 0) {
+        this.rolls = [];
+        this.options = [];
+        this.movable = [];
+        this.onChange(this);
+        return this.schedule(this.delays.noMove, () => this.endRolls());
+      }
+      return this.playRolls(); // re-checks the moves, and auto-moves a forced one
+    }
+    this.changed();
+  }
+
+  // After a restart: everyone who didn't come back is treated as having left.
+  dropAbsent() {
+    let changed = false;
+    this.seats.forEach((s, i) => {
+      if (!s || s.bot || this.connected.has(s.userId)) return;
+      if (this.phase === 'lobby') this.seats[i] = null;
+      else s.connected = false;
+      changed = true;
+    });
+    if (this.hostId && !this.connected.has(this.hostId)) {
+      this.hostId = this.nextHost();
+      changed = true;
+    }
+    if (changed) this.changed();
   }
 
   // ---------- helpers ----------

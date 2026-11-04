@@ -8,6 +8,7 @@ const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I, easy to
 const CODE_LENGTH = 4;
 const MAX_ROOMS = 500; // plenty for a 1 GB VM: a room is a few KB
 const MAX_LISTED = 50;
+const SAVE_VERSION = 1; // bump if a change makes old saved rooms unreadable
 
 export class RoomDirectory {
   /**
@@ -111,6 +112,45 @@ export class RoomDirectory {
       .map((r) => r.summary(instanceId))
       .sort((a, b) => rank(a) - rank(b) || b.people - a.people)
       .slice(0, MAX_LISTED);
+  }
+
+  // ---------- surviving a server restart ----------
+
+  // Every open room as plain data, ready to be written to disk on shutdown.
+  save() {
+    return { version: SAVE_VERSION, savedAt: Date.now(), rooms: [...this.rooms.values()].map((r) => r.toSave()) };
+  }
+
+  // Brings back rooms from save(). Rooms that can't be read are skipped (and logged), and a
+  // save older than `maxAgeMs` is ignored: its players have long gone. Restored rooms start
+  // empty, so each one closes after the usual idle time if nobody comes back to it.
+  // `extra(id)`: more Room options for the room with that id (e.g. its onKick).
+  restore(doc, { extra = () => ({}), graceMs = 20_000, maxAgeMs = 10 * 60_000 } = {}) {
+    if (doc?.version !== SAVE_VERSION || !Array.isArray(doc.rooms)) return 0;
+    if (Date.now() - (doc.savedAt || 0) > maxAgeMs) return 0;
+    let restored = 0;
+    for (const data of doc.rooms) {
+      if (this.rooms.size >= MAX_ROOMS) break;
+      if (this.rooms.has(data?.id) || this.byCode.has(data?.code)) continue;
+      let room = null;
+      try {
+        room = Room.fromSave(data, { ...this.roomOptions, ...extra(data.id) });
+        this.rooms.set(room.id, room);
+        this.byCode.set(room.code, room);
+        room.resume(graceMs);
+        this.left(room);
+        restored++;
+      } catch (err) {
+        console.error(`Couldn't restore room ${data?.code || '?'}:`, err.message);
+        if (room && this.rooms.get(room.id) === room) {
+          this.keep(room);
+          room.destroy();
+          this.rooms.delete(room.id);
+          this.byCode.delete(room.code);
+        }
+      }
+    }
+    return restored;
   }
 
   destroy() {
