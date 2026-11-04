@@ -44,6 +44,31 @@ export const SHOP_ITEMS = [
   { id: 'emote-skull', type: 'emote', name: 'Skull', emoji: '💀', price: 150 },
   { id: 'emote-clown', type: 'emote', name: 'Clown', emoji: '🤡', price: 200 },
   { id: 'emote-crown', type: 'emote', name: 'Crown', emoji: '👑', price: 300 },
+  // Emote packs: one purchase unlocks a set of image emotes, served from /emotes/.
+  // Sending one carries the pack id plus the entry index.
+  {
+    id: 'emote-pack-hamster',
+    type: 'emote-pack',
+    name: 'Hamster pack',
+    emoji: '🐹',
+    price: 600,
+    emotes: [
+      { img: '/emotes/hamster/thumbsuphamster.png', name: 'Thumbs up' },
+      { img: '/emotes/hamster/bonkhamster.png', name: 'Bonk' },
+      { img: '/emotes/hamster/celebrationhamster.png', name: 'Celebration' },
+      { img: '/emotes/hamster/chefhamster.png', name: 'Chef' },
+      { img: '/emotes/hamster/goodnight.png', name: 'Goodnight' },
+      { img: '/emotes/hamster/hamsterdespair.png', name: 'Despair' },
+      { img: '/emotes/hamster/hamsterdrool.png', name: 'Drool' },
+      { img: '/emotes/hamster/hamster-shock.gif', name: 'Shock' },
+      { img: '/emotes/hamster/happyhamsta.gif', name: 'Happy' },
+      { img: '/emotes/hamster/oxygenhamster.png', name: 'Oxygen' },
+      { img: '/emotes/hamster/princesshamster.png', name: 'Princess' },
+      { img: '/emotes/hamster/shockedhamster.png', name: 'Shocked' },
+      { img: '/emotes/hamster/skeletonhamster.png', name: 'Skeleton' },
+      { img: '/emotes/hamster/zzzhamster.png', name: 'Sleepy' },
+    ],
+  },
 ];
 
 export const ITEMS = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]));

@@ -467,3 +467,20 @@ test('emotes need a seat and ownership', () => {
   assert.throws(() => room.emote(u, 'emote-crown'), /don't own/);
   room.destroy();
 });
+
+test('emote packs: idx picks an image entry, ownership is required', () => {
+  const store = new ProfileStore(null);
+  const room = new Room('t', { profiles: store });
+  const u = { id: 'u', name: 'U' };
+  store.get('u');
+  room.connect(u);
+  room.host(u);
+  assert.throws(() => room.emote(u, 'emote-pack-hamster', 0), /don't own/);
+  store.get('u').owned.push('emote-pack-hamster');
+  assert.throws(() => room.emote(u, 'emote-pack-hamster', 99), /Unknown emote/);
+  room.emote(u, 'emote-pack-hamster', 0);
+  assert.equal(room.emotes[0].img, '/emotes/hamster/thumbsuphamster.png');
+  assert.equal(room.emotes[0].emoji, undefined);
+  assert.throws(() => store.equip('u', 'emote-pack-hamster'), /can't be equipped/);
+  room.destroy();
+});

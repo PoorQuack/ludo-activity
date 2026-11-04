@@ -310,7 +310,7 @@ function onState(next) {
     if (e.id <= lastEmoteId) continue;
     lastEmoteId = e.id;
     if (muted.has(next.seats[e.seat]?.userId)) continue; // you muted them
-    floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
+    floaters.push({ seat: e.seat, emoji: e.emoji, img: e.img, start: performance.now() });
   }
 
   // While rolls and moves are still playing out, the panel catches up when the last one ends.
@@ -977,19 +977,29 @@ function renderPanel() {
 
   if (phase !== 'finished') els.banner.classList.add('hidden');
 
-  // Emotes you own (only once you're seated)
-  const owned = SHOP_ITEMS.filter((i) => i.type === 'emote' && ownsItem(profile, i.id));
-  const emoteKey = seat >= 0 ? owned.map((i) => i.id).join() : '';
+  // Emotes you own (only once you're seated) — unicode emotes plus every entry in owned packs
+  const entries = [];
+  for (const i of SHOP_ITEMS) {
+    if (!ownsItem(profile, i.id)) continue;
+    if (i.type === 'emote') entries.push({ key: i.id, item: i.id, emoji: i.emoji, name: i.name });
+    else if (i.type === 'emote-pack') i.emotes.forEach((e, idx) => entries.push({ key: `${i.id}:${idx}`, item: i.id, idx, img: e.img, name: e.name }));
+  }
+  const emoteKey = seat >= 0 ? entries.map((e) => e.key).join() : '';
   if (els.emoteBar.dataset.key !== emoteKey) {
     els.emoteBar.dataset.key = emoteKey;
     els.emoteBar.innerHTML = '';
     if (emoteKey) {
-      for (const item of owned) {
+      for (const e of entries) {
         const b = document.createElement('button');
         b.className = 'emote';
-        b.title = item.name;
-        b.textContent = item.emoji;
-        b.addEventListener('click', () => send('emote', { item: item.id }));
+        b.title = e.name;
+        if (e.img) {
+          const img = document.createElement('img');
+          img.src = e.img;
+          img.alt = e.name;
+          b.appendChild(img);
+        } else b.textContent = e.emoji;
+        b.addEventListener('click', () => send('emote', { item: e.item, idx: e.idx }));
         els.emoteBar.appendChild(b);
       }
     }

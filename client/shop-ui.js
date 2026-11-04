@@ -24,7 +24,7 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
   }
 
   grid.innerHTML = '';
-  for (const item of SHOP_ITEMS.filter((i) => i.type === tab)) {
+  for (const item of SHOP_ITEMS.filter((i) => i.type === tab || (tab === 'emote' && i.type === 'emote-pack'))) {
     const owned = ownsItem(profile, item.id);
     const equipped = profile?.equipped[item.type] === item.id;
     const card = document.createElement('div');
@@ -38,7 +38,7 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
 
     const btn = document.createElement('button');
     btn.className = 'btn small';
-    if (item.type === 'emote' && owned) {
+    if ((item.type === 'emote' || item.type === 'emote-pack') && owned) {
       btn.textContent = 'Owned';
       btn.disabled = true;
     } else if (equipped) {
@@ -71,6 +71,20 @@ function preview(item, theme) {
     const d = document.createElement('div');
     d.className = 'preview emoji';
     d.textContent = item.emoji;
+    return d;
+  }
+  if (item.type === 'emote-pack') {
+    const d = document.createElement('div');
+    d.className = 'preview pack';
+    for (const e of item.emotes.slice(0, 6)) {
+      const img = document.createElement('img');
+      img.src = e.img;
+      img.alt = e.name;
+      d.appendChild(img);
+    }
+    const more = document.createElement('span');
+    more.textContent = `+${item.emotes.length - 6}`;
+    d.appendChild(more);
     return d;
   }
   const canvas = document.createElement('canvas');

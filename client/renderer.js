@@ -441,6 +441,14 @@ export class BoardRenderer {
       const b = this.board.bases[e.seat];
       const scale = easeOutBack(Math.min(1, age / 220));
       ctx.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
+      if (e.img) {
+        const im = emoteImg(e.img);
+        if (im.complete && im.naturalWidth) {
+          const size = s * 1.6 * scale;
+          ctx.drawImage(im, this.px(b.x) - size / 2, this.px(b.y) - k * s * 1.4 - size / 2, size, size);
+        }
+        continue;
+      }
       ctx.font = `${s * 1.6 * scale}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
       ctx.fillText(e.emoji, this.px(b.x), this.px(b.y) - k * s * 1.4);
     }
@@ -980,6 +988,19 @@ export function drawShape(ctx, shape, x, y, r, fill, stroke, lineWidth = 1) {
 function circle(ctx, x, y, r) {
   ctx.beginPath();
   ctx.arc(x, y, Math.max(0, r), 0, TAU);
+}
+
+// Image emotes (from packs) are shared between the DOM buttons and the canvas:
+// one element per URL so the browser does the fetching once.
+const emoteImgs = new Map();
+function emoteImg(url) {
+  let im = emoteImgs.get(url);
+  if (!im) {
+    im = new Image();
+    im.src = url;
+    emoteImgs.set(url, im);
+  }
+  return im;
 }
 
 // The four spots in a base where pins wait, like the circles on a real Ludo board:

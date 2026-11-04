@@ -108,13 +108,13 @@ export class ProfileStore {
     if (p.coins < price) throw new Error('Not enough coins');
     p.coins -= price;
     p.owned.push(itemId);
-    if (item.type !== 'emote') p.equipped[item.type] = itemId;
+    if (!['emote', 'emote-pack'].includes(item.type)) p.equipped[item.type] = itemId;
     this.changed(id);
   }
 
   equip(id, itemId) {
     const item = ITEMS[itemId];
-    if (!item || item.type === 'emote') throw new Error("That can't be equipped");
+    if (!item || ['emote', 'emote-pack'].includes(item.type)) throw new Error("That can't be equipped");
     const p = this.get(id);
     if (!ownsItem(p, itemId)) throw new Error("You don't own that yet");
     p.equipped[item.type] = itemId;

@@ -173,7 +173,7 @@ export class Room {
       case 'start': return this.start(user);
       case 'roll': return this.roll(user);
       case 'move': return this.move(user, msg.token, msg.roll);
-      case 'emote': return this.emote(user, msg.item);
+      case 'emote': return this.emote(user, msg.item, msg.idx);
       case 'chat': return this.say(user, msg.text);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
@@ -355,17 +355,19 @@ export class Room {
     }
   }
 
-  emote(user, itemId) {
+  emote(user, itemId, idx = 0) {
     const item = ITEMS[itemId];
-    if (!item || item.type !== 'emote') throw new Error('Unknown emote');
+    if (!item || !['emote', 'emote-pack'].includes(item.type)) throw new Error('Unknown emote');
     const seat = this.seatOf(user.id);
     if (seat < 0) throw new Error('Take a seat to send emotes');
     if (!ownsItem(this.profiles?.peek(user.id), itemId)) throw new Error("You don't own that emote");
+    const entry = item.type === 'emote' ? { emoji: item.emoji } : item.emotes?.[idx];
+    if (!entry) throw new Error('Unknown emote');
     const now = Date.now();
     if (now - (this.lastEmote.get(user.id) || 0) < EMOTE_COOLDOWN_MS) return;
     this.lastEmote.set(user.id, now);
     this.emotes = this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS);
-    this.emotes.push({ id: ++this.emoteSeq, seat, emoji: item.emoji, at: now });
+    this.emotes.push({ id: ++this.emoteSeq, seat, emoji: entry.emoji, img: entry.img, at: now });
     this.onChange(this); // nothing in the game changed, so skip automate()
   }
 

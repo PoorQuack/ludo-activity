@@ -598,6 +598,10 @@ html, body {
 }
 .emote:hover { transform: scale(1.12); }
 .emote:active { transform: scale(0.9); }
+.emote img { width: 28px; height: 28px; object-fit: contain; display: block; }
+.preview.pack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: center; justify-items: center; }
+.preview.pack img { width: 36px; height: 36px; object-fit: contain; }
+.preview.pack span { color: var(--muted); font-size: 12px; }
 
 /* ---------- chat + sound toggles ---------- */
 .chat {
