@@ -36,7 +36,7 @@ export const SHOP_ITEMS = [
   { id: 'emote-thumbs', type: 'emote', name: 'Thumbs up', emoji: '👍', price: 0 },
   { id: 'emote-laugh', type: 'emote', name: 'Laugh', emoji: '😂', price: 0 },
   { id: 'emote-wow', type: 'emote', name: 'Wow', emoji: '😮', price: 0 },
-  { id: 'emote-angry', type: 'emote', name: 'Angry', emoji: '😠', price: 0 },
+  { id: 'emote-angry', type: 'emote', name: 'Angry', emoji: '�', price: 0 },
   { id: 'emote-fire', type: 'emote', name: 'Fire', emoji: '🔥', price: 100 },
   { id: 'emote-cool', type: 'emote', name: 'Cool', emoji: '😎', price: 100 },
   { id: 'emote-cry', type: 'emote', name: 'Cry', emoji: '😭', price: 100 },
