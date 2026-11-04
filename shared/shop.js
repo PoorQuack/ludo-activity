@@ -34,6 +34,8 @@ export const SHOP_ITEMS = [
   { id: 'board-neon', type: 'board', name: 'Neon', price: 500 },
 
   // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
+  // Single stickers (type 'emote' with an img + slug) work the same way, just sold one at a time.
+  { id: 'emote-cathappy', type: 'emote', name: 'Happy cat', img: '/emotes/cats/cathappy.gif', slug: 'cathappy', price: 150 },
   // Emote packs: one purchase unlocks a set of image emotes, served from /emotes/.
   // Sending one carries the pack id plus the entry index.
   {
@@ -66,10 +68,13 @@ export const ITEMS = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]
 // :slug: codes usable in chat. slug -> { item, idx } so the server can check the sender owns the pack.
 export const EMOTE_SLUGS = {};
 for (const item of SHOP_ITEMS) {
-  if (item.type !== 'emote-pack') continue;
-  item.emotes.forEach((e, idx) => {
-    if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name };
-  });
+  if (item.type === 'emote-pack') {
+    item.emotes.forEach((e, idx) => {
+      if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name };
+    });
+  } else if (item.type === 'emote' && item.slug && item.img) {
+    EMOTE_SLUGS[item.slug] = { item: item.id, idx: 0, img: item.img, name: item.name };
+  }
 }
 
 export const DEFAULT_EQUIPPED = { token: 'token-classic', dice: 'dice-classic', board: 'board-classic' };

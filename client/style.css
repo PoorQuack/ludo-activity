@@ -636,6 +636,7 @@ html, body {
 .chat-emote { width: 26px; height: 26px; object-fit: contain; vertical-align: -6px; margin: 0 1px; }
 .chat-sticker { width: 88px; height: 88px; object-fit: contain; display: inline-block; vertical-align: middle; margin: 4px 6px 4px 0; }
 .emoji-empty { grid-column: 1 / -1; margin: 4px; font-size: 12px; color: var(--muted); max-width: 170px; }
+.preview.emoji img { width: 64px; height: 64px; object-fit: contain; }
 
 /* The Shop button earns its spot in the top bar: Ludo-coloured pips and a soft twinkle. */
 .shop-btn {

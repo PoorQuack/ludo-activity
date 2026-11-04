@@ -414,7 +414,8 @@ function emoteEntries() {
   const entries = [];
   for (const i of SHOP_ITEMS) {
     if (!ownsItem(profile, i.id)) continue;
-    if (i.type === 'emote-pack') i.emotes.forEach((e) => entries.push({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
+    if (i.type === 'emote' && i.img) entries.push({ img: i.img, name: i.name, insert: `:${i.slug}:` });
+    else if (i.type === 'emote-pack') i.emotes.forEach((e) => entries.push({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
   }
   return entries;
 }

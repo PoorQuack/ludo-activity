@@ -67,6 +67,15 @@ const H = 100;
 
 // Tokens are shown in the colours of your equipped board, so you see how they'll really look.
 function preview(item, theme) {
+  if (item.type === 'emote' && item.img) {
+    const d = document.createElement('div');
+    d.className = 'preview emoji';
+    const img = document.createElement('img');
+    img.src = item.img;
+    img.alt = item.name;
+    d.appendChild(img);
+    return d;
+  }
   if (item.type === 'emote') {
     const d = document.createElement('div');
     d.className = 'preview emoji';

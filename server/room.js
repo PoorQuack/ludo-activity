@@ -361,7 +361,7 @@ export class Room {
     const seat = this.seatOf(user.id);
     if (seat < 0) throw new Error('Take a seat to send emotes');
     if (!ownsItem(this.profiles?.peek(user.id), itemId)) throw new Error("You don't own that emote");
-    const entry = item.type === 'emote' ? { emoji: item.emoji } : item.emotes?.[idx];
+    const entry = item.type === 'emote' ? { emoji: item.emoji, img: item.img } : item.emotes?.[idx];
     if (!entry) throw new Error('Unknown emote');
     const now = Date.now();
     if (now - (this.lastEmote.get(user.id) || 0) < EMOTE_COOLDOWN_MS) return;
