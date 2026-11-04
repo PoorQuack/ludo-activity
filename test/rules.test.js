@@ -304,6 +304,16 @@ test('acting yourself resets the timeout count', () => {
   room.destroy();
 });
 
+test('a second roll request after the roll already happened is ignored, not an error', () => {
+  const { room, a } = twoPlayerRoom([3, 5]);
+  room.tokens[0] = [5, -1, -1, -1];
+  room.roll(a);
+  assert.equal(room.rolled, true);
+  assert.doesNotThrow(() => room.roll(a)); // the double-tap that crossed the first in flight
+  assert.deepEqual(room.rolls, [3]); // and it didn't roll again
+  room.destroy();
+});
+
 test('pity: 5 dead turns with every token in base makes the next roll a 6', () => {
   const { room } = twoPlayerRoom(); // rng always returns 1
   for (let t = 0; t < 5; t++) {

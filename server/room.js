@@ -307,6 +307,9 @@ export class Room {
 
   roll(user) {
     this.requireTurn(user);
+    // A second tap that crossed the first in flight (or the timer rolling for them at the
+    // same moment): the roll already happened, so there's nothing to complain about.
+    if (this.rolled) return;
     this.timeouts[this.turn] = 0; // they're here: forget earlier timeouts
     this.doRoll();
   }

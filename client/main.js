@@ -1174,8 +1174,18 @@ function updateDice(now) {
   }
 }
 
+// A roll we've sent but the server hasn't answered yet: until the next roll shows up
+// (or 2s pass), more taps are ignored, so a double-tap can't roll twice.
+let rollPending = null; // { seq, at }
+
+function sendRoll() {
+  rollPending = { seq: state.lastRoll?.seq ?? null, at: performance.now() };
+  send('roll');
+}
+
 function canRoll() {
-  return state?.phase === 'playing' && mySeat() === state.turn && !state.rolled && dice.mode === 'ready' && idle();
+  const waiting = rollPending && rollPending.seq === (state?.lastRoll?.seq ?? null) && performance.now() - rollPending.at < 2000;
+  return state?.phase === 'playing' && mySeat() === state.turn && !state.rolled && dice.mode === 'ready' && idle() && !waiting;
 }
 
 function canMove() {
@@ -1387,7 +1397,7 @@ function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
 }
 
 els.canvas.addEventListener('pointerdown', (e) => {
-  if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return send('roll');
+  if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return sendRoll();
   closeChooser(); // tapping anywhere else on the board cancels it
   if (!canMove()) return;
   const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), state.movable);
@@ -1400,7 +1410,7 @@ window.addEventListener('keydown', (e) => {
   if (e.target instanceof HTMLInputElement) return; // typing in the chat
   if (e.code === 'Space' && screen === 'game' && canRoll()) {
     e.preventDefault();
-    send('roll');
+    sendRoll();
   }
 });
 
