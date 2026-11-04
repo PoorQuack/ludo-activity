@@ -806,6 +806,8 @@ html, body {
 }
 .volume > span { width: 48px; }
 .volume .toggle { width: 46px; flex: none; }
+.volume .volume-fill { flex: 1; width: auto; font-size: 12px; }
+.preview.pack img.has-sound { cursor: pointer; }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
 .setting small { opacity: 0.75; }
 .setting .toggle { width: 46px; flex: none; }

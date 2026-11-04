@@ -45,6 +45,52 @@ export const BOARD_THEMES = {
     baseInner: '#0c0d15',
     players: { red: '#ff4d6d', green: '#2ef29a', yellow: '#ffe04a', blue: '#3db2ff', purple: '#c35cff', orange: '#ff8e3a' },
   },
+  // bg2 (optional): the board glows from this colour in the middle out to bg at the edges
+  'board-ocean': {
+    bg: '#0d4a6b',
+    bg2: '#1f8db5',
+    cell: '#e8f7fb',
+    safe: '#bfe7f2',
+    star: '#0f7fa3',
+    baseInner: '#eef9fc',
+    players: { red: '#f0605a', green: '#1fb38a', yellow: '#f5c33b', blue: '#2f6fd6', purple: '#8b6fe0', orange: '#f08a3e' },
+  },
+  'board-forest': {
+    bg: '#263f23',
+    bg2: '#4c7a40',
+    cell: '#f1f4e4',
+    safe: '#dfe8b8',
+    star: '#5d7d22',
+    baseInner: '#f6f8ec',
+    players: { red: '#c94f3d', green: '#3a8a40', yellow: '#d6a425', blue: '#3d6ea8', purple: '#7a5aa6', orange: '#d07a32' },
+  },
+  'board-ice': {
+    bg: '#9ccfe8',
+    bg2: '#e6f6fd',
+    cell: '#f8fdff',
+    safe: '#d4effa',
+    star: '#4aa3cf',
+    baseInner: '#fbfeff',
+    players: { red: '#e2566a', green: '#25a585', yellow: '#e3ad1f', blue: '#3a74d8', purple: '#8a6be0', orange: '#ec8a46' },
+  },
+  'board-lava': {
+    bg: '#150806',
+    bg2: '#5a1a0b',
+    cell: '#2b1a16',
+    safe: '#4d2b12',
+    star: '#ff8a2a',
+    baseInner: '#211310',
+    players: { red: '#ff4a3d', green: '#48d18a', yellow: '#ffc83a', blue: '#4f8dff', purple: '#c06bff', orange: '#ff7b2a' },
+  },
+  'board-royal': {
+    bg: '#25114a',
+    bg2: '#52309a',
+    cell: '#f8f2e4',
+    safe: '#f0dca0',
+    star: '#c9971c',
+    baseInner: '#fcf7ec',
+    players: { red: '#c8364a', green: '#23875f', yellow: '#dfa923', blue: '#3159b8', purple: '#7d3fb8', orange: '#d66a2a' },
+  },
 };
 
 // ---------- colour-blind mode ----------
@@ -97,4 +143,11 @@ export const DICE_STYLES = {
   // Glows in the colour of whoever is rolling (green in shop previews).
   'dice-neon': { face: '#0f1017', edge: '#2ef29a', pip: '#2ef29a', outline: '#2ef29a', playerColor: true },
   'dice-gold': { face: '#e2b44a', edge: '#9c771c', pip: '#5a3f00', shine: '#f3d585' },
+  'dice-ice': { face: '#e3f5ff', edge: '#94c4de', pip: '#2b6c93', shine: '#ffffff' },
+  'dice-emerald': { face: '#1f9c66', edge: '#0f5c3b', pip: '#effff6', shine: '#55d39b' },
+  'dice-candy': { face: '#ffc9de', edge: '#e384ab', pip: '#c2185b', shine: '#fff0f6' },
+  // Each pip in one of the four Ludo colours
+  'dice-ludo': { face: '#fbfaf6', edge: '#d3cdbf', pip: '#26262b', pipColors: ['#e5483f', '#2fa86a', '#f2b425', '#3a6fd0'] },
+  'dice-lava': { face: '#1c0d0a', edge: '#ff6a2a', pip: '#ffb02e', outline: '#ff6a2a' },
+  'dice-galaxy': { face: '#1b1240', edge: '#5b3fb0', pip: '#ffffff', shine: '#3d2a8f', specks: true },
 };

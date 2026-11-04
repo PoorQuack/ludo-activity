@@ -90,7 +90,13 @@ export class BoardRenderer {
 
     // Flat tiles with small gaps, so the board colour shows through as clean grout lines.
     const n = board.arms;
-    ctx.fillStyle = theme.bg;
+    if (theme.bg2) {
+      // Some themes glow from the middle out
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, half * 1.25);
+      g.addColorStop(0, theme.bg2);
+      g.addColorStop(1, theme.bg);
+      ctx.fillStyle = g;
+    } else ctx.fillStyle = theme.bg;
     if (n === 4) {
       roundRect(ctx, -half, -half, this.span, this.span, 12 * lw);
     } else {
@@ -626,6 +632,12 @@ const PAWN_STYLES = {
   'token-neon': { neon: true },
   'token-candy': { stripes: true },
   'token-crown': { gold: true, crown: true },
+  // Whole new shapes instead of the pawn
+  'token-checker': { shape: 'checker' },
+  'token-ghost': { shape: 'ghost' },
+  'token-slime': { shape: 'slime' },
+  'token-rocket': { shape: 'rocket' },
+  'token-duck': { shape: 'duck' },
 };
 
 const GOLD = '#f6cf57';
@@ -633,6 +645,7 @@ const GOLD_DARK = '#9a6f00';
 
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
 function paintPawn(ctx, r, hex, style) {
+  if (style.shape) return TOKEN_SHAPES[style.shape](ctx, r, hex);
   const body = style.neon ? '#1c1c26' : hex;
   const edge = style.neon ? hex : mix(hex, '#000000', 0.38);
   const trim = style.gold ? GOLD : mix(body, '#ffffff', 0.22);
@@ -744,6 +757,211 @@ function paintPawn(ctx, r, hex, style) {
   }
 }
 
+// ---------- token shapes ----------
+// Each draws upwards from (0, 0), about as tall as the pawn (2.1 r), in the player's colour.
+
+function outline(ctx, r, hex) {
+  ctx.lineWidth = Math.max(1, r * 0.05);
+  ctx.strokeStyle = mix(hex, '#000000', 0.4);
+  ctx.lineJoin = 'round';
+}
+
+// A cartoon eye: white, a dark pupil looking slightly forward, and a glint.
+function eye(ctx, x, y, w, h, look = 0) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, w, h, 0, 0, TAU);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = Math.max(0.6, w * 0.18);
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.stroke();
+  circle(ctx, x + look * w * 0.25, y + h * 0.15, w * 0.55);
+  ctx.fillStyle = '#17171f';
+  ctx.fill();
+  circle(ctx, x + look * w * 0.25 - w * 0.2, y - h * 0.1, w * 0.18);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+}
+
+const TOKEN_SHAPES = {
+  // Two stacked game checkers with a ridged top.
+  checker(ctx, r, hex) {
+    outline(ctx, r, hex);
+    for (const y0 of [0, -r * 0.34]) {
+      ctx.beginPath();
+      ctx.ellipse(0, y0 - r * 0.05, r, r * 0.42, 0, 0, Math.PI);
+      ctx.lineTo(-r, y0 - r * 0.32);
+      ctx.ellipse(0, y0 - r * 0.32, r, r * 0.42, 0, Math.PI, TAU);
+      ctx.closePath();
+      ctx.fillStyle = cylinder(ctx, r, hex);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, y0 - r * 0.32, r, r * 0.42, 0, 0, TAU);
+      ctx.fillStyle = mix(hex, '#ffffff', 0.18);
+      ctx.fill();
+      ctx.stroke();
+    }
+    const ty = -r * 0.66;
+    ctx.beginPath();
+    ctx.ellipse(0, ty, r * 0.66, r * 0.27, 0, 0, TAU);
+    ctx.strokeStyle = mix(hex, '#000000', 0.22);
+    ctx.stroke();
+    drawStar(ctx, 0, ty, r * 0.26, mix(hex, '#ffffff', 0.55));
+  },
+
+  // A friendly ghost with a wavy hem.
+  ghost(ctx, r, hex) {
+    outline(ctx, r, hex);
+    const hem = -r * 0.15;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.78, hem);
+    ctx.lineTo(-r * 0.78, -r * 1.3);
+    ctx.arc(0, -r * 1.3, r * 0.78, Math.PI, 0);
+    ctx.lineTo(r * 0.78, hem);
+    const w = (r * 1.56) / 4;
+    for (let i = 0; i < 4; i++) {
+      const x0 = r * 0.78 - i * w;
+      ctx.quadraticCurveTo(x0 - w / 2, hem + r * 0.32, x0 - w, hem);
+    }
+    ctx.closePath();
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 1.55, r * 0.1, 0, -r * 1.1, r * 1.2);
+    g.addColorStop(0, mix(hex, '#ffffff', 0.75));
+    g.addColorStop(0.55, mix(hex, '#ffffff', 0.3));
+    g.addColorStop(1, hex);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.stroke();
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(sx * r * 0.27, -r * 1.38, r * 0.13, r * 0.2, 0, 0, TAU);
+      ctx.fillStyle = '#1a1a24';
+      ctx.fill();
+      circle(ctx, sx * r * 0.27 - r * 0.04, -r * 1.45, r * 0.045);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.98, r * 0.1, r * 0.13, 0, 0, TAU);
+    ctx.fillStyle = '#1a1a24';
+    ctx.fill();
+  },
+
+  // A glossy jelly blob with big eyes.
+  slime(ctx, r, hex) {
+    outline(ctx, r, hex);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.98, -r * 0.12);
+    ctx.bezierCurveTo(-r * 1.05, -r * 0.95, -r * 0.62, -r * 1.72, 0, -r * 1.76);
+    ctx.bezierCurveTo(r * 0.62, -r * 1.72, r * 1.05, -r * 0.95, r * 0.98, -r * 0.12);
+    ctx.quadraticCurveTo(0, r * 0.18, -r * 0.98, -r * 0.12);
+    ctx.closePath();
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 1.25, r * 0.08, 0, -r * 0.8, r * 1.2);
+    g.addColorStop(0, mix(hex, '#ffffff', 0.55));
+    g.addColorStop(0.6, hex);
+    g.addColorStop(1, mix(hex, '#000000', 0.3));
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.42, -r * 1.33, r * 0.2, r * 0.1, -0.5, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fill();
+    eye(ctx, -r * 0.3, -r * 0.92, r * 0.17, r * 0.21, 0.4);
+    eye(ctx, r * 0.3, -r * 0.92, r * 0.17, r * 0.21, 0.4);
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.62, r * 0.17, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.lineWidth = Math.max(1, r * 0.07);
+    ctx.strokeStyle = mix(hex, '#000000', 0.55);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+  },
+
+  // A little rocket with fins, a porthole and a flame.
+  rocket(ctx, r, hex) {
+    outline(ctx, r, hex);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.28, -r * 0.38);
+    ctx.quadraticCurveTo(0, r * 0.4, r * 0.28, -r * 0.38);
+    ctx.closePath();
+    const fg = ctx.createLinearGradient(0, -r * 0.38, 0, r * 0.35);
+    fg.addColorStop(0, '#fff3a0');
+    fg.addColorStop(0.45, '#ffb02e');
+    fg.addColorStop(1, 'rgba(255,80,40,0)');
+    ctx.fillStyle = fg;
+    ctx.fill();
+    for (const sx of [-1, 1]) {
+      path(ctx, [[sx * r * 0.36, -r * 1.05], [sx * r * 0.86, -r * 0.36], [sx * r * 0.8, -r * 0.14], [sx * r * 0.34, -r * 0.46]]);
+      ctx.fillStyle = mix(hex, '#000000', 0.25);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.42, -r * 0.4);
+    ctx.bezierCurveTo(-r * 0.52, -r * 1.3, -r * 0.3, -r * 1.9, 0, -r * 2.3);
+    ctx.bezierCurveTo(r * 0.3, -r * 1.9, r * 0.52, -r * 1.3, r * 0.42, -r * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.46, hex);
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillRect(-r, -r * 2.4, r * 2, r * 0.56);
+    ctx.restore();
+    ctx.stroke();
+    circle(ctx, 0, -r * 1.25, r * 0.2);
+    ctx.fillStyle = '#bfe8ff';
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.08);
+    ctx.strokeStyle = '#e9eef5';
+    ctx.stroke();
+    circle(ctx, -r * 0.06, -r * 1.31, r * 0.06);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  },
+
+  // A rubber duck, in your colour, with an orange beak.
+  duck(ctx, r, hex) {
+    outline(ctx, r, hex);
+    path(ctx, [[r * 0.7, -r * 0.72], [r * 1.08, -r * 1.18], [r * 0.98, -r * 0.55]]);
+    ctx.fillStyle = hex;
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.55, r * 0.98, r * 0.56, 0, 0, TAU);
+    ctx.fillStyle = cylinder(ctx, r * 0.98, hex);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.18, -r * 0.62, r * 0.42, r * 0.22, -0.35, 0, TAU);
+    ctx.fillStyle = mix(hex, '#000000', 0.14);
+    ctx.fill();
+    ctx.stroke();
+    const g = ctx.createRadialGradient(-r * 0.5, -r * 1.6, r * 0.05, -r * 0.35, -r * 1.4, r * 0.55);
+    g.addColorStop(0, mix(hex, '#ffffff', 0.55));
+    g.addColorStop(0.6, hex);
+    g.addColorStop(1, mix(hex, '#000000', 0.25));
+    circle(ctx, -r * 0.35, -r * 1.4, r * 0.5);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.86, -r * 1.3, r * 0.3, r * 0.13, 0.15, 0, TAU);
+    ctx.fillStyle = '#ff9a2e';
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.05);
+    ctx.strokeStyle = '#b85f0c';
+    ctx.stroke();
+    circle(ctx, -r * 0.47, -r * 1.52, r * 0.09);
+    ctx.fillStyle = '#15151c';
+    ctx.fill();
+    circle(ctx, -r * 0.5, -r * 1.55, r * 0.03);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  },
+};
+
 // Left-to-right shading that makes a flat shape look round.
 function cylinder(ctx, w, color) {
   const g = ctx.createLinearGradient(-w, 0, w, 0);
@@ -765,6 +983,12 @@ const PIPS = {
   5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]],
   6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
 };
+
+// Where the stars sit on a speckled (galaxy) dice face: x, y, size.
+const SPECKS = [
+  [-38, -30, 1.6], [-20, -42, 1], [6, -36, 1.4], [30, -40, 1], [40, -18, 1.8], [-42, 4, 1.2], [-14, -12, 1],
+  [18, -6, 1.2], [38, 12, 1], [-30, 26, 1.8], [-6, 40, 1.2], [22, 34, 1.6], [42, 40, 1], [-44, 42, 1],
+];
 
 // Each face: its value, outward normal and two in-face axes (y points down). Opposite faces add up to 7.
 const FACES = [
@@ -814,6 +1038,19 @@ function paintFace(ctx, st, value, { light = 1, pips = true, glow = null, px = 1
   ctx.fillStyle = fill;
   ctx.fill();
   ctx.shadowBlur = 0;
+  if (st.specks) {
+    // A scatter of stars across the face
+    ctx.save();
+    ctx.clip();
+    ctx.globalAlpha *= 0.6;
+    ctx.fillStyle = shade('#ffffff');
+    for (const [x, y, sz] of SPECKS) {
+      circle(ctx, x, y, sz);
+      ctx.fill();
+    }
+    ctx.restore();
+    roundRect(ctx, -50, -50, 100, 100, 16);
+  }
   if (st.outline) {
     ctx.shadowColor = st.outline;
     ctx.shadowBlur = 20 * px;
@@ -830,10 +1067,11 @@ function paintFace(ctx, st, value, { light = 1, pips = true, glow = null, px = 1
     ctx.shadowBlur = 15 * px;
   }
   if (value) {
-    for (const [x, y] of PIPS[value]) {
+    PIPS[value].forEach(([x, y], i) => {
+      if (st.pipColors) ctx.fillStyle = shade(st.pipColors[i % st.pipColors.length]);
       circle(ctx, x * 27, y * 27, 10);
       ctx.fill();
-    }
+    });
   } else {
     ctx.font = '800 58px system-ui, sans-serif';
     ctx.textAlign = 'center';

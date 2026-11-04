@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<defs><radialGradient id="f" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff6a8"/><stop offset=".55" stop-color="#ffd23a"/><stop offset="1" stop-color="#f0a20c"/></radialGradient></defs>
+<style>
+.tongue{transform-origin:64px 82px;animation:wag .2s ease-in-out infinite alternate}
+.spit{animation:spit .4s ease-out infinite}.spit2{animation:spit .4s ease-out .2s infinite}
+.wink{transform-origin:84px 54px;animation:wink 1.6s steps(1) infinite}
+@keyframes wag{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+@keyframes spit{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(0,16px) scale(.5)}}
+@keyframes wink{0%,70%{transform:scaleY(1)}71%,85%{transform:scaleY(.15)}}
+</style>
+<circle cx="64" cy="64" r="46" fill="url(#f)" stroke="#c07a00" stroke-width="3"/>
+<circle cx="44" cy="54" r="7" fill="#3a2200"/>
+<g class="wink"><circle cx="84" cy="54" r="7" fill="#3a2200"/></g>
+<path d="M40 80q24 8 48 0" fill="none" stroke="#3a2200" stroke-width="5" stroke-linecap="round"/>
+<g class="tongue"><path d="M52 82q0 26 12 26t12-26z" fill="#ff5d73" stroke="#b3203a" stroke-width="3" stroke-linejoin="round"/><path d="M64 86v14" stroke="#b3203a" stroke-width="2.5" stroke-linecap="round"/></g>
+<g class="spit"><circle cx="46" cy="98" r="3" fill="#bfe8ff"/></g>
+<g class="spit2"><circle cx="84" cy="100" r="2.5" fill="#bfe8ff"/></g>
+</svg>

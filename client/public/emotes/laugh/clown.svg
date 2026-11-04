@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<defs><radialGradient id="w" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e8e2d8"/></radialGradient>
+<radialGradient id="n" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#ff9a9a"/><stop offset=".5" stop-color="#ff2a2a"/><stop offset="1" stop-color="#b00010"/></radialGradient></defs>
+<style>
+.nose{transform-origin:64px 70px;animation:honk .6s ease-in-out infinite}
+.hair{transform-origin:64px 40px;animation:wig .6s ease-in-out infinite alternate}
+.txt{animation:flash .6s steps(2) infinite}
+@keyframes honk{0%,100%{transform:scale(1)}20%{transform:scale(1.35)}40%{transform:scale(.9)}}
+@keyframes wig{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+</style>
+<g class="hair">
+<circle cx="24" cy="44" r="16" fill="#ff8a1e"/><circle cx="104" cy="44" r="16" fill="#2fd481"/>
+<circle cx="16" cy="62" r="13" fill="#4d8dff"/><circle cx="112" cy="62" r="13" fill="#ff5a4f"/>
+</g>
+<circle cx="64" cy="66" r="44" fill="url(#w)" stroke="#9b8f80" stroke-width="3"/>
+<path d="M40 44l8 8M48 44l-8 8M80 44l8 8M88 44l-8 8" stroke="#3a6fd0" stroke-width="4" stroke-linecap="round"/>
+<circle cx="44" cy="56" r="5" fill="#222"/><circle cx="84" cy="56" r="5" fill="#222"/>
+<path d="M30 80q34 36 68 0q-10 6-34 6t-34-6z" fill="#e8213a" stroke="#9e0f20" stroke-width="3" stroke-linejoin="round"/>
+<path d="M38 84q26 22 52 0" fill="#7a0a14"/>
+<g class="nose"><circle cx="64" cy="70" r="12" fill="url(#n)" stroke="#8a0010" stroke-width="2"/></g>
+<g class="txt"><text x="64" y="20" text-anchor="middle" font-family="Impact,Arial Black,sans-serif" font-size="20" fill="#ffd23a" stroke="#c0392b" stroke-width="2" paint-order="stroke">HONK</text></g>
+</svg>

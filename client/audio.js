@@ -7,7 +7,7 @@
 // starts on the first interaction.
 
 const SETTINGS_KEY = 'ludo-audio';
-const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicTrack: '' };
+const settings = { music: true, sound: true, emoteSounds: true, musicVolume: 0.5, soundVolume: 0.5, musicTrack: '' };
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   // Older versions had one volume for both: carry it over to each
@@ -199,6 +199,12 @@ export function prevTrack() {
   if (tracks.length) playTrack(tracks[(tracks.indexOf(currentTrack()) - 1 + tracks.length) % tracks.length].id);
 }
 
+// Sticker sounds (the Laugh pack) can be switched off on their own.
+export function setEmoteSounds(on) {
+  settings.emoteSounds = on;
+  save();
+}
+
 export function setSound(on) {
   settings.sound = on;
   save();
@@ -340,6 +346,174 @@ export function sfx(name) {
   const recorded = samples[name];
   if (recorded?.length) playSample(recorded[Math.floor(Math.random() * recorded.length)], name === 'step');
   else EFFECTS[name]?.();
+}
+
+// ---------------- sticker sounds ----------------
+// Laugh-pack stickers make a noise for everyone in the room. All generated here, no recordings.
+
+const lastSticker = new Map(); // sender -> when their last sticker sound played
+
+// `key` (the sender): each sender is heard at most every 2.5 s, so spamming doesn't stack up.
+export function stickerSound(name, key) {
+  if (!ctx || !settings.sound || !settings.emoteSounds || ctx.state !== 'running' || !STICKER_SOUNDS[name]) return;
+  if (key !== undefined) {
+    const t = performance.now();
+    if (t - (lastSticker.get(key) || -1e9) < 2500) return;
+    lastSticker.set(key, t);
+  }
+  STICKER_SOUNDS[name]();
+}
+
+const STICKER_SOUNDS = {
+  // Big belly laugh, getting lower as it goes
+  laugh() {
+    let t = now();
+    for (let i = 0; i < 7; i++) {
+      const p = 290 - i * 14 + Math.random() * 20;
+      ha(t, 0.13, p, p * 0.85, 1.3);
+      t += 0.17 + Math.random() * 0.03;
+    }
+  },
+  giggle() {
+    let t = now();
+    for (let i = 0; i < 9; i++) {
+      const p = 520 - i * 12 + Math.random() * 30;
+      ha(t, 0.08, p, p * 0.9, 1, [650, 1700]);
+      t += 0.105;
+    }
+  },
+  // "Ha-ha!" (pointing)
+  haha() {
+    ha(now(), 0.2, 270, 240, 1.4);
+    ha(now() + 0.3, 0.34, 255, 185, 1.4);
+  },
+  honk() {
+    for (const d of [0, 0.28]) for (const f of [330, 337]) tone(f, now() + d, 0.2, 'square', 0.1, f * 0.93);
+  },
+  // Wah wah wah waaah
+  trombone() {
+    let t = now();
+    for (const [f, len] of [[196, 0.33], [185, 0.33], [175, 0.33], [165, 1.1]]) {
+      brass(t, len, f, len > 0.5);
+      t += len + 0.07;
+    }
+  },
+  // "Mwa-ha-ha-ha-ha"
+  evil() {
+    let t = now();
+    ha(t, 0.34, 140, 165, 1.4, [600, 1000]);
+    t += 0.44;
+    for (let i = 0; i < 5; i++) {
+      ha(t, 0.15, 175 - i * 7, 150 - i * 7, 1.3, [650, 1050]);
+      t += 0.19;
+    }
+  },
+  raspberry() {
+    const t = now();
+    const len = 0.7;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(95, t);
+    osc.frequency.linearRampToValueAtTime(70, t + len);
+    const flutter = ctx.createGain();
+    flutter.gain.value = 0.5;
+    const lfo = ctx.createOscillator();
+    lfo.type = 'square';
+    lfo.frequency.value = 28;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.5;
+    lfo.connect(depth).connect(flutter.gain);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    const g = envelope(t, len, 0.5);
+    osc.connect(flutter).connect(lp).connect(g).connect(sfxGain);
+    osc.start(t);
+    lfo.start(t);
+    osc.stop(t + len + 0.05);
+    lfo.stop(t + len + 0.05);
+    noise(t, len, 600, 0.2);
+  },
+  // A slap, then a long sigh
+  facepalm() {
+    const t = now();
+    noise(t, 0.07, 2500, 1);
+    noise(t, 0.12, 700, 0.6);
+    tone(110, t, 0.15, 'sine', 0.5, 55);
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 2;
+    bp.frequency.setValueAtTime(1200, t + 0.35);
+    bp.frequency.exponentialRampToValueAtTime(380, t + 1.25);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t + 0.35);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    src.connect(bp).connect(g).connect(sfxGain);
+    src.start(t + 0.35);
+    src.stop(t + 1.35);
+  },
+};
+
+// A gain that swells in, holds and fades out over `len`.
+function envelope(t, len, vol) {
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+  g.gain.setValueAtTime(vol, t + len * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  return g;
+}
+
+// One "ha": a buzzy voice shaped like an "ah" (or another vowel), with a breathy "h" in front.
+function ha(t, len, f0, f1, vol, vowel = [800, 1200]) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(f0, t);
+  osc.frequency.exponentialRampToValueAtTime(f1, t + len);
+  const g = envelope(t, len, vol);
+  for (const [fc, q, amp] of [[vowel[0], 5, 1], [vowel[1], 7, 0.7], [2600, 9, 0.25]]) {
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = fc;
+    bp.Q.value = q;
+    const a = ctx.createGain();
+    a.gain.value = amp;
+    osc.connect(bp).connect(a).connect(g);
+  }
+  g.connect(sfxGain);
+  osc.start(t);
+  osc.stop(t + len + 0.05);
+  noise(t, 0.05, 1600, vol * 0.4);
+}
+
+// A trombone-ish note: a "wah" filter sweep, and a wobble that sags on the long last note.
+function brass(t, len, f, wobble) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(f, t);
+  if (wobble) {
+    osc.frequency.linearRampToValueAtTime(f * 0.94, t + len);
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 6;
+    const d = ctx.createGain();
+    d.gain.value = f * 0.03;
+    lfo.connect(d).connect(osc.frequency);
+    lfo.start(t);
+    lfo.stop(t + len + 0.05);
+  }
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 4;
+  lp.frequency.setValueAtTime(300, t);
+  lp.frequency.linearRampToValueAtTime(1400, t + 0.12);
+  lp.frequency.linearRampToValueAtTime(500, t + len);
+  osc.connect(lp).connect(envelope(t, len, 0.35)).connect(sfxGain);
+  osc.start(t);
+  osc.stop(t + len + 0.05);
 }
 
 // `vary`: nudge the pitch a little so repeated taps don't sound identical.

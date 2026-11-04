@@ -19,6 +19,11 @@ export const SHOP_ITEMS = [
   { id: 'token-neon', type: 'token', name: 'Neon', price: 300 },
   { id: 'token-candy', type: 'token', name: 'Candy', price: 350 },
   { id: 'token-crown', type: 'token', name: 'Royal', price: 800 },
+  { id: 'token-checker', type: 'token', name: 'Checker', price: 250 },
+  { id: 'token-ghost', type: 'token', name: 'Ghost', price: 400 },
+  { id: 'token-slime', type: 'token', name: 'Slime', price: 450 },
+  { id: 'token-rocket', type: 'token', name: 'Rocket', price: 500 },
+  { id: 'token-duck', type: 'token', name: 'Rubber Duck', price: 650 },
 
   { id: 'dice-classic', type: 'dice', name: 'Classic', price: 0 },
   { id: 'dice-midnight', type: 'dice', name: 'Midnight', price: 150 },
@@ -26,12 +31,23 @@ export const SHOP_ITEMS = [
   { id: 'dice-ruby', type: 'dice', name: 'Ruby', price: 250 },
   { id: 'dice-neon', type: 'dice', name: 'Neon', price: 350 },
   { id: 'dice-gold', type: 'dice', name: 'Gold', price: 600 },
+  { id: 'dice-ice', type: 'dice', name: 'Ice', price: 250 },
+  { id: 'dice-candy', type: 'dice', name: 'Candy', price: 250 },
+  { id: 'dice-emerald', type: 'dice', name: 'Emerald', price: 300 },
+  { id: 'dice-ludo', type: 'dice', name: 'Ludo', price: 400 },
+  { id: 'dice-lava', type: 'dice', name: 'Lava', price: 450 },
+  { id: 'dice-galaxy', type: 'dice', name: 'Galaxy', price: 500 },
 
   { id: 'board-classic', type: 'board', name: 'Classic', price: 0 },
   { id: 'board-midnight', type: 'board', name: 'Midnight', price: 300 },
   { id: 'board-wood', type: 'board', name: 'Wood', price: 350 },
   { id: 'board-candy', type: 'board', name: 'Candy', price: 350 },
   { id: 'board-neon', type: 'board', name: 'Neon', price: 500 },
+  { id: 'board-ocean', type: 'board', name: 'Ocean', price: 400 },
+  { id: 'board-forest', type: 'board', name: 'Forest', price: 400 },
+  { id: 'board-ice', type: 'board', name: 'Ice', price: 450 },
+  { id: 'board-lava', type: 'board', name: 'Lava', price: 550 },
+  { id: 'board-royal', type: 'board', name: 'Royal', price: 700 },
 
   // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
   // Single stickers (type 'emote' with an img + slug) work the same way, just sold one at a time.
@@ -61,6 +77,25 @@ export const SHOP_ITEMS = [
       { img: '/emotes/hamster/zzzhamster.png', slug: 'sleepy', name: 'Sleepy' },
     ],
   },
+  // Animated stickers that also play a sound for everyone in the room (`sound`: a name in
+  // client/audio.js). Players can switch sticker sounds off in the sound settings.
+  {
+    id: 'emote-pack-laugh',
+    type: 'emote-pack',
+    name: 'Laugh pack 🔊',
+    emoji: '😂',
+    price: 500,
+    emotes: [
+      { img: '/emotes/laugh/rofl.svg', slug: 'rofl', name: 'ROFL', sound: 'laugh' },
+      { img: '/emotes/laugh/tearsofjoy.svg', slug: 'lol', name: 'LOL', sound: 'giggle' },
+      { img: '/emotes/laugh/pointlaugh.svg', slug: 'haha', name: 'Ha-ha!', sound: 'haha' },
+      { img: '/emotes/laugh/clown.svg', slug: 'honk', name: 'Clown', sound: 'honk' },
+      { img: '/emotes/laugh/sadtrombone.svg', slug: 'womp', name: 'Womp womp', sound: 'trombone' },
+      { img: '/emotes/laugh/evil.svg', slug: 'mwahaha', name: 'Mwahaha', sound: 'evil' },
+      { img: '/emotes/laugh/raspberry.svg', slug: 'pbbt', name: 'Pbbbt', sound: 'raspberry' },
+      { img: '/emotes/laugh/facepalm.svg', slug: 'facepalm', name: 'Facepalm', sound: 'facepalm' },
+    ],
+  },
 ];
 
 export const ITEMS = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]));
@@ -70,12 +105,15 @@ export const EMOTE_SLUGS = {};
 for (const item of SHOP_ITEMS) {
   if (item.type === 'emote-pack') {
     item.emotes.forEach((e, idx) => {
-      if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name };
+      if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name, sound: e.sound };
     });
   } else if (item.type === 'emote' && item.slug && item.img) {
     EMOTE_SLUGS[item.slug] = { item: item.id, idx: 0, img: item.img, name: item.name };
   }
 }
+
+// Sticker image -> its sound, for stickers that have one.
+export const STICKER_SOUNDS = Object.fromEntries(Object.values(EMOTE_SLUGS).filter((e) => e.sound).map((e) => [e.img, e.sound]));
 
 export const DEFAULT_EQUIPPED = { token: 'token-classic', dice: 'dice-classic', board: 'board-classic' };
 

@@ -1,5 +1,6 @@
 // The shop screen: tabs plus a grid of item cards with drawn previews.
-import { SHOP_ITEMS, ownsItem } from '../shared/shop.js';
+import { SHOP_ITEMS, ownsItem, STICKER_SOUNDS } from '../shared/shop.js';
+import { stickerSound } from './audio.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
 import { playerColor } from './skins.js';
@@ -89,6 +90,12 @@ function preview(item, theme) {
       const img = document.createElement('img');
       img.src = e.img;
       img.alt = e.name;
+      // Stickers with a sound: tap one in the shop to hear it
+      if (STICKER_SOUNDS[e.img]) {
+        img.title = `${e.name} — tap to hear it`;
+        img.classList.add('has-sound');
+        img.addEventListener('click', () => stickerSound(STICKER_SOUNDS[e.img]));
+      }
       d.appendChild(img);
     }
     const more = document.createElement('span');
