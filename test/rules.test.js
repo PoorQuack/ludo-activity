@@ -140,8 +140,8 @@ test('finishing a game pays coins (half when you are the only human)', async () 
     { profiles: store },
   );
   const place = room.winners.indexOf(0);
-  const share = progressShare(room.tokens, 0, room.board);
-  assert.equal(room.rewards[0], Math.round((REWARDS.place[place] * share + room.captures[0] * REWARDS.capture) * REWARDS.soloFactor));
+  assert.equal(room.rewards[0], Math.round((REWARDS.place[place] + room.captures[0] * REWARDS.capture) * REWARDS.soloFactor));
+  assert.deepEqual(room.rewardPartial, []); // a game that ran its course pays the full placement
   assert.equal(store.peek('h').coins, 150 + room.rewards[0]);
   room.destroy();
 });
@@ -264,6 +264,25 @@ test('surrendering ends a two-player game and pays the winner only', () => {
   // 42/224 of the way home: the early win pays a fraction of the full 1st-place 25.
   assert.equal(room.rewards[2], Math.round(REWARDS.place[0] * progressShare(room.tokens, 2, room.board)));
   assert.deepEqual(room.rewardPartial, [2]);
+  room.destroy();
+});
+
+test('a forfeit mid-game then a normal finish pays the last survivor in full', () => {
+  const store = new ProfileStore(null);
+  const { room, a, b } = twoPlayerRoom([1]);
+  room.profiles = store;
+  room.seats[1] = { userId: 'c', name: 'C', bot: false, connected: true };
+  room.surrender(a); // game continues: seats 1 and 2 are still playing
+  assert.equal(room.phase, 'playing');
+  room.tokens[2] = [56, 56, 56, 55]; // three home, the last one step short
+  room.turn = 2;
+  room.resetTurn();
+  room.roll(b);
+  room.move(b, 3); // last token homes: the game ends normally, not by forfeit
+  assert.equal(room.phase, 'finished');
+  assert.deepEqual(room.winners, [2, 1, 0]);
+  assert.equal(room.rewards[1], REWARDS.place[1]); // full 2nd-place pay, no early discount
+  assert.deepEqual(room.rewardPartial, []);
   room.destroy();
 });
 

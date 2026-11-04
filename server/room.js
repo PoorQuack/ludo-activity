@@ -67,6 +67,7 @@ export class Room {
     this.stuck = []; // seat -> turns in a row with every token in base and no 6
     this.turnTimedOut = false;
     this.rewards = null; // seat -> coins, once a game is over
+    this.endedEarly = false;
     this.rewardCapped = []; // seats whose payout was cut by the daily coin cap
     this.rewardPartial = []; // seats whose payout was cut by an early end
     this.lastMove = null;
@@ -297,6 +298,7 @@ export class Room {
     this.timeouts = Array(this.board.arms).fill(0);
     this.stuck = Array(this.board.arms).fill(0);
     this.rewards = null;
+    this.endedEarly = false;
     this.rewardCapped = [];
     this.rewardPartial = [];
     this.lastMove = null;
@@ -340,7 +342,11 @@ export class Room {
     this.seats[seat].surrendered = true;
     this.tokens[seat] = [-1, -1, -1, -1];
     this.addLog(message);
+    // A game that ends here was cut short: survivors get progress-scaled pay.
+    // If the game continues, it wasn't ended by this — put the flag back.
+    this.endedEarly = true;
     if (this.endIfOver()) return;
+    this.endedEarly = false;
     if (this.turn === seat) {
       this.clearTimer();
       this.nextTurn();
@@ -435,6 +441,7 @@ export class Room {
     this.forfeited = [];
     for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
+    this.endedEarly = false;
     this.rewardCapped = [];
     this.rewardPartial = [];
     this.stuck = Array(this.board.arms).fill(0);
@@ -607,9 +614,9 @@ export class Room {
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
-      // The placement pays for how far you got, so a game handed over by a surrender
-      // pays a fraction of a real finish. Captures still pay in full — they're earned.
-      const share = progressShare(this.tokens, s, this.board);
+      // A game cut short by a surrender pays for how far you got; a game that ran
+      // its course pays the full placement even if the last-placed seat didn't finish.
+      const share = this.endedEarly ? progressShare(this.tokens, s, this.board) : 1;
       if (share < 1) this.rewardPartial.push(s);
       const coins = Math.round((REWARDS.place[place] * share + this.captures[s] * REWARDS.capture) * factor);
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
