@@ -435,6 +435,11 @@ export class BoardRenderer {
     const s = this.cell;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    // Colour emoji fonts first: with a text font first, Windows can fall back to Segoe UI
+    // Symbol's monochrome glyphs, which paint in the leftover fillStyle (white). Opaque black
+    // fill and no shadow keep any fallback glyph dark instead of washed out.
+    ctx.fillStyle = '#000';
+    ctx.shadowBlur = 0;
     for (const e of list) {
       const age = now - e.start;
       if (age < 0 || age > EMOTE_MS) continue;
@@ -442,7 +447,7 @@ export class BoardRenderer {
       const b = this.board.bases[e.seat];
       const scale = easeOutBack(Math.min(1, age / 220));
       ctx.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
-      ctx.font = `${s * 1.6 * scale}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+      ctx.font = `${s * 1.6 * scale}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
       ctx.fillText(e.emoji, this.px(b.x), this.px(b.y) - k * s * 1.4);
     }
     ctx.globalAlpha = 1;
