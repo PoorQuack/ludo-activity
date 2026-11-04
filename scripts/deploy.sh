@@ -10,9 +10,21 @@
 # Rolls back if anything fails.
 #
 #   bash scripts/deploy.sh                  normal update
+#   bash scripts/deploy.sh --when-quiet     if the server must restart, first wait until nobody is
+#                                           mid-game (checks every 30s, gives up after 60 min)
 #   FORCE_RESTART=1 bash scripts/deploy.sh  restart even if only the page changed (e.g. after editing .env)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+WHEN_QUIET=""
+for arg in "$@"; do
+  case "$arg" in
+    --when-quiet) WHEN_QUIET=1 ;;
+    *) echo "Unknown option: $arg (see the top of scripts/deploy.sh)" >&2; exit 2 ;;
+  esac
+done
+QUIET_WAIT_MIN="${QUIET_WAIT_MIN:-60}"
+QUIET_POLL_SEC="${QUIET_POLL_SEC:-30}"
 
 read_env() {
   local v
@@ -59,6 +71,31 @@ wait_healthy() {
   return 1
 }
 
+# How many players are in a game right now (from /api/status; on an older server without it,
+# a rougher count of open connections to the game).
+players_in_games() {
+  local s n
+  if s=$(curl -fsS --max-time 5 "http://localhost:${PORT}/api/status" 2>/dev/null); then
+    n=$(printf '%s' "$s" | grep -o '"playersInGames":[0-9]*' | cut -d: -f2 || true)
+    if [ -n "$n" ]; then echo "$n"; return; fi
+  fi
+  ss -Htn state established "( sport = :${PORT} )" 2>/dev/null | wc -l
+}
+
+wait_quiet() {
+  local deadline=$((SECONDS + QUIET_WAIT_MIN * 60)) n
+  while :; do
+    n=$(players_in_games)
+    if [ "$n" -eq 0 ]; then echo "Quiet: nobody is mid-game, restarting now"; return 0; fi
+    if [ "$SECONDS" -ge "$deadline" ]; then
+      echo "!!! Still $n player(s) mid-game after ${QUIET_WAIT_MIN} min — not restarting. Try again later." >&2
+      return 1
+    fi
+    echo "$n player(s) mid-game — checking again in ${QUIET_POLL_SEC}s (Ctrl+C to give up)"
+    sleep "$QUIET_POLL_SEC"
+  done
+}
+
 bash scripts/backup.sh pre-deploy
 
 OLD="$(git rev-parse HEAD)"
@@ -90,6 +127,12 @@ rollback() {
 # Everything that can fail before players see any change.
 # (tests get 5 minutes: a test that hangs must fail the deploy, not stall it)
 if ! { { [ -z "$NEED_INSTALL" ] || npm ci; } && build_dist && timeout 300 npm test; }; then
+  rollback ""
+  exit 1
+fi
+
+# --when-quiet: before anything goes live, wait until a restart wouldn't interrupt anyone.
+if [ -n "$NEED_RESTART" ] && [ -n "$WHEN_QUIET" ] && ! wait_quiet; then
   rollback ""
   exit 1
 fi

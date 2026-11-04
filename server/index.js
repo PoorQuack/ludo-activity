@@ -92,6 +92,24 @@ app.post('/api/token', (req, res, next) => {
 
 app.get('/healthz', (_req, res) => res.send('ok'));
 
+// How busy the server is, for scripts/deploy.sh --when-quiet. Only answered on the VM itself:
+// requests through the Cloudflare tunnel carry cf-connecting-ip and get a 404.
+app.get('/api/status', (req, res) => {
+  const local = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+  if (!local || req.headers['cf-connecting-ip']) return res.status(404).end();
+  let games = 0;
+  let playersInGames = 0;
+  for (const room of directory.rooms.values()) {
+    if (room.phase !== 'playing') continue;
+    const here = room.seats.filter((s) => s && !s.bot && room.connected.has(s.userId)).length;
+    if (here) games++;
+    playersInGames += here;
+  }
+  let online = 0;
+  for (const ws of wss.clients) if (ws.ctx?.user) online++;
+  res.json({ rooms: directory.rooms.size, games, playersInGames, online, uptimeSec: Math.round(process.uptime()) });
+});
+
 const dist = path.join(__dirname, '..', 'dist');
 // The page itself is never cached, so players always get the newest version after an update.
 // Built files have a hash in their name that changes with every build, so those can be kept.

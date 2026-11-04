@@ -1020,10 +1020,12 @@ function renderPanel() {
       const home = state.tokens[i].filter((p) => p >= board.finished).length;
       const place = state.winners.indexOf(i);
       const missed = state.timeouts?.[i] || 0;
+      // Just dropped out: the server waits a few seconds for them before playing for them
+      const away = s.disconnectedAt && state.serverNow - s.disconnectedAt < state.disconnectGrace ? ' · reconnecting…' : ' · offline (auto)';
       sub.textContent =
         place >= 0
           ? `🏆 ${ordinal(place + 1)} place`
-          : `${home}/4 home${s.connected ? '' : ' · offline (auto)'}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
+          : `${home}/4 home${s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
     }
     card.appendChild(sub);
 

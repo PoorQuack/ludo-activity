@@ -9,6 +9,9 @@ const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
 const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot or forced move
 const TURN_TIMEOUT_MS = 30_000;
+// A player whose connection drops gets this long to come back (phone blip, refresh) before
+// their turns are played for them. Their turn clock keeps running meanwhile.
+const DISCONNECT_GRACE_MS = 12_000;
 const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
 const MAX_SIXES = 3; // this many 6s in a row loses the turn
 const STUCK_TURNS = 5; // dead turns (no 6) with every token in base before the next roll is a free 6
@@ -48,6 +51,7 @@ export class Room {
       noMove: NO_MOVE_DELAY_MS,
       autoMove: AUTO_MOVE_MS,
       timeout: TURN_TIMEOUT_MS,
+      disconnectGrace: DISCONNECT_GRACE_MS,
       ...delays,
     };
     this.profiles = profiles; // ProfileStore (optional): skins, emotes and coin rewards
@@ -104,6 +108,7 @@ export class Room {
     if (seat >= 0) {
       this.seats[seat].connected = true;
       this.seats[seat].name = user.name;
+      delete this.seats[seat].disconnectedAt;
     }
     this.changed();
   }
@@ -119,7 +124,10 @@ export class Room {
     const seat = this.seatOf(user.id);
     if (seat >= 0) {
       if (this.phase === 'lobby') this.seats[seat] = null;
-      else this.seats[seat].connected = false;
+      else {
+        this.seats[seat].connected = false;
+        this.seats[seat].disconnectedAt = Date.now(); // starts their grace period
+      }
     }
     if (this.hostId === user.id) this.hostId = this.nextHost();
     this.changed();
@@ -696,15 +704,21 @@ export class Room {
     this.clearTimer();
     if (this.phase !== 'playing') return;
     const seat = this.seats[this.turn];
-    const auto = seat.bot || !seat.connected;
+    // A player who dropped out is waited for until their grace period (or the turn clock) runs
+    // out; after that their turns are played for them, like a bot's.
+    const away = !seat.bot && !seat.connected;
+    const graceLeft = away ? (seat.disconnectedAt ?? 0) + this.delays.disconnectGrace - Date.now() : 0;
+    const auto = seat.bot || (away && graceLeft <= 0);
     // Bots roll after a short pause, and move once everyone has seen the dice.
     const botDelay = this.rolled ? this.delays.autoMove : this.delays.bot;
-    const delay = auto ? botDelay : Math.max(0, this.turnDeadline - Date.now());
+    const untilDeadline = Math.max(0, this.turnDeadline - Date.now());
+    const delay = auto ? botDelay : away ? Math.min(graceLeft, untilDeadline) : untilDeadline;
     this.timer = setTimeout(() => {
       this.timer = null;
       // A connected player let the clock run out: count it once per turn, and
-      // take them out of the game after too many turns in a row.
-      if (!auto && !this.turnTimedOut) {
+      // take them out of the game after too many turns in a row. (Not someone who
+      // dropped out: their grace ran out, so they're simply played for.)
+      if (!auto && !away && !this.turnTimedOut) {
         this.turnTimedOut = true;
         const s = this.turn;
         this.timeouts[s] = (this.timeouts[s] || 0) + 1;
@@ -802,7 +816,10 @@ export class Room {
     this.seats.forEach((s, i) => {
       if (!s || s.bot || this.connected.has(s.userId)) return;
       if (this.phase === 'lobby') this.seats[i] = null;
-      else s.connected = false;
+      else {
+        s.connected = false;
+        s.disconnectedAt = 0; // they already had the restart's grace period
+      }
       changed = true;
     });
     if (this.hostId && !this.connected.has(this.hostId)) {
@@ -891,6 +908,7 @@ export class Room {
       typing: [...this.typingAt].filter(([, t]) => now - t.at < 3500).map(([id, t]) => ({ id, name: t.name })),
       turnDeadline: this.turnDeadline,
       turnTimeout: this.delays.timeout,
+      disconnectGrace: this.delays.disconnectGrace,
       serverNow: now,
       spectators: this.connected.size,
       people: [...this.people].map(([id, name]) => ({ id, name })),
