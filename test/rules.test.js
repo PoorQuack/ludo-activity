@@ -71,21 +71,34 @@ test('capture sends opponent home, but not on safe squares', () => {
   assert.deepEqual(capturesAt(t2, 0, 8, [0, 1]), []);
 });
 
+// Plays a whole game. The human stays connected and plays their own turns (always the first
+// possible move) — a game where every player has left pauses instead of playing on.
 function playToEnd(setup, options = {}) {
   let room;
+  const human = { id: 'h', name: 'Human' };
+  const play = () => {
+    if (room.phase !== 'playing' || room.seatOf('h') !== room.turn || room.pending) return;
+    try {
+      if (!room.rolled) room.roll(human);
+      else {
+        const idx = room.options.findIndex((o) => o.length > 0);
+        if (idx >= 0) room.move(human, room.options[idx][0], idx);
+      }
+    } catch {
+      // the server moved first (a forced move): nothing to do
+    }
+  };
   const done = new Promise((resolve) => {
     room = new Room('t', {
-      delays: { bot: 0, noMove: 0, autoMove: 0, timeout: 0 },
-      onChange: (r) => r.phase === 'finished' && resolve(),
+      delays: { bot: 0, noMove: 0, autoMove: 0, timeout: 60_000 },
+      onChange: (r) => (r.phase === 'finished' ? resolve() : setImmediate(play)),
       ...options,
     });
   });
-  const human = { id: 'h', name: 'Human' };
   room.connect(human);
   room.host(human);
   setup(room, human);
   room.start(human);
-  room.disconnect(human); // seat goes on autopilot
   return done.then(() => room);
 }
 
@@ -130,7 +143,7 @@ test('switching mode keeps humans seated and drops bots first', () => {
   room.destroy();
 });
 
-test('finishing a game pays coins (half when you are the only human)', async () => {
+test('a game against bots only pays no coins', async () => {
   const store = new ProfileStore(null);
   const room = await playToEnd(
     (room, human) => {
@@ -139,10 +152,10 @@ test('finishing a game pays coins (half when you are the only human)', async () 
     },
     { profiles: store },
   );
-  const place = room.winners.indexOf(0);
-  assert.equal(room.rewards[0], Math.round((REWARDS.place[place] + room.captures[0] * REWARDS.capture) * REWARDS.soloFactor));
-  assert.deepEqual(room.rewardPartial, []); // a game that ran its course pays the full placement
-  assert.equal(store.peek('h').coins, 150 + room.rewards[0]);
+  assert.equal(room.winners.length, 2); // played to the end
+  assert.equal(room.rewards[0], undefined);
+  assert.equal(room.noCoins, 'bots');
+  assert.equal(store.peek('h'), null); // never paid, so nothing was saved for them
   room.destroy();
 });
 

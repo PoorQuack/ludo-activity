@@ -1087,7 +1087,10 @@ function renderPanel() {
     else if (sixes) text = `${cur.name} rolled a 6 — rolling again`;
     else if (state.rolled) text = `${cur.name} rolled ${rolls.length ? rolls.join(' + ') : `a ${state.dice}`}`;
     else text = `${cur.name}'s turn`;
-    els.turnText.textContent = sym(board.colors[state.turn]) + text + extra;
+    if (state.paused) {
+      text = `Paused — every player left. The game ends in ${Math.round(state.pauseMs / 1000)}s if nobody comes back`;
+      els.turnText.textContent = `⏸️ ${text}`;
+    } else els.turnText.textContent = sym(board.colors[state.turn]) + text + extra;
     els.turnText.style.color = col(board.colors[state.turn]);
   }
   const racing = phase === 'playing' && seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
@@ -1109,7 +1112,13 @@ function showFinish() {
     const reward = coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '';
     return `${MEDALS[i] || `${i + 1}.`} ${escapeHtml(state.seats[s]?.name)}${reward}`;
   });
-  els.banner.innerHTML = `<div class="banner-title">Game over!</div>${lines.join('<br>')}`;
+  const why = {
+    bots: 'No coins for games against bots only — play with friends to earn.',
+    abandoned: 'Everyone left and nobody came back, so no coins this time.',
+  }[state.noCoins];
+  const title = state.noCoins === 'abandoned' ? 'Game ended' : 'Game over!';
+  const note = why ? `<div class="banner-note">${why}</div>` : '';
+  els.banner.innerHTML = `<div class="banner-title">${title}</div>${lines.join('<br>')}${note}`;
   els.banner.classList.remove('hidden');
 }
 

@@ -12,6 +12,8 @@ const TURN_TIMEOUT_MS = 30_000;
 // A player whose connection drops gets this long to come back (phone blip, refresh) before
 // their turns are played for them. Their turn clock keeps running meanwhile.
 const DISCONNECT_GRACE_MS = 12_000;
+// Every player still racing has left: the game pauses this long, then ends with no coins.
+const PAUSE_MS = 60_000;
 const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
 const MAX_SIXES = 3; // this many 6s in a row loses the turn
 const STUCK_TURNS = 5; // dead turns (no 6) with every token in base before the next roll is a free 6
@@ -29,7 +31,7 @@ const SAVED_FIELDS = [
   'tokens', 'turn', 'dice', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
   'lastRoll', 'winners', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
-  'emoteSeq', 'chat', 'chatSeq',
+  'emoteSeq', 'chat', 'chatSeq', 'noCoins',
 ];
 
 export class Room {
@@ -52,6 +54,7 @@ export class Room {
       autoMove: AUTO_MOVE_MS,
       timeout: TURN_TIMEOUT_MS,
       disconnectGrace: DISCONNECT_GRACE_MS,
+      pause: PAUSE_MS,
       ...delays,
     };
     this.profiles = profiles; // ProfileStore (optional): skins, emotes and coin rewards
@@ -95,6 +98,9 @@ export class Room {
     this.typingAt = new Map(); // userId -> { name, at }
     this.turnDeadline = null;
     this.timer = null;
+    this.pausedAt = null; // set while the game waits for its players to come back
+    this.pauseTimer = null;
+    this.noCoins = null; // why a finished game paid nothing: 'bots' (no other human) or 'abandoned'
   }
 
   // ---------- connections ----------
@@ -320,6 +326,8 @@ export class Room {
     this.endedEarly = false;
     this.rewardCapped = [];
     this.rewardPartial = [];
+    this.noCoins = null;
+    this.clearPause();
     this.lastMove = null;
     this.log = [];
     this.turn = active[randomInt(active.length)];
@@ -473,6 +481,8 @@ export class Room {
     if (this.phase === 'lobby') return;
     if (this.phase === 'playing') this.requireHost(user);
     this.clearTimer();
+    this.clearPause();
+    this.noCoins = null;
     this.phase = 'lobby';
     // Drop disconnected humans, keep everyone else seated.
     this.seats = this.seats.map((s) => (s && (s.bot || s.connected) ? s : null));
@@ -649,12 +659,16 @@ export class Room {
   }
 
   // Coins for every human who didn't surrender: by finishing place, plus a bonus per capture.
+  // Only games against other people pay: playing bots on your own earns nothing.
   giveRewards() {
-    const humans = this.winners.filter((s) => !this.seats[s].bot);
-    const factor = humans.length >= 2 ? 1 : REWARDS.soloFactor;
     this.rewards = {};
     this.rewardCapped = [];
     this.rewardPartial = []; // seats whose placement payout was cut by an early end
+    const humans = this.activeSeats().filter((s) => !this.seats[s].bot);
+    if (humans.length < 2) {
+      this.noCoins = 'bots';
+      return;
+    }
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
@@ -662,7 +676,7 @@ export class Room {
       // its course pays the full placement even if the last-placed seat didn't finish.
       const share = this.endedEarly ? progressShare(this.tokens, s, this.board) : 1;
       if (share < 1) this.rewardPartial.push(s);
-      const coins = Math.round((REWARDS.place[place] * share + this.captures[s] * REWARDS.capture) * factor);
+      const coins = Math.round(REWARDS.place[place] * share + this.captures[s] * REWARDS.capture);
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
@@ -703,6 +717,9 @@ export class Room {
   automate() {
     this.clearTimer();
     if (this.phase !== 'playing') return;
+    // Nobody still racing is here: wait for them rather than play on for an empty room.
+    if (!this.inPlay().some((s) => !this.seats[s].bot && this.seats[s].connected)) return this.pause();
+    if (this.pausedAt) this.unpause();
     const seat = this.seats[this.turn];
     // A player who dropped out is waited for until their grace period (or the turn clock) runs
     // out; after that their turns are played for them, like a bot's.
@@ -741,6 +758,47 @@ export class Room {
     }, delay);
   }
 
+  // Every player still in the game has left: nothing moves (the turn clock stops too), and if
+  // none of them is back within delays.pause the game ends with no coins for anyone.
+  pause() {
+    this.turnDeadline = null;
+    if (this.pausedAt) return;
+    this.pausedAt = Date.now();
+    this.addLog(`⏸️ Everyone left — the game waits ${Math.round(this.delays.pause / 1000)}s for someone to come back`);
+    this.pauseTimer = setTimeout(() => {
+      this.pauseTimer = null;
+      this.abandon();
+    }, this.delays.pause);
+  }
+
+  unpause() {
+    this.clearPause();
+    this.turnDeadline = Date.now() + this.delays.timeout; // a fresh clock for whoever's turn it is
+    this.addLog('▶️ A player is back — game on!');
+  }
+
+  clearPause() {
+    clearTimeout(this.pauseTimer);
+    this.pauseTimer = null;
+    this.pausedAt = null;
+  }
+
+  // Nobody came back in time: the game is over and nobody is paid.
+  abandon() {
+    if (this.phase !== 'playing') return;
+    this.clearPause();
+    this.clearTimer();
+    this.addLog('Nobody came back — game over, no coins this time.');
+    this.phase = 'finished';
+    this.rolled = false;
+    this.turnDeadline = null;
+    this.rewards = {};
+    this.rewardCapped = [];
+    this.rewardPartial = [];
+    this.noCoins = 'abandoned';
+    this.changed();
+  }
+
   schedule(delay, fn) {
     this.clearTimer();
     this.pending = true;
@@ -759,6 +817,7 @@ export class Room {
 
   destroy() {
     this.clearTimer();
+    this.clearPause();
     clearTimeout(this.graceTimer);
     this.graceTimer = null;
   }
@@ -909,6 +968,9 @@ export class Room {
       turnDeadline: this.turnDeadline,
       turnTimeout: this.delays.timeout,
       disconnectGrace: this.delays.disconnectGrace,
+      paused: !!this.pausedAt,
+      pauseMs: this.delays.pause,
+      noCoins: this.noCoins,
       serverNow: now,
       spectators: this.connected.size,
       people: [...this.people].map(([id, name]) => ({ id, name })),

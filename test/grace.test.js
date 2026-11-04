@@ -62,3 +62,59 @@ test('a connected player who lets the clock run out still gets a timeout', async
   await wait(50);
   assert.equal(room.timeouts[room.seatOf('ann')], 1);
 });
+
+// ---------- everyone leaves: the game pauses, then ends with no coins ----------
+
+test('when every player has left, the game pauses: nothing is played and the clock stops', async () => {
+  const room = annsTurn({ disconnectGrace: 0, pause: 60_000 });
+  room.disconnect(ann);
+  room.disconnect(bob);
+  await wait(30);
+  assert.equal(room.rolled, false);
+  assert.equal(room.turnDeadline, null);
+  assert.equal(room.snapshot().paused, true);
+  assert.match(room.log.at(-1), /Everyone left/);
+});
+
+test('watchers alone do not keep a paused game going', async () => {
+  const room = annsTurn({ disconnectGrace: 0, pause: 60_000 });
+  room.connect({ id: 'cat', name: 'Cat' }); // watching, not playing
+  room.disconnect(ann);
+  room.disconnect(bob);
+  await wait(30);
+  assert.equal(room.snapshot().paused, true);
+  assert.equal(room.rolled, false);
+});
+
+test('a player coming back un-pauses the game with a fresh turn clock', async () => {
+  const room = annsTurn({ disconnectGrace: 0, pause: 60_000 });
+  room.disconnect(ann);
+  room.disconnect(bob);
+  await wait(10);
+  room.connect(bob);
+  assert.equal(room.snapshot().paused, false);
+  assert.ok(room.turnDeadline > Date.now() + 50_000);
+  assert.match(room.log.at(-1), /back/);
+  await wait(30);
+  assert.equal(room.rolled, true); // Ann is still away (grace 0): her turn is played for her
+});
+
+test('nobody back within the pause: the game ends and nobody is paid', async () => {
+  const room = annsTurn({ disconnectGrace: 0, pause: 40 });
+  room.disconnect(ann);
+  room.disconnect(bob);
+  await wait(80);
+  assert.equal(room.phase, 'finished');
+  assert.equal(room.noCoins, 'abandoned');
+  assert.deepEqual(room.rewards, {});
+  room.connect(ann); // too late: still over
+  assert.equal(room.phase, 'finished');
+});
+
+test('one player leaving does not pause a game the others are still playing', async () => {
+  const room = annsTurn({ disconnectGrace: 0 });
+  room.disconnect(ann);
+  await wait(30);
+  assert.equal(room.snapshot().paused, false);
+  assert.equal(room.rolled, true); // Ann's turn was played for her
+});
