@@ -269,6 +269,7 @@ function onState(next) {
     chatVersion++;
     lastEmoteId = Math.max(0, ...next.emotes.map((e) => e.id));
     floaters = [];
+    for (const el of els.canvas.parentElement.querySelectorAll('.board-sticker')) el.remove();
     closeChooser();
     showScreen('game');
   }
@@ -310,7 +311,9 @@ function onState(next) {
     if (e.id <= lastEmoteId) continue;
     lastEmoteId = e.id;
     if (muted.has(next.seats[e.seat]?.userId)) continue; // you muted them
-    floaters.push({ seat: e.seat, emoji: e.emoji, img: e.img, start: performance.now() });
+    // Stickers float as real <img>s so animated ones play; canvas can't animate GIFs.
+    if (e.img) spawnBoardSticker(e);
+    else floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
   }
 
   // While rolls and moves are still playing out, the panel catches up when the last one ends.
@@ -347,6 +350,28 @@ function toggleMute(userId) {
   chatVersion++; // redraw the chat without (or with) them
   renderChat();
   renderUI();
+}
+
+const STICKER_MS = 2800;
+
+// A sticker floats up from the sender's base as a DOM image — big and fully animated.
+function spawnBoardSticker(e) {
+  const wrap = els.canvas.parentElement;
+  const b = boardFor(state.mode).bases[e.seat];
+  if (!b) return;
+  const pt = renderer.toClient(b.x, b.y);
+  const wr = wrap.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'board-sticker';
+  el.style.left = `${pt.x - wr.left}px`;
+  el.style.top = `${pt.y - wr.top}px`;
+  const img = document.createElement('img');
+  img.src = e.img;
+  img.alt = '';
+  img.style.width = `${Math.round(renderer.cell * 2.6)}px`;
+  el.appendChild(img);
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), STICKER_MS);
 }
 
 function renderChat() {
