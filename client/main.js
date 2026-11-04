@@ -745,7 +745,9 @@ function renderMyRoom() {
   const board = boardFor(state.mode);
   els.gameTitle.textContent = state.roomName;
   els.gameMode.textContent = MODES[state.mode].label;
-  els.myRoomInfo.textContent = roomInfoText();
+  // Menu version of the room info: the lock icon instead of emoji, to match the room list
+  const kind = state.visibility === 'private' ? `${LOCK_ICON} Private` : 'Public';
+  els.myRoomInfo.innerHTML = `${kind} · code ${escapeHtml(state.code)}${state.chatOn ? '' : ' · chat off'}`;
 
   // Everyone who has joined, with their colour
   els.gamePlayers.innerHTML = '';
