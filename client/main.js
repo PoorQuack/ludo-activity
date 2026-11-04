@@ -539,6 +539,7 @@ for (const b of cbButtons) {
       renderChat();
       if (screen === 'shop') drawShop();
     }
+    drawMenuBoard();
   });
 }
 renderColorBlindToggles();
@@ -620,7 +621,8 @@ function renderUI() {
 // ---------------- menu: create a room, find a room ----------------
 
 function renderMenu() {
-  els.menuName.textContent = me ? `Signed in as ${me.name}` : '';
+  els.menuName.textContent = me ? me.name : '';
+  els.menuName.title = me ? `Signed in as ${me.name}` : '';
   els.myRoom.classList.toggle('hidden', !state);
   els.createCard.classList.toggle('hidden', !!state); // one room at a time: leave yours to make another
 
@@ -639,26 +641,104 @@ function renderMenu() {
   if (!others.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = state ? 'No other rooms right now.' : 'No rooms right now. Create one and invite people!';
+    li.textContent = state ? 'No other rooms right now.' : 'No open rooms right now.';
     els.roomList.appendChild(li);
   }
+  // Each row: name (with a lock if private), mode + status, one dot per seat, Join or Watch
   for (const r of others) {
     const li = document.createElement('li');
     const info = document.createElement('div');
     info.className = 'room-text';
-    const name = document.createElement('b');
-    name.textContent = `${r.visibility === 'private' ? '🔒' : '🌐'} ${r.name}`;
-    const sub = document.createElement('span');
-    const status = r.phase === 'lobby' ? (r.players < r.seats ? 'Waiting for players' : 'Full') : r.phase === 'playing' ? 'Playing' : 'Game over';
-    sub.textContent = `${r.label} · ${r.players}/${r.seats} seats · ${status}${r.sameCall ? ' · In your call' : ''}`;
-    info.append(name, sub);
+    const name = document.createElement('div');
+    name.className = 'room-name';
+    if (r.visibility === 'private') name.innerHTML = LOCK_ICON;
+    const nameText = document.createElement('span');
+    nameText.textContent = r.name;
+    name.appendChild(nameText);
+    const meta = document.createElement('div');
+    meta.className = 'room-meta';
+    const status = r.phase === 'lobby' ? (r.players < r.seats ? 'Waiting' : 'Full') : r.phase === 'playing' ? 'Playing' : 'Game over';
+    meta.textContent = `${r.label} · ${status}`;
+    if (r.sameCall) {
+      const call = document.createElement('span');
+      call.className = 'room-call';
+      call.textContent = ' · in your call';
+      meta.appendChild(call);
+    }
+    info.append(name, meta);
+
+    const seats = document.createElement('span');
+    seats.className = 'room-seats';
+    seats.title = `${r.players} of ${r.seats} seats taken`;
+    seats.setAttribute('aria-label', seats.title);
+    for (let i = 0; i < r.seats; i++) {
+      const dot = document.createElement('i');
+      if (i < r.players) dot.className = 'on';
+      seats.appendChild(dot);
+    }
+
     const canSit = r.phase === 'lobby' && r.players < r.seats;
     const join = button(canSit ? 'Join' : 'Watch', () => sendLobby('join', { id: r.id }));
-    if (canSit) join.classList.add('primary');
-    li.append(info, join);
+    join.classList.add(canSit ? 'join' : 'watch');
+    li.append(info, seats, join);
     els.roomList.appendChild(li);
   }
+  drawMenuBoard();
 }
+
+const LOCK_ICON =
+  '<svg class="ico" viewBox="0 0 16 16" aria-label="Private"><rect x="3.25" y="7" width="9.5" height="7" rx="1.5" /><path d="M5.5 7V5.25a2.5 2.5 0 0 1 5 0V7" /></svg>';
+
+// ---------------- menu: the board beside the actions (wide screens) ----------------
+// A still picture of the player's own board: drawn when the menu shows, and again only when
+// its size, the board theme, the token skin or colour-blind mode changes. No frame loop.
+const menuBoard = new BoardRenderer($('menu-board'));
+const menuBoardCaption = $('menu-board-caption');
+const MENU_BOARD = boardFor('4p');
+const MENU_BOARD_MAX = 420;
+let menuBoardKey = '';
+
+function drawMenuBoard() {
+  if (screen !== 'menu') return;
+  const hero = menuBoard.canvas.parentElement;
+  const width = hero.clientWidth; // 0 when the hero is hidden (narrow screens)
+  if (!width) return;
+  const size = Math.min(MENU_BOARD_MAX, width);
+  const theme = myTheme() || 'board-classic';
+  const skin = profile?.equipped?.token || null;
+  const key = [size, window.devicePixelRatio || 1, theme, skin, isColorBlind()].join('|');
+  if (key === menuBoardKey) return;
+  menuBoardKey = key;
+  menuBoard.setBoard(MENU_BOARD, theme);
+  menuBoard.resize(size);
+  const seats = MENU_BOARD.colors.map((_, i) => i);
+  menuBoard.draw(
+    {
+      tokens: seats.map(() => [-1, -1, -1, -1]),
+      active: seats,
+      skins: seats.map(() => skin),
+      overrides: null,
+      highlight: null,
+      turn: null,
+      dice: null,
+      emotes: [],
+    },
+    performance.now(),
+  );
+  const themeName = SHOP_ITEMS.find((i) => i.id === theme)?.name;
+  menuBoardCaption.innerHTML = '';
+  if (themeName) {
+    const b = document.createElement('b');
+    b.textContent = themeName;
+    menuBoardCaption.append('Your board: ', b, ' · change it in the Shop');
+  }
+}
+
+let menuResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(menuResizeTimer);
+  menuResizeTimer = setTimeout(drawMenuBoard, 120);
+});
 
 // The card for the room you're in, at the top of the menu.
 function renderMyRoom() {

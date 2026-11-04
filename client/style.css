@@ -1,4 +1,15 @@
+/* Fraunces (SIL OFL 1.1, see fonts/OFL.txt): only the wordmark and section titles use it.
+   Self-hosted, because Discord's proxy blocks font CDNs. */
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/fraunces-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
+  --display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --bg: #0e1510;
   --panel: #18201a;
   --panel-2: #232d26;
@@ -54,7 +65,7 @@ html, body {
   white-space: nowrap;
 }
 .btn:hover { filter: brightness(1.15); }
-.btn:active { transform: scale(0.97); }
+.btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; }
 .btn.primary { background: var(--accent); color: var(--on-accent); width: 100%; padding: 12px; font-size: 15px; }
 .btn.small { padding: 5px 8px; font-size: 12px; }
@@ -88,40 +99,230 @@ html, body {
 .coins.small .coin { width: 13px; height: 13px; }
 
 /* ---------- main menu ---------- */
+/* Flat felt, a top bar, the player's own board on the left (wide screens only) and one
+   panel of actions on the right. No cards-in-cards: sections are split by thin rules. */
 #menu {
   display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
+  animation: menu-in 0.2s ease-out; /* a plain fade: no rise, no stagger */
+}
+@keyframes menu-in { from { opacity: 0; } }
+.menu-shell { width: min(440px, 100%); margin: auto; display: flex; flex-direction: column; gap: 18px; }
+
+.menu-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.wordmark { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.wordmark h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1; letter-spacing: -0.01em; }
+/* The four bases, in their places on the Classic board */
+.wordmark-dots { display: grid; grid-template-columns: 9px 9px; gap: 3px; }
+.wordmark-dots i { width: 9px; height: 9px; border-radius: 2px; }
+.wordmark-dots i:nth-child(1) { background: var(--red); }
+.wordmark-dots i:nth-child(2) { background: var(--green); }
+.wordmark-dots i:nth-child(3) { background: var(--blue); }
+.wordmark-dots i:nth-child(4) { background: var(--yellow); }
+.menu-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.menu-name { margin: 0; min-width: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-name:empty { display: none; }
+.menu-tools .icon-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  flex: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
-.menu-card {
-  width: min(400px, 100%);
+.menu-tools .icon-btn:hover { color: var(--text); background: var(--panel); }
+.menu-tools .icon-btn[aria-expanded='true'] { color: var(--on-accent); background: var(--accent); box-shadow: none; }
+
+/* Line icons (inline SVG, 1.5px stroke in the text colour) */
+.ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+.menu-main { display: flex; flex-direction: column; gap: 16px; }
+.menu-hero { display: none; margin: 0; }
+.menu-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* Wide screens: the board on the left, the actions on the right */
+@media (min-width: 880px) {
+  #menu { padding: 20px 24px; }
+  .menu-shell { width: min(880px, 100%); gap: 24px; }
+  .menu-main {
+    display: grid;
+    grid-template-columns: minmax(0, 420px) minmax(340px, 400px);
+    justify-content: space-between;
+    align-items: start;
+    gap: 40px;
+  }
+  .menu-hero { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+}
+#menu-board { display: block; max-width: 100%; }
+.menu-hero figcaption { font-size: 12px; color: var(--muted); }
+.menu-hero figcaption b { color: var(--text); font-weight: 600; }
+
+/* One panel, three sections */
+.menu-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.menu-sec { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
+.menu-sec:last-child { border-bottom: none; }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sec-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sec-title label { cursor: inherit; }
+.sec-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Buttons on the menu change colour on hover instead of brightening */
+.menu-shell .btn:hover { filter: none; }
+.menu-shell .btn.primary { border-radius: 10px; }
+.menu-shell .btn.primary:not(:disabled):hover { background: #ddb262; }
+.btn.quiet { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.btn.quiet:not(:disabled):hover { background: var(--panel); }
+
+/* Public / Private */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.segmented .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+}
+.segmented .btn:hover { color: var(--text); }
+.segmented .btn.active { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px #3a463c; }
+.segmented .btn.active .ico { color: var(--accent); }
+.segmented .ico { width: 15px; height: 15px; }
+
+/* Join with a code */
+.code-form { display: flex; gap: 8px; }
+.code-form input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.code-form input:focus { border-color: var(--accent); }
+.code-form input::placeholder { letter-spacing: 0.02em; font-weight: 400; color: #6c7566; }
+.code-form .btn { min-width: 72px; background: var(--panel-2); box-shadow: inset 0 0 0 1px #3a463c; }
+.code-form .btn:hover { background: #2b372e; }
+
+/* Open rooms */
+.room-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; }
+.room-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.room-list li:first-child { border-top: none; padding-top: 2px; }
+.room-list li.empty { display: block; color: var(--muted); font-size: 13px; padding: 2px 0; }
+.room-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.room-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; font-weight: 600; }
+.room-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-name .ico { width: 13px; height: 13px; color: var(--muted); }
+.room-meta { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.room-call { color: var(--accent); }
+/* One dot per seat: filled = taken, ring = open */
+.room-seats { display: flex; gap: 4px; }
+.room-seats i { width: 8px; height: 8px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #59634f; }
+.room-seats i.on { background: var(--text); box-shadow: none; }
+.room-list .btn { min-width: 66px; padding: 7px 12px; }
+.btn.join { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.btn.join:not(:disabled):hover { background: rgba(210, 165, 78, 0.12); }
+.btn.watch { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+.btn.watch:not(:disabled):hover { color: var(--text); background: var(--panel-2); }
+
+/* The room you're in */
+.game-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-/* On narrow screens the column wrappers dissolve: every card is a direct flex item,
-   so the menu reads exactly like the old single column. */
-.menu-col-left,
-.menu-col-right { display: contents; }
-/* DOM order puts the settings row inside the left column, so on a single column it would
-   land third — order:10 keeps it at the very end like the old menu had it. (On wide
-   screens it's already the last child of its own column.) */
-.menu-col-left > [data-audio] { order: 10; }
-/* Wide screens: brand on the left, the action cards on the right */
-@media (min-width: 880px) {
-  .menu-card { width: min(880px, 100%); flex-direction: row; gap: 20px; align-items: stretch; }
-  .menu-col-left,
-  .menu-col-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-  .menu-col-left { flex: 0 0 36%; }
-  .menu-col-right { flex: 1; }
-  /* Two auto margins split the free space evenly: the brand cluster centres itself
-     in the column while the settings row stays pinned to the bottom */
-  .menu-col-left > .menu-top { margin-top: auto; }
-  .menu-col-left > [data-audio] { margin-top: auto; }
+.game-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.game-card-head h2 { margin: 0; min-width: 0; font-family: var(--display); font-size: 20px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.game-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
 }
-.menu-top { display: flex; align-items: center; justify-content: space-between; }
-.menu-tools { display: flex; align-items: center; gap: 8px; }
+.game-players li:first-child { border-top: none; }
+.game-players li.muted { color: var(--muted); font-size: 13px; }
+.game-players .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.game-players .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#my-room .btn.big { padding: 12px; font-size: 15px; border-radius: 10px; }
+#my-room .btn:not(.primary) { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+#my-room .btn:not(.primary):not(:disabled):hover { background: var(--panel-2); }
+
+/* Under the panel: the other pages and the one setting */
+.menu-foot { display: flex; flex-direction: column; gap: 12px; }
+.menu-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.menu-links .btn { padding: 10px; }
+.menu-foot .setting { padding: 0 2px; }
+/* Wide screens: links and the setting share one row, so the column stays short */
+@media (min-width: 880px) {
+  .menu-foot { flex-direction: row; align-items: center; justify-content: space-between; }
+  .menu-links { display: flex; }
+  .menu-links .btn { padding: 8px 14px; }
+  .menu-foot .setting small { display: none; }
+}
+
+/* Phones: everything you tap is at least 40px tall */
+@media (max-width: 879px) {
+  #menu { padding: 16px; }
+  .menu-shell .btn, .code-form input { min-height: 40px; }
+  .menu-tools .icon-btn { width: 40px; height: 40px; }
+  .room-list li { gap: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #menu { animation: none; }
+  .btn:active { transform: none; }
+}
 
 /* ---------- music player popover ---------- */
 .player-pop {
@@ -160,44 +361,8 @@ html, body {
 .player-list button.active { background: var(--accent); color: var(--on-accent); }
 .player-list button small { display: block; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-list button.active small { color: rgba(22, 18, 10, 0.72); }
-.wordmark { display: flex; align-items: center; gap: 10px; }
-.wordmark h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
-.wordmark-dots { display: grid; grid-template-columns: 9px 9px; gap: 3px; }
-.wordmark-dots i { width: 9px; height: 9px; border-radius: 2px; }
-.wordmark-dots i:nth-child(1) { background: var(--red); }
-.wordmark-dots i:nth-child(2) { background: var(--green); }
-.wordmark-dots i:nth-child(3) { background: var(--blue); }
-.wordmark-dots i:nth-child(4) { background: var(--yellow); }
-.menu-name { margin: -4px 0 0; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .menu-row .btn { padding: 11px; }
-
-.game-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
-}
-.game-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.game-card-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
-.game-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.game-players li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 2px;
-  border-top: 1px solid var(--line);
-  font-size: 14px;
-}
-.game-players li:first-child { border-top: none; }
-.game-players li.muted { color: var(--muted); font-size: 13px; }
-.game-players .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.game-players .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#play-btn { font-size: 16px; padding: 13px; border-radius: 10px; }
 
 /* ---------- shop + how to play pages ---------- */
 .page { display: flex; flex-direction: column; padding: 16px; gap: 12px; max-width: 760px; margin: 0 auto; }
@@ -594,39 +759,8 @@ html, body {
 }
 
 /* ---------- rooms ---------- */
-.card-title { margin: 0; font-size: 17px; font-weight: 700; }
 .room-info { margin: 0; font-size: 12.5px; color: var(--muted); }
 #room-info { margin-top: -4px; }
-
-.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
-.segmented .btn { background: transparent; color: var(--muted); }
-.segmented .btn.active { background: var(--accent); color: var(--on-accent); }
-
-.code-form { display: flex; gap: 6px; }
-.code-form input {
-  flex: 1;
-  min-width: 0;
-  background: var(--panel-2);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--text);
-  font: inherit;
-  font-size: 14px;
-  letter-spacing: 1px;
-  padding: 9px 11px;
-  outline: none;
-}
-.code-form input:focus { border-color: var(--accent); }
-.code-form input::placeholder { letter-spacing: 0; }
-
-.room-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
-.room-list li { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); }
-.room-list li:first-child { border-top: none; }
-.room-list li.empty { color: var(--muted); font-size: 13px; justify-content: center; padding: 14px 4px; }
-.room-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.room-text b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.room-text span { font-size: 12px; color: var(--muted); }
-.room-list .btn { flex: none; min-width: 64px; }
 
 .room-settings { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
 .room-settings #visibility-btn { min-width: 92px; }
@@ -639,117 +773,3 @@ html, body {
 .people-list .name.is-muted { color: var(--muted); text-decoration: line-through; }
 .people-list .btn.kick { color: #ec6a64; }
 .chat-form input:disabled { opacity: 0.6; }
-
-/* The menu has more on it now: let it scroll on short screens */
-#menu { align-items: flex-start; overflow-y: auto; }
-.menu-card { margin: auto 0; padding-bottom: 8px; }
-
-/* ---------- menu polish ---------- */
-/* Felt-table ambience: the player colours still drift behind the menu, but muted to a
-   whisper and pulled toward brass so they read as coloured felt under lamplight rather
-   than a rainbow. Radial gradients (no blur() filters on huge elements) and only
-   transform animates, so this stays on the GPU. */
-.menu-bg { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
-/* Steady warm glow near the top — the "lamp over the table" */
-.menu-bg::before {
-  content: '';
-  position: absolute;
-  top: -36vmax;
-  left: 50%;
-  width: 85vmax;
-  height: 55vmax;
-  margin-left: -42.5vmax;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 11%, transparent), transparent 70%);
-}
-.menu-bg i {
-  position: absolute;
-  width: 55vmax;
-  height: 55vmax;
-  border-radius: 50%;
-  animation: blob-a 38s ease-in-out infinite alternate;
-}
-.menu-bg i:nth-child(1) {
-  top: -24vmax; left: -18vmax;
-  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--red) 45%, var(--accent)) 7%, transparent), transparent 68%);
-}
-.menu-bg i:nth-child(2) {
-  top: -20vmax; right: -22vmax;
-  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--green) 50%, var(--accent)) 6%, transparent), transparent 68%);
-  animation-name: blob-b;
-  animation-duration: 46s;
-}
-.menu-bg i:nth-child(3) {
-  bottom: -26vmax; left: -16vmax;
-  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--blue) 40%, var(--accent)) 7%, transparent), transparent 68%);
-  animation-name: blob-b;
-  animation-duration: 52s;
-}
-.menu-bg i:nth-child(4) {
-  bottom: -20vmax; right: -18vmax;
-  background: radial-gradient(circle, color-mix(in srgb, color-mix(in srgb, var(--yellow) 55%, var(--accent)) 6%, transparent), transparent 68%);
-  animation-duration: 44s;
-}
-@keyframes blob-a {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(4vmax, 3vmax, 0) scale(1.12); }
-}
-@keyframes blob-b {
-  from { transform: translate3d(0, 0, 0) scale(1.06); }
-  to { transform: translate3d(-3vmax, -4vmax, 0) scale(0.94); }
-}
-/* The card sits above the drifting blobs */
-.menu-card { position: relative; z-index: 1; }
-
-/* Menu sections fade + rise in with a short stagger as the menu shows.
-   The stagger runs within each column, so wide and narrow menus feel the same. */
-.menu-col-left > *, .menu-col-right > * { animation: menu-item-in 0.45s ease-out backwards; }
-.menu-col-left > *:nth-child(2), .menu-col-right > *:nth-child(2) { animation-delay: 60ms; }
-.menu-col-left > *:nth-child(3), .menu-col-right > *:nth-child(3) { animation-delay: 120ms; }
-.menu-col-left > *:nth-child(4), .menu-col-right > *:nth-child(4) { animation-delay: 180ms; }
-.menu-col-left > *:nth-child(n + 5), .menu-col-right > *:nth-child(n + 5) { animation-delay: 240ms; }
-@keyframes menu-item-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-}
-
-/* Wordmark: the four pips pop in one by one */
-.wordmark-dots i { animation: pip-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
-.wordmark-dots i:nth-child(2) { animation-delay: 90ms; }
-.wordmark-dots i:nth-child(3) { animation-delay: 180ms; }
-.wordmark-dots i:nth-child(4) { animation-delay: 270ms; }
-@keyframes pip-pop { from { transform: scale(0); } }
-
-.brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.menu-tag { margin: 0; font-size: 13px; color: var(--muted); }
-
-/* Primary buttons: a faint sheen sweeps across on hover */
-.btn.primary { position: relative; overflow: hidden; }
-.btn.primary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.22) 50%, transparent 62%);
-  transform: translateX(-130%);
-  transition: transform 0.7s ease;
-  pointer-events: none;
-}
-
-/* Micro-interactions — hover-capable devices only: a small lift, a firmer press */
-@media (hover: hover) {
-  .btn { transition: filter 0.15s, transform 0.1s, box-shadow 0.15s; }
-  .btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
-  .btn:not(:disabled):active { transform: scale(0.97); box-shadow: none; }
-  .btn.primary:hover::after { transform: translateX(130%); }
-  .game-card { transition: transform 0.2s, box-shadow 0.2s; }
-  .game-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.34); }
-}
-
-/* Less motion when the player asked for it: no drift, no entrances, no sheen */
-@media (prefers-reduced-motion: reduce) {
-  .menu-bg i,
-  .menu-col-left > *,
-  .menu-col-right > *,
-  .wordmark-dots i { animation: none; }
-  .btn.primary::after { display: none; }
-}
