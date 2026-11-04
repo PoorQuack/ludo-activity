@@ -15,10 +15,18 @@
   --panel-2: #232d26;
   --text: #f0ece0;
   --muted: #939b8a;
-  --accent: #d2a54e;
-  /* dark ink that sits on top of the brass accent */
-  --on-accent: #16120a;
-  --gold: #f6cf57;
+  /* Bright Ludo yellow: buttons, highlights, the turn clock */
+  --accent: #ffc23a;
+  --accent-rgb: 255, 194, 58;
+  /* dark ink that sits on top of the yellow accent */
+  --on-accent: #1d1503;
+  --gold: #ffd54a;
+  /* Brighter versions of the four Ludo colours, for the interface (the board keeps its own) */
+  --ludo-red: #ff5a4f;
+  --ludo-green: #2fd481;
+  --ludo-blue: #4d8dff;
+  --ludo-yellow: #ffc23a;
+  --ludo-stripe: linear-gradient(90deg, var(--ludo-red) 0 25%, var(--ludo-green) 25% 50%, var(--ludo-yellow) 50% 75%, var(--ludo-blue) 75%);
   --ok: #2f9e5f;
   --line: #2d372e;
   /* same as the Classic board's player colours */
@@ -67,7 +75,15 @@ html, body {
 .btn:hover { filter: brightness(1.15); }
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; }
-.btn.primary { background: var(--accent); color: var(--on-accent); width: 100%; padding: 12px; font-size: 15px; }
+.btn.primary {
+  background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c);
+  color: var(--on-accent);
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  box-shadow: 0 0 0 1px rgba(255, 228, 140, 0.35) inset, 0 4px 18px rgba(var(--accent-rgb), 0.28);
+}
+.btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 1px rgba(255, 236, 170, 0.5) inset, 0 4px 24px rgba(var(--accent-rgb), 0.45); }
 .btn.small { padding: 5px 8px; font-size: 12px; }
 .btn.big { padding: 14px; font-size: 16px; border-radius: 12px; }
 .btn.danger { background: #c62f3a; color: #fff; }
@@ -86,13 +102,13 @@ html, body {
 .coins.small { font-size: 12px; padding: 3px 8px 3px 4px; }
 .coins.bump { animation: bump 0.6s ease-out; }
 @keyframes bump {
-  30% { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(246, 207, 87, 0.35); }
+  30% { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(255, 213, 74, 0.4); }
 }
 .coin {
   width: 16px; height: 16px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff3b8, var(--gold) 45%, #b48a12);
-  box-shadow: inset 0 0 0 2px rgba(154, 111, 0, 0.6);
+  background: radial-gradient(circle at 35% 35%, #fff6c4, var(--gold) 45%, #d39a12);
+  box-shadow: inset 0 0 0 2px rgba(196, 136, 0, 0.55), 0 0 6px rgba(255, 213, 74, 0.35);
   flex-shrink: 0;
   display: inline-block;
 }
@@ -117,17 +133,18 @@ html, body {
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid transparent;
+  border-image: var(--ludo-stripe) 1;
 }
 .wordmark { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .wordmark h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1; letter-spacing: -0.01em; }
 /* The four bases, in their places on the Classic board */
 .wordmark-dots { display: grid; grid-template-columns: 9px 9px; gap: 3px; }
 .wordmark-dots i { width: 9px; height: 9px; border-radius: 2px; }
-.wordmark-dots i:nth-child(1) { background: var(--red); }
-.wordmark-dots i:nth-child(2) { background: var(--green); }
-.wordmark-dots i:nth-child(3) { background: var(--blue); }
-.wordmark-dots i:nth-child(4) { background: var(--yellow); }
+.wordmark-dots i:nth-child(1) { background: var(--ludo-red); }
+.wordmark-dots i:nth-child(2) { background: var(--ludo-green); }
+.wordmark-dots i:nth-child(3) { background: var(--ludo-blue); }
+.wordmark-dots i:nth-child(4) { background: var(--ludo-yellow); }
 .menu-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .menu-name { margin: 0; min-width: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu-name:empty { display: none; }
@@ -265,7 +282,7 @@ html, body {
 .room-seats i.on { background: var(--text); box-shadow: none; }
 .room-list .btn { min-width: 66px; padding: 7px 12px; }
 .btn.join { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.btn.join:not(:disabled):hover { background: rgba(210, 165, 78, 0.12); }
+.btn.join:not(:disabled):hover { background: rgba(var(--accent-rgb), 0.12); }
 .btn.watch { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
 .btn.watch:not(:disabled):hover { color: var(--text); background: var(--panel-2); }
 
@@ -414,7 +431,8 @@ html, body {
 .item .preview.emoji { display: flex; align-items: center; justify-content: center; font-size: 48px; }
 .item-name { font-weight: 600; font-size: 14px; }
 .item .btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.item .btn.buy { background: #4a3d12; color: var(--gold); }
+.item .btn.buy { background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c); color: var(--on-accent); }
+.item .btn.buy:hover:not(.cant) { box-shadow: 0 2px 14px rgba(var(--accent-rgb), 0.45); }
 .item .btn.buy.cant { opacity: 0.55; }
 
 .howto-body { background: var(--panel); border-radius: 14px; padding: 6px 20px 16px; overflow-y: auto; line-height: 1.55; font-size: 14px; }
@@ -659,24 +677,34 @@ html, body {
 .typing-line { min-height: 17px; padding: 0 10px; font-size: 11.5px; font-style: italic; color: var(--muted); }
 .preview.emoji img { width: 64px; height: 64px; object-fit: contain; }
 
-/* The Shop button earns its spot in the top bar: Ludo-coloured pips and a soft twinkle. */
+/* The Shop button earns its spot in the top bar: the four Ludo colours flowing through it,
+   a glow that cycles through them, a shine sweeping across and a couple of twinkles. */
 .shop-btn {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(210, 165, 78, 0.45);
-  background: linear-gradient(180deg, rgba(210, 165, 78, 0.16), rgba(210, 165, 78, 0.06)), var(--panel-2);
-  color: var(--text);
-  box-shadow: 0 0 12px rgba(210, 165, 78, 0.12);
+  overflow: hidden;
+  isolation: isolate;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 99px;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(100deg, var(--ludo-red), var(--ludo-yellow), var(--ludo-green), var(--ludo-blue), var(--ludo-red));
+  background-size: 300% 100%;
+  animation: shop-flow 6s linear infinite, shop-glow 4s linear infinite;
 }
-.shop-btn:hover { border-color: rgba(210, 165, 78, 0.85); box-shadow: 0 0 18px rgba(210, 165, 78, 0.28); }
-.shop-pips { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
-.shop-pips i { width: 6.5px; height: 6.5px; border-radius: 2px; display: block; }
-.shop-pips i:nth-child(1) { background: #f2604f; }
-.shop-pips i:nth-child(2) { background: #3ecf7f; }
-.shop-pips i:nth-child(3) { background: #4f86e8; }
-.shop-pips i:nth-child(4) { background: #f5bd2c; }
+.shop-btn:hover { filter: brightness(1.12) saturate(1.1); transform: translateY(-1px); }
+/* the shine */
+.shop-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: shop-shine 3.2s ease-in-out infinite;
+}
 .shop-btn .tw {
   position: absolute;
   width: 5px;
@@ -689,12 +717,27 @@ html, body {
   pointer-events: none;
 }
 .shop-btn .tw-a { top: 4px; right: 8px; }
-.shop-btn .tw-b { bottom: 4px; right: 42px; animation-delay: 1.3s; }
+.shop-btn .tw-b { bottom: 4px; left: 10px; animation-delay: 1.3s; }
+@keyframes shop-flow {
+  to { background-position: 300% 0; }
+}
+@keyframes shop-glow {
+  0%, 100% { box-shadow: 0 0 14px 1px rgba(255, 90, 79, 0.55); }
+  25% { box-shadow: 0 0 16px 2px rgba(255, 194, 58, 0.6); }
+  50% { box-shadow: 0 0 14px 1px rgba(47, 212, 129, 0.55); }
+  75% { box-shadow: 0 0 16px 2px rgba(77, 141, 255, 0.6); }
+}
+@keyframes shop-shine {
+  0%, 55% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
 @keyframes shop-twinkle {
   0%, 100% { opacity: 0; transform: rotate(45deg) scale(0.3); }
   50% { opacity: 0.95; transform: rotate(45deg) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
+  .shop-btn, .shop-btn::after { animation: none; }
+  .shop-btn { box-shadow: 0 0 14px 1px rgba(var(--accent-rgb), 0.5); }
   .shop-btn .tw { display: none; }
 }
 .preview.pack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: center; justify-items: center; }
