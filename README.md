@@ -194,6 +194,7 @@ Players stay in their games:
 - **Server changes** (`server/`, `shared/`, packages) restart Ludo. On the way down it saves every open
   room to `data/rooms.json`, and the new server picks them back up: players see "Reconnecting…" for a
   moment and carry on. Anyone who doesn't come back within 20 seconds is treated as having left.
+- Give a player coins (live, no restart; negative takes them away): `bash scripts/give-coins.sh 1000000 <discord id> [<discord id> …]`. Only works on the VM itself.
 - Use `FORCE_RESTART=1 bash scripts/deploy.sh` to restart anyway (e.g. after editing `.env`).
 - `bash scripts/deploy.sh --when-quiet` waits (up to an hour, checking every 30s) until nobody is
   mid-game before restarting. To see how busy it is yourself: `curl -s localhost:3001/api/status`

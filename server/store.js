@@ -104,6 +104,14 @@ export class ProfileStore {
     return coins;
   }
 
+  // Admin: add (or, with a negative amount, take away) coins. Never below 0. Returns the new balance.
+  adminCoins(id, amount) {
+    const p = this.get(id);
+    p.coins = Math.max(0, p.coins + amount);
+    this.changed(id);
+    return p.coins;
+  }
+
   dayKey() {
     return new Date(this.now()).toISOString().slice(0, 10); // the UTC day, 'YYYY-MM-DD'
   }

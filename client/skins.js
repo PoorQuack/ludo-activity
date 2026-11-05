@@ -6,11 +6,12 @@
 
 export const BOARD_THEMES = {
   'board-classic': {
-    art: { mark: 'star' },
+    // Safe squares stand out: a warm gold tile, a darker ring and a big outlined star
+    art: { mark: 'star', markSize: 0.34, markEdge: '#ffffff', safeRing: '#d39a1e' },
     bg: '#e9e2d3', // shows between the squares
     cell: '#fbf8f1',
-    safe: '#f3e3b5',
-    star: '#b98a17',
+    safe: '#fbdc85',
+    star: '#a8690a',
     baseInner: '#fbf8f1',
     players: { red: '#d24d47', green: '#2f9467', yellow: '#e2a92a', blue: '#3a68c8', purple: '#7e57bd', orange: '#dd7433' },
   },

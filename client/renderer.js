@@ -161,7 +161,27 @@ export class BoardRenderer {
         drawShape(ctx, this.seatShape(startSeat), sq.x, sq.y, 0.27, ink.fill, ink.edge, 0.05);
       }
       else if (startSeat >= 0) motif(ctx, art.mark || 'star', sq.x, sq.y, 0.27, 'rgba(255,255,255,0.92)');
-      else if (safe) motif(ctx, art.mark || 'star', sq.x, sq.y, 0.27, theme.star);
+      else if (safe) {
+        // Safe squares: optionally a ring round the tile and an outlined mark, so they stand out
+        if (art.safeRing) {
+          ctx.save();
+          ctx.translate(sq.x, sq.y);
+          ctx.rotate(sq.angle);
+          ctx.lineWidth = 0.07;
+          ctx.strokeStyle = art.safeRing;
+          roundRect(ctx, -0.37, -0.37, 0.74, 0.74, 0.09);
+          ctx.stroke();
+          ctx.restore();
+        }
+        motif(ctx, art.mark || 'star', sq.x, sq.y, art.markSize || 0.27, theme.star);
+        if (art.markEdge) {
+          ctx.lineWidth = 0.045;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = art.markEdge;
+          ctx.stroke();
+          motif(ctx, art.mark || 'star', sq.x, sq.y, art.markSize || 0.27, theme.star);
+        }
+      }
     });
 
     // Home columns

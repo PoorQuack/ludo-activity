@@ -98,11 +98,28 @@ app.post('/api/token', (req, res, next) => {
 
 app.get('/healthz', (_req, res) => res.send('ok'));
 
+// Requests from the VM itself only: anything through the Cloudflare tunnel carries
+// cf-connecting-ip, and the game is only reachable from outside through the tunnel.
+const fromVm = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress) && !req.headers['cf-connecting-ip'];
+
+// Admin: give a player coins (scripts/give-coins.sh). VM only. Takes effect at once, and the
+// player's coin count updates live if they're online.
+app.post('/api/admin/coins', (req, res) => {
+  if (!fromVm(req)) return res.status(404).end();
+  const userId = String(req.body?.userId || '');
+  const amount = Number(req.body?.amount);
+  if (!/^(\d{5,25}|guest-[a-z0-9-]{8,48})$/i.test(userId)) return res.status(400).json({ error: 'userId should be a Discord user id (digits)' });
+  if (!Number.isInteger(amount) || Math.abs(amount) > 1e9) return res.status(400).json({ error: 'amount should be a whole number (up to 1,000,000,000)' });
+  const coins = store.adminCoins(userId, amount);
+  store.flush();
+  console.log(`Admin: ${amount >= 0 ? 'gave' : 'took'} ${Math.abs(amount)} coins ${amount >= 0 ? 'to' : 'from'} ${userId} (now ${coins})`);
+  res.json({ userId, coins });
+});
+
 // How busy the server is, for scripts/deploy.sh --when-quiet. Only answered on the VM itself:
 // requests through the Cloudflare tunnel carry cf-connecting-ip and get a 404.
 app.get('/api/status', (req, res) => {
-  const local = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
-  if (!local || req.headers['cf-connecting-ip']) return res.status(404).end();
+  if (!fromVm(req)) return res.status(404).end();
   res.json({ rooms: directory.rooms.size, ...activity(), uptimeSec: Math.round(process.uptime()) });
 });
 
