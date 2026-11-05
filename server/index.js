@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
 import { ProfileStore } from './store.js';
+import { Leaderboard } from './leaderboard.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,6 +17,8 @@ const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'p
 // Open rooms are written here when the server stops and read back when it starts, so an
 // update (pm2 restart) doesn't end anyone's game: players reconnect and carry on.
 const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 'rooms.json');
+// Weekly and monthly leaderboards (scores, last winners, prizes paid), next to the profiles.
+const LEADERBOARD_FILE = process.env.LEADERBOARD_FILE || path.join(path.dirname(DATA_FILE), 'leaderboard.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
@@ -97,17 +100,7 @@ app.get('/healthz', (_req, res) => res.send('ok'));
 app.get('/api/status', (req, res) => {
   const local = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
   if (!local || req.headers['cf-connecting-ip']) return res.status(404).end();
-  let games = 0;
-  let playersInGames = 0;
-  for (const room of directory.rooms.values()) {
-    if (room.phase !== 'playing') continue;
-    const here = room.seats.filter((s) => s && !s.bot && room.connected.has(s.userId)).length;
-    if (here) games++;
-    playersInGames += here;
-  }
-  let online = 0;
-  for (const ws of wss.clients) if (ws.ctx?.user) online++;
-  res.json({ rooms: directory.rooms.size, games, playersInGames, online, uptimeSec: Math.round(process.uptime()) });
+  res.json({ rooms: directory.rooms.size, ...activity(), uptimeSec: Math.round(process.uptime()) });
 });
 
 const dist = path.join(__dirname, '..', 'dist');
@@ -134,10 +127,13 @@ const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const userSockets = new Map();
 const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, freeShop: FREE_SHOP });
+const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards });
+setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon as a week or month ends
 const directory = new RoomDirectory({
   idleMs: ROOM_IDLE_MS,
   roomOptions: {
     profiles: store,
+    onGameEnd: (results) => leaderboard.record(results),
     onChange: (room) => {
       broadcast(room);
       listsChanged();
@@ -180,6 +176,15 @@ function sendProfile(userId) {
   for (const ws of userSockets.get(userId) || []) if (ws.readyState === 1) ws.send(msg);
 }
 
+// "You came 2nd in last week's leaderboard: +200 coins" — sent once, when they're online.
+function sendAwards(userId) {
+  const sockets = [...(userSockets.get(userId) || [])].filter((ws) => ws.readyState === 1);
+  if (!sockets.length) return; // told next time they connect
+  const awards = leaderboard.takeAwards(userId);
+  if (!awards.length) return;
+  for (const ws of sockets) ws.send(JSON.stringify({ type: 'awards', awards }));
+}
+
 function broadcast(room) {
   const msg = JSON.stringify({ type: 'state', state: room.snapshot() });
   for (const ws of room.clients) if (ws.readyState === 1) ws.send(msg);
@@ -196,7 +201,20 @@ function listsChanged() {
 }
 
 function sendList(ws) {
-  if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'rooms', rooms: directory.list(ws.ctx.instanceId) }));
+  if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'rooms', rooms: directory.list(ws.ctx.instanceId), ...activity() }));
+}
+
+// How busy the server is: shown in everyone's menu, and by /api/status.
+function activity() {
+  let games = 0;
+  let playersInGames = 0;
+  for (const room of directory.rooms.values()) {
+    if (room.phase !== 'playing') continue;
+    const here = room.seats.filter((s) => s && !s.bot && room.connected.has(s.userId)).length;
+    if (here) games++;
+    playersInGames += here;
+  }
+  return { online: userSockets.size, games, playersInGames };
 }
 
 // ---------- moving between rooms ----------
@@ -343,6 +361,8 @@ wss.on('connection', (ws, req) => {
         send({ type: 'welcome', you: user });
         sendProfile(user.id);
         sendList(ws);
+        listsChanged(); // everyone's "players online" count
+        sendAwards(user.id); // any leaderboard prizes won while they were away
         // Back after a refresh or a dropped connection: return to the same room if it's still open
         const room = msg.rejoin && directory.findCode(msg.rejoin);
         if (room) {
@@ -359,6 +379,7 @@ wss.on('connection', (ws, req) => {
       }
       if (!ctx.user) return send({ type: 'error', message: 'Not connected yet' });
       if (msg.type === 'lobby') return handleLobby(ws, msg);
+      if (msg.type === 'leaderboard') return send({ type: 'leaderboard', boards: leaderboard.view(ctx.user.id) });
       if (msg.type === 'action') {
         if (!ctx.room) throw new Error('Join a room first');
         return ctx.room.handle(ctx.user, msg);
@@ -383,7 +404,10 @@ wss.on('connection', (ws, req) => {
     if (!user) return;
     const sockets = userSockets.get(user.id);
     sockets?.delete(ws);
-    if (sockets?.size === 0) userSockets.delete(user.id);
+    if (sockets?.size === 0) {
+      userSockets.delete(user.id);
+      listsChanged(); // one fewer online
+    }
     if (room) {
       ws.ctx.room = null;
       room.clients.delete(ws);
@@ -414,6 +438,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     stopping = true;
     saveRooms();
     store.flush();
+    leaderboard.flush();
     process.exit(0);
   });
 }

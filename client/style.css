@@ -922,6 +922,7 @@ html, body {
   animation: toast-in 0.25s ease-out;
 }
 .toast.ok { background: var(--ok); }
+.toast.win { background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c); color: var(--on-accent); max-width: min(92vw, 520px); text-align: center; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 
 /* ---------- phones ---------- */
@@ -952,3 +953,64 @@ html, body {
 .people-list .name.is-muted { color: var(--muted); text-decoration: line-through; }
 .people-list .btn.kick { color: #ec6a64; }
 .chat-form input:disabled { opacity: 0.6; }
+
+/* "● 12 players online" above the menu panel */
+.online-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(47, 212, 129, 0.08);
+  border: 1px solid rgba(47, 212, 129, 0.25);
+  font-size: 13px;
+  color: var(--muted);
+}
+.online-strip > span { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.online-strip .lb-btn { margin-left: auto; flex: none; }
+.online-strip b { color: var(--text); }
+.online-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ludo-green);
+  box-shadow: 0 0 0 0 rgba(47, 212, 129, 0.6);
+  animation: online-pulse 2s ease-out infinite;
+  flex: none;
+}
+@keyframes online-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(47, 212, 129, 0.6); }
+  70%, 100% { box-shadow: 0 0 0 7px rgba(47, 212, 129, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .online-dot { animation: none; }
+}
+
+/* ---------- leaderboard ---------- */
+.lb-body { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; padding-bottom: 12px; }
+.lb-prizes { background: var(--panel); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.lb-prize-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.lb-prize { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: var(--panel-2); font-size: 15px; }
+.lb-prize b { color: var(--gold); }
+.lb-note { margin: 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+.lb-note b { color: var(--text); }
+.lb-list { list-style: none; margin: 0; padding: 6px; background: var(--panel); border-radius: 14px; display: flex; flex-direction: column; gap: 4px; }
+.lb-row { display: grid; grid-template-columns: 36px 1fr auto 56px; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 10px; font-size: 14px; }
+.lb-row:nth-child(odd) { background: rgba(255, 255, 255, 0.025); }
+.lb-row.top1 { background: linear-gradient(90deg, rgba(255, 194, 58, 0.22), transparent 70%); }
+.lb-row.top2 { background: linear-gradient(90deg, rgba(200, 210, 225, 0.16), transparent 70%); }
+.lb-row.top3 { background: linear-gradient(90deg, rgba(214, 140, 80, 0.18), transparent 70%); }
+.lb-row.you { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.lb-rank { font-size: 18px; text-align: center; font-weight: 700; color: var(--muted); }
+.lb-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-name small { color: var(--muted); font-weight: 500; }
+.lb-wins { font-size: 12px; color: var(--muted); }
+.lb-pts { text-align: right; color: var(--gold); font-variant-numeric: tabular-nums; }
+.lb-gap { text-align: center; color: var(--muted); list-style: none; line-height: 1; }
+.lb-you { margin: 0; text-align: center; font-size: 14px; }
+.lb-last { background: var(--panel); border-radius: 14px; padding: 12px 16px; }
+.lb-last h3 { margin: 0 0 8px; font-family: var(--display); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.lb-last ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.lb-last li span { color: var(--muted); font-size: 12px; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px; }
+.lb-last .coin { width: 12px; height: 12px; }

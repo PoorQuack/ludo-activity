@@ -37,7 +37,7 @@ const SAVED_FIELDS = [
 export class Room {
   constructor(
     id,
-    { onChange, onKick, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
+    { onChange, onKick, onGameEnd, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
   ) {
     this.id = id;
     this.code = code; // short code anyone can join with, e.g. "K7QX"
@@ -47,6 +47,7 @@ export class Room {
     this.banned = new Set(); // userIds the host kicked: they can't come back
     this.onKick = onKick || (() => {}); // the server takes a kicked player out of the room
     this.onChange = onChange || (() => {});
+    this.onGameEnd = onGameEnd || (() => {}); // results of a game that paid out (for the leaderboards)
     this.rng = rng;
     this.delays = {
       bot: BOT_DELAY_MS,
@@ -669,6 +670,7 @@ export class Room {
       this.noCoins = 'bots';
       return;
     }
+    const results = [];
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
@@ -680,7 +682,10 @@ export class Room {
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
+      // Leaderboard points: what the game paid before the daily cap
+      results.push({ userId: seat.userId, name: seat.name, points: coins, won: place === 0 });
     });
+    this.onGameEnd(results);
   }
 
   nextTurn() {

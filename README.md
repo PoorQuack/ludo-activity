@@ -8,6 +8,8 @@ Multiplayer Ludo that runs inside Discord as an Activity.
 - **Main menu** with the room list, Shop and How to play.
 - **Colour-blind mode** (per player, in the menu and the in-game ☰): colours that stay distinct for the common kinds of colour blindness, plus a shape for every player (▲ ■ ● ◆ ✚ ✖) on pins, bases, home columns, seat cards, chat and turn text.
 - **Coins and shop:** players earn coins by finishing games and spend them on token skins, dice skins, board themes and emotes. If a game ends early because someone surrenders, placements pay for how far your tokens got; a game that runs its course pays in full. Games against bots only (one human) pay nothing. If every player still in a game leaves, it pauses for a minute; if nobody comes back it ends with no coins. Coins are saved on the server in `data/profiles.json`.
+- **Leaderboards:** weekly (Monday 00:00 UTC) and monthly boards. Every game against other people scores what it pays in coins before the daily cap; the top 3 win 300/200/100 coins a week and 1000/600/300 a month, paid automatically (prize amounts: `PRIZES` in `server/leaderboard.js`). Saved in `data/leaderboard.json` next to the profiles.
+- **Players online:** the menu shows how many people are on and how many games are running.
 
 - **Server:** Node.js, Express and WebSockets. The server enforces the rules, so players can't cheat.
 - **Client:** Plain JavaScript drawing on a canvas, bundled with Vite and using the Discord Embedded App SDK.

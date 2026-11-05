@@ -22,7 +22,9 @@ const $ = (id) => document.getElementById(id);
 const els = {
   loading: $('loading'),
   loadingText: $('loading-text'),
-  screens: { menu: $('menu'), shop: $('shop'), howto: $('howto'), game: $('game') },
+  screens: { menu: $('menu'), shop: $('shop'), howto: $('howto'), leaderboard: $('leaderboard'), game: $('game') },
+  lbBody: $('lb-body'),
+  lbTabs: [...document.querySelectorAll('[data-lb]')],
   menuName: $('menu-name'),
   myRoom: $('my-room'),
   myRoomInfo: $('my-room-info'),
@@ -37,6 +39,8 @@ const els = {
   visibilityHint: $('visibility-hint'),
   createBtn: $('create-btn'),
   roomsCount: $('rooms-count'),
+  onlineStrip: $('online-strip'),
+  onlineText: $('online-text'),
   codeForm: $('code-form'),
   codeInput: $('code-input'),
   roomList: $('room-list'),
@@ -187,8 +191,13 @@ function connect() {
     } else if (msg.type === 'profile') onProfile(msg.profile);
     else if (msg.type === 'rooms') {
       roomList = msg.rooms;
+      renderOnline(msg);
       renderUI();
-    } else if (msg.type === 'state') onState(msg.state);
+    } else if (msg.type === 'leaderboard') {
+      lbData = msg.boards;
+      renderLeaderboard();
+    } else if (msg.type === 'awards') showAwards(msg.awards);
+    else if (msg.type === 'state') onState(msg.state);
     else if (msg.type === 'left') onLeft(msg.message);
     else if (msg.type === 'error') toast(msg.message);
   };
@@ -567,6 +576,86 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   vv?.addEventListener('scroll', fit);
 }
 
+// "● 12 players online · 3 games in progress" at the top of the menu
+function renderOnline({ online, games }) {
+  if (!Number.isFinite(online)) return;
+  const people = `${online} player${online === 1 ? '' : 's'} online`;
+  const playing = games ? ` · ${games} game${games === 1 ? '' : 's'} in progress` : '';
+  els.onlineText.innerHTML = `<span class="online-dot"></span><b>${people}</b>${playing}`;
+  els.onlineStrip.classList.remove('hidden');
+}
+
+// ---------------- leaderboards ----------------
+
+let lbData = null; // { week, month } from the server, fetched each time the screen opens
+let lbTab = 'week';
+
+for (const b of els.lbTabs) {
+  b.addEventListener('click', () => {
+    lbTab = b.dataset.lb;
+    renderLeaderboard();
+  });
+}
+
+// "3d 14h" / "5h 20m" / "12m"
+function timeLeft(ms) {
+  const m = Math.max(0, Math.floor(ms / 60_000));
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  if (d) return `${d}d ${h}h`;
+  if (h) return `${h}h ${m % 60}m`;
+  return `${m % 60}m`;
+}
+
+function renderLeaderboard() {
+  for (const b of els.lbTabs) b.classList.toggle('active', b.dataset.lb === lbTab);
+  const body = els.lbBody;
+  if (!lbData) {
+    body.innerHTML = '<p class="lb-note">Loading…</p>';
+    return;
+  }
+  const b = lbData[lbTab];
+  const word = lbTab === 'week' ? 'week' : 'month';
+  const coin = '<span class="coin"></span>';
+  const row = (e, mine) => `<li class="lb-row${e.rank <= 3 ? ` top${e.rank}` : ''}${mine ? ' you' : ''}">
+      <span class="lb-rank">${MEDALS[e.rank - 1] || e.rank}</span>
+      <span class="lb-name">${escapeHtml(e.name)}${mine ? ' <small>(you)</small>' : ''}</span>
+      <span class="lb-wins">${e.wins} win${e.wins === 1 ? '' : 's'}</span>
+      <b class="lb-pts">${e.points}</b>
+    </li>`;
+  let rows = b.top.map((e) => row(e, e.you)).join('');
+  if (b.me && b.me.rank > b.top.length) rows += `<li class="lb-gap">⋯</li>${row({ ...b.me, name: me?.name || 'You' }, true)}`;
+  const list = b.top.length
+    ? `<ol class="lb-list">${rows}</ol>`
+    : `<p class="lb-note">No scores yet this ${word}. Finish games against other people to get on the board!</p>`;
+  const yours = b.me
+    ? `You're <b>${ordinal(b.me.rank)}</b> of ${b.players} with <b>${b.me.points}</b> points.`
+    : `You're not on the board yet this ${word}.`;
+  const last = b.last?.podium?.length
+    ? `<section class="lb-last"><h3>Last ${word}'s winners</h3><ol>${b.last.podium
+        .map((p) => `<li>${MEDALS[p.place - 1]} ${escapeHtml(p.name)} <span>${p.points} pts · +${p.coins} ${coin}</span></li>`)
+        .join('')}</ol></section>`
+    : '';
+  body.innerHTML = `
+    <section class="lb-prizes">
+      <div class="lb-prize-row">${b.prizes.map((c, i) => `<span class="lb-prize">${MEDALS[i]} ${coin}<b>${c}</b></span>`).join('')}</div>
+      <p class="lb-note">Top 3 win coins when the ${word} ends · resets in <b>${timeLeft(b.endsAt - (Date.now() + clockOffset))}</b></p>
+    </section>
+    ${list}
+    <p class="lb-you">${yours}</p>
+    ${last}
+    <p class="lb-note">Points = the coins a game pays you before the daily limit, in games against other people. Ties go to more wins.</p>`;
+}
+
+// Prizes won (told once, when you next connect)
+function showAwards(awards) {
+  const text = awards
+    .map((a) => `🏆 You came ${ordinal(a.place)} in last ${a.kind === 'week' ? "week's" : "month's"} leaderboard: +${a.coins} coins!`)
+    .join('  ');
+  toast(text, 'win', 9000);
+  sfx('win');
+}
+
 // ---------------- sound ----------------
 
 function renderAudioToggles() {
@@ -735,6 +824,10 @@ function showScreen(name) {
   screen = name;
   for (const [id, el] of Object.entries(els.screens)) el.classList.toggle('hidden', id !== name);
   if (name === 'shop') drawShop();
+  if (name === 'leaderboard') {
+    renderLeaderboard();
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'leaderboard' }));
+  }
   renderUI();
 }
 
@@ -1577,11 +1670,11 @@ function setLoading(text) {
 }
 
 let toastTimer = null;
-function toast(text, kind = 'error') {
+function toast(text, kind = 'error', ms = 2500) {
   els.toast.textContent = text;
   els.toast.className = `toast ${kind}`;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => els.toast.classList.add('hidden'), 2500);
+  toastTimer = setTimeout(() => els.toast.classList.add('hidden'), ms);
 }
 
 let popTimer = null;
@@ -1627,8 +1720,10 @@ function capitalize(s) {
   return s[0].toUpperCase() + s.slice(1);
 }
 
+// 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 102nd
 function ordinal(n) {
-  return ['1st', '2nd', '3rd', '4th', '5th', '6th'][n - 1];
+  const teen = n % 100 >= 11 && n % 100 <= 13;
+  return `${n}${teen ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
 }
 
 function escapeHtml(s) {

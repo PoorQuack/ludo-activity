@@ -55,6 +55,12 @@
                 <button id="leave-btn" class="btn big">Leave room</button>
               </section>
 
+              <!-- Live: how many people are on right now -->
+              <div id="online-strip" class="online-strip hidden">
+                <span id="online-text" aria-live="polite"></span>
+                <button class="btn small lb-btn" data-go="leaderboard">🏆 Leaderboard</button>
+              </div>
+
               <div class="menu-panel">
                 <!-- Make a room -->
                 <section id="create-card" class="menu-sec">
@@ -120,6 +126,20 @@
       </section>
 
       <!-- How to play -->
+      <!-- Leaderboards -->
+      <section id="leaderboard" class="screen page hidden">
+        <header class="screen-head">
+          <button class="btn small" data-go="menu">← Back</button>
+          <h2>🏆 Leaderboard</h2>
+          <span></span>
+        </header>
+        <nav id="lb-tabs" class="tabs">
+          <button class="tab active" data-lb="week">This week</button>
+          <button class="tab" data-lb="month">This month</button>
+        </nav>
+        <div id="lb-body" class="lb-body"></div>
+      </section>
+
       <section id="howto" class="screen page hidden">
         <header class="screen-head">
           <button class="btn small" data-go="menu">← Back</button>
@@ -154,6 +174,7 @@
             <li>Finish a game to earn coins: <b>25</b> for 1st, 15 for 2nd, 10 for 3rd, then 8 / 6 / 5. If the game ends early because someone surrenders, placements pay for how far your tokens got — a game handed over isn't worth full price.</li>
             <li><b>+2</b> for every token you capture.</li>
             <li>Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).</li>
+            <li>Every game against other people also scores leaderboard points (what it pays in coins, before the daily limit). The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.</li>
             <li>Spend coins in the shop on tokens, dice, boards and emotes. Your board theme is just for you: everyone plays on the board they picked.</li>
             <li>Colour-blind? Turn on <b>Colour-blind mode</b> on the menu or under ☰ in a game: every player gets safer colours and a shape of their own.</li>
           </ul>

@@ -95,6 +95,15 @@ export class ProfileStore {
     return granted;
   }
 
+  // Leaderboard prizes: paid in full, outside the daily earning cap.
+  grantPrize(id, coins) {
+    if (id.startsWith('guest-')) return 0;
+    const p = this.get(id);
+    p.coins += coins;
+    this.changed(id);
+    return coins;
+  }
+
   dayKey() {
     return new Date(this.now()).toISOString().slice(0, 10); // the UTC day, 'YYYY-MM-DD'
   }
