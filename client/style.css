@@ -39,6 +39,10 @@
 
 * { box-sizing: border-box; }
 
+/* The page blocks text selection (taps on the board shouldn't select text), but iPhones then
+   also refuse a caret in text boxes: let typing fields select again. */
+input, textarea { -webkit-user-select: text; user-select: text; }
+
 html, body {
   margin: 0;
   height: 100%;
@@ -513,8 +517,9 @@ html, body {
 /* Sections keep their size and the panel scrolls, instead of squashing them into each other */
 .panel > * { flex-shrink: 0; }
 
-/* Phones (and any tall, narrow window): the board fills the width, the panel takes the rest */
-@media (max-aspect-ratio: 1/1) {
+/* Phones (and any tall, narrow window): the board fills the width, the panel takes the rest.
+   Touch phones keep this layout even when the keyboard makes the screen short and wide. */
+@media (max-aspect-ratio: 1/1), (hover: none) and (pointer: coarse) and (max-width: 820px) {
   #game { flex-direction: column; padding: 6px; gap: 6px; }
   .board-wrap { flex: 0 0 auto; height: min(calc(100vw - 12px), 62vh); }
   .panel { width: 100%; flex: 1; min-height: 0; padding: 10px; gap: 9px; border-radius: 12px; }
@@ -526,6 +531,28 @@ html, body {
   .panel .chat-log { flex: 1; height: auto; min-height: 0; }
   .emote { width: 36px; height: 36px; font-size: 18px; }
 }
+
+/* Phones while the chat keyboard is up (main.js sets --kb-top/--kb-h from the visible area):
+   the game fills only the space above the keyboard, the board shrinks into what's left over the
+   chat, and nothing else in the panel takes room. */
+.kb-open #game:not(.hidden) {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--kb-top, 0px);
+  height: var(--kb-h, 100%);
+  flex-direction: column;
+  padding: 6px;
+  gap: 6px;
+  animation: none;
+}
+.kb-open #game .board-wrap { flex: 1 1 0; height: auto; min-height: 80px; }
+.kb-open #game .panel { flex: 0 1 auto; max-height: 62%; padding: 6px; overflow: hidden; }
+.kb-open #game .panel > :not(.chat) { display: none; }
+.kb-open #game .panel .chat { flex: 1 1 auto; min-height: 0; }
+.kb-open #game .chat-log { flex: 1 1 auto; height: auto; min-height: 48px; }
+/* In the lobby there's no board: the chat gets all of it */
+.kb-open #game[data-phase='lobby'] .panel { flex: 1 1 auto; max-height: none; }
 
 /* Roomy landscape windows get a wider side panel; the portrait rule above keeps phones at 100% */
 @media (min-width: 1000px) and (min-aspect-ratio: 1/1) {
@@ -783,6 +810,10 @@ html, body {
   outline: none;
 }
 .chat-form input:focus { border-color: var(--accent); }
+/* Phones zoom into any text box under 16px when it's tapped: keep them at 16px there */
+@media (hover: none) and (pointer: coarse) {
+  .chat-form input, .code-form input { font-size: 16px; }
+}
 .chat-count {
   align-self: center;
   min-width: 46px;

@@ -520,6 +520,10 @@ for (const box of els.chats) {
     }
   });
   updateCount();
+  // On phones, tapping Send must not take focus from the box: that would close the keyboard
+  // after every message.
+  const sendBtn = form.querySelector('button[type="submit"]');
+  for (const ev of ['pointerdown', 'mousedown']) sendBtn.addEventListener(ev, (e) => e.preventDefault());
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = input.value.trim();
@@ -527,7 +531,40 @@ for (const box of els.chats) {
     send('chat', { text });
     input.value = '';
     updateCount();
+    if (document.documentElement.classList.contains('kb-open')) input.focus({ preventScroll: true });
   });
+}
+
+// ---------------- phones: the on-screen keyboard ----------------
+// While someone types on a phone, the game is pinned to the part of the screen above the
+// keyboard (the visual viewport): the board shrinks and the chat box sits right on top of the
+// keyboard. Without this the browser scrolls the page to keep the box in view while the layout
+// resizes under it, and everything jumps about.
+if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
+  const root = document.documentElement;
+  const vv = window.visualViewport;
+  const isChat = (el) => !!el?.matches?.('.chat-form input');
+  const fit = () => {
+    if (!root.classList.contains('kb-open')) return;
+    root.style.setProperty('--kb-h', `${Math.round(vv ? vv.height : window.innerHeight)}px`);
+    root.style.setProperty('--kb-top', `${Math.round(vv ? vv.offsetTop : 0)}px`);
+  };
+  document.addEventListener('focusin', (e) => {
+    if (!isChat(e.target) || screen !== 'game') return;
+    root.classList.add('kb-open');
+    fit();
+  });
+  document.addEventListener('focusout', (e) => {
+    if (!isChat(e.target)) return;
+    // Focus moves for a moment when an emoji is picked: only close if it really left the chat
+    setTimeout(() => {
+      if (isChat(document.activeElement)) return;
+      root.classList.remove('kb-open');
+      window.scrollTo(0, 0); // iPhones leave the page scrolled after the keyboard goes
+    }, 150);
+  });
+  vv?.addEventListener('resize', fit);
+  vv?.addEventListener('scroll', fit);
 }
 
 // ---------------- sound ----------------
