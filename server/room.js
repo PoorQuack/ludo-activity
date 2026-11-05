@@ -37,7 +37,7 @@ const SAVED_FIELDS = [
 export class Room {
   constructor(
     id,
-    { onChange, onKick, onGameEnd, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
+    { onChange, onKick, onGameEnd, onStat, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
   ) {
     this.id = id;
     this.code = code; // short code anyone can join with, e.g. "K7QX"
@@ -48,6 +48,7 @@ export class Room {
     this.onKick = onKick || (() => {}); // the server takes a kicked player out of the room
     this.onChange = onChange || (() => {});
     this.onGameEnd = onGameEnd || (() => {}); // results of a game that paid out (for the leaderboards)
+    this.onStat = onStat || (() => {}); // things players did, for daily quests: (userId, name, stat, n)
     this.rng = rng;
     this.delays = {
       bot: BOT_DELAY_MS,
@@ -519,6 +520,7 @@ export class Room {
     // Random rolls are untouched — only the first roll of such a turn is forced.
     const pity = this.rolls.length === 0 && this.allInBase(seat) && this.stuck[seat] >= STUCK_TURNS;
     const dice = pity ? 6 : this.rng();
+    if (dice === 6) this.stat(seat, 'six');
     if (dice === 6) this.stuck[seat] = 0; // any 6 ends the drought, forced or not
     this.dice = dice;
     this.rolls.push(dice);
@@ -607,6 +609,8 @@ export class Room {
     this.options = [];
     this.movable = [];
     this.captures[seat] += result.captured.length;
+    if (result.captured.length) this.stat(seat, 'capture', result.captured.length);
+    if (result.finishedToken) this.stat(seat, 'home');
 
     // One line for every move, then any capture.
     if (result.finishedToken) this.addLog(`${name} used a ${value} and brought a token home!`);
@@ -684,6 +688,9 @@ export class Room {
       if (granted < coins) this.rewardCapped.push(s);
       // Leaderboard points: what the game paid before the daily cap
       results.push({ userId: seat.userId, name: seat.name, points: coins, won: place === 0 });
+      this.stat(s, 'game');
+      if (place === 0) this.stat(s, 'win');
+      if (place <= 1) this.stat(s, 'top2');
     });
     this.onGameEnd(results);
   }
@@ -891,6 +898,13 @@ export class Room {
       changed = true;
     }
     if (changed) this.changed();
+  }
+
+  // Daily quests count what humans do in games against other people (never against bots alone).
+  stat(seat, stat, n = 1) {
+    const s = this.seats[seat];
+    if (!s || s.bot || this.activeSeats().filter((i) => !this.seats[i].bot).length < 2) return;
+    this.onStat(s.userId, s.name, stat, n);
   }
 
   // ---------- helpers ----------

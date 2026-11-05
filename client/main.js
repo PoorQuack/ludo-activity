@@ -41,6 +41,10 @@ const els = {
   roomsCount: $('rooms-count'),
   onlineStrip: $('online-strip'),
   onlineText: $('online-text'),
+  questsCard: $('quests-card'),
+  questList: $('quest-list'),
+  questsReset: $('quests-reset'),
+  questsBonus: $('quests-bonus'),
   codeForm: $('code-form'),
   codeInput: $('code-input'),
   roomList: $('room-list'),
@@ -197,6 +201,10 @@ function connect() {
       lbData = msg.boards;
       renderLeaderboard();
     } else if (msg.type === 'awards') showAwards(msg.awards);
+    else if (msg.type === 'quests') {
+      questData = msg.quests;
+      renderQuests();
+    } else if (msg.type === 'questsDone') showQuestsDone(msg.completed);
     else if (msg.type === 'state') onState(msg.state);
     else if (msg.type === 'left') onLeft(msg.message);
     else if (msg.type === 'error') toast(msg.message);
@@ -644,7 +652,44 @@ function renderLeaderboard() {
     ${list}
     <p class="lb-you">${yours}</p>
     ${last}
-    <p class="lb-note">Points = the coins a game pays you before the daily limit, in games against other people. Ties go to more wins.</p>`;
+    <p class="lb-note">Points = the coins a game pays you before the daily limit (in games against other people), plus daily quests. Ties go to more wins.</p>`;
+}
+
+// ---------------- daily quests ----------------
+
+let questData = null; // { day, endsAt, quests: [{ title, goal, progress, points, done, tier }], bonus }
+
+function renderQuests() {
+  if (!questData) return;
+  els.questsCard.classList.remove('hidden');
+  const left = timeLeft(questData.endsAt - (Date.now() + clockOffset));
+  els.questsReset.textContent = `new in ${left}`;
+  els.questList.innerHTML = questData.quests
+    .map((q) => {
+      const pct = Math.round((100 * q.progress) / q.goal);
+      return `<li class="quest tier${q.tier}${q.done ? ' done' : ''}">
+        <div class="quest-top"><span class="quest-title">${escapeHtml(q.title)}</span>
+          <span class="quest-pts">${q.done ? '✓ ' : ''}+${q.points} pts</span></div>
+        <div class="quest-bar"><i style="width:${pct}%"></i></div>
+        <span class="quest-count">${q.progress}/${q.goal}</span>
+      </li>`;
+    })
+    .join('');
+  const b = questData.bonus;
+  els.questsBonus.innerHTML = b.done
+    ? `🎉 All done today: <b>+${b.points} bonus</b> earned`
+    : `Finish all three for <b>+${b.points} bonus</b> · only games against other people count`;
+}
+// Keep the "new in …" countdown current, and fetch the new day's quests after midnight
+setInterval(() => {
+  if (!questData) return;
+  if (Date.now() + clockOffset >= questData.endsAt && ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'quests' }));
+  renderQuests();
+}, 60_000);
+
+function showQuestsDone(completed) {
+  toast(completed.map((c) => `${c.bonus ? '🎉' : '✅'} ${c.title} · +${c.points} pts`).join('   '), 'ok', 5000);
+  sfx('home');
 }
 
 // Prizes won (told once, when you next connect)

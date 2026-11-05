@@ -61,6 +61,16 @@
                 <button class="btn small lb-btn" data-go="leaderboard">🏆 Leaderboard</button>
               </div>
 
+              <!-- Today's three quests (points for the leaderboards) -->
+              <section id="quests-card" class="quests-card hidden">
+                <div class="sec-head">
+                  <h2 class="sec-title">Daily quests</h2>
+                  <span id="quests-reset" class="sec-count"></span>
+                </div>
+                <ol id="quest-list" class="quest-list"></ol>
+                <p id="quests-bonus" class="quest-bonus"></p>
+              </section>
+
               <div class="menu-panel">
                 <!-- Make a room -->
                 <section id="create-card" class="menu-sec">
@@ -174,7 +184,7 @@
             <li>Finish a game to earn coins: <b>25</b> for 1st, 15 for 2nd, 10 for 3rd, then 8 / 6 / 5. If the game ends early because someone surrenders, placements pay for how far your tokens got — a game handed over isn't worth full price.</li>
             <li><b>+2</b> for every token you capture.</li>
             <li>Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).</li>
-            <li>Every game against other people also scores leaderboard points (what it pays in coins, before the daily limit). The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.</li>
+            <li>Every game against other people also scores leaderboard points (what it pays in coins, before the daily limit), and so do your three daily quests (new ones every day at midnight UTC; finish all three for a bonus). The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.</li>
             <li>Spend coins in the shop on tokens, dice, boards and emotes. Your board theme is just for you: everyone plays on the board they picked.</li>
             <li>Colour-blind? Turn on <b>Colour-blind mode</b> on the menu or under ☰ in a game: every player gets safer colours and a shape of their own.</li>
           </ul>

@@ -9,6 +9,7 @@ import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
 import { ProfileStore } from './store.js';
 import { Leaderboard } from './leaderboard.js';
+import { QuestBook } from './quests.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -19,6 +20,8 @@ const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'p
 const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 'rooms.json');
 // Weekly and monthly leaderboards (scores, last winners, prizes paid), next to the profiles.
 const LEADERBOARD_FILE = process.env.LEADERBOARD_FILE || path.join(path.dirname(DATA_FILE), 'leaderboard.json');
+// Today's daily quest progress (reset at midnight UTC).
+const QUESTS_FILE = process.env.QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
@@ -129,11 +132,14 @@ const userSockets = new Map();
 const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, freeShop: FREE_SHOP });
 const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards });
 setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon as a week or month ends
+// Finished daily quests add their points to the leaderboards.
+const quests = new QuestBook(QUESTS_FILE, { onPoints: (userId, name, points) => leaderboard.addPoints(userId, name, points) });
 const directory = new RoomDirectory({
   idleMs: ROOM_IDLE_MS,
   roomOptions: {
     profiles: store,
     onGameEnd: (results) => leaderboard.record(results),
+    onStat: questProgress,
     onChange: (room) => {
       broadcast(room);
       listsChanged();
@@ -173,6 +179,22 @@ function saveRooms() {
 
 function sendProfile(userId) {
   const msg = JSON.stringify({ type: 'profile', profile: store.view(userId) });
+  for (const ws of userSockets.get(userId) || []) if (ws.readyState === 1) ws.send(msg);
+}
+
+// Progress from a game: update the player's quest card, and tell them about finished quests.
+function questProgress(userId, name, stat, n) {
+  const { changed, completed } = quests.track(userId, name, stat, n);
+  if (changed) sendQuests(userId);
+  if (completed.length) sendTo(userId, { type: 'questsDone', completed });
+}
+
+function sendQuests(userId) {
+  sendTo(userId, { type: 'quests', quests: quests.view(userId) });
+}
+
+function sendTo(userId, obj) {
+  const msg = JSON.stringify(obj);
   for (const ws of userSockets.get(userId) || []) if (ws.readyState === 1) ws.send(msg);
 }
 
@@ -363,6 +385,7 @@ wss.on('connection', (ws, req) => {
         sendList(ws);
         listsChanged(); // everyone's "players online" count
         sendAwards(user.id); // any leaderboard prizes won while they were away
+        sendQuests(user.id);
         // Back after a refresh or a dropped connection: return to the same room if it's still open
         const room = msg.rejoin && directory.findCode(msg.rejoin);
         if (room) {
@@ -380,6 +403,7 @@ wss.on('connection', (ws, req) => {
       if (!ctx.user) return send({ type: 'error', message: 'Not connected yet' });
       if (msg.type === 'lobby') return handleLobby(ws, msg);
       if (msg.type === 'leaderboard') return send({ type: 'leaderboard', boards: leaderboard.view(ctx.user.id) });
+      if (msg.type === 'quests') return send({ type: 'quests', quests: quests.view(ctx.user.id) });
       if (msg.type === 'action') {
         if (!ctx.room) throw new Error('Join a room first');
         return ctx.room.handle(ctx.user, msg);
@@ -439,6 +463,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     saveRooms();
     store.flush();
     leaderboard.flush();
+    quests.flush();
     process.exit(0);
   });
 }

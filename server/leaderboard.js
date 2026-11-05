@@ -72,6 +72,20 @@ export class Leaderboard {
     this.save();
   }
 
+  // Points from outside a game (daily quests): no game or win counted.
+  addPoints(userId, name, points) {
+    if (!userId || userId.startsWith('guest-') || !(points > 0)) return;
+    this.rollover();
+    const t = this.now();
+    for (const kind of KINDS) {
+      const s = (this.boards[kind].scores[userId] ||= { name, points: 0, wins: 0, games: 0, at: t });
+      s.name = name;
+      s.points += Math.round(points);
+      s.at = t;
+    }
+    this.save();
+  }
+
   // Ends any board whose week or month is over: pays its top three and starts a new one.
   // Called on every game and once a minute.
   rollover() {
