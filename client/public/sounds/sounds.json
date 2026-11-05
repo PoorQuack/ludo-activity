@@ -1,7 +1,7 @@
 {
   "music": [
     { "id": "lofi", "label": "Lo-fi", "title": "lofi hip hop", "artist": "omfgdude (OpenGameArt)", "file": "music-lofi-2.mp3" },
-    { "id": "jazz", "label": "Slow jazz", "title": "Wallpaper", "artist": "Kevin MacLeod", "file": "music-jazz.mp3" },
-    { "id": "energetic", "label": "Energetic", "title": "Faster Does It", "artist": "Kevin MacLeod", "file": "music-energetic.mp3" }
+    { "id": "jazz", "label": "Slow jazz", "title": "Faster Does It", "artist": "Kevin MacLeod", "file": "music-energetic.mp3" },
+    { "id": "energetic", "label": "Energetic", "title": "Wallpaper", "artist": "Kevin MacLeod", "file": "music-jazz.mp3" }
   ]
 }

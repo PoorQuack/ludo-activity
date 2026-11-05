@@ -11,6 +11,8 @@
 CC-BY attribution line (also shown in game, "How to play" → Music & sounds):
 "Wallpaper" and "Faster Does It" — Kevin MacLeod (incompetech.com), CC-BY 4.0.
 
+Note: the file names are historical — music-energetic.mp3 ("Faster Does It") is the slow jazz track and music-jazz.mp3 ("Wallpaper") the energetic one; sounds.json maps each to the right button. Files keep their names because browsers cache them for a week.
+
 ## Sound effects
 
 None — the game synthesises dice, moves and other effects with the Web Audio API
