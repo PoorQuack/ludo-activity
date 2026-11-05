@@ -22,6 +22,7 @@ const CHAT_COOLDOWN_MS = 700;
 const CHAT_KEEP = 40; // messages kept (and sent) per room
 const CHAT_MAX_LEN = 100;
 const EMOTE_TTL_MS = 3000;
+const TYPING_MS = 2500; // "is typing…" lasts this long after the last ping (clients ping every second)
 const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
@@ -200,7 +201,7 @@ export class Room {
       case 'roll': return this.roll(user);
       case 'move': return this.move(user, msg.token, msg.roll);
       case 'emote': return this.emote(user, msg.item, msg.idx);
-      case 'typing': return this.typing(user);
+      case 'typing': return this.typing(user, msg.on !== false);
       case 'chat': return this.say(user, msg.text);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
@@ -422,6 +423,7 @@ export class Room {
     if (now - (this.lastChat.get(user.id) || 0) < CHAT_COOLDOWN_MS) throw new Error('Slow down a little');
     this.lastChat.set(user.id, now);
     this.chat.push({ id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now });
+    this.typingAt.delete(user.id); // they sent it: no longer typing
     if (this.chat.length > CHAT_KEEP) this.chat.shift();
     // A message that's just a sticker also floats over the sender's base, like a board reaction.
     const solo = /^:([a-z0-9-]+):$/.exec(clean);
@@ -433,8 +435,13 @@ export class Room {
     this.onChange(this); // nothing in the game changed, so skip automate()
   }
 
-  // A "still typing" ping: throttled server-side so a keymashing client can't flood.
-  typing(user) {
+  // A "still typing" ping (throttled server-side so a keymashing client can't flood), or
+  // `on` false: they stopped (emptied the box, left it), so the line goes at once.
+  typing(user, on = true) {
+    if (!on) {
+      if (this.typingAt.delete(user.id)) this.onChange(this);
+      return;
+    }
     const now = Date.now();
     const prev = this.typingAt.get(user.id)?.at || 0;
     if (now - prev < 800) return;
@@ -983,7 +990,8 @@ export class Room {
       seq: this.seq,
       log: this.log.slice(-8),
       emotes: this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS),
-      typing: [...this.typingAt].filter(([, t]) => now - t.at < 3500).map(([id, t]) => ({ id, name: t.name })),
+      // `until`: server time it expires, so clients can drop it exactly then
+      typing: [...this.typingAt].filter(([, t]) => now - t.at < TYPING_MS).map(([id, t]) => ({ id, name: t.name, until: t.at + TYPING_MS })),
       turnDeadline: this.turnDeadline,
       turnTimeout: this.delays.timeout,
       disconnectGrace: this.delays.disconnectGrace,

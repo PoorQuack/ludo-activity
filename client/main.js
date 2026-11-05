@@ -402,13 +402,7 @@ function renderChat() {
     input.disabled = !state.chatOn;
     box.querySelector('[data-emoji-btn]').disabled = !state.chatOn;
     input.placeholder = state.chatOn ? 'Say something…' : 'The host turned chat off';
-    const typists = (state.typing || []).filter((t) => t.id !== me?.id && !muted.has(t.id)).map((t) => t.name);
-    const line = box.querySelector('.typing-line');
-    const text = typists.length > 1 ? `${typists.join(' & ')} are typing…` : typists.length ? `${typists[0]} is typing…` : '';
-    if (line.textContent !== text) line.textContent = text;
-    // Typing state expires server-side after ~3.5s; if nothing else updates, clear it ourselves.
-    clearTimeout(line._t);
-    if (text) line._t = setTimeout(() => { line.textContent = ''; }, 4000);
+    renderTyping(box.querySelector('.typing-line'));
   }
   const msgs = (state.chat || []).filter((m) => !muted.has(m.userId));
   const latest = msgs.at(-1)?.id || 0;
@@ -482,6 +476,19 @@ function keepAtBottom(list) {
   if (list._pinned !== false) list.scrollTop = list.scrollHeight;
 }
 
+// "Ann is typing…": each entry carries the server time it runs out, so it goes exactly then,
+// however many other updates (rolls, moves) arrive in between.
+function renderTyping(line) {
+  clearTimeout(line._t);
+  if (!state) return;
+  const now = Date.now() + clockOffset;
+  const live = (state.typing || []).filter((t) => t.id !== me?.id && !muted.has(t.id) && (t.until ?? now + 1) > now);
+  const names = live.map((t) => t.name);
+  const text = names.length > 1 ? `${names.join(' & ')} are typing…` : names.length ? `${names[0]} is typing…` : '';
+  if (line.textContent !== text) line.textContent = text;
+  if (live.length) line._t = setTimeout(() => renderTyping(line), Math.max(50, Math.min(...live.map((t) => t.until ?? now + 2500)) - now));
+}
+
 // Emotes the current player can pick from: unicode emotes insert the character,
 // pack emotes insert a :slug: code that the server verifies on send.
 function emoteEntries() {
@@ -530,6 +537,11 @@ function renderEmojiPops() {
 }
 
 let lastTypingSent = 0;
+function stopTyping() {
+  if (!lastTypingSent) return;
+  lastTypingSent = 0;
+  send('typing', { on: false });
+}
 
 for (const box of els.chats) {
   const form = box.querySelector('form');
@@ -552,11 +564,16 @@ for (const box of els.chats) {
   };
   input.addEventListener('input', () => {
     updateCount();
+    // Emptied the box: tell the others straight away. Otherwise a "still typing" ping every second.
+    if (!input.value) return stopTyping();
     const now = performance.now();
-    if (now - lastTypingSent > 1500) {
+    if (now - lastTypingSent > 1000) {
       lastTypingSent = now;
       send('typing');
     }
+  });
+  input.addEventListener('blur', () => {
+    if (input.value) stopTyping(); // left the box half-written
   });
   updateCount();
   // On phones, tapping Send must not take focus from the box: that would close the keyboard
@@ -569,6 +586,7 @@ for (const box of els.chats) {
     if (!text) return;
     send('chat', { text });
     input.value = '';
+    lastTypingSent = 0; // the server clears "typing" when the message arrives
     updateCount();
     // Sending always takes you down to the newest messages
     const list = box.querySelector('.chat-log');

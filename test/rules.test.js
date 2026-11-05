@@ -471,11 +471,27 @@ test('typing pings show in the snapshot, throttled and expiring', () => {
   const u = { id: 'u', name: 'U' };
   room.connect(u);
   room.typing(u);
-  assert.deepEqual(room.snapshot().typing, [{ id: 'u', name: 'U' }]);
+  const [t] = room.snapshot().typing;
+  assert.deepEqual([t.id, t.name], ['u', 'U']);
+  assert.ok(t.until > Date.now() && t.until <= Date.now() + 2500);
   const seq = room.chatSeq;
   room.typing(u); // under the throttle window: silently ignored
   assert.equal(room.typingAt.get('u').at, room.typingAt.get('u').at);
-  room.typingAt.set('u', { name: 'U', at: Date.now() - 4000 }); // expired
+  room.typingAt.set('u', { name: 'U', at: Date.now() - 2600 }); // expired
+  assert.deepEqual(room.snapshot().typing, []);
+  room.destroy();
+});
+
+test('"is typing" goes at once when they stop or send', () => {
+  const room = new Room('t');
+  const u = { id: 'u', name: 'U' };
+  room.connect(u);
+  room.typing(u);
+  room.handle(u, { action: 'typing', on: false });
+  assert.deepEqual(room.snapshot().typing, []);
+  room.typingAt.clear();
+  room.typing(u);
+  room.say(u, 'hello');
   assert.deepEqual(room.snapshot().typing, []);
   room.destroy();
 });
