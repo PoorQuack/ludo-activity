@@ -421,7 +421,7 @@ function renderChat() {
   const board = boardFor(state.mode);
   for (const box of els.chats) {
     const list = box.querySelector('.chat-log');
-    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+    const readingAt = list.scrollTop; // kept when you're scrolled up reading
     list.innerHTML = '';
     if (!msgs.length) {
       const li = document.createElement('li');
@@ -450,14 +450,36 @@ function renderChat() {
           img.src = hit.img;
           img.alt = `:${slug}:`;
           img.title = hit.name;
+          img.addEventListener('load', () => keepAtBottom(list)); // a sticker can arrive after the scroll
           li.appendChild(img);
         } else if (part) li.appendChild(document.createTextNode(part));
       }
       list.appendChild(li);
     }
-    if (atBottom || !list.dataset.seen) list.scrollTop = list.scrollHeight;
-    list.dataset.seen = '1';
+    if (list._pinned === false) list.scrollTop = readingAt;
+    else keepAtBottom(list);
   }
+}
+
+// The chat stays scrolled to the newest message unless you scrolled up to read. Whether you're
+// "at the bottom" is only decided by your own scrolling: on phones the box changes height all the
+// time (the keyboard, the "typing…" line, the panel between turns, the chat hidden behind another
+// screen), and measuring it at the moment a message arrived used to leave it stuck part-way up.
+for (const box of els.chats) {
+  const list = box.querySelector('.chat-log');
+  list._pinned = true;
+  list.addEventListener('scroll', () => {
+    // A scroll that lands at the bottom (ours or yours) pins it; scrolling up unpins it.
+    // Scrolls while the box is hidden or zero-height say nothing.
+    if (!list.clientHeight) return;
+    list._pinned = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  });
+  // Any change of size (keyboard, layout, becoming visible): back to the bottom if pinned
+  new ResizeObserver(() => keepAtBottom(list)).observe(list);
+}
+
+function keepAtBottom(list) {
+  if (list._pinned !== false) list.scrollTop = list.scrollHeight;
 }
 
 // Emotes the current player can pick from: unicode emotes insert the character,
@@ -548,6 +570,10 @@ for (const box of els.chats) {
     send('chat', { text });
     input.value = '';
     updateCount();
+    // Sending always takes you down to the newest messages
+    const list = box.querySelector('.chat-log');
+    list._pinned = true;
+    keepAtBottom(list);
     if (document.documentElement.classList.contains('kb-open')) input.focus({ preventScroll: true });
   });
 }
