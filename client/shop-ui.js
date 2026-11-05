@@ -25,6 +25,7 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
   }
 
   grid.innerHTML = '';
+  animated.length = 0;
   for (const item of SHOP_ITEMS.filter((i) => i.type === tab || (tab === 'emote' && i.type === 'emote-pack'))) {
     const owned = ownsItem(profile, item.id);
     const equipped = profile?.equipped[item.type] === item.id;
@@ -65,6 +66,21 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
 
 const W = 150;
 const H = 100;
+
+// Dice and boards move (twinkles, glints, embers…), so their previews are redrawn every frame
+// while the shop is on screen.
+const animated = []; // { canvas, draw(ctx, now) }
+function animate(now) {
+  requestAnimationFrame(animate);
+  for (const a of animated) {
+    if (!a.canvas.isConnected) continue;
+    const ctx = a.canvas.getContext('2d');
+    ctx.setTransform(a.dpr, 0, 0, a.dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    a.draw(ctx, now);
+  }
+}
+requestAnimationFrame(animate);
 
 // Tokens are shown in the colours of your equipped board, so you see how they'll really look.
 function preview(item, theme) {
@@ -114,15 +130,21 @@ function preview(item, theme) {
   if (item.type === 'token') {
     ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 68, 14, playerColor(theme, c), item.id));
   } else if (item.type === 'dice') {
-    drawDice(ctx, W / 2, H / 2, 56, 5, item.id);
+    const draw = (c, now) => drawDice(c, W / 2, H / 2, 56, 5, item.id, { t: now });
+    draw(ctx, performance.now());
+    animated.push({ canvas, dpr, draw });
   } else if (item.type === 'board') {
     const size = H - 8;
     const off = document.createElement('canvas');
     const r = new BoardRenderer(off);
     r.setBoard(BOARDS[4], item.id);
     r.resize(size);
-    r.draw({ tokens: IN_BASE, active: [0, 1, 2, 3], skins: [], turn: null }, 0);
-    ctx.drawImage(off, (W - size) / 2, 4, size, size);
+    const draw = (c, now) => {
+      r.draw({ tokens: IN_BASE, active: [0, 1, 2, 3], skins: [], turn: null }, now);
+      c.drawImage(off, (W - size) / 2, 4, size, size);
+    };
+    draw(ctx, performance.now());
+    animated.push({ canvas, dpr, draw });
   }
   return canvas;
 }
