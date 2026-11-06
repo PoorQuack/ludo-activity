@@ -25,6 +25,8 @@ export const SHOP_ITEMS = [
   { id: 'token-rocket', type: 'token', name: 'Rocket', price: 500 },
   { id: 'token-duck', type: 'token', name: 'Rubber Duck', price: 650 },
   { id: 'token-cat', type: 'token', name: 'Cat', price: 450 },
+  // Your zodiac sign by colour: ram (red), bull (green), crab (blue), lion (yellow), scorpion (purple), archer (orange)
+  { id: 'token-constellation', type: 'token', name: 'Constellation', price: 600 },
 
   { id: 'dice-classic', type: 'dice', name: 'Classic', price: 0 },
   { id: 'dice-midnight', type: 'dice', name: 'Midnight', price: 150 },

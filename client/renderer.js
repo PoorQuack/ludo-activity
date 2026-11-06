@@ -446,7 +446,7 @@ export class BoardRenderer {
     const shield = p.safe && this.theme.art?.shield;
     const grow = shield ? easeOutBack(Math.min(1, p.shieldAge / 450)) : 0;
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'back');
-    drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash });
+    drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash, sign: this.board.colors[p.seat] });
     // Colour-blind mode: the player's shape on the token's body (each shape has its own spot)
     if (this.cb) {
       const mark = TOKEN_MARKS[PAWN_STYLES[p.skin]?.shape || 'pawn'];
@@ -754,6 +754,7 @@ export class BoardRenderer {
       alpha,
       glow: d.mode === 'ready' ? d.color : null,
       color: d.color,
+      sign: d.sign,
     });
 
     this.drawBank(d, size, cx, cy - hop);
@@ -903,7 +904,7 @@ export class BoardRenderer {
     const y = cy - size * 0.5 - small * 0.75;
     groups.forEach((g, i) => {
       const x = cx + (i - (groups.length - 1) / 2) * slot - (g.count > 1 ? small * 0.3 : 0);
-      drawDice(ctx, x, y, small, g.value, d.style, { color: d.color });
+      drawDice(ctx, x, y, small, g.value, d.style, { color: d.color, sign: d.sign });
       if (g.count > 1) {
         ctx.font = `800 ${Math.max(10, small * 0.5)}px system-ui, sans-serif`;
         ctx.textAlign = 'left';
@@ -950,7 +951,7 @@ export class BoardRenderer {
 // ---------- tokens ----------
 
 // Draws one 3D pawn standing on (x, y). `lift` raises it (px), `squash` < 1 flattens it on landing.
-export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1 } = {}) {
+export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1, sign = 'red' } = {}) {
   const gy = y + r * 0.2; // the pawn's base sits on the centre of its square
   const shrink = 1 - Math.min(0.45, lift / (r * 4));
   ctx.beginPath();
@@ -961,7 +962,7 @@ export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1 } = {}
   ctx.save();
   ctx.translate(x, gy - lift);
   ctx.scale(1 / squash, squash);
-  paintPawn(ctx, r, hex, PAWN_STYLES[skin] || PAWN_STYLES['token-classic']);
+  paintPawn(ctx, r, hex, PAWN_STYLES[skin] || PAWN_STYLES['token-classic'], sign);
   ctx.restore();
 }
 
@@ -980,6 +981,8 @@ const PAWN_STYLES = {
   'token-rocket': { shape: 'rocket' },
   'token-duck': { shape: 'duck' },
   'token-cat': { shape: 'cat' },
+  // The player's zodiac sign: a ram for red, a bull for green, a crab for blue…
+  'token-constellation': { shape: 'zodiac' },
 };
 
 // Where the colour-blind shape sits on each token shape: height above the base (in r), a
@@ -992,14 +995,15 @@ const TOKEN_MARKS = {
   rocket: { y: 0.78, x: 0, size: 0.85 },
   duck: { y: 0.5, x: 0.12, size: 0.95 },
   cat: { y: 0.55, x: 0, size: 0.9 },
+  zodiac: { y: 0.62, x: -0.15, size: 0.75 },
 };
 
 const GOLD = '#f6cf57';
 const GOLD_DARK = '#9a6f00';
 
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
-function paintPawn(ctx, r, hex, style) {
-  if (style.shape) return TOKEN_SHAPES[style.shape](ctx, r, hex);
+function paintPawn(ctx, r, hex, style, sign) {
+  if (style.shape) return TOKEN_SHAPES[style.shape](ctx, r, hex, sign);
   const body = style.neon ? '#1c1c26' : hex;
   const edge = style.neon ? hex : mix(hex, '#000000', 0.38);
   const trim = style.gold ? GOLD : mix(body, '#ffffff', 0.22);
@@ -1138,6 +1142,60 @@ function eye(ctx, x, y, w, h, look = 0) {
 }
 
 const TOKEN_SHAPES = {
+  // The player's zodiac animal in their colour, edged in gold, on a starry navy plinth
+  zodiac(ctx, r, hex, sign) {
+    // the plinth
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.05, r * 0.92, r * 0.34, 0, 0, Math.PI);
+    ctx.lineTo(-r * 0.92, -r * 0.24);
+    ctx.ellipse(0, -r * 0.24, r * 0.92, r * 0.34, 0, Math.PI, TAU);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.92, '#1a2260');
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.06);
+    ctx.strokeStyle = '#d9b25a';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.24, r * 0.92, r * 0.34, 0, 0, TAU);
+    const top = ctx.createRadialGradient(-r * 0.2, -r * 0.3, 0, 0, -r * 0.24, r);
+    top.addColorStop(0, '#3a4aa8');
+    top.addColorStop(1, '#0d1240');
+    ctx.fillStyle = top;
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff3c4';
+    for (const [sx, sy] of [[-0.5, -0.26], [0.45, -0.18], [0.1, -0.4]]) {
+      circle(ctx, sx * r, sy * r, r * 0.035);
+      ctx.fill();
+    }
+    // the animal, standing on it
+    const z = zodiacPath(sign);
+    const sc = (r * 2.1) / 100;
+    ctx.save();
+    ctx.translate(-50 * sc, -r * 0.3 - 92 * sc);
+    ctx.scale(sc, sc);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    const g = ctx.createLinearGradient(0, 10, 0, 92);
+    g.addColorStop(0, mix(hex, '#ffffff', 0.35));
+    g.addColorStop(1, mix(hex, '#000000', 0.25));
+    // horns, claws and tails first, thick in the player's colour so they read as part of the body
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = mix(hex, '#000000', 0.35);
+    ctx.stroke(z.lines);
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = mix(hex, '#ffffff', 0.15);
+    ctx.stroke(z.lines);
+    ctx.fillStyle = g;
+    ctx.fill(z.body);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#e9c46a';
+    ctx.stroke(z.body);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#fff1c2';
+    ctx.stroke(z.lines);
+    ctx.restore();
+  },
   // Two stacked game checkers with a ridged top.
   checker(ctx, r, hex) {
     outline(ctx, r, hex);
@@ -1441,8 +1499,10 @@ const tiltBy = (t) => mul(rotX(-0.42 * t), rotY(-0.5 * t));
 const LIGHT = [-0.35, -0.6, 0.72].map((c, _, a) => c / Math.hypot(...a));
 
 // A dice skin's colours; skins with `playerColor` take on the roller's colour.
-function diceStyle(styleId, color) {
+function diceStyle(styleId, color, sign) {
   const st = DICE_STYLES[styleId] || DICE_STYLES['dice-classic'];
+  // Constellation-style dice take the roller's colour for their nebula and show their sign
+  if (st.signed) return color ? { ...st, tint: color, sign: sign || 'red' } : { ...st, sign: sign || 'red' };
   if (!st.playerColor || !color) return st;
   return { ...st, edge: color, pip: color, outline: color };
 }
@@ -1573,18 +1633,19 @@ const DICE_ART = {
   // Navy sky in a gold ring; the pips are stars joined into a little constellation
   zodiac(ctx, st, t) {
     const g = ctx.createRadialGradient(-18, -22, 4, 0, 0, 78);
-    g.addColorStop(0, '#26306e');
-    g.addColorStop(1, '#070a26');
+    g.addColorStop(0, st.tint ? mix(st.tint, '#101850', 0.45) : '#26306e');
+    g.addColorStop(1, st.tint ? mix(st.tint, '#05071e', 0.82) : '#070a26');
     ctx.fillStyle = g;
     ctx.fillRect(-50, -50, 100, 100);
     ctx.globalCompositeOperation = 'lighter';
-    const n = ctx.createRadialGradient(22, 26, 0, 22, 26, 46);
-    n.addColorStop(0, 'rgba(140, 70, 220, 0.35)');
+    const n = ctx.createRadialGradient(18, 22, 0, 18, 22, 58);
+    n.addColorStop(0, st.tint ? hexA(st.tint, 0.55) : 'rgba(140, 70, 220, 0.35)');
     n.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = n;
     ctx.fillRect(-50, -50, 100, 100);
     ctx.globalCompositeOperation = 'source-over';
     twinkles(ctx, t, 9, '#fff3d0', 11);
+    if (st.sign) zodiacOutline(ctx, st.sign, 2, 4, 80, st.tint ? hexA(mix(st.tint, '#ffffff', 0.55), 0.6) : 'rgba(240, 210, 140, 0.45)', 2.2, st.tint || null);
     ctx.strokeStyle = 'rgba(217, 178, 90, 0.75)';
     ctx.lineWidth = 1.6;
     roundRect(ctx, -42, -42, 84, 84, 10);
@@ -1985,8 +2046,8 @@ const PIP_STYLES = {
 };
 
 // Draws a flat dice centred on (cx, cy) showing one face. `value` null shows "?".
-export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null, color = null, t = performance.now() } = {}) {
-  const st = diceStyle(styleId, color);
+export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = null, color = null, sign = null, t = performance.now() } = {}) {
+  const st = diceStyle(styleId, color, sign);
   const k = (size * 0.96) / 100; // same size as the cube's face when it lands
   ctx.save();
   ctx.globalAlpha *= alpha;
@@ -2003,8 +2064,8 @@ export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = 
 
 // Draws the dice as a tumbling 3D cube, with the `value` face towards you after `spin`.
 // As `tilt` reaches 0 only that face shows, so it hands over smoothly to the flat dice.
-function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null, color = null, t = performance.now() } = {}) {
-  const st = diceStyle(styleId, color);
+function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTITY, tilt = 1, alpha = 1, glow = null, color = null, sign = null, t = performance.now() } = {}) {
+  const st = diceStyle(styleId, color, sign);
   const R = mul(tiltBy(tilt), mul(spin, FACE_FRONT[value || 1]));
   const h = size * (0.48 - 0.08 * tilt); // half the cube's edge; a flat face is drawn a little bigger
   ctx.save();
@@ -2097,6 +2158,70 @@ function drawTile(ctx, sq, fill, style, theme, role = 'cell', turn = 0) {
 
 let tileK = 1; // pixels per board unit while the board is drawn (for glows)
 
+// ---------- zodiac figures ----------
+// The animals of the Constellation set, as line art in a 100×100 box, facing right, feet on
+// y = 92. body: one closed outline (filled on tokens); lines: the rest (horns, claws, legs…).
+const ZODIAC = {
+  // Aries: a ram with a curled horn
+  red: {
+    body: 'M18 50 C22 40 36 35 52 36 C60 36 66 35 70 32 C73 26 78 22 84 22 C91 22 96 27 96 33 C96 37 94 40 90 41 C86 42 82 41 80 44 C78 50 77 56 74 60 C74 66 76 74 80 82 L81 90 L76 91 C74 84 70 76 68 70 C66 76 64 84 64 91 L59 91 C59 84 59 76 58 69 C50 72 40 72 34 69 C33 76 34 84 36 91 L31 91 C29 84 28 78 26 72 C24 78 20 84 16 90 L11 90 C14 82 16 74 15 66 C13 60 14 54 18 50 Z',
+    lines: 'M82 26 C72 20 66 31 73 36 C79 40 86 33 81 29 C78 27 75 30 77 32 M86 23 L84 18 M27 44 C31 41 35 44 39 41 C43 44 47 41 51 44 C55 41 59 44 63 41',
+  },
+  // Taurus: a bull with its head down and horns forward
+  green: {
+    body: 'M16 48 C20 36 34 30 50 30 C58 30 64 27 70 26 C76 26 80 30 82 36 C86 40 92 44 95 50 C97 55 94 59 89 59 C84 59 82 57 80 58 C77 62 76 66 75 70 C76 77 78 84 81 91 L76 91 C73 84 70 78 68 73 C66 79 65 85 65 91 L60 91 C60 85 60 78 59 73 C50 76 40 76 34 72 C33 79 34 85 36 91 L31 91 C29 85 28 79 26 74 C23 80 19 86 15 91 L10 91 C13 83 15 75 14 66 C12 58 12 52 16 48 Z',
+    lines: 'M15 52 C7 56 6 68 9 77 C7 79 7 82 10 82 M84 40 C81 30 86 23 94 21 M88 43 C91 35 96 31 100 31 M92 52 L92 52',
+  },
+  // Cancer: a crab with its claws raised
+  blue: {
+    body: 'M24 62 C24 50 38 44 50 44 C62 44 76 50 76 62 C76 72 64 78 50 78 C36 78 24 72 24 62 Z',
+    lines: 'M31 51 C22 41 18 33 22 25 M22 25 C13 23 11 14 18 10 M22 25 C27 19 25 12 18 10 M69 51 C78 41 82 33 78 25 M78 25 C87 23 89 14 82 10 M78 25 C73 19 75 12 82 10 M28 68 L15 73 L9 85 M31 73 L20 81 L16 92 M72 68 L85 73 L91 85 M69 73 L80 81 L84 92 M44 44 L42 35 M56 44 L58 35',
+  },
+  // Leo: a lion with a big mane and a tufted tail
+  yellow: {
+    body: 'M16 56 C18 46 30 42 46 43 L62 43 C63 32 71 23 82 23 C93 23 99 32 98 41 C97 50 92 56 85 58 C80 61 78 65 76 70 C77 77 79 84 82 91 L77 91 C74 85 71 79 69 74 C67 80 66 86 66 91 L61 91 C61 85 61 79 60 74 C51 77 41 77 35 73 C34 80 35 86 37 91 L32 91 C30 85 29 79 27 74 C24 80 20 86 16 91 L11 91 C14 83 16 75 15 67 C14 62 14 59 16 56 Z',
+    lines: 'M16 58 C7 56 4 45 8 38 M8 38 C4 35 6 30 10 32 C12 34 11 37 8 38 M88 33 C93 35 95 41 92 46 M71 31 C76 36 76 46 71 52 M77 26 C80 30 80 36 77 40',
+  },
+  // Scorpius: a scorpion with its tail curled over its back
+  purple: {
+    body: 'M22 72 C22 64 31 60 41 61 L60 63 C67 64 69 71 63 75 L41 78 C31 79 22 78 22 72 Z',
+    lines: 'M60 67 C76 65 87 53 85 39 C83 27 71 23 65 31 M65 31 L58 29 L62 37 M24 67 C14 61 10 53 14 47 M14 47 C8 43 10 37 16 37 M14 47 C20 45 20 39 16 37 M24 76 C14 80 9 86 12 91 M35 78 L31 90 M43 78 L41 91 M51 77 L51 91 M57 76 L61 89',
+  },
+  // Sagittarius: the archer's drawn bow and arrow
+  orange: {
+    body: 'M22 88 C6 62 26 20 76 12 C50 28 34 54 30 84 Z',
+    lines: 'M22 88 L76 12 M27 82 L91 18 M91 18 L78 20 M91 18 L89 31 M33 76 L24 76 M33 76 L33 85 M38 71 L29 71 M38 71 L38 80',
+  },
+};
+const zodiacPaths = new Map(); // made on first use (Path2D only exists in the browser)
+function zodiacPath(sign) {
+  if (!zodiacPaths.has(sign)) {
+    const z = ZODIAC[sign] || ZODIAC.red;
+    zodiacPaths.set(sign, { body: new Path2D(z.body), lines: new Path2D(z.lines) });
+  }
+  return zodiacPaths.get(sign);
+}
+
+// A zodiac animal outlined in light, centred on (x, y), `w` wide (Constellation board, dice)
+function zodiacOutline(ctx, sign, x, y, w, color, lineWidth, glow) {
+  const z = zodiacPath(sign);
+  const sc = w / 100;
+  ctx.save();
+  ctx.translate(x - 50 * sc, y - 52 * sc);
+  ctx.scale(sc, sc);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = lineWidth / sc;
+  ctx.strokeStyle = color;
+  if (glow) {
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = lineWidth * 6;
+  }
+  ctx.stroke(z.body);
+  ctx.stroke(z.lines);
+  ctx.restore();
+}
+
 // ---------- constellation board ----------
 // Each base holds its player's constellation, and four of its stars are where the tokens wait.
 // Star positions are in "spread" units: the token stars are always the first four, at (±1, ±1)
@@ -2139,6 +2264,8 @@ function drawConstellation(ctx, b, spread, r, color, name, inner, k) {
     ctx.fillStyle = g;
     ctx.fillRect(b.x - inner, b.y - inner, inner * 2, inner * 2);
   }
+  // the animal itself, drawn in faint light behind its stars
+  zodiacOutline(ctx, name, b.x, b.y, inner * 1.85, hexA(mix(color, '#ffffff', 0.6), 0.62), inner * 0.026, color);
   // the lines
   ctx.lineCap = 'round';
   ctx.shadowColor = color;

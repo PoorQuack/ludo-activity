@@ -123,7 +123,7 @@ function preview(item, theme) {
   ctx.scale(dpr, dpr);
 
   if (item.type === 'token') {
-    ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 68, 14, playerColor(theme, c), item.id));
+    ['red', 'green', 'yellow', 'blue'].forEach((c, i) => drawToken(ctx, 30 + i * 30, 68, 14, playerColor(theme, c), item.id, { sign: c }));
   } else if (item.type === 'dice') {
     const draw = (c, now) => drawDice(c, W / 2, H / 2, 56, 5, item.id, { t: now });
     draw(ctx, performance.now());

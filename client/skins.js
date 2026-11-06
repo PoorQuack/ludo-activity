@@ -300,7 +300,8 @@ export const DICE_STYLES = {
   'dice-ludo': { face: '#ffffff', edge: '#cfc8b8', pip: '#ffffff', art: 'ludo', quads: ['#d24d47', '#2f9467', '#e2a92a', '#3a68c8'], pips: 'outlined' },
   'dice-lava': { face: '#1c0d0a', edge: '#ff6a2a', pip: '#ffb02e', outline: '#ff6a2a', pulse: true, art: 'magma', pips: 'magma' },
   'dice-galaxy': { face: '#0d0726', edge: '#5b3fb0', pip: '#ffffff', outline: '#8a5cff', art: 'nebula', pips: 'glow' },
-  // Navy and gold; each face's pips are stars joined into a constellation
-  'dice-constellation': { face: '#0b1034', edge: '#d9b25a', pip: '#fff1c2', outline: '#d9b25a', art: 'zodiac', pips: 'star', links: true },
+  // Navy and gold, tinted with the roller's colour and showing their zodiac sign; each face's
+  // pips are stars joined into a constellation
+  'dice-constellation': { face: '#0b1034', edge: '#d9b25a', pip: '#fff1c2', outline: '#d9b25a', art: 'zodiac', pips: 'star', links: true, signed: true },
   'dice-cat': { face: '#f5b26b', edge: '#b0641f', pip: '#5a2d0c', art: 'tabby', pips: 'paw' },
 };

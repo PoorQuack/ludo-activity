@@ -1593,7 +1593,7 @@ function tapToken(token, layoutItem) {
     c.width = c.height = 40 * dpr;
     const ctx = c.getContext('2d');
     ctx.scale(dpr, dpr);
-    drawDice(ctx, 20, 19, 34, rolls[i], state.seats[state.turn]?.skins.dice, { color: col(board.colors[state.turn]) });
+    drawDice(ctx, 20, 19, 34, rolls[i], state.seats[state.turn]?.skins.dice, { color: col(board.colors[state.turn]), sign: board.colors[state.turn] });
     b.appendChild(c);
     b.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1679,6 +1679,7 @@ function diceView(now, board) {
     axes: dice.axes,
     style: state.seats[dice.seat]?.skins.dice,
     color: col(board.colors[dice.seat]),
+    sign: board.colors[dice.seat],
     mine: dice.seat === mySeat(),
   };
 }
