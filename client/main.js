@@ -1328,6 +1328,7 @@ function renderPanel() {
   }
   const racing = phase === 'playing' && seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
   els.surrenderBtn.classList.toggle('hidden', !racing);
+  updateTurnNudge();
   els.screens.game.dataset.phase = phase; // the phone layout hides the seat cards while playing
 
   if (phase !== 'finished') els.banner.classList.add('hidden');
@@ -1777,14 +1778,63 @@ function toast(text, kind = 'error', ms = 2500) {
 }
 
 let popTimer = null;
-function showTurnPop() {
-  sfx('turn');
+function showTurnPop(text = 'Your turn!', sound = 'turn') {
+  sfx(sound);
+  buzz(sound === 'hurry' ? [40, 60, 40] : [70]);
+  els.turnPop.textContent = text;
   els.turnPop.classList.remove('hidden');
   els.turnPop.style.animation = 'none';
   void els.turnPop.offsetWidth;
   els.turnPop.style.animation = '';
   clearTimeout(popTimer);
   popTimer = setTimeout(() => els.turnPop.classList.add('hidden'), 1300);
+}
+
+// A short vibration on phones that support it (a no-op elsewhere), only when sounds are on.
+function buzz(pattern) {
+  if (!audioSettings().sound) return;
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    // not allowed here
+  }
+}
+
+// ---------------- "it's your turn" reminders ----------------
+// While the game is waiting for you (to roll, or to pick a move) the board gets a glowing ring
+// in your colour, and if you haven't acted you get a soft reminder after a few seconds and a
+// "hurry" one just before the turn clock runs out. Nothing when the game moves for you anyway.
+const NUDGE_AFTER_MS = 8000;
+const HURRY_BEFORE_MS = 5000;
+let nudgeKey = null;
+let nudgeTimers = [];
+
+function waitingOnMe() {
+  if (!state || state.phase !== 'playing' || state.paused) return false;
+  const seat = mySeat();
+  if (seat < 0 || state.turn !== seat) return false;
+  if (!state.rolled) return true;
+  // rolled: only waiting if there's a real choice to make (a single choice moves by itself)
+  const choices = new Set();
+  (state.options || []).forEach((o, i) => o.forEach((t) => choices.add(`${state.rolls[i]}:${state.tokens[seat]?.[t]}`)));
+  return choices.size > 1;
+}
+
+function updateTurnNudge() {
+  const waiting = waitingOnMe();
+  els.canvas.classList.toggle('my-turn', waiting);
+  if (waiting) els.canvas.style.setProperty('--my-color', col(boardFor(state.mode).colors[mySeat()]));
+  const key = waiting ? `${state.roomId}|${state.turn}|${state.seq}|${state.rolled}|${state.rolls?.length}` : null;
+  if (key === nudgeKey) return;
+  nudgeKey = key;
+  for (const t of nudgeTimers) clearTimeout(t);
+  nudgeTimers = [];
+  if (!waiting) return;
+  nudgeTimers.push(setTimeout(() => waitingOnMe() && showTurnPop('Still your turn!', 'nudge'), NUDGE_AFTER_MS));
+  const left = (state.turnDeadline || 0) - (Date.now() + clockOffset);
+  if (left > HURRY_BEFORE_MS + 1000) {
+    nudgeTimers.push(setTimeout(() => waitingOnMe() && showTurnPop('5 seconds left!', 'hurry'), left - HURRY_BEFORE_MS));
+  }
 }
 
 function bumpCoins() {

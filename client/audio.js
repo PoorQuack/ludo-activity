@@ -329,9 +329,21 @@ const EFFECTS = {
   home() {
     [523, 659, 784, 1047].forEach((f, i) => tone(f, now() + i * 0.08, 0.25, 'triangle', 0.25));
   },
+  // Your turn: a bright little three-note bell
   turn() {
-    tone(660, now(), 0.12, 'sine', 0.25);
-    tone(880, now() + 0.12, 0.18, 'sine', 0.25);
+    [784, 988, 1319].forEach((f, i) => {
+      tone(f, now() + i * 0.09, 0.45, 'triangle', 0.34);
+      tone(f * 2, now() + i * 0.09, 0.2, 'sine', 0.06);
+    });
+  },
+  // Still your turn: a soft "ding-dong"
+  nudge() {
+    tone(988, now(), 0.5, 'triangle', 0.26);
+    tone(784, now() + 0.22, 0.6, 'triangle', 0.26);
+  },
+  // Time nearly up: a quick tick-tock
+  hurry() {
+    for (let i = 0; i < 4; i++) tone(i % 2 ? 1100 : 1500, now() + i * 0.16, 0.06, 'square', 0.08);
   },
   win() {
     [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, now() + i * 0.12, 0.35, 'triangle', 0.25));

@@ -1032,3 +1032,16 @@ html, body {
 .quest.done .quest-bar i { background: var(--ludo-green); box-shadow: 0 0 8px var(--ludo-green); }
 .quest-bonus { margin: 0; font-size: 12px; color: var(--muted); }
 .quest-bonus b { color: var(--gold); }
+
+/* The game is waiting for you: a glow in your colour round the board, gently pulsing */
+canvas.my-turn {
+  border-radius: 12px;
+  animation: my-turn-glow 1.6s ease-in-out infinite;
+}
+@keyframes my-turn-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--my-color, var(--accent)), 0 0 6px 0 var(--my-color, var(--accent)); }
+  50% { box-shadow: 0 0 0 4px var(--my-color, var(--accent)), 0 0 26px 6px var(--my-color, var(--accent)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  canvas.my-turn { animation: none; box-shadow: 0 0 0 3px var(--my-color, var(--accent)); }
+}
