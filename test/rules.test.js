@@ -65,6 +65,20 @@ test('capture sends opponent home, but not on safe squares', () => {
   assert.equal(res3.captured.length, 1);
   assert.equal(t3[1].filter((p) => p === greenP).length, 1);
 
+  // two colours on one square (2 green, 2 blue): one of each is captured, the rest stay
+  const t4 = newTokens();
+  const blueP = (5 - 39 + 52) % 52;
+  t4[1][0] = greenP;
+  t4[1][1] = greenP;
+  t4[3][0] = blueP;
+  t4[3][2] = blueP;
+  t4[0][0] = 2;
+  assert.equal(B4.trackIndex(3, blueP), 5);
+  const res4 = applyMove(t4, 0, 0, 3, [0, 1, 3]);
+  assert.deepEqual(res4.captured.map((c) => c.seat).sort(), [1, 3]);
+  assert.equal(t4[1].filter((p) => p === greenP).length, 1);
+  assert.equal(t4[3].filter((p) => p === blueP).length, 1);
+
   // star square (index 8) is safe
   const t2 = newTokens();
   t2[1][0] = (8 - 13 + 52) % 52;

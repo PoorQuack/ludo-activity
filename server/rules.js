@@ -31,18 +31,19 @@ export function legalMoves(tokens, seat, dice, board = DEFAULT_BOARD) {
   return moves;
 }
 
-// The opponent token that would be captured if `seat` lands on `progress`.
-// Only one is sent home, even when several share the square.
+// The opponent tokens captured if `seat` lands on `progress`: one token of each colour on that
+// square (2 greens and 2 blues there: one green and one blue go home). None on safe squares.
 export function capturesAt(tokens, seat, progress, activeSeats, board = DEFAULT_BOARD) {
   if (progress < 0 || progress > board.lastTrack) return [];
   const idx = board.trackIndex(seat, progress);
   if (board.safe.has(idx)) return [];
+  const captured = [];
   for (const other of activeSeats) {
     if (other === seat) continue;
     const t = tokens[other].findIndex((p) => p >= 0 && p <= board.lastTrack && board.trackIndex(other, p) === idx);
-    if (t >= 0) return [{ seat: other, token: t }];
+    if (t >= 0) captured.push({ seat: other, token: t });
   }
-  return [];
+  return captured;
 }
 
 // Applies a move in place. Returns a description used for animation/logging.
