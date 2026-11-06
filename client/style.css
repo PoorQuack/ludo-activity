@@ -667,14 +667,47 @@ html, body {
   right: 6px;
   bottom: 54px;
   z-index: 8;
-  display: grid;
-  grid-template-columns: repeat(4, 40px);
+  display: flex;
+  flex-direction: column;
   gap: 6px;
+  width: 210px;
   padding: 8px;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 12px;
-  max-height: 220px;
+}
+/* One tab per sticker pack; scrolls sideways when there are lots */
+.emoji-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+.emoji-tab {
+  flex: 0 0 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 17px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s, background 0.12s;
+}
+.emoji-tab img { width: 24px; height: 24px; object-fit: contain; }
+.emoji-tab:hover { opacity: 1; background: var(--panel); }
+.emoji-tab.active { opacity: 1; background: var(--panel); border-color: var(--accent, #f2c14e); }
+.emoji-pack-name { font-size: 11px; font-weight: 700; color: var(--muted); padding: 0 2px; }
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 40px);
+  gap: 6px;
+  justify-content: space-between;
+  max-height: 184px;
   overflow-y: auto;
 }
 .emoji-pop.hidden { display: none; }
@@ -700,7 +733,7 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .board-sticker { animation-duration: 1.4s; }
 }
-.emoji-empty { grid-column: 1 / -1; margin: 4px; font-size: 12px; color: var(--muted); max-width: 170px; }
+.emoji-empty { margin: 4px; font-size: 12px; color: var(--muted); max-width: 170px; }
 .typing-line { min-height: 17px; padding: 0 10px; font-size: 11.5px; font-style: italic; color: var(--muted); }
 .preview.emoji img { width: 64px; height: 64px; object-fit: contain; }
 

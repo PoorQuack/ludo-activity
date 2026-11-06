@@ -505,51 +505,133 @@ function renderTyping(line) {
   if (live.length) line._t = setTimeout(() => renderTyping(line), Math.max(50, Math.min(...live.map((t) => t.until ?? now + 2500)) - now));
 }
 
-// Emotes the current player can pick from: unicode emotes insert the character,
-// pack emotes insert a :slug: code that the server verifies on send.
-function emoteEntries() {
-  const entries = [];
+// The sticker picker: a row of tabs, one per pack you own (plus single stickers and your recent
+// ones), and the chosen pack's stickers underneath. Each sticker inserts a :slug: code that the
+// server checks you own when you send it.
+const RECENT_KEY = 'ludo-recent-stickers';
+const RECENT_MAX = 12;
+let pickerPack = null; // the tab last opened (kept between games)
+try {
+  pickerPack = localStorage.getItem('ludo-sticker-tab');
+} catch {
+  // no storage: start on the first tab
+}
+
+function recentStickers() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function rememberSticker(insert) {
+  const list = [insert, ...recentStickers().filter((x) => x !== insert)].slice(0, RECENT_MAX);
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    // not saved: fine
+  }
+}
+
+// [{ id, name, icon, entries: [{ img, name, insert }] }] for what this player owns
+function stickerGroups() {
+  const groups = [];
+  const singles = [];
+  const all = new Map();
   for (const i of SHOP_ITEMS) {
     if (!ownsItem(profile, i.id)) continue;
-    if (i.type === 'emote' && i.img) entries.push({ img: i.img, name: i.name, insert: `:${i.slug}:` });
-    else if (i.type === 'emote-pack') i.emotes.forEach((e) => entries.push({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
+    if (i.type === 'emote' && i.img) singles.push({ img: i.img, name: i.name, insert: `:${i.slug}:` });
+    else if (i.type === 'emote-pack') {
+      const entries = i.emotes.map((e) => ({ img: e.img, name: e.name, insert: `:${e.slug}:` }));
+      groups.push({ id: i.id, name: i.name, icon: entries[0]?.img, entries });
+    }
   }
-  return entries;
+  if (singles.length) groups.push({ id: 'singles', name: 'Stickers', icon: singles[0].img, entries: singles });
+  for (const g of groups) for (const e of g.entries) all.set(e.insert, e);
+  const recent = recentStickers().map((x) => all.get(x)).filter(Boolean);
+  if (recent.length) groups.unshift({ id: 'recent', name: 'Recent', icon: null, entries: recent });
+  return groups;
 }
 
 function renderEmojiPops() {
-  for (const box of els.chats) {
-    const pop = box.querySelector('.emoji-pop');
-    const input = box.querySelector('input');
-    pop.innerHTML = '';
-    const entries = emoteEntries();
-    if (!entries.length) {
-      const hint = document.createElement('p');
-      hint.className = 'emoji-empty';
-      hint.textContent = 'No stickers yet — find packs in the Shop';
-      pop.appendChild(hint);
-    }
-    for (const e of entries) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'emote';
-      b.title = e.name;
-      if (e.img) {
-        const img = document.createElement('img');
-        img.src = e.img;
-        img.alt = e.name;
-        b.appendChild(img);
-      } else b.textContent = e.emoji;
-      b.addEventListener('click', () => {
-        const pos = input.selectionStart ?? input.value.length;
-        input.setRangeText(e.insert, pos, input.selectionEnd ?? pos, 'end');
-        input.dispatchEvent(new Event('input'));
-        input.focus();
-        pop.classList.add('hidden');
-      });
-      pop.appendChild(b);
-    }
+  for (const box of els.chats) renderEmojiPop(box);
+}
+
+function renderEmojiPop(box) {
+  const pop = box.querySelector('.emoji-pop');
+  const input = box.querySelector('input');
+  pop.innerHTML = '';
+  const groups = stickerGroups();
+  if (!groups.length) {
+    const hint = document.createElement('p');
+    hint.className = 'emoji-empty';
+    hint.textContent = 'No stickers yet — find packs in the Shop';
+    pop.appendChild(hint);
+    return;
   }
+  const current = groups.find((g) => g.id === pickerPack) || groups.find((g) => g.id !== 'recent') || groups[0];
+
+  // The pack tabs
+  const tabs = document.createElement('div');
+  tabs.className = 'emoji-tabs';
+  for (const g of groups) {
+    const t = document.createElement('button');
+    t.type = 'button';
+    t.className = `emoji-tab${g === current ? ' active' : ''}`;
+    t.title = g.name;
+    t.setAttribute('aria-label', g.name);
+    if (g.icon) {
+      const img = document.createElement('img');
+      img.src = g.icon;
+      img.alt = '';
+      t.appendChild(img);
+    } else t.textContent = '🕘';
+    t.addEventListener('click', () => {
+      pickerPack = g.id;
+      try {
+        localStorage.setItem('ludo-sticker-tab', g.id);
+      } catch {
+        // fine
+      }
+      renderEmojiPops();
+    });
+    tabs.appendChild(t);
+  }
+  pop.appendChild(tabs);
+
+  const label = document.createElement('div');
+  label.className = 'emoji-pack-name';
+  label.textContent = current.name;
+  pop.appendChild(label);
+
+  // The chosen pack's stickers
+  const grid = document.createElement('div');
+  grid.className = 'emoji-grid';
+  for (const e of current.entries) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'emote';
+    b.title = e.name;
+    const img = document.createElement('img');
+    img.src = e.img;
+    img.alt = e.name;
+    img.loading = 'lazy';
+    b.appendChild(img);
+    b.addEventListener('click', () => {
+      const pos = input.selectionStart ?? input.value.length;
+      input.setRangeText(e.insert, pos, input.selectionEnd ?? pos, 'end');
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+      pop.classList.add('hidden');
+      rememberSticker(e.insert);
+      renderEmojiPops(); // so Recent is up to date next time
+    });
+    grid.appendChild(b);
+  }
+  pop.appendChild(grid);
+  // keep the active tab in view when there are lots of packs
+  tabs.querySelector('.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 let lastTypingSent = 0;
