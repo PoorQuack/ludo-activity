@@ -5,9 +5,11 @@
 // everything on one board matches.
 
 export const BOARD_THEMES = {
+  // art.shield: what wraps a token standing on a safe square (renderer.js SHIELDS)
   'board-classic': {
     // Safe squares stand out: a warm gold tile, a darker ring and a big outlined star
-    art: { mark: 'star', markSize: 0.34, markEdge: '#ffffff', safeRing: '#d39a1e' },
+    art: { mark: 'star', markSize: 0.34, markEdge: '#ffffff', safeRing: '#d39a1e',
+      shield: { kind: 'orbit', motif: 'star', colors: ['#ffd54a', '#ffb52e'], glow: 'rgba(255, 220, 120, 0.5)' } },
     bg: '#e9e2d3', // shows between the squares
     cell: '#fbf8f1',
     safe: '#fbdc85',
@@ -15,26 +17,62 @@ export const BOARD_THEMES = {
     baseInner: '#fbf8f1',
     players: { red: '#d24d47', green: '#2f9467', yellow: '#e2a92a', blue: '#3a68c8', purple: '#7e57bd', orange: '#dd7433' },
   },
+  // The textured themes all work the same way (see art in renderer.js): a surface texture under
+  // the board shows through the grout and through each base's "window", a second copy of it
+  // drifts over that (art.under), and the squares and bases get their own textures (art.tex).
   'board-midnight': {
-    art: { base: 'dusk', frame: ['#2b3570', '#8fa0ff', 0.22], pattern: 'stars', patternColor: 'rgba(255, 244, 200, 0.28)', patternSize: 0.22, tile: 'starry', mark: 'moon', emblem: 'moon', emblemAlpha: 0.22, innerShade: 'rgba(0,0,20,0.35)', fx: 'twinkle', fxColor: '#fff3c4', fxCount: 30 },
-    bg: '#121319',
-    cell: '#22242d',
-    safe: '#3a3424',
-    star: '#e0bd57',
+    // Night sky through every window, slate squares, stars twinkling
+    art: {
+      base: 'dusk', frame: ['#1b2250', '#c9b8ff', 0.32], panel: 'window',
+      tex: {
+        surface: { src: '/textures/midnight-sky.jpg', size: 8 },
+        base: { src: '/textures/midnight-sky.jpg', size: 6, blend: 'soft-light', alpha: 0.5 },
+        tile: { src: '/textures/midnight-slate.jpg', size: 3, blend: 'multiply', alpha: 0.9 },
+      },
+      under: { src: '/textures/midnight-sky.jpg', size: 11, alpha: 0.55, blend: 'screen', speed: 0.06 },
+      pattern: 'stars', patternColor: 'rgba(255, 244, 200, 0.22)', patternSize: 0.2, tile: 'starry', mark: 'moon', markSize: 0.3,
+      fx: 'twinkle', fxColor: '#fff3c4', fxCount: 30,
+      shield: { kind: 'orbit', motif: 'sparkle', colors: ['#fff3c4', '#cfe0ff'], glow: 'rgba(170, 190, 255, 0.45)', n: 6 },
+    },
+    bg: '#0b0e24',
+    cell: '#3a3f55',
+    safe: '#5a5040',
+    star: '#f0cf6a',
     baseInner: '#191a21',
     players: { red: '#ec6a64', green: '#43c98c', yellow: '#efc34e', blue: '#5c8be8', purple: '#a283ea', orange: '#ef9452' },
   },
   'board-wood': {
-    art: { base: 'inlay', frame: ['#5a3412', '#a8743c', 0.4], pattern: 'grain', patternColor: 'rgba(40, 18, 4, 0.22)', tile: 'wood', mark: 'star', fx: 'dust', fxCount: 18 },
-    bg: '#9a6f45',
-    cell: '#f0dfc1',
-    safe: '#e6c48a',
+    // A walnut board with pale maple squares, inlaid bases
+    art: {
+      base: 'inlay', frame: ['#3a200c', '#8a5a2c', 0.4],
+      tex: {
+        surface: { src: '/textures/wood-walnut.jpg', size: 9 },
+        base: { src: '/textures/wood-maple.jpg', size: 6, blend: 'multiply', alpha: 0.5 },
+        tile: { src: '/textures/wood-maple.jpg', size: 4, blend: 'multiply', alpha: 0.9 },
+        panel: { src: '/textures/wood-maple.jpg', size: 5 },
+      },
+      tile: 'gloss', mark: 'star', fx: 'dust', fxCount: 18,
+      shield: { kind: 'orbit', motif: 'leaf', colors: ['#d9822b', '#b5541c', '#e8b23a'], glow: 'rgba(255, 190, 110, 0.45)' },
+    },
+    bg: '#4a2a12',
+    cell: '#fff6e6',
+    safe: '#f2cf8f',
     star: '#7f5220',
     baseInner: '#f5e7cd',
     players: { red: '#a8432f', green: '#4b7a3a', yellow: '#c48c22', blue: '#395c84', purple: '#6c4a7c', orange: '#b5622a' },
   },
   'board-candy': {
-    art: { base: 'solid', frame: ['#ff8fb8', '#ffffff', 0.3], pattern: 'stripes', patternColor: 'rgba(255, 255, 255, 0.26)', tile: 'gloss', mark: 'heart', emblem: 'candy', emblemAlpha: 0.2, fx: 'sprinkles', fxCount: 22 },
+    // Pastel candy swirling through the windows, frosted bases with sprinkles
+    art: {
+      base: 'solid', frame: ['#ff8fb8', '#ffffff', 0.32], panel: 'window',
+      tex: {
+        surface: { src: '/textures/candy-swirl.jpg', size: 9 },
+        base: { src: '/textures/candy-icing.jpg', size: 5, blend: 'soft-light', alpha: 0.7 },
+      },
+      under: { src: '/textures/candy-swirl.jpg', size: 9, alpha: 0.6, blend: 'overlay', speed: 0.14 },
+      tile: 'gloss', mark: 'heart', fx: 'sprinkles', fxCount: 22,
+      shield: 'candy',
+    },
     bg: '#f6d7e5',
     cell: '#fffafc',
     safe: '#fde6b3',
@@ -43,10 +81,20 @@ export const BOARD_THEMES = {
     players: { red: '#ee7486', green: '#4fbf95', yellow: '#f2bf57', blue: '#6c98ee', purple: '#b087ec', orange: '#f3965f' },
   },
   'board-neon': {
-    art: { base: 'outline', frame: ['#ff2fd1', '#2ef2ff', 0.14], pattern: 'grid', patternColor: 'rgba(255, 255, 255, 0.16)', tile: 'neon', mark: 'star', fx: 'scan', innerShade: 'rgba(0,0,0,0.5)' },
+    // A glowing grid scrolls under the board and through the windows
+    art: {
+      base: 'outline', frame: ['#ff2fd1', '#2ef2ff', 0.14], panel: 'window',
+      tex: {
+        surface: { src: '/textures/neon-grid.jpg', size: 4 },
+        tile: { src: '/textures/neon-tarmac.jpg', size: 3, blend: 'multiply', alpha: 1 },
+      },
+      under: { src: '/textures/neon-grid.jpg', size: 4, alpha: 0.7, blend: 'screen', speed: 0.5, single: true },
+      tile: 'neon', mark: 'star', fx: 'scan',
+      shield: 'force',
+    },
     bg: '#07070d',
-    cell: '#12131d',
-    safe: '#1c1a3d',
+    cell: '#24263a',
+    safe: '#2c2860',
     star: '#8d84ff',
     baseInner: '#0c0d15',
     players: { red: '#ff4d6d', green: '#2ef29a', yellow: '#ffe04a', blue: '#3db2ff', purple: '#c35cff', orange: '#ff8e3a' },
@@ -63,6 +111,7 @@ export const BOARD_THEMES = {
       },
       under: { src: '/textures/ocean-water.jpg', size: 7, alpha: 0.55, blend: 'overlay', speed: 0.22 },
       mark: 'starfish', markSize: 0.32, fx: 'bubbles', fxCount: 24,
+      shield: 'bubble',
     },
     bg: '#0d4a6b',
     bg2: '#1f8db5',
@@ -73,40 +122,78 @@ export const BOARD_THEMES = {
     players: { red: '#f0605a', green: '#1fb38a', yellow: '#f5c33b', blue: '#2f6fd6', purple: '#8b6fe0', orange: '#f08a3e' },
   },
   'board-forest': {
-    art: { base: 'solid', frame: ['#1d3a1a', '#5f8f3a', 0.36], pattern: 'leaves', patternColor: 'rgba(255, 255, 255, 0.2)', patternSize: 0.24, tile: 'moss', mark: 'leaf', emblem: 'leaf', emblemAlpha: 0.2, fx: 'fireflies', fxCount: 16 },
+    // A mossy clearing in each base, stepping-stone squares, sunlight drifting through the leaves
+    art: {
+      base: 'solid', frame: ['#3b2a16', '#8a6a3a', 0.38], panel: 'window',
+      tex: {
+        surface: { src: '/textures/forest-moss.jpg', size: 6 },
+        base: { src: '/textures/forest-moss.jpg', size: 5, blend: 'soft-light', alpha: 0.5 },
+        tile: { src: '/textures/forest-stone.jpg', size: 3.4, blend: 'multiply', alpha: 0.85 },
+      },
+      under: { src: '/textures/forest-light.jpg', size: 9, alpha: 0.5, blend: 'screen', speed: 0.1 },
+      tile: 'moss', mark: 'leaf', fx: 'fireflies', fxCount: 16,
+      shield: { kind: 'orbit', motif: 'leaf', colors: ['#5fbf3a', '#3d9a30', '#9ad84a'], glow: 'rgba(200, 255, 140, 0.4)', n: 6 },
+    },
     bg: '#263f23',
-    bg2: '#4c7a40',
-    cell: '#eef4dc',
-    safe: '#d6e8a8',
+    cell: '#f4f2e6',
+    safe: '#dcebb0',
     star: '#5d7d22',
     baseInner: '#f3f7e6',
     players: { red: '#c94f3d', green: '#3a8a40', yellow: '#d6a425', blue: '#3d6ea8', purple: '#7a5aa6', orange: '#d07a32' },
   },
   'board-ice': {
-    art: { base: 'frosted', frame: ['#ffffff', '#bfe6fa', 0.3], pattern: 'snow', patternColor: 'rgba(255, 255, 255, 0.4)', patternSize: 0.2, tile: 'frost', mark: 'snowflake', emblem: 'snowflake', emblemAlpha: 0.25, fx: 'snow', fxCount: 40 },
+    // Looking down into deep cracked ice; snowy squares; snow falling
+    art: {
+      base: 'frosted', frame: ['#ffffff', '#9fd4f0', 0.32], panel: 'window',
+      tex: {
+        surface: { src: '/textures/ice-deep.jpg', size: 7 },
+        base: { src: '/textures/ice-snow.jpg', size: 5, blend: 'soft-light', alpha: 0.6 },
+        tile: { src: '/textures/ice-snow.jpg', size: 3.2, blend: 'multiply', alpha: 0.8 },
+      },
+      under: { src: '/textures/ice-deep.jpg', size: 10, alpha: 0.45, blend: 'soft-light', speed: 0.05 },
+      tile: 'frost', mark: 'snowflake', fx: 'snow', fxCount: 40,
+      shield: 'frost',
+    },
     bg: '#9ccfe8',
-    bg2: '#e6f6fd',
-    cell: '#f8fdff',
+    cell: '#ffffff',
     safe: '#d4effa',
     star: '#4aa3cf',
     baseInner: '#fbfeff',
     players: { red: '#e2566a', green: '#25a585', yellow: '#e3ad1f', blue: '#3a74d8', purple: '#8a6be0', orange: '#ec8a46' },
   },
   'board-lava': {
-    art: { base: 'rock', frame: ['#ff5a1a', '#ffc04a', 0.18], pattern: 'flames', patternColor: 'rgba(255, 210, 90, 0.2)', patternSize: 0.22, patternSpin: 0.3, tile: 'stone', mark: 'flame', emblem: 'flame', emblemAlpha: 0.22, innerShade: 'rgba(60,10,0,0.45)', fx: 'embers', fxCount: 28 },
-    bg: '#150806',
-    bg2: '#5a1a0b',
-    cell: '#2b1a16',
-    safe: '#4d2b12',
-    star: '#ff8a2a',
+    // Molten lava glowing between basalt squares and filling each base
+    art: {
+      base: 'rock', frame: ['#2a120a', '#ff7a2a', 0.3], panel: 'window',
+      tex: {
+        surface: { src: '/textures/lava-molten.jpg', size: 6 },
+        base: { src: '/textures/lava-basalt.jpg', size: 4, blend: 'overlay', alpha: 0.8 },
+        tile: { src: '/textures/lava-basalt.jpg', size: 3, blend: 'multiply', alpha: 1 },
+      },
+      under: { src: '/textures/lava-molten.jpg', size: 6, alpha: 0.6, blend: 'screen', speed: 0.12 },
+      tile: 'stone', mark: 'flame', markSize: 0.3, fx: 'embers', fxCount: 28,
+      shield: 'fire',
+    },
+    bg: '#2a0c05',
+    cell: '#6a5d58',
+    safe: '#8a5a3a',
+    star: '#ffb347',
     baseInner: '#211310',
     players: { red: '#ff4a3d', green: '#48d18a', yellow: '#ffc83a', blue: '#4f8dff', purple: '#c06bff', orange: '#ff7b2a' },
   },
-  // Warm and cosy, with paw prints everywhere
+  // Warm and cosy: a knitted blanket in every base, linen squares, paw prints everywhere
   'board-cat': {
-    art: { base: 'cushion', frame: ['#c27a4a', '#ffd9b0', 0.32], pattern: 'paw', patternColor: 'rgba(255, 255, 255, 0.3)', patternSize: 0.2, tile: 'gloss', mark: 'paw', emblem: 'cat', emblemAlpha: 0.22, fx: 'paws', fxColor: '#8a5a3c', fxCount: 24 },
-    bg: '#e9b98e',
-    bg2: '#fbe3c8',
+    art: {
+      base: 'cushion', frame: ['#c27a4a', '#ffd9b0', 0.34], panel: 'window',
+      tex: {
+        surface: { src: '/textures/cat-knit.jpg', size: 3.2 },
+        base: { src: '/textures/cat-linen.jpg', size: 4, blend: 'multiply', alpha: 0.6 },
+        tile: { src: '/textures/cat-linen.jpg', size: 3, blend: 'multiply', alpha: 0.8 },
+      },
+      tile: 'gloss', mark: 'paw', fx: 'paws', fxColor: '#8a5a3c', fxCount: 24,
+      shield: { kind: 'orbit', motif: 'paw', colors: ['#ffffff', '#ffd3e0'], glow: 'rgba(255, 190, 140, 0.55)', n: 4, size: 0.36 },
+    },
+    bg: '#c9875a',
     cell: '#fffaf3',
     safe: '#ffe2c6',
     star: '#c27a4a',
@@ -114,10 +201,21 @@ export const BOARD_THEMES = {
     players: { red: '#e86a6a', green: '#5dbb8a', yellow: '#f1b947', blue: '#6c8fe0', purple: '#a57ad8', orange: '#ee8a4a' },
   },
   'board-royal': {
-    art: { base: 'frame', frame: ['#b8860b', '#ffe9a0', 0.3], pattern: 'damask', patternColor: 'rgba(255, 228, 150, 0.24)', patternSize: 0.2, patternSpin: 0, tile: 'gilded', mark: 'crown', emblem: 'crown', emblemAlpha: 0.4, emblemColor: '#e9c35a', fx: 'sparkle', fxColor: '#ffe08a', fxCount: 22 },
+    // Purple velvet and white marble, gold everywhere
+    art: {
+      base: 'frame', frame: ['#b8860b', '#ffe9a0', 0.32],
+      tex: {
+        surface: { src: '/textures/royal-velvet.jpg', size: 6 },
+        base: { src: '/textures/royal-velvet.jpg', size: 5, blend: 'soft-light', alpha: 0.6 },
+        tile: { src: '/textures/royal-marble.jpg', size: 4, blend: 'multiply', alpha: 1 },
+        panel: { src: '/textures/royal-velvet.jpg', size: 5 },
+      },
+      pattern: 'damask', patternColor: 'rgba(255, 228, 150, 0.22)', patternSize: 0.2, patternSpin: 0,
+      tile: 'gilded', mark: 'crown', emblem: 'crown', emblemAlpha: 0.3, emblemColor: '#e9c35a', fx: 'sparkle', fxColor: '#ffe08a', fxCount: 22,
+      shield: { kind: 'orbit', motif: 'sparkle', colors: ['#ffe08a', '#fff6d0'], glow: 'rgba(255, 215, 110, 0.5)', n: 6, crown: true },
+    },
     bg: '#25114a',
-    bg2: '#52309a',
-    cell: '#fbf4e2',
+    cell: '#ffffff',
     safe: '#f3dc95',
     star: '#c9971c',
     baseInner: '#3a2068',

@@ -19,6 +19,7 @@ export class BoardRenderer {
     this.under = document.createElement('canvas'); // the board's surface, seen through gaps and windows
     this.particles = [];
     this.lastNow = 0;
+    this.shieldSince = new Map(); // "seat-token" -> when it stepped onto a safe square
   }
 
   setBoard(board, themeId) {
@@ -331,9 +332,16 @@ export class BoardRenderer {
           hl,
           moving: o ? 1 : 0,
           onBoard: !o && progress >= 0,
+          safe: !o && progress >= 0 && progress <= board.lastTrack && board.safe.has(board.trackIndex(seat, progress)),
           scale: 1,
           skin: view.skins[seat],
         };
+        // The shield pops up when a token arrives on a safe square, so remember when that was
+        const sk = `${seat}-${t}`;
+        if (item.safe) {
+          if (!this.shieldSince.has(sk)) this.shieldSince.set(sk, now);
+          item.shieldAge = now - this.shieldSince.get(sk);
+        } else this.shieldSince.delete(sk);
         items.push(item);
         if (o) continue;
         const key = board.cellKey(seat, progress, t);
@@ -399,6 +407,9 @@ export class BoardRenderer {
       ctx.strokeStyle = hex;
       ctx.stroke();
     }
+    const shield = p.safe && this.theme.art?.shield;
+    const grow = shield ? easeOutBack(Math.min(1, p.shieldAge / 450)) : 0;
+    if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'back');
     drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash });
     // Colour-blind mode: the player's shape on the token's body (each shape has its own spot)
     if (this.cb) {
@@ -406,6 +417,7 @@ export class BoardRenderer {
       const by = y + r * 0.2 - p.lift * s - r * mark.y * p.squash;
       drawShape(ctx, this.seatShape(p.seat), x + r * mark.x, by, r * 0.36 * mark.size, '#ffffff', '#111111', Math.max(1.2, r * 0.08));
     }
+    if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'front');
   }
 
   // A texture drifting slowly over the surface (water, lava…), in two layers going different
@@ -424,7 +436,8 @@ export class BoardRenderer {
     ctx.globalCompositeOperation = spec.blend || 'overlay';
     ctx.globalAlpha = spec.alpha ?? 0.5;
     const loop = spec.size * 4;
-    for (const [scale, dx, dy] of [[1, 1, 0.6], [1.35, -0.8, 0.9]]) {
+    const layers = spec.single ? [[1, 0.6, 1]] : [[1, 1, 0.6], [1.35, -0.8, 0.9]];
+    for (const [scale, dx, dy] of layers) {
       const p = ctx.createPattern(img, 'repeat');
       const sc = (spec.size * scale) / img.width;
       p.setTransform(new DOMMatrix([sc, 0, 0, sc, (t * spec.speed * dx) % loop, (t * spec.speed * dy) % loop]));
@@ -1904,6 +1917,314 @@ function drawTile(ctx, sq, fill, style, theme) {
 }
 
 let tileK = 1; // pixels per board unit while the board is drawn (for glows)
+
+// ---------- safe-square shields ----------
+// A token standing on a safe square is wrapped in a shield in the board's theme (art.shield):
+// a bubble in the ocean, a ring of fire on lava, a frost crystal on ice… Each is drawn in two
+// halves, 'back' before the token and 'front' after it, round a pawn whose base sits at (x, gy).
+// The pawn is about 2.1r tall. t: seconds, k: 0..1 as the shield pops up.
+function drawShield(ctx, spec, x, gy, r, hex, t, k, part) {
+  if (k <= 0) return;
+  const kind = typeof spec === 'string' ? spec : spec.kind;
+  ctx.save();
+  SHIELDS[kind]?.(ctx, spec, x, gy, r, hex, t, k, part);
+  ctx.restore();
+}
+
+// The dome that fits round a pawn
+const dome = (x, gy, r, k) => ({ cx: x, cy: gy - r * 0.92, rx: r * 1.18 * k, ry: r * 1.42 * k });
+
+// Little things circling a token: 'back' draws the ones behind it, 'front' the rest
+function orbiters(ctx, part, n, x, cy, rx, ry, t, speed, draw) {
+  for (let i = 0; i < n; i++) {
+    const a = t * speed + (i / n) * TAU;
+    const behind = Math.sin(a) < 0;
+    if (behind !== (part === 'back')) continue;
+    draw(x + Math.cos(a) * rx, cy + Math.sin(a) * ry, i, 0.75 + 0.25 * Math.sin(a));
+  }
+}
+
+// A soft glow behind the token
+function aura(ctx, x, gy, r, k, color) {
+  const d = dome(x, gy, r, k);
+  const g = ctx.createRadialGradient(d.cx, d.cy, 0, d.cx, d.cy, d.ry * 1.05);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(d.cx, d.cy, d.rx * 1.05, d.ry * 1.05, 0, 0, TAU);
+  ctx.fill();
+}
+
+const SHIELDS = {
+  // A soap bubble that wobbles a little, with a rainbow sheen
+  bubble(ctx, spec, x, gy, r, hex, t, k, part) {
+    const d = dome(x, gy, r, k);
+    const w = Math.sin(t * 3.1) * 0.035;
+    const rx = d.rx * (1 + w);
+    const ry = d.ry * (1 - w);
+    ctx.beginPath();
+    ctx.ellipse(d.cx, d.cy, rx, ry, 0, 0, TAU);
+    if (part === 'back') {
+      ctx.fillStyle = 'rgba(150, 225, 255, 0.16)';
+      ctx.fill();
+      return;
+    }
+    const g = ctx.createRadialGradient(d.cx, d.cy, ry * 0.55, d.cx, d.cy, ry);
+    g.addColorStop(0, 'rgba(200, 245, 255, 0)');
+    g.addColorStop(0.8, 'rgba(170, 235, 255, 0.18)');
+    g.addColorStop(1, 'rgba(230, 250, 255, 0.55)');
+    ctx.fillStyle = g;
+    ctx.fill();
+    const sheen = ctx.createLinearGradient(d.cx - rx, d.cy - ry, d.cx + rx, d.cy + ry);
+    const h = (t * 0.15) % 1;
+    sheen.addColorStop(0, 'rgba(255, 140, 220, 0.5)');
+    sheen.addColorStop(0.2 + h * 0.5, 'rgba(120, 230, 255, 0.55)');
+    sheen.addColorStop(1, 'rgba(255, 235, 130, 0.5)');
+    ctx.lineWidth = Math.max(1.2, r * 0.07);
+    ctx.strokeStyle = sheen;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(d.cx - rx * 0.45, d.cy - ry * 0.5, rx * 0.2, ry * 0.11, -0.7, 0, TAU);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(d.cx - rx * 0.12, d.cy - ry * 0.72, Math.max(1, r * 0.07), 0, TAU);
+    ctx.fill();
+  },
+
+  // A ring of flickering flames round the base, taller at the back
+  fire(ctx, spec, x, gy, r, hex, t, k, part) {
+    ctx.globalCompositeOperation = 'lighter';
+    if (part === 'back') aura(ctx, x, gy, r, k, 'rgba(255, 110, 20, 0.45)');
+    const n = 11;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + 0.2;
+      const behind = Math.sin(a) < 0;
+      if (behind !== (part === 'back')) continue;
+      const px = x + Math.cos(a) * r * 1.0 * k;
+      const py = gy + Math.sin(a) * r * 0.42 * k;
+      const flick = 0.75 + 0.25 * Math.sin(t * 11 + i * 2.3) + 0.15 * Math.sin(t * 17 + i * 5.1);
+      const h = r * (behind ? 1.25 : 0.7) * flick * k;
+      const w = r * 0.26 * k;
+      const sway = Math.sin(t * 6 + i) * w * 0.6;
+      const g = ctx.createLinearGradient(px, py, px, py - h);
+      g.addColorStop(0, 'rgba(255, 70, 10, 0.9)');
+      g.addColorStop(0.45, 'rgba(255, 150, 30, 0.85)');
+      g.addColorStop(1, 'rgba(255, 240, 150, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(px - w, py);
+      ctx.quadraticCurveTo(px - w, py - h * 0.55, px + sway, py - h);
+      ctx.quadraticCurveTo(px + w, py - h * 0.55, px + w, py);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 250, 200, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(px, py - h * 0.18, w * 0.4, h * 0.2, 0, 0, TAU);
+      ctx.fill();
+    }
+  },
+
+  // A six-sided ice crystal round the token, with frost at its foot and glints at the corners
+  frost(ctx, spec, x, gy, r, hex, t, k, part) {
+    const d = dome(x, gy, r, k);
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + (i / 6) * TAU;
+      pts.push([d.cx + Math.cos(a) * d.rx * 1.08, d.cy + Math.sin(a) * d.ry]);
+    }
+    if (part === 'back') {
+      aura(ctx, x, gy, r, k, 'rgba(190, 235, 255, 0.4)');
+      return;
+    }
+    ctx.beginPath();
+    pts.forEach(([px, py]) => ctx.lineTo(px, py));
+    ctx.closePath();
+    const g = ctx.createLinearGradient(d.cx - d.rx, d.cy - d.ry, d.cx + d.rx, d.cy + d.ry);
+    g.addColorStop(0, 'rgba(255,255,255,0.5)');
+    g.addColorStop(0.5, 'rgba(190,235,255,0.18)');
+    g.addColorStop(1, 'rgba(120,195,240,0.45)');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(120, 200, 255, 0.9)';
+    ctx.shadowBlur = r * 0.4;
+    ctx.lineWidth = Math.max(1.5, r * 0.08);
+    ctx.strokeStyle = 'rgba(235, 250, 255, 1)';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // facets
+    ctx.lineWidth = Math.max(0.8, r * 0.025);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath();
+    for (const i of [0, 2, 4]) {
+      ctx.moveTo(d.cx, d.cy);
+      ctx.lineTo(...pts[i]);
+    }
+    ctx.stroke();
+    // frost spikes round the foot
+    ctx.fillStyle = 'rgba(240, 252, 255, 0.9)';
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI + 0.2;
+      const px = x + Math.cos(a) * r * 0.95 * k;
+      const py = gy + Math.sin(a) * r * 0.4 * k;
+      const h = r * (0.3 + 0.18 * rnd(i + 5)) * k;
+      ctx.beginPath();
+      ctx.moveTo(px - r * 0.09, py);
+      ctx.lineTo(px, py - h);
+      ctx.lineTo(px + r * 0.09, py);
+      ctx.fill();
+    }
+    // glints that come and go on the corners
+    for (let i = 0; i < 6; i++) {
+      const a = Math.max(0, Math.sin(t * 2.2 + i * 1.7)) ** 4;
+      if (a < 0.05) continue;
+      ctx.globalAlpha = a;
+      sparkle(ctx, pts[i][0], pts[i][1], r * 0.22, '#ffffff');
+    }
+  },
+
+  // A force field in the player's own colour, with a scan line running up it
+  force(ctx, spec, x, gy, r, hex, t, k, part) {
+    const d = dome(x, gy, r, k);
+    ctx.beginPath();
+    ctx.ellipse(d.cx, d.cy, d.rx, d.ry, 0, 0, TAU);
+    if (part === 'back') {
+      ctx.fillStyle = hex;
+      ctx.globalAlpha = 0.12;
+      ctx.fill();
+      return;
+    }
+    ctx.save();
+    ctx.clip();
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = hex;
+    ctx.lineWidth = Math.max(0.8, r * 0.025);
+    const step = r * 0.32;
+    ctx.beginPath();
+    for (let yy = d.cy - d.ry; yy < d.cy + d.ry; yy += step) {
+      ctx.moveTo(d.cx - d.rx, yy);
+      ctx.lineTo(d.cx + d.rx, yy);
+    }
+    ctx.stroke();
+    const sy = d.cy + d.ry - ((t * 0.9) % 1) * d.ry * 2;
+    const g = ctx.createLinearGradient(0, sy - r * 0.3, 0, sy + r * 0.3);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = g;
+    ctx.fillRect(d.cx - d.rx, sy - r * 0.3, d.rx * 2, r * 0.6);
+    ctx.restore();
+    ctx.shadowColor = hex;
+    ctx.shadowBlur = r * 0.8;
+    ctx.lineWidth = Math.max(1.5, r * 0.08);
+    ctx.strokeStyle = hex;
+    ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 6);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = Math.max(0.8, r * 0.03);
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  },
+
+  // A peppermint ring spinning round the base, under a sugary glow
+  candy(ctx, spec, x, gy, r, hex, t, k, part) {
+    if (part === 'back') aura(ctx, x, gy, r, k, 'rgba(255, 170, 215, 0.45)');
+    const cy = gy - r * 0.05;
+    const rx = r * 1.02 * k;
+    const ry = r * 0.44 * k;
+    const [a0, a1] = part === 'back' ? [Math.PI, TAU] : [0, Math.PI];
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = r * 0.24 * k;
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(x, cy, rx, ry, 0, a0, a1);
+    ctx.stroke();
+    ctx.setLineDash([r * 0.22, r * 0.22]);
+    ctx.lineDashOffset = -t * r * 1.2;
+    ctx.strokeStyle = '#ff4f7b';
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineWidth = Math.max(0.8, r * 0.04);
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.ellipse(x, cy - r * 0.06 * k, rx, ry, 0, a0, a1);
+    ctx.stroke();
+  },
+
+  // Motifs circling the token (stars, leaves, paws…) over a soft glow. spec: { motif, colors,
+  // glow, n, size, crown }
+  orbit(ctx, spec, x, gy, r, hex, t, k, part) {
+    const d = dome(x, gy, r, k);
+    const glow = spec.glow || 'rgba(255, 230, 140, 0.45)';
+    if (part === 'back') {
+      aura(ctx, x, gy, r, k, glow);
+      aura(ctx, x, gy, r, k * 0.75, glow);
+    } else {
+      // a faint glassy dome, so it reads as a shield
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(d.cx, d.cy, d.rx, d.ry, 0, 0, TAU);
+      const g = ctx.createRadialGradient(d.cx, d.cy, d.ry * 0.6, d.cx, d.cy, d.ry);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(1, glow);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.globalAlpha = 0.55 + 0.2 * Math.sin(t * 3);
+      ctx.lineWidth = Math.max(1, r * 0.05);
+      ctx.strokeStyle = spec.colors?.[0] || '#ffd54a';
+      ctx.stroke();
+      ctx.restore();
+    }
+    const cy = gy - r * 0.8;
+    const colors = spec.colors || ['#ffd54a'];
+    orbiters(ctx, part, spec.n || 5, x, cy, d.rx * 1.1, r * 0.55 * k, t, spec.speed || 1.3, (px, py, i, depth) => {
+      const s = r * (spec.size || 0.34) * k * depth;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(Math.sin(t * 2 + i) * 0.5);
+      if (spec.motif === 'sparkle') sparkle(ctx, 0, 0, s * 1.4, colors[i % colors.length]);
+      else {
+        motif(ctx, spec.motif, 0, 0, s, colors[i % colors.length]);
+        if (spec.motif === 'star') {
+          ctx.lineWidth = Math.max(0.6, r * 0.02);
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    });
+    // A little crown floating over the token's head
+    if (spec.crown && part === 'front') {
+      const bob = Math.sin(t * 2.5) * r * 0.08;
+      ctx.save();
+      ctx.translate(x, gy - r * 2.45 * k + bob);
+      ctx.scale(k, k);
+      ctx.shadowColor = 'rgba(255, 210, 90, 0.9)';
+      ctx.shadowBlur = r * 0.5;
+      motif(ctx, 'crown', 0, 0, r * 0.36, '#f6cf57');
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = Math.max(0.8, r * 0.035);
+      ctx.strokeStyle = '#9a6f00';
+      ctx.stroke();
+      ctx.restore();
+    }
+  },
+};
+
+// A four-pointed twinkle
+function sparkle(ctx, x, y, s, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - s);
+  ctx.quadraticCurveTo(x, y, x + s, y);
+  ctx.quadraticCurveTo(x, y, x, y + s);
+  ctx.quadraticCurveTo(x, y, x - s, y);
+  ctx.quadraticCurveTo(x, y, x, y - s);
+  ctx.fill();
+}
 
 // ---------- board textures ----------
 // Image textures (client/public/textures, made by tools/textures) load once and are shared.

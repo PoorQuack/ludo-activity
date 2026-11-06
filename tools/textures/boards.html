@@ -1,0 +1,294 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<!-- Board textures for every theme except Ocean (ocean.html). Each <svg id> renders to <id>.jpg
+     and is copied to client/public/textures/<id>.jpg. All are 512px and tile seamlessly. -->
+
+<!-- LAVA: molten rock with glowing cracks, and the basalt the squares are cut from -->
+<svg id="lava-molten" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="molten" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.009" numOctaves="4" seed="21" stitchTiles="stitch" result="t"/>
+    <feColorMatrix in="t" type="luminanceToAlpha" result="l"/>
+    <feComponentTransfer in="l" result="heat"><feFuncA type="table" tableValues="1 0.7 0.3 0.08 0.02 0 0 0 0 0"/></feComponentTransfer>
+    <feColorMatrix in="heat" type="matrix" values="0 0 0 1 0  0 0 0 0.75 0  0 0 0 0.25 0  0 0 0 0 1" result="hot"/>
+    <feComponentTransfer in="hot" result="glow">
+      <feFuncR type="table" tableValues="0.16 0.75 1 1 1"/>
+      <feFuncG type="table" tableValues="0.03 0.12 0.42 0.78 0.97"/>
+      <feFuncB type="table" tableValues="0.02 0.02 0.05 0.22 0.65"/>
+    </feComponentTransfer>
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="5" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="2" result="lit"><feDistantLight azimuth="225" elevation="60"/></feDiffuseLighting>
+    <feComposite in="glow" in2="lit" operator="arithmetic" k1="0.7" k2="0.45" k3="0" k4="0"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#molten)"/>
+</svg>
+<svg id="lava-basalt" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="basalt" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" seed="8" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="3.2" result="lit"><feDistantLight azimuth="225" elevation="50"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.25" k2="0" k3="0" k4="0" result="s"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" seed="2" stitchTiles="stitch" result="f"/>
+    <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.05  0 0 0 0 0.04  0 0 0 0 0.04  8 0 0 0 -5" result="pits"/>
+    <feComposite in="pits" in2="s" operator="over"/>
+  </filter>
+  <rect width="512" height="512" fill="#8a8580" filter="url(#basalt)"/>
+</svg>
+
+<!-- MIDNIGHT: a deep night sky with faint nebulae and stars, and soft slate for the squares -->
+<svg id="midnight-sky" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="sky" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.005" numOctaves="3" seed="12" stitchTiles="stitch" result="a"/>
+    <feColorMatrix in="a" type="matrix" values="0 0 0 0 0.04  0 0 0 0 0.05  0 0 0 0 0.17  0 0 0 0 1" result="night"/>
+    <feColorMatrix in="a" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.25  0 0 0 0 0.75  1.6 0 0 0 -0.85" result="neb1"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="3" seed="31" stitchTiles="stitch" result="b"/>
+    <feColorMatrix in="b" type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.45  0 0 0 0 0.75  0 1.5 0 0 -0.8" result="neb2"/>
+    <feComposite in="neb1" in2="night" operator="over" result="s1"/>
+    <feComposite in="neb2" in2="s1" operator="over" result="s2"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="40" stitchTiles="stitch" result="st"/>
+    <feColorMatrix in="st" type="matrix" values="0 0 0 0 1  0 0 0 0 0.97  0 0 0 0 0.86  22 0 0 0 -15.4" result="stars"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.45" numOctaves="1" seed="41" stitchTiles="stitch" result="st2"/>
+    <feColorMatrix in="st2" type="matrix" values="0 0 0 0 0.85  0 0 0 0 0.9  0 0 0 0 1  0 14 0 0 -9.6" result="bigst"/>
+    <feGaussianBlur in="bigst" stdDeviation="0.6" result="bigb"/>
+    <feComposite in="stars" in2="s2" operator="over" result="s3"/>
+    <feComposite in="bigb" in2="s3" operator="over"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#sky)"/>
+</svg>
+<svg id="midnight-slate" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="slate" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="4" seed="3" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="1.6" result="lit"><feDistantLight azimuth="225" elevation="62"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.2" k2="0" k3="0" k4="0"/>
+  </filter>
+  <rect width="512" height="512" fill="#c8ccd8" filter="url(#slate)"/>
+</svg>
+
+<!-- ICE: deep cracked ice to look down into, and frosty snow for the squares -->
+<svg id="ice-deep" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="deep" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="3" seed="6" stitchTiles="stitch" result="d"/>
+    <feColorMatrix in="d" type="matrix" values="0 0 0 0 0.25  0 0 0 0 0.6  0 0 0 0 0.82  0 0 0 0 1" result="blue"/>
+    <feColorMatrix in="d" type="matrix" values="0 0 0 0 0.75  0 0 0 0 0.93  0 0 0 0 1  2 0 0 0 -0.9" result="pale"/>
+    <feComposite in="pale" in2="blue" operator="over" result="b1"/>
+    <feTurbulence type="turbulence" baseFrequency="0.012" numOctaves="3" seed="17" stitchTiles="stitch" result="c"/>
+    <feColorMatrix in="c" type="luminanceToAlpha" result="cl"/>
+    <feComponentTransfer in="cl" result="crk"><feFuncA type="table" tableValues="0.95 0.35 0 0 0 0 0 0 0 0"/></feComponentTransfer>
+    <feFlood flood-color="#ffffff" result="w"/>
+    <feComposite in="w" in2="crk" operator="in" result="cracks"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" seed="9" stitchTiles="stitch" result="n"/>
+    <feSpecularLighting in="n" lighting-color="#ffffff" surfaceScale="2.5" specularConstant="0.9" specularExponent="18" result="spec"><feDistantLight azimuth="225" elevation="45"/></feSpecularLighting>
+    <feComposite in="spec" in2="SourceAlpha" operator="in" result="specin"/>
+    <feComponentTransfer in="specin" result="specs"><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+    <feComposite in="cracks" in2="b1" operator="over" result="b2"/>
+    <feBlend in="specs" in2="b2" mode="screen"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#deep)"/>
+</svg>
+<svg id="ice-snow" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="snowf" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="14" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="1.8" result="lit"><feDistantLight azimuth="225" elevation="60"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.12" k2="0" k3="0" k4="0" result="s"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="3" stitchTiles="stitch" result="f"/>
+    <feColorMatrix in="f" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  12 0 0 0 -8.2" result="glit"/>
+    <feComposite in="glit" in2="s" operator="over"/>
+  </filter>
+  <rect width="512" height="512" fill="#e2eef6" filter="url(#snowf)"/>
+</svg>
+
+<!-- FOREST: a mossy forest floor, a stepping-stone path, and dappled light that drifts over it -->
+<svg id="forest-moss" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="moss" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="4" stitchTiles="stitch" result="p"/>
+    <feColorMatrix in="p" type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.26  0 0 0 0 0.08  0 0 0 0 1" result="dark"/>
+    <feColorMatrix in="p" type="matrix" values="0 0 0 0 0.33  0 0 0 0 0.52  0 0 0 0 0.16  2.2 0 0 0 -1" result="lite"/>
+    <feComposite in="lite" in2="dark" operator="over" result="b"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="4" seed="11" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="3.5" result="lit"><feDistantLight azimuth="225" elevation="48"/></feDiffuseLighting>
+    <feComposite in="b" in2="lit" operator="arithmetic" k1="1.35" k2="0" k3="0" k4="0" result="s"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="1" seed="19" stitchTiles="stitch" result="f"/>
+    <feColorMatrix in="f" type="matrix" values="0 0 0 0 0.75  0 0 0 0 0.85  0 0 0 0 0.35  10 0 0 0 -6.9" result="tips"/>
+    <feComposite in="tips" in2="s" operator="over"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#moss)"/>
+</svg>
+<svg id="forest-stone" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="fstone" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" seed="23" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="2.6" result="lit"><feDistantLight azimuth="225" elevation="55"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.22" k2="0" k3="0" k4="0" result="s"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="2" stitchTiles="stitch" result="m"/>
+    <feColorMatrix in="m" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.62  0 0 0 0 0.3  3 0 0 0 -1.75" result="lichen"/>
+    <feComposite in="lichen" in2="s" operator="over"/>
+  </filter>
+  <rect width="512" height="512" fill="#d9d6c8" filter="url(#fstone)"/>
+</svg>
+<svg id="forest-light" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="dapple" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.014" numOctaves="2" seed="29" stitchTiles="stitch" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="m"/>
+    <feComponentTransfer in="m" result="mask"><feFuncR type="table" tableValues="0 0 0 0.05 0.75 1"/><feFuncG type="table" tableValues="0 0 0 0.05 0.7 0.95"/><feFuncB type="table" tableValues="0 0 0 0.03 0.45 0.7"/></feComponentTransfer>
+    <feGaussianBlur in="mask" stdDeviation="3"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#dapple)"/>
+</svg>
+
+<!-- WOOD: dark walnut for the board, pale maple for the squares -->
+<svg id="wood-walnut" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="walnut" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.002 0.03" numOctaves="3" seed="7" stitchTiles="stitch" result="g"/>
+    <feColorMatrix in="g" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="g1"/>
+    <feComponentTransfer in="g1" result="rings">
+      <feFuncR type="table" tableValues="0.22 0.36 0.25 0.4 0.27 0.38 0.23 0.35 0.26"/>
+      <feFuncG type="table" tableValues="0.12 0.21 0.14 0.24 0.15 0.22 0.13 0.2 0.15"/>
+      <feFuncB type="table" tableValues="0.06 0.11 0.07 0.13 0.08 0.12 0.06 0.1 0.07"/>
+      <feFuncA type="discrete" tableValues="1"/>
+    </feComponentTransfer>
+    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.4" numOctaves="2" seed="13" stitchTiles="stitch" result="fib"/>
+    <feDiffuseLighting in="fib" lighting-color="#ffffff" surfaceScale="1.2" result="lit"><feDistantLight azimuth="200" elevation="60"/></feDiffuseLighting>
+    <feComposite in="rings" in2="lit" operator="arithmetic" k1="1.25" k2="0" k3="0" k4="0"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#walnut)"/>
+</svg>
+<svg id="wood-maple" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="maple" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.002 0.035" numOctaves="3" seed="19" stitchTiles="stitch" result="g"/>
+    <feColorMatrix in="g" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="g1"/>
+    <feComponentTransfer in="g1" result="rings">
+      <feFuncR type="table" tableValues="0.9 0.97 0.88 0.98 0.9 0.96 0.89"/>
+      <feFuncG type="table" tableValues="0.76 0.86 0.74 0.88 0.77 0.85 0.75"/>
+      <feFuncB type="table" tableValues="0.55 0.66 0.53 0.68 0.56 0.65 0.54"/>
+      <feFuncA type="discrete" tableValues="1"/>
+    </feComponentTransfer>
+    <feTurbulence type="fractalNoise" baseFrequency="0.012 0.5" numOctaves="2" seed="3" stitchTiles="stitch" result="fib"/>
+    <feDiffuseLighting in="fib" lighting-color="#ffffff" surfaceScale="0.9" result="lit"><feDistantLight azimuth="200" elevation="62"/></feDiffuseLighting>
+    <feComposite in="rings" in2="lit" operator="arithmetic" k1="1.12" k2="0" k3="0" k4="0"/>
+  </filter>
+  <rect width="512" height="512" filter="url(#maple)"/>
+</svg>
+
+<!-- ROYAL: purple velvet and white marble -->
+<svg id="royal-velvet" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="velvet" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="3" seed="15" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="5" result="lit"><feDistantLight azimuth="235" elevation="40"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.5" k2="0" k3="0" k4="0" result="s"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="5" stitchTiles="stitch" result="pile"/>
+    <feColorMatrix in="pile" type="matrix" values="0 0 0 0 0.6  0 0 0 0 0.45  0 0 0 0 0.9  1.2 0 0 0 -0.45" result="fuzz"/>
+    <feComposite in="fuzz" in2="s" operator="over"/>
+  </filter>
+  <rect width="512" height="512" fill="#4b2a86" filter="url(#velvet)"/>
+</svg>
+<svg id="royal-marble" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="marble" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.006 0.011" numOctaves="5" seed="27" stitchTiles="stitch" result="t"/>
+    <feColorMatrix in="t" type="luminanceToAlpha" result="l"/>
+    <feComponentTransfer in="l" result="v"><feFuncA type="table" tableValues="0.75 0.3 0.08 0 0 0 0 0"/></feComponentTransfer>
+    <feFlood flood-color="#8a7a66" result="vc"/>
+    <feComposite in="vc" in2="v" operator="in" result="veins"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" seed="2" stitchTiles="stitch" result="cl"/>
+    <feColorMatrix in="cl" type="matrix" values="0 0 0 0 0.93  0 0 0 0 0.9  0 0 0 0 0.85  1.6 0 0 0 -0.6" result="cloud"/>
+    <feComposite in="cloud" in2="SourceGraphic" operator="over" result="b"/>
+    <feComposite in="veins" in2="b" operator="over"/>
+  </filter>
+  <rect width="512" height="512" fill="#fbf8f2" filter="url(#marble)"/>
+</svg>
+
+<!-- CANDY: strawberry icing for the board, and a slow pastel swirl underneath -->
+<svg id="candy-icing" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="icing" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="3" seed="10" stitchTiles="stitch" result="n"/>
+    <feSpecularLighting in="n" lighting-color="#ffffff" surfaceScale="6" specularConstant="1.1" specularExponent="25" result="sp"><feDistantLight azimuth="225" elevation="40"/></feSpecularLighting>
+    <feComposite in="sp" in2="SourceAlpha" operator="in" result="spi"/>
+    <feComponentTransfer in="spi" result="sps"><feFuncA type="linear" slope="0.55"/></feComponentTransfer>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="4" result="lit"><feDistantLight azimuth="225" elevation="55"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0" result="s"/>
+    <feBlend in="sps" in2="s" mode="screen"/>
+  </filter>
+  <rect width="512" height="512" fill="#f7a6c6" filter="url(#icing)"/>
+  <g id="sprinkles"></g>
+</svg>
+<svg id="candy-swirl" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="swirl" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="2" seed="33" stitchTiles="stitch" result="n"/>
+    <feComponentTransfer in="n">
+      <feFuncR type="table" tableValues="1 0.5 1 0.42 1 0.95"/>
+      <feFuncG type="table" tableValues="0.42 0.85 0.74 0.62 0.42 0.88"/>
+      <feFuncB type="table" tableValues="0.72 0.96 0.38 1 0.68 0.5"/>
+      <feFuncA type="discrete" tableValues="1"/>
+    </feComponentTransfer>
+  </filter>
+  <rect width="512" height="512" filter="url(#swirl)"/>
+</svg>
+
+<!-- NEON: a glowing grid over dark tarmac -->
+<svg id="neon-grid" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="gp" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M0 0H64M0 0V64" stroke="#2ef2ff" stroke-width="2" fill="none"/>
+      <path d="M32 0V64M0 32H64" stroke="#ff2fd1" stroke-width="1" stroke-opacity="0.5" fill="none"/>
+    </pattern>
+    <filter id="glow" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="tarmac" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="4" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0.08 0 0 0 0.01  0.08 0 0 0 0.01  0.14 0 0 0 0.03  0 0 0 0 1"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" filter="url(#tarmac)"/>
+  <rect width="512" height="512" fill="url(#gp)" filter="url(#glow)"/>
+</svg>
+<svg id="neon-tarmac" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="tm" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="3" seed="8" stitchTiles="stitch" result="n"/>
+    <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="1.4" result="lit"><feDistantLight azimuth="225" elevation="60"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.3" k2="0" k3="0" k4="0"/>
+  </filter>
+  <rect width="512" height="512" fill="#9a9aae" filter="url(#tm)"/>
+</svg>
+
+<!-- CAT: a chunky knitted blanket and soft linen -->
+<svg id="cat-knit" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="kp" width="32" height="32" patternUnits="userSpaceOnUse">
+      <ellipse cx="9" cy="16" rx="6" ry="13" transform="rotate(-28 9 16)" fill="#fff"/>
+      <ellipse cx="23" cy="16" rx="6" ry="13" transform="rotate(28 23 16)" fill="#fff"/>
+    </pattern>
+    <filter id="knit" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="2" seed="3" stitchTiles="stitch" result="fz"/>
+      <feComposite in="b" in2="fz" operator="arithmetic" k1="0" k2="1" k3="0.25" k4="-0.1" result="h"/>
+      <feDiffuseLighting in="h" lighting-color="#ffffff" surfaceScale="5" result="lit"><feDistantLight azimuth="235" elevation="45"/></feDiffuseLighting>
+      <feFlood flood-color="#e9a36a" result="c"/>
+      <feComposite in="c" in2="lit" operator="arithmetic" k1="1.25" k2="0" k3="0" k4="0"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#000"/>
+  <rect width="512" height="512" fill="url(#kp)" filter="url(#knit)"/>
+</svg>
+<svg id="cat-linen" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <filter id="linen" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02 0.9" numOctaves="2" seed="1" stitchTiles="stitch" result="a"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9 0.02" numOctaves="2" seed="2" stitchTiles="stitch" result="b"/>
+    <feComposite in="a" in2="b" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0" result="w"/>
+    <feDiffuseLighting in="w" lighting-color="#ffffff" surfaceScale="1.5" result="lit"><feDistantLight azimuth="225" elevation="60"/></feDiffuseLighting>
+    <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1.12" k2="0" k3="0" k4="0"/>
+  </filter>
+  <rect width="512" height="512" fill="#f3e6d6" filter="url(#linen)"/>
+</svg>
+
+<script>
+// Candy sprinkles: random little rods, copied across the edges so the texture still tiles
+const g = document.getElementById('sprinkles');
+let s = 7;
+const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+const cols = ['#ffffff', '#ffd23f', '#3fd8a4', '#5aa8ff', '#b07bff', '#ff4f7b'];
+for (let i = 0; i < 70; i++) {
+  const x = rnd() * 512, y = rnd() * 512, a = rnd() * 180, c = cols[i % cols.length];
+  for (const dx of [-512, 0, 512]) for (const dy of [-512, 0, 512]) {
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    Object.entries({ x: x + dx - 7, y: y + dy - 2.2, width: 14, height: 4.4, rx: 2.2, fill: c, transform: `rotate(${a} ${x + dx} ${y + dy})` })
+      .forEach(([k, v]) => r.setAttribute(k, v));
+    r.setAttribute('style', 'filter: drop-shadow(0 1px 0.6px rgba(120,30,70,0.45))');
+    g.appendChild(r);
+  }
+}
+</script>
+</body></html>
