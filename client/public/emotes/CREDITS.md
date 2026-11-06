@@ -10,7 +10,7 @@ differently or taken down, open an issue and it will be removed.
 | `toshi/` | [Toshi Reactions](https://emoji.gg/pack/638459-toshi-reactions) | Toshi pack, Laugh pack |
 | `kitty/` | [Kitty Emotions](https://emoji.gg/pack/944638-kitty-emotions), [White kitties](https://emoji.gg/pack/92422-white-kitties) | Kitty pack, Laugh pack |
 | `aliaa/` | [Aliaa](https://emoji.gg/pack/862115-aliaa) (pixel art scaled up 6x) | Aliaa pack |
-| `cats/` | emoji.gg (Happy cat); a Discord emoji the owner supplied (Dancing kitten) | Happy cat, Dancing kitten stickers |
+| `cats/` | emoji.gg (Happy cat); stickers the owner supplied (Dancing kitten; Angry cat, white background removed) | Happy cat, Dancing kitten, Angry cat stickers |
 | `hamster/nervoushamster.png` | the "nervous hamster" meme (background removed) | Hamster pack |
 | `meme/dumb.png` | [dumb](https://emoji.gg/emoji/399151-dumb) (background removed) | Laugh pack |
 
