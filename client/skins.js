@@ -221,6 +221,23 @@ export const BOARD_THEMES = {
     baseInner: '#3a2068',
     players: { red: '#c8364a', green: '#23875f', yellow: '#dfa923', blue: '#3159b8', purple: '#7d3fb8', orange: '#d66a2a' },
   },
+  // A night sky in gold lines. Each base is a window onto the stars holding its player's
+  // constellation (Aries, Taurus, Cancer, Leo…), whose brightest stars are where the tokens wait.
+  'board-constellation': {
+    art: {
+      base: 'celestial', frame: ['#8a6a24', '#f3d98a', 0.22], panel: 'window', windowRim: '#e2bf6a', pins: 'constellation',
+      tex: { surface: { src: '/textures/constellation-sky.jpg', size: 9 } },
+      under: { src: '/textures/constellation-sky.jpg', size: 12, alpha: 0.5, blend: 'screen', speed: 0.05 },
+      tile: 'celestial', mark: 'sparkle', markSize: 0.3, fx: 'cosmos', fxColor: '#fff3c4', fxCount: 26,
+      shield: 'constellation',
+    },
+    bg: '#070a26',
+    cell: 'rgba(12, 16, 56, 0.62)',
+    safe: 'rgba(120, 92, 30, 0.72)',
+    star: '#ffe08a',
+    baseInner: '#0b0f30',
+    players: { red: '#e8475f', green: '#2fbf7a', yellow: '#f2c14e', blue: '#4f8ff0', purple: '#a674f0', orange: '#f08a3e' },
+  },
 };
 
 // ---------- colour-blind mode ----------
@@ -282,5 +299,7 @@ export const DICE_STYLES = {
   'dice-ludo': { face: '#ffffff', edge: '#cfc8b8', pip: '#ffffff', art: 'ludo', quads: ['#d24d47', '#2f9467', '#e2a92a', '#3a68c8'], pips: 'outlined' },
   'dice-lava': { face: '#1c0d0a', edge: '#ff6a2a', pip: '#ffb02e', outline: '#ff6a2a', pulse: true, art: 'magma', pips: 'magma' },
   'dice-galaxy': { face: '#0d0726', edge: '#5b3fb0', pip: '#ffffff', outline: '#8a5cff', art: 'nebula', pips: 'glow' },
+  // Navy and gold; each face's pips are stars joined into a constellation
+  'dice-constellation': { face: '#0b1034', edge: '#d9b25a', pip: '#fff1c2', outline: '#d9b25a', art: 'zodiac', pips: 'star', links: true },
   'dice-cat': { face: '#f5b26b', edge: '#b0641f', pip: '#5a2d0c', art: 'tabby', pips: 'paw' },
 };

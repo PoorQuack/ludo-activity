@@ -143,7 +143,8 @@ export class BoardRenderer {
         const inner = b.size * 0.7;
         roundRect(ctx, b.x - inner, b.y - inner, inner * 2, inner * 2, 0.4);
         innerPanel(ctx, theme, b.x, b.y, inner, color(seat));
-        drawPinSpots(ctx, b, board.baseSpread, 0.62, color(seat));
+        if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.4, color(seat), this.board.colors[seat], inner, k);
+        else drawPinSpots(ctx, b, board.baseSpread, 0.62, color(seat));
       } else {
         // The whole triangle between two arms in the player's colour, a plain circle inside,
         // and a faint spot for each pin to stand on
@@ -158,7 +159,8 @@ export class BoardRenderer {
         paintBase(ctx, art, theme, b.x - 7, b.y - 7, 14, 14, color(seat), k);
         circle(ctx, b.x, b.y, b.size);
         innerPanel(ctx, theme, b.x, b.y, b.size, color(seat));
-        drawPinSpots(ctx, b, board.baseSpread, 0.42, color(seat));
+        if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.3, color(seat), this.board.colors[seat], b.size, k);
+        else drawPinSpots(ctx, b, board.baseSpread, 0.42, color(seat));
       }
       // Colour-blind mode: the player's shape in the middle of their base
       if (cb) drawShape(ctx, this.seatShape(seat), b.x, b.y, b.square ? 0.6 : 0.42, color(seat), 'rgba(0,0,0,0.35)', 0.08);
@@ -459,7 +461,7 @@ export class BoardRenderer {
     ctx.setTransform(k, 0, 0, k, mid, mid);
     const wrap = (v) => ((((v + half) % this.span) + this.span) % this.span) - half;
     const n = art.fxCount || 26;
-    const kind = art.fx;
+    let kind = art.fx;
     if (kind === 'scan') {
       // a soft band of light sweeping down the board
       const y = wrap(t * 2.2);
@@ -471,6 +473,10 @@ export class BoardRenderer {
       ctx.fillRect(-half, y - 1.2, this.span, 2.4);
       ctx.restore();
       return;
+    }
+    if (kind === 'cosmos') {
+      this.drawCosmos(t, half);
+      kind = 'twinkle';
     }
     if (['embers', 'fireflies', 'twinkle', 'sparkle'].includes(kind)) ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < n; i++) {
@@ -561,6 +567,78 @@ export class BoardRenderer {
         circle(ctx, x, y, 0.04);
         ctx.fill();
       }
+    }
+    ctx.restore();
+  }
+
+  // The Constellation board's moving sky (board units, set up by drawAmbience)
+  drawCosmos(t, half) {
+    const ctx = this.ctx;
+    const { board } = this;
+    // a zodiac ring turning slowly round the middle
+    const R = board.hub * 0.98;
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(t * 0.04);
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = 'rgba(240, 205, 120, 0.9)';
+    ctx.lineWidth = 0.035;
+    for (const rr of [R, R * 0.8]) {
+      circle(ctx, 0, 0, rr);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU;
+      ctx.moveTo(Math.cos(a) * R * 0.8, Math.sin(a) * R * 0.8);
+      ctx.lineTo(Math.cos(a) * R, Math.sin(a) * R);
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#fff1c2';
+    for (let i = 0; i < 12; i++) {
+      const a = ((i + 0.5) / 12) * TAU;
+      circle(ctx, Math.cos(a) * R * 0.9, Math.sin(a) * R * 0.9, i % 3 ? 0.03 : 0.055);
+      ctx.fill();
+    }
+    ctx.restore();
+    // the token stars in each base breathe
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    board.bases.forEach((b, seat) => {
+      const color = this.seatColor(seat);
+      TOKEN_STARS.forEach(([ox, oy], i) => {
+        const x = b.x + ox * board.baseSpread;
+        const y = b.y + oy * board.baseSpread;
+        const p = 0.5 + 0.5 * Math.sin(t * 1.6 + seat * 1.3 + i * 2.1);
+        const r = (b.square ? 0.75 : 0.55) * (0.8 + 0.3 * p);
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, hexA(color, 0.35 * p));
+        g.addColorStop(1, hexA(color, 0));
+        ctx.fillStyle = g;
+        circle(ctx, x, y, r);
+        ctx.fill();
+      });
+    });
+    // now and then a shooting star
+    const every = 6.5;
+    const n = Math.floor(t / every);
+    const ph = (t % every) / 0.9;
+    if (ph < 1) {
+      const sx = -half + rnd(n * 7 + 1) * this.span * 0.7;
+      const sy = -half + rnd(n * 7 + 2) * this.span * 0.4;
+      const len = 3.2;
+      const x = sx + ph * 5;
+      const y = sy + ph * 2.6;
+      const g = ctx.createLinearGradient(x - len, y - len * 0.52, x, y);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(1, `rgba(255, 248, 220, ${0.9 * Math.sin(ph * Math.PI)})`);
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 0.06;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - len, y - len * 0.52);
+      ctx.lineTo(x, y);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -1360,6 +1438,18 @@ function paintFace(ctx, st, value, { light = 1, pips = true, glow = null, px = 1
   ctx.clip();
   if (st.art) DICE_ART[st.art](ctx, st, t);
   if (pips) {
+    if (value && st.links) {
+      // join the pips with fine gold lines, like a constellation
+      const p = PIPS[value];
+      ctx.strokeStyle = 'rgba(240, 205, 120, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (const [i, j] of PIP_LINKS[value]) {
+        ctx.moveTo(p[i][0] * 27, p[i][1] * 27);
+        ctx.lineTo(p[j][0] * 27, p[j][1] * 27);
+      }
+      ctx.stroke();
+    }
     if (value) {
       PIPS[value].forEach(([x, y], i) => (PIP_STYLES[st.pips || 'round'])(ctx, x * 27, y * 27, 10, st, i, t, px));
     } else {
@@ -1446,6 +1536,29 @@ function strokeCracks(ctx) {
 }
 
 const DICE_ART = {
+  // Navy sky in a gold ring; the pips are stars joined into a little constellation
+  zodiac(ctx, st, t) {
+    const g = ctx.createRadialGradient(-18, -22, 4, 0, 0, 78);
+    g.addColorStop(0, '#26306e');
+    g.addColorStop(1, '#070a26');
+    ctx.fillStyle = g;
+    ctx.fillRect(-50, -50, 100, 100);
+    ctx.globalCompositeOperation = 'lighter';
+    const n = ctx.createRadialGradient(22, 26, 0, 22, 26, 46);
+    n.addColorStop(0, 'rgba(140, 70, 220, 0.35)');
+    n.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = n;
+    ctx.fillRect(-50, -50, 100, 100);
+    ctx.globalCompositeOperation = 'source-over';
+    twinkles(ctx, t, 9, '#fff3d0', 11);
+    ctx.strokeStyle = 'rgba(217, 178, 90, 0.75)';
+    ctx.lineWidth = 1.6;
+    roundRect(ctx, -42, -42, 84, 84, 10);
+    ctx.stroke();
+    ctx.lineWidth = 0.8;
+    roundRect(ctx, -38, -38, 76, 76, 8);
+    ctx.stroke();
+  },
   // Night sky: a deep gradient and twinkling stars
   night(ctx, st, t) {
     const g = ctx.createRadialGradient(-20, -25, 5, 0, 0, 80);
@@ -1720,7 +1833,28 @@ function pawPrint(ctx, x, y, r, color) {
 
 // ---------- pip styles ----------
 // (ctx, x, y, r, style, pip index, time, px)
+// How the pips of each face are joined when a dice draws them as a constellation
+const PIP_LINKS = {
+  1: [],
+  2: [[0, 1]],
+  3: [[0, 1], [1, 2]],
+  4: [[0, 1], [1, 3], [3, 2]],
+  5: [[0, 2], [2, 1], [2, 3], [3, 4]],
+  6: [[0, 2], [2, 4], [4, 5], [5, 3], [3, 1]],
+};
+
 const PIP_STYLES = {
+  // a glowing four-pointed star
+  star(ctx, x, y, r, st, i, t, px) {
+    const tw = 0.85 + 0.15 * Math.sin(t / 300 + i * 1.9);
+    ctx.shadowColor = '#fff1c2';
+    ctx.shadowBlur = 12 * px;
+    sparkle(ctx, x, y, r * 1.55 * tw, st.pip);
+    ctx.fillStyle = '#ffffff';
+    circle(ctx, x, y, r * 0.38);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  },
   round(ctx, x, y, r, st, i) {
     ctx.fillStyle = st.pipColors ? st.pipColors[i % st.pipColors.length] : st.pip;
     circle(ctx, x, y, r);
@@ -1918,6 +2052,96 @@ function drawTile(ctx, sq, fill, style, theme) {
 
 let tileK = 1; // pixels per board unit while the board is drawn (for glows)
 
+// ---------- constellation board ----------
+// Each base holds its player's constellation, and four of its stars are where the tokens wait.
+// Star positions are in "spread" units: the token stars are always the first four, at (±1, ±1)
+// (top-left, top-right, bottom-left, bottom-right); [x, y, size] for the rest. Lines join stars by index.
+const CONSTELLATIONS = {
+  // Aries, the ram: a long bent line of stars
+  red: { stars: [[-1.75, 0.25, 0.8], [1.7, -1.6, 0.9], [1.55, 0.05, 0.7]], lines: [[4, 2], [2, 0], [0, 1], [1, 5], [1, 6], [6, 3]] },
+  // Taurus, the bull: the V of its face round bright Aldebaran, and two long horns
+  green: { stars: [[0, 0.1, 1.5], [-1.75, -1.7, 0.9], [1.75, -1.55, 0.9], [0.3, 1.75, 0.6]], lines: [[2, 4], [4, 3], [4, 0], [0, 5], [4, 1], [1, 6], [3, 7]] },
+  // Cancer, the crab: its upside-down Y, with a claw curling up each side
+  blue: { stars: [[0, 0.3, 1.1], [0, -1.65, 0.9], [-1.75, 0.15, 0.8], [1.75, 0.15, 0.8]], lines: [[5, 4], [4, 2], [4, 3], [2, 6], [6, 0], [3, 7], [7, 1]] },
+  // Leo, the lion: the sickle of its mane down to Regulus, its body, and its tail
+  yellow: { stars: [[-0.35, -1.75, 0.8], [-1.72, -1.5, 0.8], [-1.72, 0, 0.8], [1.75, 1.7, 0.9]], lines: [[4, 5], [5, 0], [0, 6], [6, 2], [0, 1], [1, 3], [3, 2], [3, 7]] },
+  // Scorpius: claws, red Antares at its heart, and the curling tail
+  purple: { stars: [[-1.7, -1.5, 0.8], [-0.05, -0.25, 1.4], [1.65, -1.7, 0.8], [-0.35, 1.75, 0.7], [0.55, 1.7, 0.7]], lines: [[4, 0], [0, 5], [5, 1], [1, 6], [5, 2], [2, 7], [7, 8], [8, 3]] },
+  // Sagittarius: the teapot, with its handle, lid and spout
+  orange: { stars: [[-1.75, 0, 0.8], [0, -1.7, 0.8], [1.75, 1.55, 0.9]], lines: [[0, 1], [1, 3], [3, 2], [2, 0], [0, 4], [4, 2], [0, 5], [5, 1], [3, 6]] },
+};
+const TOKEN_STARS = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+
+function constellationStars(name, b, spread) {
+  const c = CONSTELLATIONS[name] || CONSTELLATIONS.red;
+  const pts = [...TOKEN_STARS.map(([x, y]) => [x, y, 0]), ...c.stars];
+  return { c, pts: pts.map(([x, y, sz]) => ({ x: b.x + x * spread, y: b.y + y * spread, sz })) };
+}
+
+// The constellation inside a base's window: a nebula in the player's colour, glowing lines,
+// small stars, and the four big stars the tokens sit on. (r: a token star's radius, inner: the
+// window's half-size)
+function drawConstellation(ctx, b, spread, r, color, name, inner, k) {
+  const { c, pts } = constellationStars(name, b, spread);
+  ctx.save();
+  // the nebula
+  for (const [ox, oy, rr, a] of [[0, 0, 1.1, 0.5], [-0.35, 0.3, 0.6, 0.35], [0.4, -0.35, 0.55, 0.3]]) {
+    const gx = b.x + ox * inner;
+    const gy = b.y + oy * inner;
+    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, inner * rr);
+    g.addColorStop(0, hexA(color, a));
+    g.addColorStop(1, hexA(color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(b.x - inner, b.y - inner, inner * 2, inner * 2);
+  }
+  // the lines
+  ctx.lineCap = 'round';
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 0.25 * k;
+  ctx.lineWidth = r * 0.12;
+  ctx.strokeStyle = hexA(mix(color, '#ffffff', 0.55), 0.75);
+  ctx.beginPath();
+  for (const [i, j] of c.lines) {
+    ctx.moveTo(pts[i].x, pts[i].y);
+    ctx.lineTo(pts[j].x, pts[j].y);
+  }
+  ctx.stroke();
+  // the small stars
+  pts.slice(4).forEach((p) => {
+    ctx.shadowBlur = 0.3 * k;
+    ctx.shadowColor = '#ffffff';
+    ctx.fillStyle = '#fffaf0';
+    circle(ctx, p.x, p.y, r * 0.18 * p.sz);
+    ctx.fill();
+  });
+  // the token stars: a glow in the player's colour, a white-hot middle and a twinkle
+  for (const p of pts.slice(0, 4)) {
+    ctx.shadowBlur = 0;
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 1.9);
+    g.addColorStop(0, hexA(mix(color, '#ffffff', 0.5), 0.95));
+    g.addColorStop(0.35, hexA(color, 0.6));
+    g.addColorStop(1, hexA(color, 0));
+    ctx.fillStyle = g;
+    circle(ctx, p.x, p.y, r * 1.9);
+    ctx.fill();
+    ctx.lineWidth = r * 0.1;
+    ctx.strokeStyle = hexA(mix(color, '#ffffff', 0.6), 0.9);
+    circle(ctx, p.x, p.y, r);
+    ctx.stroke();
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 0.3 * k;
+    sparkle(ctx, p.x, p.y, r * 0.75, '#ffffff');
+  }
+  ctx.restore();
+}
+
+// '#rrggbb' (or mix()'s 'rgb(…)') with an alpha, as rgba()
+function hexA(hex, a) {
+  if (hex.startsWith('rgb(')) return hex.replace('rgb(', 'rgba(').replace(')', `, ${a})`);
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 // ---------- safe-square shields ----------
 // A token standing on a safe square is wrapped in a shield in the board's theme (art.shield):
 // a bubble in the ocean, a ring of fire on lava, a frost crystal on ice… Each is drawn in two
@@ -1957,6 +2181,45 @@ function aura(ctx, x, gy, r, k, color) {
 }
 
 const SHIELDS = {
+  // A little ring of stars, joined by gold lines, turning round the token
+  constellation(ctx, spec, x, gy, r, hex, t, k, part) {
+    const d = dome(x, gy, r, k);
+    if (part === 'back') {
+      aura(ctx, x, gy, r, k, 'rgba(150, 170, 255, 0.6)');
+      aura(ctx, x, gy, r, k * 0.7, 'rgba(255, 225, 150, 0.35)');
+    }
+    const n = 6;
+    const cy = gy - r * 0.85;
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = t * 0.9 + (i / n) * TAU;
+      const wob = 1 + 0.12 * Math.sin(i * 2.3);
+      pts.push({ x: x + Math.cos(a) * d.rx * 1.05 * wob, y: cy + Math.sin(a) * r * 0.62 * k + Math.sin(i * 1.7) * r * 0.25 * k, back: Math.sin(a) < 0, i });
+    }
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1.2, r * 0.07);
+    ctx.shadowColor = 'rgba(255, 220, 140, 0.9)';
+    ctx.shadowBlur = r * 0.3;
+    ctx.strokeStyle = 'rgba(250, 220, 140, 0.95)';
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const p = pts[i];
+      const q = pts[(i + 1) % n];
+      if ((p.back && q.back) !== (part === 'back')) continue;
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(q.x, q.y);
+    }
+    ctx.stroke();
+    for (const p of pts) {
+      if (p.back !== (part === 'back')) continue;
+      const tw = 0.7 + 0.3 * Math.sin(t * 5 + p.i * 2);
+      ctx.shadowColor = '#fff3c4';
+      ctx.shadowBlur = r * 0.5;
+      sparkle(ctx, p.x, p.y, r * (p.i % 2 ? 0.3 : 0.44) * tw * k, p.i % 3 ? '#fff6d8' : hex);
+    }
+    ctx.shadowBlur = 0;
+  },
+
   // A soap bubble that wobbles a little, with a rainbow sheen
   bubble(ctx, spec, x, gy, r, hex, t, k, part) {
     const d = dome(x, gy, r, k);
@@ -2264,6 +2527,20 @@ function texPattern(ctx, spec) {
 
 // Each is drawn over a tile already filled, in the tile's own frame (-0.45..0.45), path still set.
 const TILE_STYLES = {
+  celestial(ctx, fill, theme) {
+    ctx.save();
+    ctx.clip();
+    const g = ctx.createLinearGradient(0, -0.45, 0, 0.45);
+    g.addColorStop(0, 'rgba(255,255,255,0.14)');
+    g.addColorStop(1, 'rgba(0,0,0,0.12)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-0.5, -0.5, 1, 1);
+    ctx.restore();
+    ctx.lineWidth = 0.035;
+    ctx.strokeStyle = 'rgba(222, 186, 100, 0.9)';
+    roundRect(ctx, -0.43, -0.43, 0.86, 0.86, 0.08);
+    ctx.stroke();
+  },
   gloss(ctx) {
     ctx.save();
     ctx.clip();
@@ -2393,6 +2670,7 @@ function paintBase(ctx, art, theme, x, y, w, h, color, k) {
   if (style === 'outline') ctx.fillStyle = '#0c0d16';
   else if (style === 'rock') ctx.fillStyle = mix(color, '#000000', 0.6);
   else if (style === 'frosted') ctx.fillStyle = mix(color, '#ffffff', 0.3);
+  else if (style === 'celestial') ctx.fillStyle = 'rgba(8, 10, 40, 0.55)';
   else ctx.fillStyle = color;
   ctx.fill();
   const tex = texPattern(ctx, art.tex?.base);
@@ -2462,6 +2740,18 @@ function paintBase(ctx, art, theme, x, y, w, h, color, k) {
     ctx.translate(-cx, -cy);
     ctx.stroke();
     ctx.setLineDash([]);
+  } else if (style === 'celestial') {
+    ctx.lineWidth = 0.09;
+    ctx.strokeStyle = '#d9b25a';
+    ctx.stroke();
+    ctx.translate(cx, cy);
+    ctx.scale(0.94, 0.94);
+    ctx.translate(-cx, -cy);
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 0.3 * k;
+    ctx.lineWidth = 0.05;
+    ctx.strokeStyle = color;
+    ctx.stroke();
   } else if (style === 'pool') {
     ctx.lineWidth = 0.14;
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
@@ -2551,8 +2841,8 @@ function innerPanel(ctx, theme, x, y, r, color) {
     ctx.strokeStyle = 'rgba(0,0,0,0.3)';
     ctx.stroke();
     ctx.restore();
-    ctx.lineWidth = r * 0.035;
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = r * (art.windowRim ? 0.03 : 0.035);
+    ctx.strokeStyle = art.windowRim || 'rgba(255,255,255,0.55)';
     ctx.stroke();
     return;
   }
@@ -2582,6 +2872,9 @@ function motif(ctx, kind, x, y, s, color) {
   switch (kind) {
     case 'star':
       drawStar(ctx, x, y, s, color);
+      return;
+    case 'sparkle':
+      sparkle(ctx, x, y, s * 1.25, color);
       return;
     case 'paw':
       pawPrint(ctx, x, y + s * 0.05, s * 0.95, color);

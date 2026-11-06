@@ -17,7 +17,7 @@ test('every shop dice and board has a style', () => {
 
 test('every board has a safe-square shield and its textures exist', async () => {
   const { existsSync } = await import('node:fs');
-  const shields = ['bubble', 'fire', 'frost', 'force', 'candy', 'orbit'];
+  const shields = ['bubble', 'fire', 'frost', 'force', 'candy', 'orbit', 'constellation'];
   for (const [id, theme] of Object.entries(BOARD_THEMES)) {
     const s = theme.art?.shield;
     assert.ok(shields.includes(typeof s === 'string' ? s : s?.kind), `${id} has no shield`);

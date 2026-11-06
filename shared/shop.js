@@ -39,6 +39,7 @@ export const SHOP_ITEMS = [
   { id: 'dice-lava', type: 'dice', name: 'Lava', price: 450 },
   { id: 'dice-galaxy', type: 'dice', name: 'Galaxy', price: 500 },
   { id: 'dice-cat', type: 'dice', name: 'Cat', price: 350 },
+  { id: 'dice-constellation', type: 'dice', name: 'Constellation', price: 450 },
 
   { id: 'board-classic', type: 'board', name: 'Classic', price: 0 },
   { id: 'board-midnight', type: 'board', name: 'Midnight', price: 300 },
@@ -51,6 +52,7 @@ export const SHOP_ITEMS = [
   { id: 'board-lava', type: 'board', name: 'Lava', price: 550 },
   { id: 'board-royal', type: 'board', name: 'Royal', price: 700 },
   { id: 'board-cat', type: 'board', name: 'Cat', price: 500 },
+  { id: 'board-constellation', type: 'board', name: 'Constellation', price: 800 },
 
   // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
   // Single stickers (type 'emote' with an img + slug) work the same way, just sold one at a time.
