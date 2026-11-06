@@ -641,7 +641,34 @@ function renderEmojiPop(box, groups, current) {
     grid.appendChild(b);
   }
   pop.appendChild(grid);
+  fitPicker(pop); // a bigger pack needs more room: keep it above the button
 }
+
+// The picker floats just above its sticker button, positioned against the screen rather than
+// inside the chat box (which clips what spills out of it). It stays within the visible part of
+// the screen (short phones, the keyboard up) by letting its sticker grid shrink and scroll.
+function fitPicker(pop) {
+  if (pop.classList.contains('hidden')) return;
+  const btn = pop.parentElement.querySelector('[data-emoji-btn]');
+  const form = pop.parentElement.querySelector('.chat-form') || btn;
+  const br = btn.getBoundingClientRect();
+  const fr = form.getBoundingClientRect();
+  const vv = window.visualViewport;
+  const ceiling = (vv ? vv.offsetTop : 0) + 8;
+  const floor = br.top - 6;
+  Object.assign(pop.style, { position: 'fixed', right: 'auto', bottom: 'auto', top: '0px', maxHeight: '' });
+  pop.style.maxHeight = `${Math.max(120, Math.min(340, Math.floor(floor - ceiling)))}px`;
+  pop.style.top = `${Math.max(ceiling, floor - pop.offsetHeight)}px`;
+  const width = pop.offsetWidth;
+  const viewW = vv ? vv.offsetLeft + vv.width : window.innerWidth;
+  pop.style.left = `${Math.max(8, Math.min(fr.right - width, viewW - width - 8))}px`;
+}
+const refitPickers = () => document.querySelectorAll('.emoji-pop:not(.hidden)').forEach(fitPicker);
+window.visualViewport?.addEventListener('resize', refitPickers);
+window.addEventListener('resize', refitPickers);
+window.visualViewport?.addEventListener('scroll', refitPickers);
+// the page or a panel scrolled under it (but not the picker's own sticker list)
+document.addEventListener('scroll', (e) => e.target.closest?.('.emoji-pop') || refitPickers(), true);
 
 let lastTypingSent = 0;
 function stopTyping() {
@@ -658,6 +685,7 @@ for (const box of els.chats) {
   emojiBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     pop.classList.toggle('hidden');
+    fitPicker(pop);
   });
   // "0/100" beside the box: yellow when nearly full, red at the limit
   const count = document.createElement('span');
