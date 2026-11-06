@@ -1129,17 +1129,26 @@ let kickTimer = null;
 function renderPeople() {
   els.peopleList.innerHTML = '';
   const seated = new Map(state.seats.filter((s) => s && !s.bot).map((s) => [s.userId, s]));
-  for (const p of state.people) {
+  // Players who left mid-game are listed too (they can be kicked once they're properly gone)
+  const here = new Set(state.people.map((p) => p.id));
+  const gone = [...seated.values()].filter((s) => !here.has(s.userId) && !s.surrendered).map((s) => ({ id: s.userId, name: s.name, gone: true }));
+  const now = Date.now() + clockOffset;
+  let recheck = Infinity; // when a "just disconnected" player becomes kickable
+  for (const p of [...state.people, ...gone]) {
     const li = document.createElement('li');
     const name = document.createElement('span');
     name.className = 'name';
-    const roles = [p.id === state.hostId && 'host', p.id === me?.id && 'you', !seated.has(p.id) && 'watching'].filter(Boolean);
+    const roles = [p.id === state.hostId && 'host', p.id === me?.id && 'you', !seated.has(p.id) && 'watching', p.gone && 'disconnected'].filter(Boolean);
     name.textContent = p.name + (roles.length ? ` (${roles.join(', ')})` : '');
     if (muted.has(p.id)) name.classList.add('is-muted');
     li.appendChild(name);
     if (p.id !== me?.id) {
       li.appendChild(button(muted.has(p.id) ? 'Unmute' : 'Mute', () => toggleMute(p.id)));
-      if (isHost()) {
+      // Kick: anyone in the lobby; during a game only players who have left (after their grace)
+      const seat = seated.get(p.id);
+      const kickableAt = state.phase === 'lobby' ? 0 : p.gone ? (seat?.disconnectedAt ?? 0) + (state.disconnectGrace || 0) : Infinity;
+      if (kickableAt > now && kickableAt < Infinity) recheck = Math.min(recheck, kickableAt);
+      if (isHost() && kickableAt <= now) {
         const armed = kickArmed === p.id;
         const kick = button(armed ? 'Sure?' : 'Kick', () => {
           if (kickArmed === p.id) {
@@ -1161,6 +1170,8 @@ function renderPeople() {
     }
     els.peopleList.appendChild(li);
   }
+  clearTimeout(renderPeople.timer);
+  if (recheck < Infinity) renderPeople.timer = setTimeout(() => state && renderPeople(), recheck - now + 100);
 }
 
 function listItem(color, text, tag, muted = false) {

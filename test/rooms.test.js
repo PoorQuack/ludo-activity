@@ -78,16 +78,46 @@ test('kicking someone frees their seat and keeps them out', () => {
   dir.destroy();
 });
 
-test('kicking a player mid-game surrenders them', () => {
+test('mid-game, connected players and watchers cannot be kicked', () => {
   const dir = new RoomDirectory();
   const room = dir.create(ann, { visibility: 'public', extra: { onKick: () => {} } });
   dir.join(room, bob, {});
   room.fillBots(ann);
   room.start(ann);
+  dir.join(room, cat, {}); // watching
+  assert.throws(() => room.handle(ann, { action: 'kick', userId: 'bob' }), /before the game starts/);
+  assert.throws(() => room.handle(ann, { action: 'kick', userId: 'cat' }), /before the game starts/);
+  assert.deepEqual(room.forfeited, []);
+  assert.equal(room.banned.size, 0);
+  dir.destroy();
+});
+
+test('mid-game, a player who left can be kicked once their reconnect grace is over', () => {
+  const dir = new RoomDirectory();
+  const room = dir.create(ann, { visibility: 'public', extra: { onKick: () => {} } });
+  dir.join(room, bob, {});
+  room.fillBots(ann);
+  room.start(ann);
+  room.disconnect(bob);
+  assert.throws(() => room.handle(ann, { action: 'kick', userId: 'bob' }), /only just disconnected/);
+  room.seats[1].disconnectedAt = Date.now() - 60_000; // long gone
   room.handle(ann, { action: 'kick', userId: 'bob' });
-  assert.deepEqual(room.forfeited, [1]); // Bob's seat
+  assert.deepEqual(room.forfeited, [1]); // Bob's seat: out of the game
   assert.equal(room.seats[1].surrendered, true);
+  assert.ok(room.banned.has('bob'));
   assert.equal(room.phase, 'playing'); // Ann and the bots carry on
+  dir.destroy();
+});
+
+test('after the game, a winner who is still there cannot be kicked either', () => {
+  const dir = new RoomDirectory();
+  const room = dir.create(ann, { visibility: 'public', extra: { onKick: () => {} } });
+  dir.join(room, bob, {});
+  room.start(ann);
+  room.tokens[room.seatOf('bob')] = [10, 20, -1, -1];
+  room.surrender(ann);
+  assert.equal(room.phase, 'finished');
+  assert.throws(() => room.handle(ann, { action: 'kick', userId: 'bob' }), /before the game starts/);
   dir.destroy();
 });
 

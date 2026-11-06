@@ -470,6 +470,8 @@ export class Room {
     this.requireHost(user);
     if (userId === user.id) throw new Error("You can't kick yourself");
     if (!this.people.has(userId) && this.seatOf(userId) < 0) throw new Error("They're not in this room");
+    const why = this.kickBlocked(userId);
+    if (why) throw new Error(why);
     const name = this.people.get(userId) || this.seats[this.seatOf(userId)]?.name || 'Someone';
     this.banned.add(userId);
     const seat = this.seatOf(userId);
@@ -484,6 +486,18 @@ export class Room {
     }
     this.onKick(userId);
     this.changed();
+  }
+
+  // Kicking is for the lobby. Once a game starts, a host could kick whoever is about to beat
+  // them, so the only players who can be removed are ones who have left (disconnected for
+  // longer than their reconnect grace). Returns why not, or null if they can be kicked.
+  kickBlocked(userId) {
+    if (this.phase === 'lobby') return null;
+    const seat = this.seatOf(userId);
+    if (seat < 0 || this.seats[seat].connected) return 'Players can only be removed before the game starts, or once they have disconnected';
+    const backBy = (this.seats[seat].disconnectedAt ?? 0) + this.delays.disconnectGrace;
+    if (Date.now() < backBy) return 'They only just disconnected: give them a few seconds to come back';
+    return null;
   }
 
   newGame(user) {
