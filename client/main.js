@@ -547,22 +547,35 @@ function stickerGroups() {
       groups.push({ id: i.id, name: i.name, icon: entries[0]?.img, entries });
     }
   }
-  if (singles.length) groups.push({ id: 'singles', name: 'Stickers', icon: singles[0].img, entries: singles });
   for (const g of groups) for (const e of g.entries) all.set(e.insert, e);
+  for (const e of singles) all.set(e.insert, e);
+  // Single stickers first, then your recent ones, then the packs
   const recent = recentStickers().map((x) => all.get(x)).filter(Boolean);
   if (recent.length) groups.unshift({ id: 'recent', name: 'Recent', icon: null, entries: recent });
+  if (singles.length) groups.unshift({ id: 'singles', name: 'Stickers', icon: singles[0].img, entries: singles });
   return groups;
 }
 
+// The game redraws on every update (each roll, move, "is typing"…), so the picker is only rebuilt
+// when what it shows has changed: otherwise it would jump back to the top while you scroll it.
+let pickerShown = '';
 function renderEmojiPops() {
-  for (const box of els.chats) renderEmojiPop(box);
+  const groups = stickerGroups();
+  const current = pickedGroup(groups);
+  const key = JSON.stringify([current?.id, groups.map((g) => [g.id, g.entries.map((e) => e.insert)])]);
+  if (key === pickerShown) return;
+  pickerShown = key;
+  for (const box of els.chats) renderEmojiPop(box, groups, current);
 }
 
-function renderEmojiPop(box) {
+function pickedGroup(groups) {
+  return groups.find((g) => g.id === pickerPack) || groups.find((g) => g.id !== 'recent') || groups[0];
+}
+
+function renderEmojiPop(box, groups, current) {
   const pop = box.querySelector('.emoji-pop');
   const input = box.querySelector('input');
   pop.innerHTML = '';
-  const groups = stickerGroups();
   if (!groups.length) {
     const hint = document.createElement('p');
     hint.className = 'emoji-empty';
@@ -570,8 +583,6 @@ function renderEmojiPop(box) {
     pop.appendChild(hint);
     return;
   }
-  const current = groups.find((g) => g.id === pickerPack) || groups.find((g) => g.id !== 'recent') || groups[0];
-
   // The pack tabs
   const tabs = document.createElement('div');
   tabs.className = 'emoji-tabs';
@@ -630,8 +641,6 @@ function renderEmojiPop(box) {
     grid.appendChild(b);
   }
   pop.appendChild(grid);
-  // keep the active tab in view when there are lots of packs
-  tabs.querySelector('.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
 let lastTypingSent = 0;

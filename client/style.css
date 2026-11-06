@@ -670,20 +670,21 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: 210px;
+  width: 214px;
   padding: 8px;
+  overscroll-behavior: contain;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 12px;
 }
-/* One tab per sticker pack; scrolls sideways when there are lots */
+/* One tab per sticker pack; they wrap onto another row when there are lots (no sideways
+   scrolling, which is awkward with a mouse wheel) */
 .emoji-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  overflow-x: auto;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--line);
-  scrollbar-width: thin;
 }
 .emoji-tab {
   flex: 0 0 34px;
@@ -708,7 +709,14 @@ html, body {
   gap: 6px;
   justify-content: space-between;
   max-height: 184px;
+  overflow-x: hidden;
   overflow-y: auto;
+  /* scrolling the stickers never drags the chat or the page along with it */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  padding-right: 2px;
 }
 .emoji-pop.hidden { display: none; }
 .chat-emote { width: 26px; height: 26px; object-fit: contain; vertical-align: -6px; margin: 0 1px; }
