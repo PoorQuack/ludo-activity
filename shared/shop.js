@@ -61,6 +61,8 @@ export const SHOP_ITEMS = [
   { id: 'emote-cathappy', type: 'emote', name: 'Happy cat', img: '/emotes/cats/cathappy.gif', slug: 'cathappy', price: 150 },
   { id: 'emote-dancekitten', type: 'emote', name: 'Dancing kitten', img: '/emotes/cats/dancekitten.webp', slug: 'dancekitten', price: 150 },
   { id: 'emote-angrycat', type: 'emote', name: 'Angry cat', img: '/emotes/cats/angrycat.png', slug: 'angrycat', price: 150 },
+  // Was in the Hamster pack by mistake: anyone with that pack keeps it for free
+  { id: 'emote-nervouscat', type: 'emote', name: 'Nervous cat', img: '/emotes/cats/nervouscat.png', slug: 'nervouscat', price: 150, freeWith: 'emote-pack-hamster' },
   // Emote packs: one purchase unlocks a set of image emotes, served from /emotes/.
   // Sending one carries the pack id plus the entry index.
   {
@@ -84,7 +86,6 @@ export const SHOP_ITEMS = [
       { img: '/emotes/hamster/shockedhamster.png', slug: 'shocked', name: 'Shocked' },
       { img: '/emotes/hamster/skeletonhamster.png', slug: 'skeleton', name: 'Skeleton' },
       { img: '/emotes/hamster/zzzhamster.png', slug: 'sleepy', name: 'Sleepy' },
-      { img: '/emotes/hamster/nervoushamster.png', slug: 'nervous', name: 'Nervous' },
     ],
   },
   // Laughing and teasing stickers (art from the Toshi and kitty packs, see client/public/emotes/CREDITS.md).
@@ -195,5 +196,8 @@ export const DEFAULT_EQUIPPED = { token: 'token-classic', dice: 'dice-classic', 
 // Free items are owned by everyone.
 export function ownsItem(profile, id) {
   const item = ITEMS[id];
-  return !!item && (item.price === 0 || !!profile?.owned.includes(id));
+  if (!item) return false;
+  if (item.price === 0 || !!profile?.owned.includes(id)) return true;
+  // some items come free with another one you own (see `freeWith`)
+  return !!item.freeWith && !!profile?.owned.includes(item.freeWith);
 }

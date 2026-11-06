@@ -25,3 +25,11 @@ test('every board has a safe-square shield and its textures exist', async () => 
     for (const spec of specs) assert.ok(existsSync(new URL(`../client/public${spec.src}`, import.meta.url)), `${id}: ${spec.src} missing`);
   }
 });
+
+test('the Nervous cat comes free with the Hamster pack, and the pack has no cat in it', async () => {
+  const { ownsItem, ITEMS } = await import('../shared/shop.js');
+  assert.equal(ownsItem({ owned: ['emote-pack-hamster'] }, 'emote-nervouscat'), true);
+  assert.equal(ownsItem({ owned: [] }, 'emote-nervouscat'), false);
+  assert.equal(ownsItem({ owned: ['emote-nervouscat'] }, 'emote-nervouscat'), true);
+  assert.ok(ITEMS['emote-pack-hamster'].emotes.every((e) => e.img.startsWith('/emotes/hamster/') && !/cat/.test(e.img)));
+});
