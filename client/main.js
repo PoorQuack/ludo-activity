@@ -371,25 +371,44 @@ function toggleMute(userId) {
 
 const STICKER_MS = 2800;
 
-// A sticker floats up from the sender's base as a DOM image — big and fully animated.
+// Stickers float over their sender's base. They're placed from the board's current size, and
+// placed again whenever the board resizes (on phones it shrinks while the keyboard is open, so
+// a sticker sent then would otherwise be left stranded at the top when the board grows back).
+const liveStickers = new Set();
+
+function placeSticker(st) {
+  const b = boardFor(state.mode).bases[st.seat];
+  const rect = els.canvas.getBoundingClientRect();
+  if (!b || !rect.width || !renderer.span) return;
+  const wr = els.canvas.parentElement.getBoundingClientRect();
+  const cell = rect.width / renderer.span;
+  st.el.style.left = `${rect.left - wr.left + (b.x + renderer.span / 2) * cell}px`;
+  st.el.style.top = `${rect.top - wr.top + (b.y + renderer.span / 2) * cell}px`;
+  st.img.style.width = `${Math.round(cell * 2.6)}px`;
+}
+
 function spawnBoardSticker(e) {
-  const wrap = els.canvas.parentElement;
-  const b = boardFor(state.mode).bases[e.seat];
-  if (!b) return;
-  const pt = renderer.toClient(b.x, b.y);
-  const wr = wrap.getBoundingClientRect();
+  if (!boardFor(state.mode).bases[e.seat]) return;
   const el = document.createElement('div');
   el.className = 'board-sticker';
-  el.style.left = `${pt.x - wr.left}px`;
-  el.style.top = `${pt.y - wr.top}px`;
   const img = document.createElement('img');
   img.src = e.img;
   img.alt = '';
-  img.style.width = `${Math.round(renderer.cell * 2.6)}px`;
   el.appendChild(img);
-  wrap.appendChild(el);
-  setTimeout(() => el.remove(), STICKER_MS);
+  const st = { el, img, seat: e.seat };
+  placeSticker(st);
+  els.canvas.parentElement.appendChild(el);
+  liveStickers.add(st);
+  setTimeout(() => {
+    el.remove();
+    liveStickers.delete(st);
+  }, STICKER_MS);
 }
+
+// (the board can also just move inside its box, so watch the box as well as the board)
+const stickerWatch = new ResizeObserver(() => liveStickers.forEach(placeSticker));
+stickerWatch.observe(els.canvas);
+stickerWatch.observe(els.canvas.parentElement);
 
 function renderChat() {
   if (!state) return;
