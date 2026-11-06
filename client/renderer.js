@@ -144,7 +144,9 @@ export class BoardRenderer {
         roundRect(ctx, b.x - inner, b.y - inner, inner * 2, inner * 2, 0.4);
         innerPanel(ctx, theme, b.x, b.y, inner, color(seat));
         if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.4, color(seat), this.board.colors[seat], inner, k);
+        else if (art.pins === 'dents') drawDents(ctx, b, board.baseSpread, 0.6);
         else drawPinSpots(ctx, b, board.baseSpread, 0.62, color(seat));
+        if (art.decor === 'cat') catDecor(ctx, b.x, b.y, outer, color(seat), k);
       } else {
         // The whole triangle between two arms in the player's colour, a plain circle inside,
         // and a faint spot for each pin to stand on
@@ -158,8 +160,9 @@ export class BoardRenderer {
         ctx.closePath();
         paintBase(ctx, art, theme, b.x - 7, b.y - 7, 14, 14, color(seat), k);
         circle(ctx, b.x, b.y, b.size);
-        innerPanel(ctx, theme, b.x, b.y, b.size, color(seat));
+        innerPanel(ctx, theme, b.x, b.y, b.size, color(seat), false);
         if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.3, color(seat), this.board.colors[seat], b.size, k);
+        else if (art.pins === 'dents') drawDents(ctx, b, board.baseSpread, 0.42);
         else drawPinSpots(ctx, b, board.baseSpread, 0.42, color(seat));
       }
       // Colour-blind mode: the player's shape in the middle of their base
@@ -170,7 +173,7 @@ export class BoardRenderer {
     board.track.forEach((sq, i) => {
       const startSeat = board.startIndex.indexOf(i);
       const safe = board.safe.has(i);
-      drawTile(ctx, sq, startSeat >= 0 ? color(startSeat) : safe ? theme.safe : theme.cell, art.tile, theme);
+      drawTile(ctx, sq, startSeat >= 0 ? color(startSeat) : safe ? theme.safe : theme.cell, art.tile, theme, startSeat >= 0 ? 'start' : safe ? 'safe' : 'cell', routeTurn(sq, false));
       // (in colour-blind mode the start square shows its player's shape instead of the star)
       if (startSeat >= 0 && cb) {
         const ink = inkOn(color(startSeat));
@@ -203,7 +206,7 @@ export class BoardRenderer {
     // Home columns
     board.homeColumns.forEach((col, seat) => {
       for (const sq of col) {
-        drawTile(ctx, sq, color(seat), art.tile, theme);
+        drawTile(ctx, sq, color(seat), art.tile, theme, 'home', routeTurn(sq, true));
         if (cb) drawShape(ctx, this.seatShape(seat), sq.x, sq.y, 0.17, inkOn(color(seat)).fill, null);
       }
     });
@@ -229,6 +232,37 @@ export class BoardRenderer {
         ctx.stroke();
         ctx.restore();
       } else ctx.fill();
+      if (art.center === 'stitched') {
+        // felt triangles with a running stitch just inside the edge
+        const pts = [[0, 0], [Math.cos(a - Math.PI / n) * R, Math.sin(a - Math.PI / n) * R], [Math.cos(a + Math.PI / n) * R, Math.sin(a + Math.PI / n) * R]];
+        const cx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3;
+        const cy = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.14)';
+        ctx.fill();
+        const fab = texPattern(ctx, art.tex?.panel);
+        if (fab) {
+          ctx.globalCompositeOperation = 'multiply';
+          ctx.globalAlpha = 0.4;
+          ctx.fillStyle = fab;
+          ctx.fill();
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 1;
+        }
+        ctx.beginPath();
+        for (const [px, py] of pts) ctx.lineTo(cx + (px - cx) * 0.78, cy + (py - cy) * 0.78);
+        ctx.closePath();
+        ctx.setLineDash([0.13, 0.09]);
+        ctx.lineWidth = 0.045;
+        ctx.strokeStyle = mix(color(s), '#3a2010', 0.4);
+        ctx.stroke();
+        ctx.restore();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(pts[1][0], pts[1][1]);
+        ctx.lineTo(pts[2][0], pts[2][1]);
+        ctx.closePath();
+      }
       ctx.lineJoin = 'round';
       ctx.lineWidth = 0.1;
       ctx.strokeStyle = theme.bg;
@@ -2028,7 +2062,18 @@ function apply(m, [x, y, z]) {
 
 // One square of the track: a slightly rounded tile, a little smaller than its cell.
 // `style` (a board theme's art.tile) dresses it up: gloss, frost, stone, neon, wood, moss, gilded, starry.
-function drawTile(ctx, sq, fill, style, theme) {
+// Which way tokens travel through a square, as a turn from the square's own frame (whose +x
+// points out along its arm): out along lane -1, across the end, back in along lane +1, and in
+// towards the middle on a home column.
+function routeTurn(sq, home) {
+  if (home) return Math.PI;
+  const lane = -Math.sin(sq.angle) * sq.x + Math.cos(sq.angle) * sq.y;
+  if (Math.abs(lane) < 0.3) return Math.PI / 2; // the square across the end of the arm
+  return lane < 0 ? 0 : Math.PI;
+}
+
+// role: 'cell', 'safe', 'start' or 'home'; turn: the route's direction (see routeTurn)
+function drawTile(ctx, sq, fill, style, theme, role = 'cell', turn = 0) {
   ctx.save();
   ctx.translate(sq.x, sq.y);
   ctx.rotate(sq.angle);
@@ -2046,7 +2091,7 @@ function drawTile(ctx, sq, fill, style, theme) {
     ctx.fill();
     ctx.restore();
   }
-  if (style) TILE_STYLES[style]?.(ctx, fill, theme, rnd(sq.x * 7.3 + sq.y * 3.1));
+  if (style) TILE_STYLES[style]?.(ctx, fill, theme, rnd(sq.x * 7.3 + sq.y * 3.1), role, turn);
   ctx.restore();
 }
 
@@ -2527,6 +2572,47 @@ function texPattern(ctx, spec) {
 
 // Each is drawn over a tile already filled, in the tile's own frame (-0.45..0.45), path still set.
 const TILE_STYLES = {
+  // Knitted squares: two columns of V stitches pointing the way the route runs, inside a
+  // twisted-yarn edge. Safe and start squares are plain felt.
+  knit(ctx, fill, theme, r, role, turn) {
+    if (role === 'cell' || role === 'home') {
+      ctx.save();
+      ctx.clip();
+      ctx.rotate(turn);
+      ctx.fillStyle = mix(fill.startsWith('#') ? fill : '#f2e6d4', '#5a3418', 0.14);
+      ctx.fillRect(-0.5, -0.5, 1, 1);
+      const lit = mix(fill, '#ffffff', 0.18);
+      const dark = mix(fill, '#5a3418', 0.3);
+      ctx.lineWidth = 0.018;
+      for (const cy of [-0.215, 0.215]) {
+        for (let cx = -0.6; cx <= 0.6; cx += 0.26) {
+          for (const side of [-1, 1]) {
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + side * 0.085, 0.15, 0.075, -side * 0.55, 0, TAU);
+            const g = ctx.createLinearGradient(cx - 0.12, 0, cx + 0.12, 0);
+            g.addColorStop(0, dark);
+            g.addColorStop(0.45, lit);
+            g.addColorStop(1, fill);
+            ctx.fillStyle = g;
+            ctx.fill();
+            ctx.strokeStyle = dark;
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+    } else TILE_STYLES.gloss(ctx);
+    // the twisted yarn round the edge
+    ctx.lineWidth = 0.06;
+    ctx.strokeStyle = '#c9986a';
+    roundRect(ctx, -0.47, -0.47, 0.94, 0.94, 0.12);
+    ctx.stroke();
+    ctx.setLineDash([0.045, 0.04]);
+    ctx.lineDashOffset = r * 0.08;
+    ctx.strokeStyle = '#7a4a28';
+    ctx.stroke();
+    ctx.setLineDash([]);
+  },
   celestial(ctx, fill, theme) {
     ctx.save();
     ctx.clip();
@@ -2671,6 +2757,7 @@ function paintBase(ctx, art, theme, x, y, w, h, color, k) {
   else if (style === 'rock') ctx.fillStyle = mix(color, '#000000', 0.6);
   else if (style === 'frosted') ctx.fillStyle = mix(color, '#ffffff', 0.3);
   else if (style === 'celestial') ctx.fillStyle = 'rgba(8, 10, 40, 0.55)';
+  else if (art.baseLight) ctx.fillStyle = mix(color, '#ffffff', art.baseLight);
   else ctx.fillStyle = color;
   ctx.fill();
   const tex = texPattern(ctx, art.tex?.base);
@@ -2734,7 +2821,7 @@ function paintBase(ctx, art, theme, x, y, w, h, color, k) {
   } else if (style === 'cushion') {
     ctx.lineWidth = 0.07;
     ctx.setLineDash([0.22, 0.16]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.strokeStyle = art.stitch ? mix(color, art.stitch, 0.45) : 'rgba(255,255,255,0.75)';
     ctx.translate(cx, cy);
     ctx.scale(0.9, 0.9);
     ctx.translate(-cx, -cy);
@@ -2824,8 +2911,48 @@ function basePattern(ctx, art, x, y, w, h, color) {
 }
 
 // The panel inside a base where the pins wait: a soft glow, and the theme's emblem faintly.
-function innerPanel(ctx, theme, x, y, r, color) {
+function innerPanel(ctx, theme, x, y, r, color, square = true) {
   const art = theme.art || {};
+  if (art.panel === 'fluffy') {
+    // A soft cushion: puffs all round the edge, then the cushion itself, gently shaded
+    ctx.save();
+    const pts = [];
+    if (square) {
+      const step = 0.24;
+      for (let d = -r; d < r; d += step) pts.push([x + d, y - r], [x + r, y + d], [x - d, y + r], [x - r, y - d]);
+    } else for (let i = 0; i < 40; i++) pts.push([x + Math.cos((i / 40) * TAU) * r, y + Math.sin((i / 40) * TAU) * r]);
+    ctx.shadowColor = 'rgba(110, 66, 30, 0.35)';
+    ctx.shadowBlur = 0.15 * tileK;
+    ctx.shadowOffsetY = 0.04 * tileK;
+    ctx.fillStyle = theme.baseInner;
+    pts.forEach(([px, py], i) => {
+      circle(ctx, px, py, 0.16 + rnd(i * 3 + 1) * 0.05);
+      ctx.fill();
+    });
+    ctx.restore();
+    ctx.save();
+    if (square) roundRect(ctx, x - r, y - r, r * 2, r * 2, 0.3);
+    else circle(ctx, x, y, r);
+    ctx.fillStyle = theme.baseInner;
+    ctx.fill();
+    const tex = texPattern(ctx, art.tex?.panel);
+    if (tex) {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = tex;
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    ctx.clip();
+    const g = ctx.createRadialGradient(x - r * 0.25, y - r * 0.3, r * 0.1, x, y, r * 1.4);
+    g.addColorStop(0, 'rgba(255,255,255,0.55)');
+    g.addColorStop(1, 'rgba(120, 70, 30, 0.12)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r * 1.5, y - r * 1.5, r * 3, r * 3);
+    ctx.restore();
+    return;
+  }
   if (art.panel === 'window') {
     // An opening onto the surface below (the lagoon, the lava…), with a shaded rim for depth
     ctx.save();
@@ -3081,6 +3208,58 @@ function emoteImg(url) {
 
 // The four spots in a base where pins wait, like the circles on a real Ludo board:
 // a disc in the player's colour with a soft inset rim, so it reads as a hollow to stand in.
+// Soft dents in a cushion where the pins sit
+function drawDents(ctx, b, spread, r) {
+  for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const x = b.x + ox * spread;
+    const y = b.y + oy * spread;
+    const g = ctx.createRadialGradient(x, y + r * 0.1, 0, x, y, r);
+    g.addColorStop(0, 'rgba(120, 72, 32, 0.2)');
+    g.addColorStop(0.7, 'rgba(120, 72, 32, 0.08)');
+    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * 0.8, 0, 0, TAU);
+    ctx.fill();
+  }
+}
+
+// The Cat board's base corners: a paw print, a ball of yarn with its loose end, claw scratches
+function catDecor(ctx, x, y, outer, color, k) {
+  const ink = mix(color, '#3a2010', 0.45);
+  const m = outer - 0.48;
+  ctx.save();
+  ctx.globalAlpha = 0.6;
+  pawPrint(ctx, x - m, y - m, 0.22, ink);
+  // yarn ball
+  const bx = x - m;
+  const by = y + m;
+  ctx.globalAlpha = 0.65;
+  ctx.lineWidth = 0.035;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = ink;
+  circle(ctx, bx, by, 0.2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bx - 0.28, by - 0.02, 0.3, -0.75, 0.75);
+  ctx.moveTo(bx + 0.14, by - 0.16);
+  ctx.quadraticCurveTo(bx - 0.04, by, bx + 0.12, by + 0.17);
+  ctx.moveTo(bx + 0.2, by + 0.04);
+  ctx.bezierCurveTo(bx + 0.45, by + 0.15, bx + 0.35, by - 0.2, bx + 0.62, by - 0.05);
+  ctx.stroke();
+  // claw scratches
+  ctx.globalAlpha = 0.45;
+  ctx.lineWidth = 0.03;
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) {
+    const sx = x + m - 0.3 + i * 0.12;
+    ctx.moveTo(sx, y - m - 0.18);
+    ctx.quadraticCurveTo(sx + 0.12, y - m, sx + 0.06, y - m + 0.2);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawPinSpots(ctx, b, spread, r, color) {
   for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
     const x = b.x + ox * spread;

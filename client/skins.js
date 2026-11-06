@@ -181,24 +181,25 @@ export const BOARD_THEMES = {
     baseInner: '#211310',
     players: { red: '#ff4a3d', green: '#48d18a', yellow: '#ffc83a', blue: '#4f8dff', purple: '#c06bff', orange: '#ff7b2a' },
   },
-  // Warm and cosy: a knitted blanket in every base, linen squares, paw prints everywhere
+  // Warm and cosy: knitted squares whose stitches follow the route, felt bases with a fluffy
+  // cushion for the pins, a paw print, a ball of yarn and claw scratches in the corners
   'board-cat': {
     art: {
-      base: 'cushion', frame: ['#c27a4a', '#ffd9b0', 0.34], panel: 'window',
+      base: 'cushion', baseLight: 0.14, stitch: '#3a2010', frame: ['#b9784a', '#f3c79c', 0.3],
+      panel: 'fluffy', pins: 'dents', decor: 'cat', center: 'stitched',
       tex: {
-        surface: { src: '/textures/cat-knit.jpg', size: 3.2 },
-        base: { src: '/textures/cat-linen.jpg', size: 4, blend: 'multiply', alpha: 0.6 },
-        tile: { src: '/textures/cat-linen.jpg', size: 3, blend: 'multiply', alpha: 0.8 },
+        base: { src: '/textures/cat-linen.jpg', size: 4, blend: 'multiply', alpha: 0.55 },
+        panel: { src: '/textures/cat-linen.jpg', size: 3 },
       },
-      tile: 'gloss', mark: 'paw', fx: 'paws', fxColor: '#8a5a3c', fxCount: 24,
+      tile: 'knit', mark: 'paw', fx: 'paws', fxColor: '#8a5a3c', fxCount: 18,
       shield: { kind: 'orbit', motif: 'paw', colors: ['#ffffff', '#ffd3e0'], glow: 'rgba(255, 190, 140, 0.55)', n: 4, size: 0.36 },
     },
-    bg: '#c9875a',
-    cell: '#fffaf3',
-    safe: '#ffe2c6',
-    star: '#c27a4a',
-    baseInner: '#fff6ec',
-    players: { red: '#e86a6a', green: '#5dbb8a', yellow: '#f1b947', blue: '#6c8fe0', purple: '#a57ad8', orange: '#ee8a4a' },
+    bg: '#b98a5e',
+    cell: '#f2e6d4',
+    safe: '#ecc9a2',
+    star: '#a8683e',
+    baseInner: '#f7ecdc',
+    players: { red: '#d9665c', green: '#5fae7a', yellow: '#e8b84a', blue: '#6a8fd0', purple: '#a57fcc', orange: '#e88f55' },
   },
   'board-royal': {
     // Purple velvet and white marble, gold everywhere
