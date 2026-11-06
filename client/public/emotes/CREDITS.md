@@ -11,5 +11,7 @@ differently or taken down, open an issue and it will be removed.
 | `kitty/` | [Kitty Emotions](https://emoji.gg/pack/944638-kitty-emotions), [White kitties](https://emoji.gg/pack/92422-white-kitties) | Kitty pack, Laugh pack |
 | `aliaa/` | [Aliaa](https://emoji.gg/pack/862115-aliaa) (pixel art scaled up 6x) | Aliaa pack |
 | `cats/` | emoji.gg | Happy cat sticker |
+| `hamster/nervoushamster.png` | the "nervous hamster" meme (background removed) | Hamster pack |
+| `meme/dumb.png` | [dumb](https://emoji.gg/emoji/399151-dumb) (background removed) | Laugh pack |
 
 Files were resized for the game; nothing else about the drawings was changed.

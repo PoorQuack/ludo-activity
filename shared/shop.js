@@ -78,6 +78,7 @@ export const SHOP_ITEMS = [
       { img: '/emotes/hamster/shockedhamster.png', slug: 'shocked', name: 'Shocked' },
       { img: '/emotes/hamster/skeletonhamster.png', slug: 'skeleton', name: 'Skeleton' },
       { img: '/emotes/hamster/zzzhamster.png', slug: 'sleepy', name: 'Sleepy' },
+      { img: '/emotes/hamster/nervoushamster.png', slug: 'nervous', name: 'Nervous' },
     ],
   },
   // Laughing and teasing stickers (art from the Toshi and kitty packs, see client/public/emotes/CREDITS.md).
@@ -96,6 +97,7 @@ export const SHOP_ITEMS = [
       { img: '/emotes/kitty/catevil.png', slug: 'mwahaha', name: 'Evil grin' },
       { img: '/emotes/toshi/smug.png', slug: 'smug', name: 'Smug' },
       { img: '/emotes/kitty/party-moos.png', slug: 'party', name: 'Party' },
+      { img: '/emotes/meme/dumb.png', slug: 'dumb', name: 'Dumb' },
     ],
   },
   // Toshi, the blue fox-cat: every mood.

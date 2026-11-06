@@ -794,6 +794,8 @@ html, body {
   user-select: text;
 }
 .chat-log li { overflow-wrap: anywhere; }
+/* Messages sit at the bottom next to the input (auto margin soaks up spare room above) */
+.chat-log > li:first-child { margin-top: auto; }
 .chat-log .who { font-weight: 700; margin-right: 6px; }
 .chat-log .empty { color: var(--muted); }
 .chat-form { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); }
