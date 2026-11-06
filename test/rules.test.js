@@ -56,28 +56,24 @@ test('capture sends opponent home, but not on safe squares', () => {
   assert.equal(res.captured.length, 1);
   assert.equal(t[1][0], -1);
 
-  // two tokens on one square: only one is captured
+  // two tokens of one colour make a pair: neither is captured (see pairs.test.js)
   const t3 = newTokens();
   t3[1][0] = greenP;
   t3[1][1] = greenP;
   t3[0][0] = 2;
   const res3 = applyMove(t3, 0, 0, 3, [0, 1]);
-  assert.equal(res3.captured.length, 1);
-  assert.equal(t3[1].filter((p) => p === greenP).length, 1);
+  assert.equal(res3.captured.length, 0);
+  assert.equal(t3[1].filter((p) => p === greenP).length, 2);
 
-  // two colours on one square (2 green, 2 blue): one of each is captured, the rest stay
+  // two colours on one square, one token each: both are captured
   const t4 = newTokens();
   const blueP = (5 - 39 + 52) % 52;
   t4[1][0] = greenP;
-  t4[1][1] = greenP;
   t4[3][0] = blueP;
-  t4[3][2] = blueP;
   t4[0][0] = 2;
   assert.equal(B4.trackIndex(3, blueP), 5);
   const res4 = applyMove(t4, 0, 0, 3, [0, 1, 3]);
   assert.deepEqual(res4.captured.map((c) => c.seat).sort(), [1, 3]);
-  assert.equal(t4[1].filter((p) => p === greenP).length, 1);
-  assert.equal(t4[3].filter((p) => p === blueP).length, 1);
 
   // star square (index 8) is safe
   const t2 = newTokens();
