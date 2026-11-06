@@ -1073,6 +1073,12 @@ function drawMenuBoard() {
   }
 }
 
+// A board texture finished loading: the menu board is drawn once, so draw it again
+window.addEventListener('ludo-textures', () => {
+  menuBoardKey = null;
+  drawMenuBoard();
+});
+
 let menuResizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(menuResizeTimer);

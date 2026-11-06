@@ -1,0 +1,41 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<svg id="water" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="ripple" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <!-- deep/shallow patches -->
+      <feTurbulence type="fractalNoise" baseFrequency="0.006" numOctaves="2" seed="3" stitchTiles="stitch" result="depth"/>
+      <feColorMatrix in="depth" type="matrix" values="0 0 0 0 0.04  0 0 0 0 0.30  0 0 0 0 0.48  0 0 0 0 1" result="deepcol"/>
+      <feColorMatrix in="depth" type="matrix" values="0 0 0 0 0.12  0 0 0 0 0.62  0 0 0 0 0.78  1.6 0 0 0 -0.55" result="shallow"/>
+      <feComposite in="shallow" in2="deepcol" operator="over" result="base"/>
+      <!-- gentle ripples, lit from the top-left -->
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.028" numOctaves="3" seed="7" stitchTiles="stitch" result="n"/>
+      <feDiffuseLighting in="n" lighting-color="#ffffff" surfaceScale="2.6" result="lit"><feDistantLight azimuth="225" elevation="58"/></feDiffuseLighting>
+      <feComposite in="base" in2="lit" operator="arithmetic" k1="1.15" k2="0" k3="0" k4="0" result="shaded"/>
+      <!-- soft caustic light network -->
+      <feTurbulence type="turbulence" baseFrequency="0.016" numOctaves="2" seed="11" stitchTiles="stitch" result="c"/>
+      <feColorMatrix in="c" type="matrix" values="0 0 0 0 0.8  0 0 0 0 0.96  0 0 0 0 1  -7 0 0 0 1.05" result="caus"/>
+      <feGaussianBlur in="caus" stdDeviation="1.2" result="causb"/>
+      <feComponentTransfer in="causb" result="causs"><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
+      <feBlend in="causs" in2="shaded" mode="screen"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#000" filter="url(#ripple)"/>
+</svg>
+<svg id="sand" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <!-- wind ripples -->
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.018" numOctaves="3" seed="4" stitchTiles="stitch" result="rip"/>
+      <feDiffuseLighting in="rip" lighting-color="#ffffff" surfaceScale="2.4" result="rl"><feDistantLight azimuth="220" elevation="52"/></feDiffuseLighting>
+      <feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k1="1.18" k2="0" k3="0" k4="0" result="s1"/>
+      <!-- grains: dark and light specks -->
+      <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="1" seed="9" stitchTiles="stitch" result="fine"/>
+      <feColorMatrix in="fine" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.33  0 0 0 0 0.18  9 0 0 0 -5.6" result="dark"/>
+      <feColorMatrix in="fine" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 0.95  0 0 9 0 -6.2" result="light"/>
+      <feComposite in="dark" in2="s1" operator="over" result="s2"/>
+      <feComposite in="light" in2="s2" operator="over"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#ecd6a6" filter="url(#grain)"/>
+</svg>
+</body></html>

@@ -16,6 +16,7 @@ export class BoardRenderer {
     this.board = null;
     this.theme = null;
     this.layer = document.createElement('canvas');
+    this.under = document.createElement('canvas'); // the board's surface, seen through gaps and windows
     this.particles = [];
     this.lastNow = 0;
   }
@@ -48,7 +49,8 @@ export class BoardRenderer {
     this.dpr = dpr;
     this.span = this.board.extent * 2 + 0.3;
     this.cell = size / this.span;
-    for (const c of [this.canvas, this.layer]) {
+    this.lastCss = cssSize;
+    for (const c of [this.canvas, this.layer, this.under]) {
       c.width = Math.round(size * dpr);
       c.height = Math.round(size * dpr);
     }
@@ -87,36 +89,47 @@ export class BoardRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.layer.width, this.layer.height);
     ctx.setTransform(k, 0, 0, k, mid, mid);
+    drawingFor = this; // textures that are still loading redraw this board when they arrive
+    const art = theme.art || {};
 
-    // Flat tiles with small gaps, so the board colour shows through as clean grout lines.
+    // The surface goes on its own layer underneath: it shows through the grout between tiles, and
+    // through "window" panels, with any moving texture (water, lava…) drawn between the two.
+    const bg = this.under.getContext('2d');
+    bg.setTransform(1, 0, 0, 1, 0, 0);
+    bg.clearRect(0, 0, this.under.width, this.under.height);
+    bg.setTransform(k, 0, 0, k, mid, mid);
     const n = board.arms;
     if (theme.bg2) {
       // Some themes glow from the middle out
-      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, half * 1.25);
+      const g = bg.createRadialGradient(0, 0, 0, 0, 0, half * 1.25);
       g.addColorStop(0, theme.bg2);
       g.addColorStop(1, theme.bg);
-      ctx.fillStyle = g;
-    } else ctx.fillStyle = theme.bg;
+      bg.fillStyle = g;
+    } else bg.fillStyle = theme.bg;
     if (n === 4) {
-      roundRect(ctx, -half, -half, this.span, this.span, 12 * lw);
+      roundRect(bg, -half, -half, this.span, this.span, 12 * lw);
     } else {
       // The hexagon board's outline: the outer corners of every arm, a little grout beyond them
-      ctx.beginPath();
+      bg.beginPath();
       const r = board.hub + 6 + 0.12;
       for (let s = 0; s < n; s++) {
         const a = board.armAngle(s);
-        for (const v of [-1.62, 1.62]) ctx.lineTo(Math.cos(a) * r - Math.sin(a) * v, Math.sin(a) * r + Math.cos(a) * v);
+        for (const v of [-1.62, 1.62]) bg.lineTo(Math.cos(a) * r - Math.sin(a) * v, Math.sin(a) * r + Math.cos(a) * v);
       }
-      ctx.closePath();
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 0.3;
-      ctx.strokeStyle = theme.bg;
-      ctx.stroke();
+      bg.closePath();
+      bg.lineJoin = 'round';
+      bg.lineWidth = 0.3;
+      bg.strokeStyle = theme.bg;
+      bg.stroke();
     }
-    ctx.fill();
+    bg.fill();
+    const surface = texPattern(bg, art.tex?.surface);
+    if (surface) {
+      bg.fillStyle = surface;
+      bg.fill();
+    }
     const color = (seat) => this.seatColor(seat);
     const cb = this.cb;
-    const art = theme.art || {};
     tileK = k; // tiles that glow need to know how big a board unit is in pixels
 
     // Bases: a solid block of the player's colour with a plain panel inside
@@ -278,6 +291,9 @@ export class BoardRenderer {
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (this.size === 0 && this.lastCss) this.resize(this.lastCss); // a texture arrived: redraw
+    ctx.drawImage(this.under, 0, 0);
+    if (this.theme.art?.under) this.drawUnder(this.theme.art.under, now);
     ctx.drawImage(this.layer, 0, 0);
     if (this.theme.art?.fx) this.drawAmbience(this.theme.art, now);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -390,6 +406,32 @@ export class BoardRenderer {
       const by = y + r * 0.2 - p.lift * s - r * mark.y * p.squash;
       drawShape(ctx, this.seatShape(p.seat), x + r * mark.x, by, r * 0.36 * mark.size, '#ffffff', '#111111', Math.max(1.2, r * 0.08));
     }
+  }
+
+  // A texture drifting slowly over the surface (water, lava…), in two layers going different
+  // ways so it ripples. It's drawn between the surface and the board, so it only shows through
+  // the grout and the window panels.
+  drawUnder(spec, now) {
+    const img = texture(spec.src, this);
+    if (!img) return;
+    const ctx = this.ctx;
+    const k = this.dpr * this.cell;
+    const mid = (this.dpr * this.size) / 2;
+    const half = this.span / 2;
+    const t = now / 1000;
+    ctx.save();
+    ctx.setTransform(k, 0, 0, k, mid, mid);
+    ctx.globalCompositeOperation = spec.blend || 'overlay';
+    ctx.globalAlpha = spec.alpha ?? 0.5;
+    const loop = spec.size * 4;
+    for (const [scale, dx, dy] of [[1, 1, 0.6], [1.35, -0.8, 0.9]]) {
+      const p = ctx.createPattern(img, 'repeat');
+      const sc = (spec.size * scale) / img.width;
+      p.setTransform(new DOMMatrix([sc, 0, 0, sc, (t * spec.speed * dx) % loop, (t * spec.speed * dy) % loop]));
+      ctx.fillStyle = p;
+      ctx.fillRect(-half, -half, this.span, this.span);
+    }
+    ctx.restore();
   }
 
   // The theme's living layer, under the tokens: snow, embers, bubbles, fireflies, twinkles…
@@ -1846,11 +1888,58 @@ function drawTile(ctx, sq, fill, style, theme) {
   ctx.fillStyle = fill;
   roundRect(ctx, -0.45, -0.45, 0.9, 0.9, 0.12);
   ctx.fill();
+  const spec = theme?.art?.tex?.tile;
+  // (only on plain squares: player-coloured ones keep their colour clean)
+  const tex = fill === theme?.cell || fill === theme?.safe ? texPattern(ctx, spec) : null;
+  if (tex) {
+    ctx.save();
+    ctx.globalCompositeOperation = spec.blend || 'multiply';
+    ctx.globalAlpha = spec.alpha ?? 0.5;
+    ctx.fillStyle = tex;
+    ctx.fill();
+    ctx.restore();
+  }
   if (style) TILE_STYLES[style]?.(ctx, fill, theme, rnd(sq.x * 7.3 + sq.y * 3.1));
   ctx.restore();
 }
 
 let tileK = 1; // pixels per board unit while the board is drawn (for glows)
+
+// ---------- board textures ----------
+// Image textures (client/public/textures, made by tools/textures) load once and are shared.
+// A board drawn before its textures arrive is redrawn when they do.
+const TEXTURES = new Map(); // src -> { img, ready, waiting: Set of renderers }
+let drawingFor = null; // the renderer whose board is being drawn
+
+function texture(src, renderer = drawingFor) {
+  let t = TEXTURES.get(src);
+  if (!t) {
+    const img = new Image();
+    t = { img, ready: false, waiting: new Set() };
+    TEXTURES.set(src, t);
+    img.onload = () => {
+      t.ready = true;
+      for (const r of t.waiting) r.size = 0; // redrawn on its next frame
+      t.waiting.clear();
+      window.dispatchEvent(new Event('ludo-textures'));
+    };
+    img.src = src;
+  }
+  if (!t.ready && renderer) t.waiting.add(renderer);
+  return t.ready ? t.img : null;
+}
+
+// A repeating pattern of a texture spec { src, size (board units per tile) }, or null if
+// there's none or it hasn't loaded yet.
+function texPattern(ctx, spec) {
+  if (!spec) return null;
+  const img = texture(spec.src);
+  if (!img) return null;
+  const p = ctx.createPattern(img, 'repeat');
+  const sc = spec.size / img.width;
+  p.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0]));
+  return p;
+}
 
 // Each is drawn over a tile already filled, in the tile's own frame (-0.45..0.45), path still set.
 const TILE_STYLES = {
@@ -1985,6 +2074,15 @@ function paintBase(ctx, art, theme, x, y, w, h, color, k) {
   else if (style === 'frosted') ctx.fillStyle = mix(color, '#ffffff', 0.3);
   else ctx.fillStyle = color;
   ctx.fill();
+  const tex = texPattern(ctx, art.tex?.base);
+  if (tex) {
+    ctx.save();
+    ctx.globalCompositeOperation = art.tex.base.blend || 'soft-light';
+    ctx.globalAlpha = art.tex.base.alpha ?? 1;
+    ctx.fillStyle = tex;
+    ctx.fill();
+    ctx.restore();
+  }
   if (style === 'pool' || style === 'dusk' || style === 'rock') {
     ctx.save();
     ctx.clip();
@@ -2117,7 +2215,28 @@ function basePattern(ctx, art, x, y, w, h, color) {
 // The panel inside a base where the pins wait: a soft glow, and the theme's emblem faintly.
 function innerPanel(ctx, theme, x, y, r, color) {
   const art = theme.art || {};
-  ctx.fillStyle = theme.baseInner;
+  if (art.panel === 'window') {
+    // An opening onto the surface below (the lagoon, the lava…), with a shaded rim for depth
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.clip();
+    ctx.lineWidth = r * 0.22;
+    ctx.strokeStyle = 'rgba(0,0,0,0.38)';
+    ctx.stroke();
+    ctx.lineWidth = r * 0.07;
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.stroke();
+    ctx.restore();
+    ctx.lineWidth = r * 0.035;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.stroke();
+    return;
+  }
+  const panelTex = texPattern(ctx, art.tex?.panel);
+  ctx.fillStyle = panelTex || theme.baseInner;
   ctx.fill();
   ctx.save();
   ctx.clip();
@@ -2169,6 +2288,33 @@ function motif(ctx, kind, x, y, s, color) {
       ctx.bezierCurveTo(x + s * 0.55, y - s * 1.05, x + s * 1.25, y - s * 0.05, x, y + s * 0.85);
       ctx.fill();
       return;
+    case 'starfish': {
+      // five plump, rounded arms
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a0 = (i / 5) * TAU - Math.PI / 2;
+        const a1 = a0 + Math.PI / 5;
+        const tip = [x + Math.cos(a0) * s, y + Math.sin(a0) * s];
+        const inner = [x + Math.cos(a1) * s * 0.42, y + Math.sin(a1) * s * 0.42];
+        if (i === 0) ctx.moveTo(...tip);
+        ctx.quadraticCurveTo(x + Math.cos(a0 + 0.3) * s * 0.62, y + Math.sin(a0 + 0.3) * s * 0.62, ...inner);
+        const next = (i + 1) / 5 * TAU - Math.PI / 2;
+        ctx.quadraticCurveTo(x + Math.cos(next - 0.3) * s * 0.62, y + Math.sin(next - 0.3) * s * 0.62, x + Math.cos(next) * s, y + Math.sin(next) * s);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let i = 0; i < 5; i++) {
+        const a0 = (i / 5) * TAU - Math.PI / 2;
+        for (const d of [0.25, 0.5]) {
+          circle(ctx, x + Math.cos(a0) * s * d, y + Math.sin(a0) * s * d, s * 0.06);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      return;
+    }
     case 'shell':
       ctx.beginPath();
       ctx.moveTo(x, y + s * 0.85);

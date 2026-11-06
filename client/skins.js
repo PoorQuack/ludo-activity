@@ -53,12 +53,22 @@ export const BOARD_THEMES = {
   },
   // bg2 (optional): the board glows from this colour in the middle out to bg at the edges
   'board-ocean': {
-    art: { base: 'pool', frame: ['#e9d3a1', '#fff2cf', 0.36], pattern: 'waves', patternColor: 'rgba(255, 255, 255, 0.28)', tile: 'gloss', mark: 'shell', emblem: 'shell', emblemAlpha: 0.2, fx: 'bubbles', fxCount: 24 },
+    // Each base is a lagoon (a window onto moving water); sandy tiles; water-textured bases
+    art: {
+      base: 'solid', frame: ['#e9d3a1', '#fff2cf', 0.36], panel: 'window',
+      tex: {
+        surface: { src: '/textures/ocean-water.jpg', size: 7 },
+        base: { src: '/textures/ocean-water.jpg', size: 5, blend: 'soft-light', alpha: 0.32 },
+        tile: { src: '/textures/ocean-sand.jpg', size: 3.2, blend: 'multiply', alpha: 0.55 },
+      },
+      under: { src: '/textures/ocean-water.jpg', size: 7, alpha: 0.55, blend: 'overlay', speed: 0.22 },
+      mark: 'starfish', markSize: 0.32, fx: 'bubbles', fxCount: 24,
+    },
     bg: '#0d4a6b',
     bg2: '#1f8db5',
     cell: '#f6ecd2',
-    safe: '#c6ecf5',
-    star: '#0f7fa3',
+    safe: '#bfeaf5',
+    star: '#ff7a59',
     baseInner: '#eaf7fb',
     players: { red: '#f0605a', green: '#1fb38a', yellow: '#f5c33b', blue: '#2f6fd6', purple: '#8b6fe0', orange: '#f08a3e' },
   },
