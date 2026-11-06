@@ -1,6 +1,7 @@
 // Weekly and monthly leaderboards. Every game against at least one other person scores each
-// player the coins it pays them before the daily cap (placement + captures). Games against
-// bots only, and games everyone abandoned, score nothing. When a week (Monday 00:00 UTC) or a
+// player 10 points for each human they finished ahead of, plus 10 for beating them all (bots
+// don't count; see Room.giveRewards). Games against bots only, and games everyone abandoned,
+// score nothing; daily quests add their points too. When a week (Monday 00:00 UTC) or a
 // month ends, its top three win coin prizes, paid straight into their balance.
 import fs from 'node:fs';
 import path from 'node:path';

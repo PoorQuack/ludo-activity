@@ -123,3 +123,44 @@ test('a finished game against people reports its results; bots-only games do not
   assert.equal(ended.length, 1); // nothing new
   solo.destroy();
 });
+
+// A finished game's leaderboard points. `seats`: who sits where ('a', 'b'… are people, 'bot'
+// a bot), in a 4-seat game; `order`: seat numbers in finishing order, first place first.
+function pointsFor(seats, order, { early = false } = {}) {
+  const ended = [];
+  const room = new Room('t', { onGameEnd: (r) => ended.push(...r) });
+  const users = {};
+  seats.forEach((who, i) => {
+    if (!who || who === 'bot') return; // null: an empty seat
+    const u = (users[who] = { id: who, name: who.toUpperCase() });
+    room.connect(u);
+    if (!room.hostId) room.host(u);
+    room.sit(u, i);
+  });
+  const host = users[seats.find((w) => w !== 'bot')];
+  seats.forEach((who, i) => who === 'bot' && room.addBot(host, i));
+  room.start(host);
+  room.winners = order;
+  room.endedEarly = early;
+  room.giveRewards();
+  room.destroy();
+  return Object.fromEntries(ended.map((r) => [r.userId, [r.points, r.won]]));
+}
+
+test('leaderboard points: 10 per human you beat, +10 for beating them all', () => {
+  // four people: 40 / 20 / 10 / 0
+  assert.deepEqual(pointsFor(['a', 'b', 'c', 'd'], [0, 1, 2, 3]), { a: [40, true], b: [20, false], c: [10, false], d: [0, false] });
+  // three people: 30 / 10 / 0
+  assert.deepEqual(pointsFor(['a', 'b', 'c', null], [2, 0, 1]), { c: [30, true], a: [10, false], b: [0, false] });
+});
+
+test('bots neither add points nor take the win', () => {
+  // two people and two bots, a bot first: A (2nd overall) beat B, so A wins with 20
+  assert.deepEqual(pointsFor(['a', 'bot', 'b', 'bot'], [1, 0, 3, 2]), { a: [20, true], b: [0, false] });
+});
+
+test('a game cut short scales the points by how far you got', () => {
+  const r = pointsFor(['a', null, 'b', null], [2, 0], { early: true });
+  assert.equal(r.b[1], true);
+  assert.ok(r.b[0] < 20); // tokens all still in base: a surrender this early is worth (almost) nothing
+});

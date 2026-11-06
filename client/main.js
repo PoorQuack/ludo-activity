@@ -672,8 +672,7 @@ function renderLeaderboard() {
   const row = (e, mine) => `<li class="lb-row${e.rank <= 3 ? ` top${e.rank}` : ''}${mine ? ' you' : ''}">
       <span class="lb-rank">${MEDALS[e.rank - 1] || e.rank}</span>
       <span class="lb-name">${escapeHtml(e.name)}${mine ? ' <small>(you)</small>' : ''}</span>
-      <span class="lb-wins">${e.wins} win${e.wins === 1 ? '' : 's'}</span>
-      <b class="lb-pts">${e.points}</b>
+      <b class="lb-pts">${e.points} <small>pts</small></b>
     </li>`;
   let rows = b.top.map((e) => row(e, e.you)).join('');
   if (b.me && b.me.rank > b.top.length) rows += `<li class="lb-gap">⋯</li>${row({ ...b.me, name: me?.name || 'You' }, true)}`;
@@ -696,7 +695,7 @@ function renderLeaderboard() {
     ${list}
     <p class="lb-you">${yours}</p>
     ${last}
-    <p class="lb-note">Points = the coins a game pays you before the daily limit (in games against other people), plus daily quests. Ties go to more wins.</p>`;
+    <p class="lb-note">Each game against other people: 10 points for every player you finish ahead of, +10 for beating them all (bots don't count). Daily quests add points too.</p>`;
 }
 
 // ---------------- daily quests ----------------

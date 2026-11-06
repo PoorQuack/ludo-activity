@@ -22,6 +22,8 @@ const CHAT_COOLDOWN_MS = 700;
 const CHAT_KEEP = 40; // messages kept (and sent) per room
 const CHAT_MAX_LEN = 100;
 const EMOTE_TTL_MS = 3000;
+const LB_PER_BEATEN = 10; // leaderboard points for each human you finish ahead of
+const LB_WIN_BONUS = 10; // …and for finishing ahead of every other human
 const TYPING_MS = 2500; // "is typing…" lasts this long after the last ping (clients ping every second)
 const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -696,6 +698,9 @@ export class Room {
       return;
     }
     const results = [];
+    // The humans in finishing order (anyone who surrendered comes last): leaderboard points
+    // only count the people you beat, so bots neither add to them nor take the win.
+    const humanOrder = this.winners.filter((s) => !this.seats[s].bot);
     this.winners.forEach((s, place) => {
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
@@ -707,10 +712,15 @@ export class Room {
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
-      // Leaderboard points: what the game paid before the daily cap
-      results.push({ userId: seat.userId, name: seat.name, points: coins, won: place === 0 });
+      // Leaderboard points: LB_PER_BEATEN for each human you finished ahead of, plus LB_WIN_BONUS
+      // for beating them all, scaled like the coins when the game was cut short.
+      const humanPlace = humanOrder.indexOf(s);
+      const beaten = humanOrder.length - 1 - humanPlace;
+      const won = humanPlace === 0;
+      const points = Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
+      results.push({ userId: seat.userId, name: seat.name, points, won });
       this.stat(s, 'game');
-      if (place === 0) this.stat(s, 'win');
+      if (won) this.stat(s, 'win');
       if (place <= 1) this.stat(s, 'top2');
     });
     this.onGameEnd(results);
