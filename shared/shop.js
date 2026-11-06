@@ -59,6 +59,7 @@ export const SHOP_ITEMS = [
   // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
   // Single stickers (type 'emote' with an img + slug) work the same way, just sold one at a time.
   { id: 'emote-cathappy', type: 'emote', name: 'Happy cat', img: '/emotes/cats/cathappy.gif', slug: 'cathappy', price: 150 },
+  { id: 'emote-dancekitten', type: 'emote', name: 'Dancing kitten', img: '/emotes/cats/dancekitten.webp', slug: 'dancekitten', price: 150 },
   // Emote packs: one purchase unlocks a set of image emotes, served from /emotes/.
   // Sending one carries the pack id plus the entry index.
   {
