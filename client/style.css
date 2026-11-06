@@ -838,7 +838,6 @@ html, body {
 .volume > span { width: 48px; }
 .volume .toggle { width: 46px; flex: none; }
 .volume .volume-fill { flex: 1; width: auto; font-size: 12px; }
-.preview.pack img.has-sound { cursor: pointer; }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
 .setting small { opacity: 0.75; }
 .setting .toggle { width: 46px; flex: none; }
@@ -1045,3 +1044,6 @@ canvas.my-turn {
 @media (prefers-reduced-motion: reduce) {
   canvas.my-turn { animation: none; box-shadow: 0 0 0 3px var(--my-color, var(--accent)); }
 }
+
+/* Pixel-art stickers stay crisp when scaled */
+img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }

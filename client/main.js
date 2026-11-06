@@ -1,10 +1,10 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
 import { MODES, boardFor } from '../shared/board.js';
-import { SHOP_ITEMS, ownsItem, EMOTE_SLUGS, STICKER_SOUNDS } from '../shared/shop.js';
+import { SHOP_ITEMS, ownsItem, EMOTE_SLUGS } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop } from './shop-ui.js';
 import { playerColor, SYMBOLS, isColorBlind, setColorBlind } from './skins.js';
-import { unlockAudio, sfx, setMusic, setSound, setEmoteSounds, stickerSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
+import { unlockAudio, sfx, setMusic, setSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
 
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
@@ -329,11 +329,8 @@ function onState(next) {
     lastEmoteId = e.id;
     if (muted.has(next.seats[e.seat]?.userId)) continue; // you muted them
     // Stickers float as real <img>s so animated ones play; canvas can't animate GIFs.
-    if (e.img) {
-      spawnBoardSticker(e);
-      // Laugh-pack stickers make their noise too (each sender at most every few seconds)
-      if (STICKER_SOUNDS[e.img]) stickerSound(STICKER_SOUNDS[e.img], next.seats[e.seat]?.userId ?? e.seat);
-    } else floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
+    if (e.img) spawnBoardSticker(e);
+    else floaters.push({ seat: e.seat, emoji: e.emoji, start: performance.now() });
   }
 
   // While rolls and moves are still playing out, the panel catches up when the last one ends.
@@ -772,7 +769,6 @@ for (const b of els.audioToggles) {
   b.addEventListener('click', () => {
     const s = audioSettings();
     if (b.dataset.toggle === 'music') setMusic(!s.music);
-    else if (b.dataset.toggle === 'emoteSounds') setEmoteSounds(!s.emoteSounds);
     else setSound(!s.sound);
     renderAudioToggles();
   });

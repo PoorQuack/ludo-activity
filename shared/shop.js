@@ -72,7 +72,7 @@ export const SHOP_ITEMS = [
       { img: '/emotes/hamster/hamsterdespair.png', slug: 'despair', name: 'Despair' },
       { img: '/emotes/hamster/hamsterdrool.png', slug: 'drool', name: 'Drool' },
       { img: '/emotes/hamster/hamster-shock.gif', slug: 'shock', name: 'Shock' },
-      { img: '/emotes/hamster/happyhamsta.gif', slug: 'happy', name: 'Happy' },
+      { img: '/emotes/hamster/happyhamsta.png', slug: 'happy', name: 'Happy' },
       { img: '/emotes/hamster/oxygenhamster.png', slug: 'oxygen', name: 'Oxygen' },
       { img: '/emotes/hamster/princesshamster.png', slug: 'princess', name: 'Princess' },
       { img: '/emotes/hamster/shockedhamster.png', slug: 'shocked', name: 'Shocked' },
@@ -80,23 +80,89 @@ export const SHOP_ITEMS = [
       { img: '/emotes/hamster/zzzhamster.png', slug: 'sleepy', name: 'Sleepy' },
     ],
   },
-  // Animated stickers that also play a sound for everyone in the room (`sound`: a name in
-  // client/audio.js). Players can switch sticker sounds off in the sound settings.
+  // Laughing and teasing stickers (art from the Toshi and kitty packs, see client/public/emotes/CREDITS.md).
   {
     id: 'emote-pack-laugh',
     type: 'emote-pack',
-    name: 'Laugh pack 🔊',
+    name: 'Laugh pack',
     emoji: '😂',
     price: 500,
     emotes: [
-      { img: '/emotes/laugh/rofl.svg', slug: 'rofl', name: 'ROFL', sound: 'laugh' },
-      { img: '/emotes/laugh/tearsofjoy.svg', slug: 'lol', name: 'LOL', sound: 'giggle' },
-      { img: '/emotes/laugh/pointlaugh.svg', slug: 'haha', name: 'Ha-ha!', sound: 'haha' },
-      { img: '/emotes/laugh/clown.svg', slug: 'honk', name: 'Clown', sound: 'honk' },
-      { img: '/emotes/laugh/sadtrombone.svg', slug: 'womp', name: 'Womp womp', sound: 'trombone' },
-      { img: '/emotes/laugh/evil.svg', slug: 'mwahaha', name: 'Mwahaha', sound: 'evil' },
-      { img: '/emotes/laugh/raspberry.svg', slug: 'pbbt', name: 'Pbbbt', sound: 'raspberry' },
-      { img: '/emotes/laugh/facepalm.svg', slug: 'facepalm', name: 'Facepalm', sound: 'facepalm' },
+      { img: '/emotes/toshi/laugh-hard.png', slug: 'rofl', name: 'ROFL' },
+      { img: '/emotes/toshi/laugh-tears.png', slug: 'lol', name: 'Crying laughing' },
+      { img: '/emotes/toshi/lol.png', slug: 'haha', name: 'LOL' },
+      { img: '/emotes/toshi/giggle.png', slug: 'hehe', name: 'Giggle' },
+      { img: '/emotes/kitty/lol-moos.png', slug: 'pbbt', name: 'Bleh' },
+      { img: '/emotes/kitty/catevil.png', slug: 'mwahaha', name: 'Evil grin' },
+      { img: '/emotes/toshi/smug.png', slug: 'smug', name: 'Smug' },
+      { img: '/emotes/kitty/party-moos.png', slug: 'party', name: 'Party' },
+    ],
+  },
+  // Toshi, the blue fox-cat: every mood.
+  {
+    id: 'emote-pack-toshi',
+    type: 'emote-pack',
+    name: 'Toshi pack',
+    emoji: '🦊',
+    price: 600,
+    emotes: [
+      { img: '/emotes/toshi/happy.png', slug: 'toshi-happy', name: 'Happy' },
+      { img: '/emotes/toshi/grin.png', slug: 'toshi-grin', name: 'Grin' },
+      { img: '/emotes/toshi/wink.png', slug: 'toshi-wink', name: 'Wink' },
+      { img: '/emotes/toshi/bleh.png', slug: 'toshi-bleh', name: 'Bleh' },
+      { img: '/emotes/toshi/wide-eyed.png', slug: 'toshi-wide-eyed', name: 'Wide-eyed' },
+      { img: '/emotes/toshi/surprised.png', slug: 'toshi-surprised', name: 'Surprised' },
+      { img: '/emotes/toshi/pleading.png', slug: 'toshi-pleading', name: 'Pleading' },
+      { img: '/emotes/toshi/hungry.png', slug: 'toshi-hungry', name: 'Hungry' },
+      { img: '/emotes/toshi/yawn.png', slug: 'toshi-yawn', name: 'Yawn' },
+      { img: '/emotes/toshi/exhausted.png', slug: 'toshi-exhausted', name: 'Exhausted' },
+      { img: '/emotes/toshi/squint.png', slug: 'toshi-squint', name: 'Squint' },
+      { img: '/emotes/toshi/unimpressed.png', slug: 'toshi-unimpressed', name: 'Unimpressed' },
+      { img: '/emotes/toshi/nervous.png', slug: 'toshi-nervous', name: 'Nervous' },
+      { img: '/emotes/toshi/worried.png', slug: 'toshi-worried', name: 'Worried' },
+      { img: '/emotes/toshi/wince.png', slug: 'toshi-wince', name: 'Wince' },
+      { img: '/emotes/toshi/sad.png', slug: 'toshi-sad', name: 'Sad' },
+      { img: '/emotes/toshi/cry.png', slug: 'toshi-cry', name: 'Cry' },
+      { img: '/emotes/toshi/shout.png', slug: 'toshi-shout', name: 'Shout' },
+      { img: '/emotes/toshi/angry.png', slug: 'toshi-angry', name: 'Angry' },
+    ],
+  },
+  // Round white kitties.
+  {
+    id: 'emote-pack-kitty',
+    type: 'emote-pack',
+    name: 'Kitty pack',
+    emoji: '🐱',
+    price: 550,
+    emotes: [
+      { img: '/emotes/kitty/cathappy.png', slug: 'kitty-happy', name: 'Happy' },
+      { img: '/emotes/kitty/cat-smile.png', slug: 'kitty-smile', name: 'Smile' },
+      { img: '/emotes/kitty/catexcited.png', slug: 'kitty-excited', name: 'Excited' },
+      { img: '/emotes/kitty/catwink.png', slug: 'kitty-wink', name: 'Wink' },
+      { img: '/emotes/kitty/catrelaxed.png', slug: 'kitty-relaxed', name: 'Relaxed' },
+      { img: '/emotes/kitty/catstare.png', slug: 'kitty-stare', name: 'Stare' },
+      { img: '/emotes/kitty/catpaw.png', slug: 'kitty-paw', name: 'Paw' },
+      { img: '/emotes/kitty/cute-moos.png', slug: 'kitty-cute', name: 'Cute' },
+      { img: '/emotes/kitty/kiss-moos.png', slug: 'kitty-kiss', name: 'Kiss' },
+      { img: '/emotes/kitty/huh-moos.png', slug: 'kitty-huh', name: 'Huh?' },
+      { img: '/emotes/kitty/shocked-moos.png', slug: 'kitty-shocked', name: 'Shocked' },
+      { img: '/emotes/kitty/ew-moos.png', slug: 'kitty-ew', name: 'Ew' },
+      { img: '/emotes/kitty/sad-moos.png', slug: 'kitty-sad', name: 'Sad' },
+      { img: '/emotes/kitty/mad-moos.png', slug: 'kitty-mad', name: 'Mad' },
+    ],
+  },
+  // Tiny animated pixel pals (the Aliaa pack from emoji.gg).
+  {
+    id: 'emote-pack-aliaa',
+    type: 'emote-pack',
+    name: 'Aliaa pack',
+    emoji: '🦇',
+    price: 300,
+    emotes: [
+      { img: '/emotes/aliaa/nuko-astonished.gif', slug: 'nuko-wow', name: 'Nuko wow' },
+      { img: '/emotes/aliaa/nuko-astonished2.gif', slug: 'nuko-shock', name: 'Nuko shock' },
+      { img: '/emotes/aliaa/nuko-handstand2.gif', slug: 'nuko-flip', name: 'Nuko handstand' },
+      { img: '/emotes/aliaa/cutebat.gif', slug: 'bat', name: 'Cute bat' },
     ],
   },
 ];
@@ -108,15 +174,13 @@ export const EMOTE_SLUGS = {};
 for (const item of SHOP_ITEMS) {
   if (item.type === 'emote-pack') {
     item.emotes.forEach((e, idx) => {
-      if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name, sound: e.sound };
+      if (e.slug) EMOTE_SLUGS[e.slug] = { item: item.id, idx, img: e.img, name: e.name };
     });
   } else if (item.type === 'emote' && item.slug && item.img) {
     EMOTE_SLUGS[item.slug] = { item: item.id, idx: 0, img: item.img, name: item.name };
   }
 }
 
-// Sticker image -> its sound, for stickers that have one.
-export const STICKER_SOUNDS = Object.fromEntries(Object.values(EMOTE_SLUGS).filter((e) => e.sound).map((e) => [e.img, e.sound]));
 
 export const DEFAULT_EQUIPPED = { token: 'token-classic', dice: 'dice-classic', board: 'board-classic' };
 
