@@ -177,6 +177,41 @@ export const SHOP_ITEMS = [
       { img: '/emotes/aliaa/cutebat.gif', slug: 'bat', name: 'Cute bat' },
     ],
   },
+  // Our own art (tools/stickers/brainrot.mjs): the Ludo pawn mascot and the dice character
+  {
+    id: 'emote-pack-brainrot',
+    type: 'emote-pack',
+    name: 'Brainrot pack',
+    emoji: '🧠',
+    price: 600,
+    emotes: [
+      { img: '/emotes/brainrot/aura-plus.webp', slug: 'aura-plus', name: '+1000 aura' },
+      { img: '/emotes/brainrot/aura-minus.png', slug: 'aura-minus', name: '-1000 aura' },
+      { img: '/emotes/brainrot/cooked.webp', slug: 'cooked', name: 'Bro is cooked' },
+      { img: '/emotes/brainrot/skill-issue.png', slug: 'skill-issue', name: 'Skill issue' },
+      { img: '/emotes/brainrot/w.webp', slug: 'big-w', name: 'W' },
+      { img: '/emotes/brainrot/l.png', slug: 'big-l', name: 'L' },
+      { img: '/emotes/brainrot/no-cap.png', slug: 'no-cap', name: 'No cap' },
+      { img: '/emotes/brainrot/sigma.png', slug: 'sigma', name: 'Sigma' },
+    ],
+  },
+  {
+    id: 'emote-pack-dicerot',
+    type: 'emote-pack',
+    name: 'Dice brainrot pack',
+    emoji: '🎲',
+    price: 600,
+    emotes: [
+      { img: '/emotes/dicerot/rigged.webp', slug: 'rigged', name: 'Rigged' },
+      { img: '/emotes/dicerot/six-seven.webp', slug: 'six-seven', name: '6 7' },
+      { img: '/emotes/dicerot/sus.webp', slug: 'sus', name: 'Sus' },
+      { img: '/emotes/dicerot/touch-grass.png', slug: 'touch-grass', name: 'Touch grass' },
+      { img: '/emotes/dicerot/its-giving.webp', slug: 'its-giving', name: "It's giving" },
+      { img: '/emotes/dicerot/gg-ez.png', slug: 'gg-ez', name: 'GG EZ' },
+      { img: '/emotes/dicerot/rizz.webp', slug: 'rizz', name: 'Rizz' },
+      { img: '/emotes/dicerot/npc.png', slug: 'npc', name: 'NPC' },
+    ],
+  },
 ];
 
 export const ITEMS = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]));

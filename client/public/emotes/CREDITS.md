@@ -16,3 +16,9 @@ differently or taken down, open an issue and it will be removed.
 | `meme/dontjoke.webp` | the "don't even joke lad" chick meme, supplied by the owner (framed, background kept) | Don't even joke lad sticker |
 
 Files were resized for the game; nothing else about the drawings was changed.
+
+## Our own stickers
+
+`brainrot/` (Brainrot pack) and `dicerot/` (Dice brainrot pack) are original art made for this
+game: drawn as SVG in `tools/stickers/brainrot.mjs` and rendered with `render.mjs` + `pack.py`.
+They belong to the game, so they can be sold.
