@@ -2,7 +2,7 @@
 
 Multiplayer Ludo that runs inside Discord as an Activity.
 
-- **Modes:** 2 players, 4 players, or 6 players on a hexagon board, plus team games: **2 vs 2** and **3 vs 3**, with teammates in opposite seats. Teammates never capture each other and a teammate's token keeps yours safe; a player who gets all four home sits out, and the first team with everyone home wins. Bots can fill empty seats.
+- **Modes:** 2 players, 4 players, or 6 players on a hexagon board, plus team games: **2 vs 2** and **3 vs 3**, with teammates in opposite seats. Teammates never capture each other and a teammate's token keeps yours safe; finishing places score points for the team (2 vs 2: 3/2/1/0; 3 vs 3: 5 down to 0), the game ends once the points settle it, and the team with more points wins. A tie goes to a decider: one colour per team, teammates take turns rolling it, first colour home wins. Bots can fill empty seats.
 - **Rooms:** create a **public** room anyone can find in the room list, or a **private** one that only people in your Discord call see (anyone else joins with its 4-letter code). Rooms close once everyone has left.
 - **Room chat** with a swear filter. Anyone can **mute** someone just for themselves; the host can **kick** people and turn typed chat off.
 - **Main menu** with the room list, Shop and How to play.

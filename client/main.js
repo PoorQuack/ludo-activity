@@ -310,6 +310,13 @@ function onState(next) {
     showScreen('game');
   }
 
+  // A tie on points: tell everyone what happens now
+  if (prev && !prev.decider && next.decider && next.phase === 'playing') {
+    const p = next.teamPoints || [];
+    toast(`🤝 Draw, ${p[0]} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!`, 'notice', 7000);
+    sfx('win');
+  }
+
   // New board or new game: start fresh. (playing → finished keeps going so the winning move animates.)
   const reset = !prev || prev.mode !== next.mode || (prev.phase !== next.phase && next.phase !== 'finished');
   if (reset) {
@@ -1107,6 +1114,25 @@ function mySeat() {
   return state.seats.findIndex((s) => s && !s.bot && s.userId === me.id);
 }
 
+// The colour whose tokens you move: your own seat's, or in a team decider your team's colour.
+function playSeat() {
+  const seat = mySeat();
+  if (seat < 0 || !state?.decider) return seat;
+  const t = state.decider.players.findIndex((ps) => ps.includes(seat));
+  return t >= 0 ? state.decider.colors[t] : -1;
+}
+
+// Is it your go? (In a decider your team's colour takes turns: only when it's yours to roll.)
+function myGo() {
+  const seat = playSeat();
+  return state?.phase === 'playing' && seat >= 0 && state.turn === seat && (state.actor == null || state.actor === mySeat());
+}
+
+// Whoever plays this turn (in a decider: the teammate rolling for the colour)
+function turnPlayer() {
+  return state.seats[state.actor ?? state.turn];
+}
+
 // A player colour ('red', …) as it looks on the current board theme.
 function col(name) {
   return playerColor(myTheme(), name);
@@ -1425,8 +1451,13 @@ function renderPanel() {
   const seat = mySeat();
   const { phase } = state;
   const board = boardFor(state.mode);
+  // Team games show the score: points from finishing places (3/2/1/0 in 2 vs 2)
+  const pts = state.teamPoints;
+  const score = pts && phase !== 'lobby' ? ` · A ${pts[0]} – ${pts[1]} B` : '';
   els.phaseTag.textContent =
-    phase === 'lobby' ? `Lobby · ${MODES[state.mode].label}` : phase === 'playing' ? 'In game' : 'Game over';
+    phase === 'lobby'
+      ? `Lobby · ${MODES[state.mode].label}`
+      : (phase === 'playing' ? (state.decider ? 'Decider' : 'In game') : 'Game over') + score;
   els.roomInfo.textContent = roomInfoText();
   renderRoomSettings();
   renderPeople();
@@ -1456,7 +1487,7 @@ function renderPanel() {
     const card = document.createElement('div');
     card.className = 'seat';
     card.style.setProperty('--seat-color', col(colorName));
-    if (phase === 'playing' && state.turn === i) card.classList.add('turn');
+    if (phase === 'playing' && (state.actor ?? state.turn) === i) card.classList.add('turn');
     if (s && !s.bot && me && s.userId === me.id) card.classList.add('me');
     if (s && !s.connected) card.classList.add('offline');
 
@@ -1487,7 +1518,10 @@ function renderPanel() {
     if (!s) sub.textContent = 'Empty seat';
     else if (phase === 'lobby') sub.textContent = s.bot ? 'Bot' : s.userId === state.hostId ? 'Host' : 'Ready';
     else if (s.surrendered) sub.textContent = '🏳️ Surrendered';
-    else {
+    else if (phase === 'playing' && state.decider) {
+      const t = state.decider.players.findIndex((ps) => ps.includes(i));
+      sub.textContent = t >= 0 ? `🎲 Rolls for ${capitalize(board.colors[state.decider.colors[t]])}` : 'Out of the decider';
+    } else {
       const home = state.tokens[i].filter((p) => p >= board.finished).length;
       const place = state.winners.indexOf(i);
       const missed = state.timeouts?.[i] || 0;
@@ -1500,7 +1534,7 @@ function renderPanel() {
           : teamPlace > 0
             ? `${ordinal(teamPlace + 1)} team`
             : team >= 0 && place >= 0
-              ? '🏠 All home · waiting for the team'
+              ? `🏠 ${ordinal(place + 1)} · +${state.pointsFor?.[place] ?? 0} for the team`
               : place >= 0
                 ? `🏆 ${ordinal(place + 1)} place`
                 : `${home}/4 home${s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
@@ -1546,13 +1580,14 @@ function renderPanel() {
   }
 
   if (phase === 'playing') {
-    const cur = state.seats[state.turn];
-    const myTurn = seat === state.turn;
+    const cur = { ...turnPlayer() };
+    if (state.decider) cur.name = `${cur.name} (${capitalize(board.colors[state.turn])})`;
+    const myTurn = myGo();
     const rolls = state.rolls || [];
     const sixes = !state.rolled && rolls.length; // 6s kept, waiting for the next roll
     const extra = state.extraTurns ? ` (+${state.extraTurns} extra turn${state.extraTurns > 1 ? 's' : ''})` : '';
     const choices = new Set();
-    (state.options || []).forEach((o, i) => o.forEach((t) => choices.add(`${rolls[i]}:${state.tokens[seat]?.[t]}`)));
+    (state.options || []).forEach((o, i) => o.forEach((t) => choices.add(`${rolls[i]}:${state.tokens[state.turn]?.[t]}`)));
     let text;
     if (state.skipped) text = myTurn ? 'Three 6s — your turn is skipped!' : `${cur.name} rolled three 6s — turn skipped`;
     else if (myTurn && sixes) text = `You rolled ${rolls.length > 1 ? `${rolls.length} sixes` : 'a 6'} — roll again!`;
@@ -1570,12 +1605,17 @@ function renderPanel() {
       els.turnText.textContent = `⏸️ ${text}`;
     } else {
       const team = teamOfSeat(state.turn);
-      const side = team >= 0 && !myTurn && seat >= 0 ? ` · ${teamOfSeat(seat) === team ? 'your team' : 'other team'}` : '';
+      const mate = state.decider && state.turn === playSeat() && !myTurn;
+      const side = mate ? " · your teammate's go" : team >= 0 && !myTurn && seat >= 0 ? ` · ${teamOfSeat(seat) === team ? 'your team' : 'other team'}` : '';
       els.turnText.textContent = sym(board.colors[state.turn]) + text + side + extra;
     }
     els.turnText.style.color = col(board.colors[state.turn]);
   }
-  const racing = phase === 'playing' && seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
+  const racing =
+    phase === 'playing' &&
+    seat >= 0 &&
+    !state.seats[seat].surrendered &&
+    (state.decider ? state.decider.players.flat().includes(seat) : !state.winners.includes(seat));
   els.surrenderBtn.classList.toggle('hidden', !racing);
   updateTurnNudge();
   els.screens.game.dataset.phase = phase; // the phone layout hides the seat cards while playing
@@ -1632,8 +1672,11 @@ function showTeamFinish() {
       .filter((s) => state.seats[s])
       .map((s) => `${escapeHtml(state.seats[s].name)}${rewardNote(s)}`)
       .join(', ');
-    return `${MEDALS[i] || `${i + 1}.`} <b>${teamLabel(board, t)}</b>: ${players}`;
+    const pts = state.teamPoints ? ` · ${state.teamPoints[t]} pts` : '';
+    return `${MEDALS[i] || `${i + 1}.`} <b>${teamLabel(board, t)}</b>${pts}: ${players}`;
   });
+  // a tie on points that went to the decider round
+  if (state.decider && state.noCoins !== 'abandoned') lines.unshift('<div class="banner-note">🤝 A draw on points, won in the decider</div>');
   const why = {
     bots: 'No coins for games against bots only — play with friends to earn.',
     abandoned: 'Everyone left and nobody came back, so no coins this time.',
@@ -1824,7 +1867,7 @@ function updateDice(now) {
   if (dice.mode === 'shown' || (dice.mode === 'ready' && dice.seat !== state.turn)) leave();
   else if (dice.mode === 'hidden') {
     dice = { mode: 'ready', seat: state.turn, t0: now };
-    if (state.turn === mySeat() && !state.rolls?.length) showTurnPop(); // not again after each 6
+    if (myGo() && !state.rolls?.length) showTurnPop(); // not again after each 6
   }
 }
 
@@ -1848,13 +1891,12 @@ function sendRoll() {
 
 function canRoll() {
   const waiting = rollPending && rollPending.seq === (state?.lastRoll?.seq ?? null) && performance.now() - rollPending.at < 2000;
-  return state?.phase === 'playing' && mySeat() === state.turn && !state.rolled && dice.mode === 'ready' && idle() && !waiting;
+  return myGo() && !state.rolled && dice.mode === 'ready' && idle() && !waiting;
 }
 
 function canMove() {
   return (
-    state?.phase === 'playing' &&
-    mySeat() === state.turn &&
+    myGo() &&
     state.rolled &&
     state.movable.length > 0 &&
     dice.mode === 'shown' &&
@@ -1869,7 +1911,7 @@ function canMove() {
 // slow, and snaps to the server's board if no answer comes.
 function sendMove(token, roll) {
   send('move', { token, roll });
-  const seat = mySeat();
+  const seat = playSeat();
   const from = latestTokens?.[seat]?.[token];
   const value = state.rolls?.[roll];
   if (!idle() || from === undefined || !value) return;
@@ -1961,9 +2003,11 @@ function frame(now) {
   }
   renderer.resize(Math.max(200, boardBox));
 
-  const seat = mySeat();
+  const seat = playSeat();
   const active =
-    state.phase === 'lobby' ? state.seatsAllowed : state.seats.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
+    state.phase === 'lobby'
+      ? state.seatsAllowed
+      : state.decider?.colors || state.seats.map((s, i) => (s ? i : -1)).filter((i) => i >= 0);
   floaters = floaters.filter((f) => now - f.start < EMOTE_MS);
 
   renderer.draw(
@@ -2018,7 +2062,7 @@ function diceView(now, board) {
     style: state.seats[dice.seat]?.skins.dice,
     color: col(board.colors[dice.seat]),
     sign: board.colors[dice.seat],
-    mine: dice.seat === mySeat(),
+    mine: dice.seat === playSeat(),
   };
 }
 
@@ -2109,9 +2153,9 @@ els.canvas.addEventListener('pointerdown', (e) => {
   if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return sendRoll();
   closeChooser(); // tapping anywhere else on the board cancels it
   if (!canMove()) return;
-  const token = renderer.hitToken(e.clientX, e.clientY, mySeat(), state.movable);
+  const token = renderer.hitToken(e.clientX, e.clientY, playSeat(), state.movable);
   if (token === null) return;
-  const item = renderer.lastLayout.find((it) => it.seat === mySeat() && it.token === token);
+  const item = renderer.lastLayout.find((it) => it.seat === playSeat() && it.token === token);
   tapToken(token, item);
 });
 
@@ -2171,8 +2215,8 @@ let nudgeTimers = [];
 
 function waitingOnMe() {
   if (!state || state.phase !== 'playing' || state.paused) return false;
-  const seat = mySeat();
-  if (seat < 0 || state.turn !== seat) return false;
+  const seat = playSeat();
+  if (!myGo()) return false;
   if (!state.rolled) return true;
   // rolled: only waiting if there's a real choice to make (a single choice moves by itself)
   const choices = new Set();
@@ -2183,7 +2227,7 @@ function waitingOnMe() {
 function updateTurnNudge() {
   const waiting = waitingOnMe();
   els.canvas.classList.toggle('my-turn', waiting);
-  if (waiting) els.canvas.style.setProperty('--my-color', col(boardFor(state.mode).colors[mySeat()]));
+  if (waiting) els.canvas.style.setProperty('--my-color', col(boardFor(state.mode).colors[playSeat()]));
   const key = waiting ? `${state.roomId}|${state.turn}|${state.seq}|${state.rolled}|${state.rolls?.length}` : null;
   if (key === nudgeKey) return;
   nudgeKey = key;
@@ -2251,7 +2295,7 @@ function easeOutBack(k) {
 // Used by automated browser tests: screen positions of things you can tap right now.
 window.__ludoMovablePoint = () => {
   if (!canMove() || !renderer.lastLayout) return null;
-  const seat = mySeat();
+  const seat = playSeat();
   const p = renderer.lastLayout.find((it) => it.seat === seat && state.movable.includes(it.token));
   return p ? renderer.tokenPoint(p) : null;
 };

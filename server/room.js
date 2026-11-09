@@ -34,7 +34,7 @@ const SAVED_FIELDS = [
   'tokens', 'turn', 'dice', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
   'lastRoll', 'winners', 'teamOrder', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
-  'emoteSeq', 'chat', 'chatSeq', 'noCoins',
+  'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'decider', 'actor', 'racePoints',
 ];
 
 export class Room {
@@ -83,6 +83,11 @@ export class Room {
     this.lastRoll = null;
     this.winners = [];
     this.teamOrder = null; // team games, once over: team numbers from first to last
+    // Team games score places (2v2: 3/2/1/0 points). A tie goes to a decider round: one colour per
+    // team, teammates taking turns with it ({ colors: team -> seat, players: team -> seats, next }).
+    this.decider = null;
+    this.actor = null; // in the decider: the player rolling for the colour whose turn it is
+    this.racePoints = null; // team -> points from the main race, once it's settled
     this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
     this.timeouts = []; // seat -> turns in a row that ran out
@@ -325,6 +330,9 @@ export class Room {
     this.tokens = newTokens(this.board.arms);
     this.winners = [];
     this.teamOrder = null;
+    this.decider = null;
+    this.actor = null;
+    this.racePoints = null;
     this.forfeited = [];
     for (const i of active) delete this.seats[i].surrendered;
     this.captures = Array(this.board.arms).fill(0);
@@ -349,7 +357,7 @@ export class Room {
     // A second tap that crossed the first in flight (or the timer rolling for them at the
     // same moment): the roll already happened, so there's nothing to complain about.
     if (this.rolled) return;
-    this.timeouts[this.turn] = 0; // they're here: forget earlier timeouts
+    this.timeouts[this.actorSeat()] = 0; // they're here: forget earlier timeouts
     this.doRoll();
   }
 
@@ -359,7 +367,7 @@ export class Room {
     if (!this.rolled) throw new Error('Roll first');
     const idx = Number.isInteger(roll) ? roll : this.options.findIndex((o) => o.includes(token));
     if (!this.options[idx]?.includes(token)) throw new Error("That token can't move");
-    this.timeouts[this.turn] = 0;
+    this.timeouts[this.actorSeat()] = 0;
     this.clearTimer(); // cancels a pending auto-move
     this.doMove(token, idx);
   }
@@ -375,14 +383,18 @@ export class Room {
   forfeit(seat, message) {
     this.forfeited.push(seat);
     this.seats[seat].surrendered = true;
-    this.tokens[seat] = [-1, -1, -1, -1];
+    const wasActing = this.actorSeat() === seat;
+    if (this.decider) {
+      // the colour stays on the board for their teammates; they just stop taking turns with it
+      this.decider.players = this.decider.players.map((ps) => ps.filter((s) => s !== seat));
+    } else this.tokens[seat] = [-1, -1, -1, -1];
     this.addLog(message);
     // A game that ends here was cut short: survivors get progress-scaled pay.
     // If the game continues, it wasn't ended by this — put the flag back.
     this.endedEarly = true;
     if (this.endIfOver()) return;
     this.endedEarly = false;
-    if (this.turn === seat) {
+    if (wasActing) {
       this.clearTimer();
       this.nextTurn();
     } else {
@@ -528,6 +540,9 @@ export class Room {
     this.lastMove = null;
     this.winners = [];
     this.teamOrder = null;
+    this.decider = null;
+    this.actor = null;
+    this.racePoints = null;
     this.forfeited = [];
     for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
@@ -554,7 +569,7 @@ export class Room {
     // Random rolls are untouched — only the first roll of such a turn is forced.
     const pity = this.rolls.length === 0 && this.allInBase(seat) && this.stuck[seat] >= STUCK_TURNS;
     const dice = pity ? 6 : this.rng();
-    if (dice === 6) this.stat(seat, 'six');
+    if (dice === 6) this.stat(this.actorSeat(), 'six');
     if (dice === 6) this.stuck[seat] = 0; // any 6 ends the drought, forced or not
     this.dice = dice;
     this.rolls.push(dice);
@@ -563,7 +578,7 @@ export class Room {
     this.lastMove = null;
     // Three 6s in a row: the whole turn is lost, kept 6s and earned extra turns included.
     if (dice === 6 && this.rolls.length >= MAX_SIXES) {
-      this.addLog(`${this.seats[seat].name} rolled three 6s — turn skipped!`);
+      this.addLog(`${this.turnName()} rolled three 6s — turn skipped!`);
       this.rolled = true;
       this.skipped = true;
       this.rolls = [];
@@ -574,7 +589,7 @@ export class Room {
       return;
     }
     if (dice === 6) {
-      this.addLog(`${this.seats[seat].name} rolled a 6 — rolls again`);
+      this.addLog(`${this.turnName()} rolled a 6 — rolls again`);
       this.turnDeadline = Date.now() + this.delays.timeout;
       this.changed();
       return;
@@ -586,7 +601,7 @@ export class Room {
   // Works out what the rolls left can do, and moves for the player when there's no real choice.
   playRolls() {
     const seat = this.turn;
-    const name = this.seats[seat].name;
+    const name = this.turnName();
     this.options = this.rolls.map((v) => legalMoves(this.tokens, seat, v, this.board));
     this.movable = [...new Set(this.options.flat())];
     if (this.movable.length === 0) {
@@ -634,17 +649,18 @@ export class Room {
     if (!this.rolled) throw new Error('Roll first');
     if (!this.options[idx]?.includes(token)) throw new Error("That token can't move");
     const seat = this.turn;
-    const name = this.seats[seat].name;
+    const by = this.actorSeat(); // who gets the credit (in the decider: whoever rolled for the colour)
+    const name = this.turnName();
     const value = this.rolls[idx];
-    const result = applyMove(this.tokens, seat, token, value, this.activeSeats(), this.board, this.teamMap);
+    const result = applyMove(this.tokens, seat, token, value, this.raceSeats(), this.board, this.teamMap);
     this.rolls.splice(idx, 1);
     this.seq++;
     this.lastMove = { ...result, dice: value, seq: this.seq };
     this.options = [];
     this.movable = [];
-    this.captures[seat] += result.captured.length;
-    if (result.captured.length) this.stat(seat, 'capture', result.captured.length);
-    if (result.finishedToken) this.stat(seat, 'home');
+    this.captures[by] += result.captured.length;
+    if (result.captured.length) this.stat(by, 'capture', result.captured.length);
+    if (result.finishedToken) this.stat(by, 'home');
 
     // One line for every move, then any capture.
     if (result.finishedToken) this.addLog(`${name} used a ${value} and brought a token home!`);
@@ -654,10 +670,14 @@ export class Room {
       this.addLog(`${name} captured ${this.seats[c.seat].name}'s token!`);
     }
 
+    if (result.allHome && this.decider) {
+      this.finishDecider(this.decider.colors.indexOf(seat));
+      return;
+    }
     if (result.allHome) {
       this.winners.push(seat);
       // In a team game a player who's finished sits out until their whole team is home
-      if (this.teams) this.addLog(`🏠 ${name} has every token home!`);
+      if (this.teams) this.addLog(`🏠 ${name} finished ${PLACES[this.winners.length - 1]}: +${this.placePoints(this.winners.length - 1)} points for Team ${this.teamName(this.teamMap[seat])}!`);
       else this.addLog(`🏆 ${name} finished ${PLACES[this.winners.length - 1]}!`);
       if (!this.endIfOver()) this.nextTurn();
       return;
@@ -675,7 +695,28 @@ export class Room {
 
   // Seats still racing: not finished and not surrendered.
   inPlay() {
+    if (this.decider) return this.decider.players.flat();
     return this.activeSeats().filter((s) => !this.winners.includes(s) && !this.forfeited.includes(s));
+  }
+
+  // The seats whose tokens are on the board (in the decider, just the two colours).
+  raceSeats() {
+    return this.decider ? this.decider.colors : this.activeSeats();
+  }
+
+  // Who plays this turn: the seat itself, or in the decider the teammate rolling for the colour.
+  actorSeat() {
+    return this.decider ? this.actor : this.turn;
+  }
+
+  // "Ann" (or in the decider "Ann (Red)", the colour they're rolling for)
+  turnName() {
+    const name = this.seats[this.actorSeat()]?.name || '?';
+    return this.decider ? `${name} (${this.colorName(this.turn)})` : name;
+  }
+
+  colorName(seat) {
+    return this.board.colors[seat][0].toUpperCase() + this.board.colors[seat].slice(1);
   }
 
   // The game ends when at most one player is left racing, or only bots are.
@@ -702,37 +743,113 @@ export class Room {
   }
 
   teamName(t) {
-    return this.teams[t].map((s) => this.board.colors[s][0].toUpperCase() + this.board.colors[s].slice(1)).join(' & ');
+    return this.teams[t].map((s) => this.colorName(s)).join(' & ');
   }
 
-  // A team wins once every teammate who hasn't surrendered has all four tokens home (players
-  // who finish first sit out and wait). The game also ends when only one team is left (the
-  // rest surrendered), or when only bots are still racing. Teams are then ranked: the winners,
-  // then by how far their tokens got, and teams that surrendered completely come last.
+  // Points for a finishing place: last place 0, one more for each place above (2v2: 3/2/1/0).
+  placePoints(place) {
+    return this.activeSeats().length - 1 - place;
+  }
+
+  // Team -> points so far: finished players score their place, surrendered players nothing.
+  teamPoints(order = this.winners) {
+    const pts = this.teams.map(() => 0);
+    order.forEach((s, i) => (pts[this.teamMap[s]] += this.placePoints(i)));
+    return pts;
+  }
+
+  // Is the result settled? Tries every order the players still racing could finish in:
+  // { team } when the same team comes out on top every time, { draw: true } when it's a tie
+  // every time, null while it could still go more than one way.
+  teamOutcome() {
+    const racing = this.inPlay();
+    const result = (order) => {
+      const pts = this.teamPoints(order);
+      const best = Math.max(...pts);
+      const top = pts.flatMap((p, t) => (p === best ? [t] : []));
+      return top.length > 1 ? 'draw' : top[0];
+    };
+    let seen;
+    const tryOrders = (left, order) => {
+      if (!left.length) {
+        const r = result(order);
+        if (seen === undefined) seen = r;
+        return seen === r;
+      }
+      return left.every((s, i) => tryOrders([...left.slice(0, i), ...left.slice(i + 1)], [...order, s]));
+    };
+    if (!tryOrders(racing, [...this.winners])) return null;
+    return seen === 'draw' ? { draw: true } : { team: seen };
+  }
+
+  // Team games: every finishing place scores points for its team, and the game ends as soon as
+  // the points settle it (players who finish sit out and wait). The team with more points wins;
+  // a tie goes to the decider round. When only bots are still racing they're ranked by how far
+  // their tokens got.
   endTeamGameIfOver() {
-    const teams = this.teams.map((members, t) => {
-      const alive = members.filter((s) => this.seats[s] && !this.forfeited.includes(s));
-      const racing = alive.filter((s) => !this.winners.includes(s));
-      return { t, members, alive, racing, done: alive.length > 0 && racing.length === 0, out: alive.length === 0 };
-    });
-    const done = teams.find((x) => x.done);
-    const stillIn = teams.filter((x) => !x.out);
-    const racing = teams.flatMap((x) => x.racing);
-    const onlyBots = racing.length > 0 && racing.every((s) => this.seats[s].bot);
-    if (!done && stillIn.length > 1 && !onlyBots) return false;
-    const progress = (x) => x.members.reduce((sum, s) => sum + this.tokens[s].reduce((a, p) => a + p + 1, 0), 0);
-    const order = [...teams].sort((a, b) => (b === done) - (a === done) || a.out - b.out || progress(b) - progress(a));
-    this.teamOrder = order.map((x) => x.t);
-    // winners (kept for the per-seat views): everyone in team order, finished players first
-    const left = this.inPlay();
-    this.winners = order.flatMap((x) => [
-      ...this.winners.filter((s) => x.members.includes(s)),
-      ...x.members.filter((s) => left.includes(s)),
-      ...x.members.filter((s) => this.forfeited.includes(s) && !this.winners.includes(s)),
+    if (this.decider) {
+      // The decider ends when a team has nobody left to play its colour
+      const left = this.decider.players.map((ps, t) => (ps.length ? t : -1)).filter((t) => t >= 0);
+      if (left.length > 1) return false;
+      this.finishDecider(left[0] ?? 0);
+      return true;
+    }
+    let racing = this.inPlay();
+    if (racing.length && racing.every((s) => this.seats[s].bot)) {
+      const progress = (s) => this.tokens[s].reduce((sum, p) => sum + p + 1, 0);
+      this.winners.push(...racing.sort((a, b) => progress(b) - progress(a)));
+      racing = [];
+    }
+    const outcome = this.teamOutcome();
+    if (!outcome) return false;
+    if (outcome.draw) {
+      this.startDecider();
+      return true;
+    }
+    // Settled: whoever is still racing takes the places left, by how far they got
+    const progress = (s) => this.tokens[s].reduce((sum, p) => sum + p + 1, 0);
+    this.winners.push(...this.inPlay().sort((a, b) => progress(b) - progress(a)));
+    this.racePoints = this.teamPoints();
+    const win = outcome.team;
+    this.teamOrder = [win, ...this.teams.map((_, t) => t).filter((t) => t !== win).sort((a, b) => this.racePoints[b] - this.racePoints[a])];
+    this.winners = this.teamOrder.flatMap((t) => [
+      ...this.winners.filter((s) => this.teamMap[s] === t),
+      ...this.forfeited.filter((s) => this.teamMap[s] === t).reverse(),
     ]).filter((s, i, a) => this.seats[s] && a.indexOf(s) === i);
-    this.addLog(`🏆 Team ${this.teamName(this.teamOrder[0])} wins!`);
+    const score = this.teamOrder.map((t) => this.racePoints[t]).join(' to ');
+    this.addLog(`🏆 Team ${this.teamName(win)} wins, ${score} points!`);
     this.finish();
     return true;
+  }
+
+  // A tie on points: one colour per team (each team's first colour), every token back in base,
+  // and teammates take turns rolling for it. First colour with all four home wins.
+  startDecider() {
+    this.racePoints = this.teamPoints();
+    const players = this.teams.map((members) => members.filter((s) => this.seats[s] && !this.forfeited.includes(s)));
+    const colors = this.teams.map((members) => members[0]);
+    const first = randomInt(colors.length);
+    this.decider = { colors, players, next: players.map((ps, t) => (t === first ? 1 % ps.length : 0)) };
+    this.tokens = newTokens(this.board.arms);
+    this.stuck = Array(this.board.arms).fill(0);
+    this.winners = [];
+    this.lastMove = null;
+    this.clearTimer();
+    this.turn = colors[first];
+    this.actor = players[first][0];
+    this.resetTurn();
+    this.addLog(`🤝 A draw, ${this.racePoints[0]} points each! Decider: one colour per team, teammates take turns rolling it. First colour home wins!`);
+    this.addLog(`${this.turnName()} goes first.`);
+    this.changed();
+  }
+
+  finishDecider(win) {
+    const order = [win, ...this.teams.map((_, t) => t).filter((t) => t !== win)];
+    this.teamOrder = order;
+    this.winners = order.flatMap((t) => this.teams[t].filter((s) => this.seats[s]));
+    this.endedEarly = false; // they played a whole race and a decider: full pay
+    this.addLog(`🏆 Team ${this.teamName(win)} wins the decider!`);
+    this.finish();
   }
 
   finish() {
@@ -790,6 +907,18 @@ export class Room {
 
   nextTurn() {
     if (this.phase !== 'playing') return;
+    if (this.decider) {
+      // The other team's colour, rolled by whichever of them is next in line
+      const d = this.decider;
+      const team = (d.colors.indexOf(this.turn) + 1) % d.colors.length;
+      const ps = d.players[team];
+      this.turn = d.colors[team];
+      this.actor = ps[d.next[team] % ps.length];
+      d.next[team] = (d.next[team] + 1) % ps.length;
+      this.resetTurn();
+      this.changed();
+      return;
+    }
     // Count the ending seat's drought: still all in base means another dead turn.
     const ended = this.turn;
     if (this.seats[ended]) {
@@ -825,7 +954,7 @@ export class Room {
     // Nobody still racing is here: wait for them rather than play on for an empty room.
     if (!this.inPlay().some((s) => !this.seats[s].bot && this.seats[s].connected)) return this.pause();
     if (this.pausedAt) this.unpause();
-    const seat = this.seats[this.turn];
+    const seat = this.seats[this.actorSeat()];
     // A player who dropped out is waited for until their grace period (or the turn clock) runs
     // out; after that their turns are played for them, like a bot's.
     const away = !seat.bot && !seat.connected;
@@ -842,7 +971,7 @@ export class Room {
       // dropped out: their grace ran out, so they're simply played for.)
       if (!auto && !away && !this.turnTimedOut) {
         this.turnTimedOut = true;
-        const s = this.turn;
+        const s = this.actorSeat();
         this.timeouts[s] = (this.timeouts[s] || 0) + 1;
         if (this.timeouts[s] >= MAX_TIMEOUTS) {
           this.forfeit(s, `⏰ ${this.seats[s].name} ran out of time ${MAX_TIMEOUTS} turns in a row and was removed.`);
@@ -854,7 +983,7 @@ export class Room {
         else {
           // Plays the rolls in order, each on its best token.
           const idx = this.options.findIndex((o) => o.length > 0);
-          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.activeSeats(), this.board, this.teamMap);
+          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.raceSeats(), this.board, this.teamMap);
           if (t !== null) this.doMove(t, idx);
         }
       } catch (err) {
@@ -1031,7 +1160,7 @@ export class Room {
 
   requireTurn(user) {
     this.requirePhase('playing');
-    if (this.seatOf(user.id) !== this.turn) throw new Error("It's not your turn");
+    if (this.seatOf(user.id) !== this.actorSeat()) throw new Error(this.decider && this.inPlay().includes(this.seatOf(user.id)) ? "It's your teammate's go" : "It's not your turn");
   }
 
   snapshot() {
@@ -1069,6 +1198,11 @@ export class Room {
       winners: this.winners,
       teams: this.teams,
       teamOrder: this.teamOrder,
+      // team games: points so far (or the race's final points once it's settled), and the decider
+      teamPoints: this.teams ? this.racePoints || this.teamPoints() : null,
+      pointsFor: this.teams ? this.activeSeats().map((_, i) => this.placePoints(i)) : null,
+      decider: this.decider && { colors: this.decider.colors, players: this.decider.players },
+      actor: this.decider ? this.actor : null,
       rewards: this.rewards,
       rewardCapped: this.rewardCapped,
       rewardPartial: this.rewardPartial,

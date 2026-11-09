@@ -78,7 +78,7 @@ function playToEnd(setup, options = {}) {
   let room;
   const human = { id: 'h', name: 'Human' };
   const play = () => {
-    if (room.phase !== 'playing' || room.seatOf('h') !== room.turn || room.pending) return;
+    if (room.phase !== 'playing' || room.seatOf('h') !== room.actorSeat() || room.pending) return;
     try {
       if (!room.rolled) room.roll(human);
       else {
@@ -127,12 +127,9 @@ test('a full 2 vs 2 game plays to the end and ranks the teams', async () => {
   assert.equal(room.teamOrder.length, 2);
   assert.deepEqual([...room.teamOrder].sort(), [0, 1]);
   assert.equal(room.winners.length, 4);
-  // the winning team really is home (unless only bots were left racing)
-  const win = MODES['2v2'].teams[room.teamOrder[0]];
-  const home = win.every((s) => room.tokens[s].every((p) => p === B4.finished));
-  const humanDone = room.tokens[0].every((p) => p === B4.finished);
-  assert.ok(home || humanDone, 'the game ended with the winners home, or with only bots left');
-  assert.ok(room.log.some((l) => /Team .* wins!/.test(l.text ?? l)));
+  // won on points, or in the decider after a tie
+  assert.ok(room.log.some((l) => /Team .* wins/.test(l.text ?? l)));
+  if (!room.decider) assert.ok(room.racePoints[room.teamOrder[0]] > room.racePoints[room.teamOrder[1]]);
   room.destroy();
 });
 
@@ -220,5 +217,185 @@ test('when a whole team surrenders, the other team wins', () => {
   room.surrender(d);
   assert.equal(room.phase, 'finished');
   assert.deepEqual(room.teamOrder, [0, 1]);
+  room.destroy();
+});
+
+// ---------- points and the decider ----------
+
+function teamRoom() {
+  const room = new Room('t', { delays: { bot: 60_000, timeout: 60_000 } });
+  const users = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase() }));
+  for (const u of users) room.connect(u);
+  room.host(users[0]);
+  room.setMode(users[0], '2v2');
+  users.forEach((u, i) => room.sit(u, i)); // a + c are team 0 (red + yellow), b + d team 1
+  room.start(users[0]);
+  return { room, users };
+}
+
+test('places score 3 / 2 / 1 / 0 for the team', () => {
+  const { room } = teamRoom();
+  assert.deepEqual(room.snapshot().pointsFor, [3, 2, 1, 0]);
+  room.winners = [0, 1];
+  assert.deepEqual(room.teamPoints(), [3, 2]);
+  room.destroy();
+});
+
+test('1st and 2nd for one team: settled at once, they win 5 to 1', () => {
+  const { room } = teamRoom();
+  room.winners = [0, 2];
+  assert.equal(room.endIfOver(), true);
+  assert.equal(room.phase, 'finished');
+  assert.deepEqual(room.teamOrder, [0, 1]);
+  assert.deepEqual(room.racePoints, [5, 1]);
+  assert.ok(room.log.some((l) => /wins, 5 to 1 points/.test(l.text ?? l)));
+  room.destroy();
+});
+
+test('1st and 3rd beat 2nd and 4th, 4 to 2', () => {
+  const { room } = teamRoom();
+  room.winners = [0, 1];
+  assert.equal(room.endIfOver(), false); // 3rd place decides: a win or a tie
+  room.winners = [0, 1, 2];
+  assert.equal(room.endIfOver(), true);
+  assert.deepEqual(room.teamOrder, [0, 1]);
+  assert.deepEqual(room.racePoints, [4, 2]);
+  room.destroy();
+});
+
+test('1st and last against 2nd and 3rd is a tie: the decider starts', () => {
+  const { room } = teamRoom();
+  room.tokens[0] = [B4.finished, B4.finished, B4.finished, B4.finished];
+  room.winners = [0, 1, 3]; // red 1st, green 2nd, blue 3rd: yellow will be last
+  assert.equal(room.endIfOver(), true);
+  assert.equal(room.phase, 'playing');
+  assert.deepEqual(room.racePoints, [3, 3]);
+  assert.deepEqual(room.decider.colors, [0, 1]); // red for team 0, green for team 1
+  assert.deepEqual(room.decider.players, [[0, 2], [1, 3]]);
+  assert.deepEqual(room.tokens, newTokens(4)); // everything back in base
+  assert.deepEqual(room.winners, []);
+  assert.deepEqual(room.raceSeats(), [0, 1]);
+  assert.ok(room.log.some((l) => /draw, 3 points each/.test(l.text ?? l)));
+  room.destroy();
+});
+
+test('in the decider the colours alternate and teammates take turns rolling', () => {
+  const { room, users } = teamRoom();
+  room.winners = [0, 1, 3];
+  room.endIfOver();
+  const turns = [];
+  for (let i = 0; i < 8; i++) {
+    turns.push(`${room.turn}:${room.actorSeat()}`);
+    room.nextTurn();
+  }
+  // colours alternate; each colour's players take turns
+  const red = turns.filter((t) => t.startsWith('0:')).map((t) => t.split(':')[1]);
+  const green = turns.filter((t) => t.startsWith('1:')).map((t) => t.split(':')[1]);
+  assert.equal(red.length, 4);
+  assert.equal(green.length, 4);
+  for (const seq of [red, green]) for (let i = 1; i < seq.length; i++) assert.notEqual(seq[i], seq[i - 1]);
+  // only the player whose go it is can roll; their teammate is told to wait
+  const actor = room.actorSeat();
+  const mate = room.decider.players[room.decider.colors.indexOf(room.turn)].find((s) => s !== actor);
+  assert.throws(() => room.roll(users[mate]), /teammate's go/);
+  room.roll(users[actor]);
+  assert.equal(room.lastRoll.seat, room.turn);
+  room.destroy();
+});
+
+test('the first colour home wins the decider, and both teammates share the win', () => {
+  const store = new ProfileStore(null);
+  const room = new Room('t', { profiles: store, delays: { bot: 60_000, timeout: 60_000 } });
+  const users = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase() }));
+  for (const u of users) room.connect(u);
+  room.host(users[0]);
+  room.setMode(users[0], '2v2');
+  users.forEach((u, i) => room.sit(u, i));
+  room.start(users[0]);
+  room.winners = [0, 1, 3];
+  room.endIfOver();
+  // green (team 1) is one step from home with its last token, and it's green's go
+  room.tokens[1] = [B4.finished, B4.finished, B4.finished, B4.finished - 1];
+  room.turn = 1;
+  room.actor = 3;
+  room.rolled = true;
+  room.rolls = [1];
+  room.options = [[3]];
+  room.move(users[3], 3, 0);
+  assert.equal(room.phase, 'finished');
+  assert.deepEqual(room.teamOrder, [1, 0]);
+  assert.equal(room.rewards[1], REWARDS.place[0]);
+  assert.equal(room.rewards[3], REWARDS.place[0]);
+  assert.equal(room.rewards[0], REWARDS.place[1]);
+  assert.ok(room.log.some((l) => /wins the decider/.test(l.text ?? l)));
+  room.destroy();
+});
+
+test('surrendering in the decider: the colour plays on with the teammate; nobody left loses', () => {
+  const { room, users } = teamRoom();
+  room.winners = [0, 1, 3];
+  room.endIfOver();
+  room.surrender(users[2]); // yellow's player, rolling for red
+  assert.equal(room.phase, 'playing');
+  assert.deepEqual(room.decider.players[0], [0]);
+  assert.equal(room.tokens[0].length, 4); // red's tokens stay on the board for its teammate
+  room.surrender(users[0]);
+  assert.equal(room.phase, 'finished');
+  assert.deepEqual(room.teamOrder, [1, 0]);
+  room.destroy();
+});
+
+test('a decider survives a server restart', () => {
+  const { room } = teamRoom();
+  room.winners = [0, 1, 3];
+  room.endIfOver();
+  const saved = JSON.parse(JSON.stringify(room.toSave()));
+  const back = Room.fromSave(saved, { delays: { bot: 60_000, timeout: 60_000 } });
+  assert.deepEqual(back.decider, room.decider);
+  assert.equal(back.actor, room.actor);
+  assert.deepEqual(back.racePoints, [3, 3]);
+  back.destroy();
+  room.destroy();
+});
+
+test('a decider plays to the end with a human and bots taking turns', async () => {
+  let room;
+  const human = { id: 'h', name: 'Human' };
+  const play = () => {
+    if (room.phase !== 'playing' || room.seatOf('h') !== room.actorSeat() || room.pending) return;
+    try {
+      if (!room.rolled) room.roll(human);
+      else {
+        const idx = room.options.findIndex((o) => o.length > 0);
+        if (idx >= 0) room.move(human, room.options[idx][0], idx);
+      }
+    } catch {
+      // the server moved first
+    }
+  };
+  let humanTurns = 0;
+  const done = new Promise((resolve) => {
+    room = new Room('t', {
+      delays: { bot: 0, noMove: 0, autoMove: 0, timeout: 60_000 },
+      onChange: (r) => {
+        if (r.decider && r.actor === 0 && !r.rolled) humanTurns++;
+        return r.phase === 'finished' ? resolve() : setImmediate(play);
+      },
+    });
+  });
+  room.connect(human);
+  room.host(human);
+  room.setMode(human, '2v2');
+  room.sit(human, 0);
+  room.fillBots(human);
+  room.start(human);
+  room.clearTimer();
+  room.winners = [0, 1, 3]; // a tie: into the decider
+  room.endIfOver();
+  await done;
+  assert.ok(room.log.some((l) => /wins the decider/.test(l.text ?? l)));
+  assert.ok(room.decider.colors.some((c) => room.tokens[c].every((p) => p === B4.finished)));
+  assert.ok(humanTurns > 0, 'the human rolled for red in the decider');
+  assert.equal(room.winners.length, 4);
   room.destroy();
 });
