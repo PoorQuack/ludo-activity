@@ -1054,6 +1054,51 @@ for (const b of cbButtons) {
 }
 renderColorBlindToggles();
 
+// ---------------- smooth mode ----------------
+// Fewer board effects (drifting water, floating particles, glows) for phones whose graphics can't
+// keep up. Turns itself on when the dice and pins visibly stutter, unless you turned it off.
+const SMOOTH_KEY = 'ludo-smooth'; // 'on' | 'off' | missing (decide automatically)
+let smoothPref = null;
+try {
+  smoothPref = localStorage.getItem(SMOOTH_KEY);
+} catch {
+  // no storage: decide automatically
+}
+const smoothButtons = [...document.querySelectorAll('[data-smooth]')];
+function renderSmoothToggles() {
+  for (const b of smoothButtons) {
+    b.textContent = smoothPref === 'on' ? 'On' : 'Off';
+    b.classList.toggle('off', smoothPref !== 'on');
+  }
+  renderer.setLite(smoothPref === 'on');
+}
+function setSmooth(on) {
+  smoothPref = on ? 'on' : 'off';
+  try {
+    localStorage.setItem(SMOOTH_KEY, smoothPref);
+  } catch {
+    // only for this visit
+  }
+  renderSmoothToggles();
+}
+for (const b of smoothButtons) b.addEventListener('click', () => setSmooth(smoothPref !== 'on'));
+renderSmoothToggles();
+
+// Watching for stutter: the time between frames while something moves (they should come every
+// ~17ms). Judged over a couple of seconds of movement, so one slow moment doesn't count.
+const moveFrames = [];
+function watchSmoothness(gap) {
+  if (smoothPref || document.hidden || gap > 250) return; // decided already / tab in the background
+  moveFrames.push(gap);
+  if (moveFrames.length < 150) return;
+  const avg = moveFrames.reduce((a, b) => a + b, 0) / moveFrames.length;
+  moveFrames.length = 0;
+  if (avg > 26) {
+    setSmooth(true);
+    toast('Smooth mode is on: fewer board effects so this device keeps up. You can turn it off in ☰.', 'ok', 6000);
+  }
+}
+
 // Browsers only allow sound after the player interacts with the page.
 for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, unlockAudio, { capture: true });
 
@@ -1882,6 +1927,7 @@ function closeChooser() {
 // ---------------- frame loop ----------------
 
 let lastBoardDraw = 0;
+let lastWasFast = false;
 // The board's box, measured only when it changes (measuring it every frame forced the page
 // to lay itself out again 60 times a second).
 let boardBox = 0;
@@ -1902,7 +1948,9 @@ function frame(now) {
   // looks the same while halving the work, which is what keeps phones cool and smooth.
   // (120 Hz phones would otherwise redraw it 120 times a second.)
   const fast = current || dice.mode === 'spin' || floaters.length || renderer.fast;
-  if (now - lastBoardDraw < (fast ? 15 : 32)) return;
+  if (now - lastBoardDraw < (fast ? 15 : 28)) return;
+  if (fast && lastWasFast) watchSmoothness(now - lastBoardDraw);
+  lastWasFast = fast;
   lastBoardDraw = now;
 
   const board = boardFor(state.mode);
@@ -1929,6 +1977,8 @@ function frame(now) {
       dice: diceView(now, board),
       emotes: floaters,
       teams: state.teams ? board.colors.map((_, s) => teamOfSeat(s)) : null,
+      busy: !!(current || dice.mode === 'spin'),
+      me: seat,
     },
     now,
   );

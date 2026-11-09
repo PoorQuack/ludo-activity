@@ -7,6 +7,10 @@ export const LEAVE_MS = 260;
 export const EMOTE_MS = 2400;
 const TAU = Math.PI * 2;
 
+// The drifting-texture layer's resolution, in pixels per CSS pixel (see drawUnder).
+export let ANIM_SCALE = 0.6;
+export const setAnimScale = (k) => (ANIM_SCALE = k);
+
 export class BoardRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -18,6 +22,7 @@ export class BoardRenderer {
     this.layer = document.createElement('canvas');
     this.under = document.createElement('canvas'); // the board's surface, seen through gaps and windows
     this.anim = document.createElement('canvas'); // surface + drifting texture, small and refreshed ~20×/s
+    this.animFull = document.createElement('canvas'); // that, stretched to the board's size once per refresh
     this.animAt = -Infinity;
     this.particles = [];
     this.lastNow = 0;
@@ -32,6 +37,17 @@ export class BoardRenderer {
     this.theme = theme;
     this.cb = cb; // colour-blind mode: safe colours plus a shape for each player
     this.size = 0; // redraw the static layer on the next resize()
+  }
+
+  // Smooth mode: no drifting surface, no floating particles, and no blurred glows on the board
+  // (blur is the costliest thing for a phone's GPU). Everything still shows, just stiller.
+  setLite(on) {
+    if (on === !!this.lite) return;
+    this.lite = on;
+    const ctx = this.ctx;
+    if (on) Object.defineProperty(ctx, 'shadowBlur', { configurable: true, get: () => 0, set: () => {} });
+    else delete ctx.shadowBlur;
+    this.animAt = -Infinity;
   }
 
   // A seat's colour on this board (the colour-blind palette when that's on).
@@ -55,14 +71,14 @@ export class BoardRenderer {
     this.span = this.board.extent * 2 + 0.3;
     this.cell = size / this.span;
     this.lastCss = cssSize;
-    for (const c of [this.canvas, this.layer, this.under]) {
+    for (const c of [this.canvas, this.layer, this.under, this.animFull]) {
       c.width = Math.round(size * dpr);
       c.height = Math.round(size * dpr);
     }
     this.canvas.style.width = `${size}px`;
     this.canvas.style.height = `${size}px`;
-    this.anim.width = size; // one pixel per CSS pixel: the drifting textures are soft anyway
-    this.anim.height = size;
+    this.anim.width = Math.round(size * ANIM_SCALE); // the drifting textures are soft anyway
+    this.anim.height = this.anim.width;
     this.animAt = -Infinity;
     this.drawBoard();
   }
@@ -337,12 +353,15 @@ export class BoardRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (this.size === 0 && this.lastCss) this.resize(this.lastCss); // a texture arrived: redraw
+    this.busy = !!view.busy;
     if (this.theme.art?.under) this.drawUnder(this.theme.art.under, now);
     else ctx.drawImage(this.under, 0, 0);
     ctx.drawImage(this.layer, 0, 0);
-    if (this.theme.art?.fx) this.drawAmbience(this.theme.art, now);
+    if (this.theme.art?.fx && !this.lite) this.drawAmbience(this.theme.art, now);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
+    this.teamOf = view.teams || null;
+    if (view.teams) this.drawTeamMarks(view);
     if (view.turn !== null && view.turn !== undefined) this.drawTurnGlow(view.turn, now);
 
     const placed = this.layout(view, now);
@@ -350,6 +369,7 @@ export class BoardRenderer {
     // Back to front (so nearer pawns overlap farther ones), with moving pawns on top.
     const order = [...placed].sort((p, q) => p.moving - q.moving || p.y - q.y);
     for (const p of order) this.drawPlaced(p, now);
+    if (view.teams) this.drawTeamMarks(view, true);
 
     this.drawCenterDice(view.dice, now);
     this.drawParticles(now);
@@ -480,6 +500,83 @@ export class BoardRenderer {
       drawShape(ctx, this.seatShape(p.seat), x + r * mark.x, by, r * 0.36 * mark.size, '#ffffff', '#111111', Math.max(1.2, r * 0.08));
     }
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'front');
+    // Team games: a small A/B badge at the foot of pins out on the board, so you can tell
+    // a teammate's pin from a rival's at a glance
+    const team = this.teamOf?.[p.seat];
+    if (team >= 0 && (p.onBoard || p.moving)) {
+      const br = Math.max(5.5, r * 0.36);
+      teamBadge(ctx, x + r * 0.8, y + r * 0.45 - p.lift * s, br, team);
+    }
+  }
+
+  // Team games: each base is outlined in its team's colour and labelled from your side of the
+  // table (YOU / ALLY / RIVAL; "TEAM A" when you're watching).
+  // (the outlines go under the pins, the labels over them so they always stay readable)
+  drawTeamMarks(view, labels = false) {
+    if (labels) return this.drawTeamLabels(view);
+    const ctx = this.ctx;
+    const s = this.cell;
+    ctx.save();
+    for (const seat of view.active) {
+      const team = view.teams[seat];
+      if (!(team >= 0)) continue;
+      const b = this.board.bases[seat];
+      // just inside the base's edge (the turn glow runs along the edge itself), with a dark line
+      // under the colour instead of a blurred shadow: blur is costly on phones' GPUs
+      const lw = Math.max(2.5, s * 0.13);
+      const inset = 6 + lw;
+      if (b.square) roundRect(ctx, this.px(b.x - b.size) + inset, this.px(b.y - b.size) + inset, b.size * 2 * s - inset * 2, b.size * 2 * s - inset * 2, s * 0.4);
+      else circle(ctx, this.px(b.x), this.px(b.y), b.size * s - inset + 2);
+      ctx.lineWidth = lw + 2.5;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.stroke();
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = TEAM_COLORS[team];
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawTeamLabels(view) {
+    const ctx = this.ctx;
+    const s = this.cell;
+    const mine = view.me >= 0 ? view.teams[view.me] : -1;
+    ctx.save();
+    for (const seat of view.active) {
+      const team = view.teams[seat];
+      if (!(team >= 0)) continue;
+      const b = this.board.bases[seat];
+      const col = TEAM_COLORS[team];
+      // the label: along the outer edge of a square base; on the hexagon board, across the
+      // bottom of the base's ring (off the track squares)
+      const word = view.me < 0 ? `TEAM ${'AB'[team]}` : seat === view.me ? 'YOU' : team === mine ? 'ALLY' : 'RIVAL';
+      let lx, ly;
+      if (b.square) {
+        lx = b.x;
+        ly = b.y + Math.sign(b.y) * (b.size - 0.5);
+      } else {
+        lx = b.x;
+        ly = b.y + b.size * 0.97;
+      }
+      const h = Math.max(13, s * 0.5);
+      ctx.font = `800 ${Math.round(h * 0.62)}px system-ui, sans-serif`;
+      const tw = ctx.measureText(word).width;
+      const w = tw + h * 1.45;
+      const cx = this.px(lx);
+      const cy = this.px(ly);
+      ctx.fillStyle = 'rgba(14, 18, 30, 0.82)';
+      roundRect(ctx, cx - w / 2, cy - h / 2, w, h, h / 2);
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = col;
+      ctx.stroke();
+      teamBadge(ctx, cx - w / 2 + h * 0.5, cy, h * 0.36, team);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(word, cx - w / 2 + h * 0.95, cy + 0.5);
+    }
+    ctx.restore();
   }
 
   // A texture drifting slowly over the surface (water, lava…), in two layers going different
@@ -493,11 +590,21 @@ export class BoardRenderer {
       this.ctx.drawImage(this.under, 0, 0);
       return;
     }
-    if (now - this.animAt >= 50 || now < this.animAt) {
+    // Refreshing it is the heaviest thing a frame does, so it waits while the dice rolls or a pin
+    // moves (view.busy): a hitch every few frames is what made those look jerky. The drift is slow
+    // enough that a second's pause can't be seen.
+    // Otherwise it refreshes about when the drift has moved a pixel: smooth, and far fewer than
+    // 20 a second for the slow ones (ocean ~6, starry skies ~2)
+    const every = Math.min(250, Math.max(50, 1000 / ((spec.speed || 0.1) * this.cell * 1.35)));
+    const due = this.lite ? this.animAt === -Infinity : now - this.animAt >= (this.busy ? 1500 : every);
+    if (due || now < this.animAt) {
       this.animAt = now;
-      const a = this.anim.getContext('2d');
-      const k = this.cell; // board units → anim pixels
-      const mid = this.size / 2;
+      // Drawn on the CPU (willReadFrequently keeps this small canvas off the GPU): the blend modes
+      // it uses make a GPU stop and copy what's under them for every fill, which is what made the
+      // moving boards stutter; on the CPU they're quick at this size. One upload per refresh.
+      const a = this.anim.getContext('2d', { willReadFrequently: true });
+      const k = (this.cell * this.anim.width) / this.size; // board units → anim pixels
+      const mid = this.anim.width / 2;
       const half = this.span / 2;
       const t = now / 1000;
       a.setTransform(1, 0, 0, 1, 0, 0);
@@ -510,8 +617,14 @@ export class BoardRenderer {
       a.globalAlpha = spec.alpha ?? 0.5;
       const loop = spec.size * 4;
       const layers = spec.single ? [[1, 0.6, 1]] : [[1, 1, 0.6], [1.35, -0.8, 0.9]];
-      for (const [scale, dx, dy] of layers) {
-        const p = a.createPattern(img, 'repeat');
+      // (patterns made once and moved each time: making one per refresh re-sent the whole
+      // texture to the GPU every time, which was most of the cost on phones)
+      if (this.animImg !== img) {
+        this.animImg = img;
+        this.animPats = layers.map(() => a.createPattern(img, 'repeat'));
+      }
+      for (const [li, [scale, dx, dy]] of layers.entries()) {
+        const p = this.animPats[li];
         const sc = (spec.size * scale) / img.width;
         p.setTransform(new DOMMatrix([sc, 0, 0, sc, (t * spec.speed * dx) % loop, (t * spec.speed * dy) % loop]));
         a.fillStyle = p;
@@ -523,8 +636,13 @@ export class BoardRenderer {
       a.globalCompositeOperation = 'destination-in';
       a.drawImage(this.under, 0, 0, this.anim.width, this.anim.height);
       a.globalCompositeOperation = 'source-over';
+      // Stretched to full size here, once per refresh: stretching it every frame cost phones
+      // as much as the rest of the board put together
+      const f = this.animFull.getContext('2d');
+      f.clearRect(0, 0, this.animFull.width, this.animFull.height);
+      f.drawImage(this.anim, 0, 0, this.animFull.width, this.animFull.height);
     }
-    this.ctx.drawImage(this.anim, 0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.drawImage(this.animFull, 0, 0);
   }
 
   // The theme's living layer, under the tokens: snow, embers, bubbles, fireflies, twinkles…
@@ -3364,6 +3482,25 @@ export function drawShape(ctx, shape, x, y, r, fill, stroke, lineWidth = 1) {
   }
   ctx.fillStyle = fill;
   ctx.fill();
+}
+
+// Team A gold, team B blue (the same as the A/B badges in the player list)
+const TEAM_COLORS = ['#ffc83a', '#5c9dff'];
+function teamBadge(ctx, x, y, r, team) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fillStyle = TEAM_COLORS[team];
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.2, r * 0.22);
+  ctx.strokeStyle = '#141824';
+  ctx.stroke();
+  ctx.fillStyle = '#141824';
+  ctx.font = `900 ${Math.round(r * 1.3)}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('AB'[team], x, y + r * 0.06);
+  ctx.restore();
 }
 
 function circle(ctx, x, y, r) {
