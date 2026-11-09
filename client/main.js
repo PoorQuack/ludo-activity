@@ -1104,7 +1104,7 @@ function watchSmoothness(gap) {
   moveFrames.length = 0;
   if (avg > 26) {
     setSmooth(true);
-    toast('Graphics set to Smooth: fewer board effects so this device keeps up. Change it in ⚙ Settings.', 'ok', 6000);
+    toast('Graphics set to Low: fewer board effects so this device keeps up. Change it in ⚙ Settings.', 'ok', 6000);
   }
 }
 
