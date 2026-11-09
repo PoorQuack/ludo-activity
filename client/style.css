@@ -1123,6 +1123,22 @@ canvas.my-turn {
 img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 
 /* Team games: a small tag on each seat card */
+/* a bot's difficulty, under its name in the lobby (the host can change it) */
+.bot-level {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid #56614f;
+  border-radius: 7px;
+  padding: 2px 4px;
+  max-width: 100%;
+  cursor: pointer;
+}
+.bot-level.lvl-easy { border-color: #4fbf7f; }
+.bot-level.lvl-hard { border-color: #e0a63a; }
+.bot-level.lvl-impossible { border-color: #e2554e; }
 .seat-team { margin-left: auto; flex: 0 0 auto; width: 18px; height: 18px; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; border-radius: 50%; }
 .seat-team.t0 { background: rgba(255, 194, 58, 0.18); color: #ffd36b; }
 .seat-team.t1 { background: rgba(120, 170, 255, 0.18); color: #9cc0ff; }

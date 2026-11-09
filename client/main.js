@@ -1491,6 +1491,8 @@ function listItem(color, text, tag, muted = false) {
   return li;
 }
 
+const BOT_LEVEL_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard', impossible: 'Impossible' };
+
 function renderPanel() {
   const seat = mySeat();
   const { phase } = state;
@@ -1560,7 +1562,18 @@ function renderPanel() {
     const sub = document.createElement('div');
     sub.className = 'seat-sub';
     if (!s) sub.textContent = 'Empty seat';
-    else if (phase === 'lobby') sub.textContent = s.bot ? 'Bot' : s.userId === state.hostId ? 'Host' : 'Ready';
+    else if (phase === 'lobby' && s.bot) {
+      // The bot's difficulty: the host picks it here, everyone else just sees it
+      const level = s.level || 'medium';
+      if (isHost()) {
+        const pick = document.createElement('select');
+        pick.className = `bot-level lvl-${level}`;
+        pick.setAttribute('aria-label', `${s.name}'s difficulty`);
+        for (const [id, label] of Object.entries(BOT_LEVEL_LABELS)) pick.add(new Option(`🤖 ${label}`, id, false, id === level));
+        pick.addEventListener('change', () => send('botLevel', { seat: i, level: pick.value }));
+        sub.appendChild(pick);
+      } else sub.textContent = `🤖 ${BOT_LEVEL_LABELS[level]}`;
+    } else if (phase === 'lobby') sub.textContent = s.userId === state.hostId ? 'Host' : 'Ready';
     else if (s.surrendered) sub.textContent = '🏳️ Surrendered';
     else if (phase === 'playing' && state.decider) {
       const t = state.decider.players.findIndex((ps) => ps.includes(i));
@@ -1581,7 +1594,7 @@ function renderPanel() {
               ? `🏠 ${ordinal(place + 1)} · +${state.pointsFor?.[place] ?? 0} for the team`
               : place >= 0
                 ? `🏆 ${ordinal(place + 1)} place`
-                : `${home}/4 home${s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
+                : `${home}/4 home${s.bot ? ` · ${BOT_LEVEL_LABELS[s.level || 'medium']}` : s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
     }
     card.appendChild(sub);
 

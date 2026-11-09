@@ -2,7 +2,7 @@
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor, teamsOf } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
-import { newTokens, legalMoves, applyMove, chooseBotMove, progressShare } from './rules.js';
+import { newTokens, legalMoves, applyMove, chooseBotMove, bestBotScore, progressShare, BOT_LEVELS } from './rules.js';
 import { cleanText } from './filter.js';
 
 const BOT_DELAY_MS = 900;
@@ -202,6 +202,7 @@ export class Room {
       case 'sit': return this.sit(user, msg.seat);
       case 'stand': return this.stand(user);
       case 'addBot': return this.addBot(user, msg.seat);
+      case 'botLevel': return this.setBotLevel(user, msg.seat, msg.level);
       case 'fillBots': return this.fillBots(user);
       case 'removeSeat': return this.removeSeat(user, msg.seat);
       case 'setMode': return this.setMode(user, msg.mode);
@@ -272,6 +273,16 @@ export class Room {
     this.changed();
   }
 
+  // Lobby, host only: how well a bot plays (Easy / Medium / Hard / Impossible)
+  setBotLevel(user, seat, level) {
+    this.requirePhase('lobby');
+    this.requireHost(user);
+    if (!this.seats[seat]?.bot) throw new Error("That's not a bot");
+    if (!BOT_LEVELS.includes(level)) throw new Error('Unknown difficulty');
+    this.seats[seat].level = level;
+    this.changed();
+  }
+
   fillBots(user) {
     this.requirePhase('lobby');
     this.requireHost(user);
@@ -314,7 +325,7 @@ export class Room {
     }
     for (const o of old.filter((o) => o.s.bot)) {
       const i = allowed.includes(o.i) && !this.seats[o.i] ? o.i : free();
-      if (i !== undefined) this.seats[i] = newBot(i);
+      if (i !== undefined) this.seats[i] = newBot(i, o.s.level);
     }
     this.changed();
   }
@@ -557,6 +568,22 @@ export class Room {
   // ---------- game flow ----------
 
   // A 6 is kept and you roll again; once you roll something else, you play all the rolls.
+  // The dice for this roll. An Impossible bot gets a little luck: about a third of the time it
+  // rolls twice and keeps the roll that helps it more (a 6 counts for its extra roll, and a third
+  // 6 in a row, which loses the turn, counts against it).
+  luckyRoll() {
+    const actor = this.seats[this.actorSeat()];
+    const first = this.rng();
+    if (!actor?.bot || actor.level !== 'impossible' || Math.random() >= 0.35) return first;
+    const second = this.rng();
+    const worth = (v) => {
+      if (v === 6 && this.rolls.length >= MAX_SIXES - 1) return -1000;
+      const s = bestBotScore(this.tokens, this.turn, v, this.raceSeats(), this.board, this.teamMap);
+      return (s === -Infinity ? -50 : s) + (v === 6 ? 20 : 0);
+    };
+    return worth(second) > worth(first) ? second : first;
+  }
+
   // Every token still in base?
   allInBase(seat) {
     return this.tokens[seat].every((p) => p === -1);
@@ -568,7 +595,7 @@ export class Room {
     // Stuck in base for STUCK_TURNS dead turns: this roll is a guaranteed 6.
     // Random rolls are untouched — only the first roll of such a turn is forced.
     const pity = this.rolls.length === 0 && this.allInBase(seat) && this.stuck[seat] >= STUCK_TURNS;
-    const dice = pity ? 6 : this.rng();
+    const dice = pity ? 6 : this.luckyRoll();
     if (dice === 6) this.stat(this.actorSeat(), 'six');
     if (dice === 6) this.stuck[seat] = 0; // any 6 ends the drought, forced or not
     this.dice = dice;
@@ -983,7 +1010,9 @@ export class Room {
         else {
           // Plays the rolls in order, each on its best token.
           const idx = this.options.findIndex((o) => o.length > 0);
-          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.raceSeats(), this.board, this.teamMap);
+          // Bots play at their difficulty; someone who dropped out is played for as well as possible
+          const level = seat.bot ? seat.level || 'medium' : 'hard';
+          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.raceSeats(), this.board, this.teamMap, level);
           if (t !== null) this.doMove(t, idx);
         }
       } catch (err) {
@@ -1228,6 +1257,6 @@ export class Room {
   }
 }
 
-function newBot(seat) {
-  return { userId: `bot-${seat}`, name: BOT_NAMES[seat], bot: true, connected: true };
+function newBot(seat, level = 'medium') {
+  return { userId: `bot-${seat}`, name: BOT_NAMES[seat], bot: true, connected: true, level };
 }

@@ -99,15 +99,42 @@ export function applyMove(tokens, seat, t, dice, activeSeats, board = DEFAULT_BO
 
 // Simple bot: prefer finishing, capturing, leaving base, reaching safety (a safe square or a
 // pair), then progress; avoid breaking up a pair that would leave its partner in danger.
-export function chooseBotMove(tokens, seat, dice, activeSeats, board = DEFAULT_BOARD, team = null) {
+// Bot difficulty: how the bot picks among the moves it scores (see scoreBotMoves).
+//  easy: a random move more often than not; medium: sensible, with a fair bit of noise (it
+//  misjudges now and then); hard / impossible: always its best move. (Impossible also gets a
+//  little luck with the dice: see Room.doRoll.)
+export const BOT_LEVELS = ['easy', 'medium', 'hard', 'impossible'];
+
+export function chooseBotMove(tokens, seat, dice, activeSeats, board = DEFAULT_BOARD, team = null, level = 'hard') {
+  const scored = scoreBotMoves(tokens, seat, dice, activeSeats, board, team);
+  if (!scored.length) return null;
+  if (level === 'easy' && Math.random() < 0.6) return scored[Math.floor(Math.random() * scored.length)].t;
+  const noise = level === 'easy' ? 120 : level === 'medium' ? 45 : 0;
+  let best = scored[0];
+  let bestScore = -Infinity;
+  for (const m of scored) {
+    const s = m.score + (Math.random() - 0.5) * noise;
+    if (s > bestScore) {
+      bestScore = s;
+      best = m;
+    }
+  }
+  return best.t;
+}
+
+// The best score any move with this roll gets (-Infinity with no move): how good a roll is.
+export function bestBotScore(tokens, seat, dice, activeSeats, board = DEFAULT_BOARD, team = null) {
+  return Math.max(-Infinity, ...scoreBotMoves(tokens, seat, dice, activeSeats, board, team).map((m) => m.score));
+}
+
+// Every legal move with how good it looks: [{ t, score }]
+function scoreBotMoves(tokens, seat, dice, activeSeats, board = DEFAULT_BOARD, team = null) {
   const tm = teamFn(team);
   const mates = activeSeats.filter((o) => tm(o) === tm(seat));
   // tokens of my team on a square, not counting the token being moved
   const company = (idx, moving) => mates.reduce((n, o) => n + tokensOnSquare(tokens, o, idx, board).filter((k) => o !== seat || k !== moving).length, 0);
   const moves = legalMoves(tokens, seat, dice, board);
-  if (moves.length === 0) return null;
-  let best = moves[0];
-  let bestScore = -Infinity;
+  const scored = [];
   for (const t of moves) {
     const from = tokens[seat][t];
     const to = targetProgress(tokens, seat, t, dice, board);
@@ -127,12 +154,9 @@ export function chooseBotMove(tokens, seat, dice, activeSeats, board = DEFAULT_B
       if (company(fromIdx, t) === 1 && !board.safe.has(fromIdx) && threatened(tokens, seat, fromIdx, activeSeats, board, team)) score -= 35;
     }
     score += to / 10;
-    if (score > bestScore) {
-      bestScore = score;
-      best = t;
-    }
+    scored.push({ t, score });
   }
-  return best;
+  return scored;
 }
 
 // Would a lone token of `seat` at `progress` be within 1–6 squares in front of an opponent?
