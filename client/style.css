@@ -10,16 +10,17 @@
 
 :root {
   --display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --bg: #0e1510;
-  --panel: #18201a;
-  --panel-2: #232d26;
-  --text: #f0ece0;
-  --muted: #b3bba8; /* secondary text: ~8.5:1 on the panels, easy to read */
-  /* Bright Ludo yellow: buttons, highlights, the turn clock */
-  --accent: #ffc23a;
-  --accent-rgb: 255, 194, 58;
-  /* dark ink that sits on top of the yellow accent */
-  --on-accent: #1d1503;
+  /* Near-black with a hint of indigo: easy on the eyes in Discord's dark theme */
+  --bg: #0d0b1a;
+  --panel: #1b1734;
+  --panel-2: #2a244f;
+  --text: #fbf9ff;
+  --muted: #c6c0ea; /* secondary text: soft lavender, ~9:1 on the panels */
+  /* Bubblegum pink: buttons, highlights, the turn clock */
+  --accent: #ff5fa2;
+  --accent-rgb: 255, 95, 162;
+  /* dark ink that sits on top of the pink accent */
+  --on-accent: #2b0a1e;
   --gold: #ffd54a;
   /* Brighter versions of the four Ludo colours, for the interface (the board keeps its own) */
   --ludo-red: #ff5a4f;
@@ -28,7 +29,7 @@
   --ludo-yellow: #ffc23a;
   --ludo-stripe: linear-gradient(90deg, var(--ludo-red) 0 25%, var(--ludo-green) 25% 50%, var(--ludo-yellow) 50% 75%, var(--ludo-blue) 75%);
   --ok: #2f9e5f;
-  --line: #2d372e;
+  --line: #3b3468;
   /* same as the Classic board's player colours */
   --red: #d24d47;
   --green: #2f9467;
@@ -71,7 +72,7 @@ html, body {
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  background: #333d30;
+  background: #3a3272;
   color: var(--text);
   transition: filter 0.15s, transform 0.1s;
   white-space: nowrap;
@@ -80,14 +81,14 @@ html, body {
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; }
 .btn.primary {
-  background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c);
+  background: linear-gradient(180deg, #ff9ccb, var(--accent) 55%, #ec3f88);
   color: var(--on-accent);
   width: 100%;
   padding: 12px;
   font-size: 15px;
-  box-shadow: 0 0 0 1px rgba(255, 228, 140, 0.35) inset, 0 4px 18px rgba(var(--accent-rgb), 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 205, 230, 0.4) inset, 0 4px 18px rgba(var(--accent-rgb), 0.28);
 }
-.btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 1px rgba(255, 236, 170, 0.5) inset, 0 4px 24px rgba(var(--accent-rgb), 0.45); }
+.btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 1px rgba(255, 215, 236, 0.55) inset, 0 4px 24px rgba(var(--accent-rgb), 0.45); }
 .btn.small { padding: 5px 8px; font-size: 12px; }
 .btn.big { padding: 14px; font-size: 16px; border-radius: 12px; }
 .btn.danger { background: #c62f3a; color: #fff; }
@@ -211,7 +212,7 @@ html, body {
 /* Buttons on the menu change colour on hover instead of brightening */
 .menu-shell .btn:hover { filter: none; }
 .menu-shell .btn.primary { border-radius: 10px; }
-.menu-shell .btn.primary:not(:disabled):hover { background: #ddb262; }
+.menu-shell .btn.primary:not(:disabled):hover { background: #ff7cb5; }
 .btn.quiet { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
 .btn.quiet:not(:disabled):hover { background: var(--panel); }
 
@@ -236,7 +237,7 @@ html, body {
   color: var(--muted);
 }
 .segmented .btn:hover { color: var(--text); }
-.segmented .btn.active { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px #3a463c; }
+.segmented .btn.active { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px #4a4286; }
 .segmented .btn.active .ico { color: var(--accent); }
 .segmented .ico { width: 15px; height: 15px; }
 
@@ -259,8 +260,8 @@ html, body {
 }
 .code-form input:focus { border-color: var(--accent); }
 .code-form input::placeholder { letter-spacing: 0.02em; font-weight: 400; color: #6c7566; }
-.code-form .btn { min-width: 72px; background: var(--panel-2); box-shadow: inset 0 0 0 1px #3a463c; }
-.code-form .btn:hover { background: #2b372e; }
+.code-form .btn { min-width: 72px; background: var(--panel-2); box-shadow: inset 0 0 0 1px #4a4286; }
+.code-form .btn:hover { background: #3a3272; }
 
 /* Open rooms */
 .room-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; }
@@ -397,7 +398,7 @@ html, body {
 .player-list button:hover { background: var(--panel-2); }
 .player-list button.active { background: var(--accent); color: var(--on-accent); }
 .player-list button small { display: block; color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.player-list button.active small { color: rgba(22, 18, 10, 0.72); }
+.player-list button.active small { color: rgba(43, 10, 30, 0.75); }
 .menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .menu-row .btn { padding: 11px; }
 
@@ -451,7 +452,7 @@ html, body {
 .item .preview.emoji { display: flex; align-items: center; justify-content: center; font-size: 48px; }
 .item-name { font-weight: 600; font-size: 14px; }
 .item .btn { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.item .btn.buy { background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c); color: var(--on-accent); }
+.item .btn.buy { background: linear-gradient(180deg, #ff9ccb, var(--accent) 55%, #ec3f88); color: var(--on-accent); }
 .item .btn.buy:hover:not(.cant) { box-shadow: 0 2px 14px rgba(var(--accent-rgb), 0.45); }
 .item .btn.buy.cant { opacity: 0.55; }
 
@@ -722,7 +723,7 @@ html, body {
 }
 .emoji-tab img { width: 24px; height: 24px; object-fit: contain; }
 .emoji-tab:hover { opacity: 1; background: var(--panel); }
-.emoji-tab.active { opacity: 1; background: var(--panel); border-color: var(--accent, #f2c14e); }
+.emoji-tab.active { opacity: 1; background: var(--panel); border-color: var(--accent); }
 .emoji-pack-name { font-size: 11px; font-weight: 700; color: var(--muted); padding: 0 2px; }
 .emoji-grid {
   display: grid;
@@ -820,7 +821,7 @@ html, body {
 }
 @keyframes shop-glow {
   0%, 100% { box-shadow: 0 0 14px 1px rgba(255, 90, 79, 0.55); }
-  25% { box-shadow: 0 0 16px 2px rgba(255, 194, 58, 0.6); }
+  25% { box-shadow: 0 0 16px 2px rgba(var(--accent-rgb), 0.6); }
   50% { box-shadow: 0 0 14px 1px rgba(47, 212, 129, 0.55); }
   75% { box-shadow: 0 0 16px 2px rgba(77, 141, 255, 0.6); }
 }
@@ -914,7 +915,7 @@ html, body {
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
 .setting small { opacity: 0.75; }
 .setting .toggle { width: 46px; flex: none; }
-.toggle.off { color: var(--text); background: transparent; border: 1px solid #56614f; }
+.toggle.off { color: var(--text); background: transparent; border: 1px solid #5d5596; }
 
 /* ---------- overlays ---------- */
 .overlay {
@@ -935,7 +936,7 @@ html, body {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(14, 21, 16, 0.94);
+  background: rgba(13, 11, 26, 0.94);
   padding: 22px 30px;
   border-radius: 16px;
   text-align: center;
@@ -995,7 +996,7 @@ html, body {
 }
 .toast.ok { background: var(--ok); }
 .toast.notice { background: #3b6fd8; max-width: min(92vw, 520px); text-align: center; }
-.toast.win { background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c); color: var(--on-accent); max-width: min(92vw, 520px); text-align: center; }
+.toast.win { background: linear-gradient(180deg, #ffd45e, #ffc23a 55%, #f5a91c); color: #1d1503; max-width: min(92vw, 520px); text-align: center; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 
 /* ---------- phones ---------- */
@@ -1130,7 +1131,7 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   font-weight: 700;
   color: var(--text);
   background: var(--panel-2);
-  border: 1px solid #56614f;
+  border: 1px solid #5d5596;
   border-radius: 7px;
   padding: 2px 4px;
   max-width: 100%;
