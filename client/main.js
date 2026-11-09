@@ -805,6 +805,15 @@ for (const box of els.chats) {
   });
 }
 
+// Coming back to the app: phones (iPhones especially) may have thrown away the board's drawing
+// while it was in the background, so it's drawn again from scratch.
+const redrawBoard = () => {
+  renderer.size = 0;
+  boardBox = 0; // measured again too
+};
+document.addEventListener('visibilitychange', () => document.hidden || redrawBoard());
+window.addEventListener('pageshow', redrawBoard);
+
 // ---------------- phones: the on-screen keyboard ----------------
 // While someone types on a phone, the game is pinned to the part of the screen above the
 // keyboard (the visual viewport): the board shrinks and the chat box sits right on top of the
@@ -827,26 +836,48 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
       if (!root.classList.contains('kb-open')) return;
       const h = Math.round(vv ? vv.height : window.innerHeight);
       const top = Math.round(vv ? vv.offsetTop : 0);
+      // The keyboard went away but the box kept its focus (iPhones do this when you swipe it
+      // down, or leave the app and come back): leave typing mode, or the game stays squeezed
+      // into the top of the screen with the board gone.
+      if (h > fullH - 100) {
+        if (kbSeen || performance.now() - openedAt > 1500) return closeKeyboardMode();
+      } else kbSeen = true;
       if (`${h}|${top}` === shown) return;
       shown = `${h}|${top}`;
       root.style.setProperty('--kb-h', `${h}px`);
       root.style.setProperty('--kb-top', `${top}px`);
     });
   };
+  let fullH = 0; // the visible height before the keyboard came up
+  let kbSeen = false;
+  let openedAt = 0;
+  const closeKeyboardMode = () => {
+    if (!root.classList.contains('kb-open')) return;
+    root.classList.remove('kb-open');
+    shown = '';
+    if (isChat(document.activeElement)) document.activeElement.blur();
+    window.scrollTo(0, 0); // iPhones leave the page scrolled after the keyboard goes
+  };
   document.addEventListener('focusin', (e) => {
     if (!isChat(e.target) || screen !== 'game') return;
+    if (!root.classList.contains('kb-open')) {
+      fullH = Math.round(vv ? vv.height : window.innerHeight);
+      kbSeen = false;
+      openedAt = performance.now();
+    }
     shown = '';
     root.classList.add('kb-open');
     fit();
+    setTimeout(fit, 1600); // no keyboard showed up at all (e.g. a keyboard plugged in): back to normal
   });
+  // Leaving the app (or the tab) always ends typing mode
+  document.addEventListener('visibilitychange', () => document.hidden && closeKeyboardMode());
+  window.addEventListener('pagehide', closeKeyboardMode);
   document.addEventListener('focusout', (e) => {
     if (!isChat(e.target)) return;
     // Focus moves for a moment when an emoji is picked: only close if it really left the chat
     setTimeout(() => {
-      if (isChat(document.activeElement)) return;
-      root.classList.remove('kb-open');
-      shown = '';
-      window.scrollTo(0, 0); // iPhones leave the page scrolled after the keyboard goes
+      if (!isChat(document.activeElement)) closeKeyboardMode();
     }, 150);
   });
   vv?.addEventListener('resize', fit);
