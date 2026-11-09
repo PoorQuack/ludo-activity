@@ -14,7 +14,7 @@
   --panel: #18201a;
   --panel-2: #232d26;
   --text: #f0ece0;
-  --muted: #939b8a;
+  --muted: #b3bba8; /* secondary text: ~8.5:1 on the panels, easy to read */
   /* Bright Ludo yellow: buttons, highlights, the turn clock */
   --accent: #ffc23a;
   --accent-rgb: 255, 194, 58;
@@ -363,12 +363,18 @@ html, body {
 }
 .player-volumes { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
 /* ⚙ settings panel (the same popover as the music player) */
-.set-title { font-weight: 800; font-size: 15px; }
-.set-label { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.set-title { font-weight: 800; font-size: 16px; }
+/* Settings must be easy to read: full-strength text, section headings in the accent colour */
+.set-label { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
 .set-group { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
-.set-note { font-size: 11.5px; line-height: 1.35; color: var(--muted); }
+.set-note { font-size: 12.5px; line-height: 1.4; color: var(--text); opacity: 0.88; }
+.player-pop .setting,
+.player-pop .volume { color: var(--text); font-size: 14px; }
+.player-pop .setting small { opacity: 1; color: var(--muted); font-size: 12.5px; }
+.player-pop .player-now span,
+.player-pop .player-list button small { color: var(--muted); }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
-.seg button { border: 0; border-radius: 7px; padding: 8px 6px; font: inherit; font-size: 13px; font-weight: 700; background: transparent; color: var(--muted); cursor: pointer; }
+.seg button { border: 0; border-radius: 7px; padding: 9px 6px; font: inherit; font-size: 14px; font-weight: 700; background: transparent; color: var(--text); cursor: pointer; }
 .seg button.active { background: var(--accent); color: var(--on-accent); }
 .gear-btn .ico { width: 17px; height: 17px; display: block; }
 .ico.gear { stroke-width: 1.9; }
@@ -908,7 +914,7 @@ html, body {
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
 .setting small { opacity: 0.75; }
 .setting .toggle { width: 46px; flex: none; }
-.toggle.off { color: var(--muted); background: transparent; border: 1px solid var(--line); }
+.toggle.off { color: var(--text); background: transparent; border: 1px solid #56614f; }
 
 /* ---------- overlays ---------- */
 .overlay {
