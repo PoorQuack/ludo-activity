@@ -32,7 +32,8 @@ let sfxGain = null;
 let noiseBuffer = null;
 let musicTimer = null;
 let musicEl = null; // the one <audio> element for music files (its src changes with the track)
-let tracks = []; // the playlist from sounds.json: { id, label, title, artist, file }
+let tracks = []; // the genres from sounds.json: { id, label, songs: [{ title, artist, file }] }
+let songIdx = 0; // which song of the current genre is playing
 let musicFileFailed = false; // the file wouldn't load: fall back to the generated loop
 let nextNote = 0;
 let step = 0;
@@ -42,7 +43,14 @@ const MUSIC_VOLUME = 0.6;
 const SFX_VOLUME = 0.6;
 
 export function audioSettings() {
-  return { ...settings, tracks: tracks.map(({ id, label, title, artist }) => ({ id, label, title, artist })) };
+  const cur = currentTrack();
+  const song = cur?.songs[songIdx % cur.songs.length];
+  return {
+    ...settings,
+    // each genre, and the song playing now (title / artist of the current genre's song)
+    tracks: tracks.map(({ id, label, songs }) => ({ id, label, songs: songs.length, title: songs[0].title, artist: songs[0].artist })),
+    song: song ? { title: song.title, artist: song.artist, n: (songIdx % cur.songs.length) + 1, of: cur.songs.length } : null,
+  };
 }
 
 function emitChange() {
@@ -106,19 +114,19 @@ async function loadFiles() {
   }
   for (const [name, file] of Object.entries(list)) {
     if (name === 'music') {
-      // Preferred: an ordered playlist [{ id, label, title, artist, file }]. Still fine:
-      // "one.mp3" for everyone, or { style: "file.mp3" } (id/label = the style key, title = file name).
-      if (typeof file === 'string') tracks = [{ id: 'music', label: 'Music', title: file, artist: '', file: `sounds/${file}` }];
+      // Preferred: genres [{ id, label, songs: [{ title, artist, file }] }], played one song after
+      // another. Still fine: a genre with a single { title, artist, file }, "one.mp3" for
+      // everyone, or { style: "file.mp3" }.
+      const song = (s) => ({ title: s.title || s.file, artist: s.artist || '', file: `sounds/${s.file}` });
+      if (typeof file === 'string') tracks = [{ id: 'music', label: 'Music', songs: [song({ file })] }];
       else if (Array.isArray(file)) {
         tracks = file.map((t) => ({
           id: t.id || t.file,
           label: t.label || t.id || t.title || t.file,
-          title: t.title || t.file,
-          artist: t.artist || '',
-          file: `sounds/${t.file}`,
+          songs: (t.songs || [t]).map(song),
         }));
       } else {
-        tracks = Object.entries(file).map(([id, f]) => ({ id, label: id, title: f, artist: '', file: `sounds/${f}` }));
+        tracks = Object.entries(file).map(([id, f]) => ({ id, label: id, songs: [song({ file: f })] }));
       }
       continue;
     }
@@ -134,7 +142,10 @@ async function loadFiles() {
       }
     }
   }
-  if (tracks.length) loadTrack(currentTrack());
+  if (tracks.length) {
+    songIdx = randomSong(currentTrack());
+    loadTrack(currentTrack());
+  }
   window.dispatchEvent(new Event('ludo-audio-ready'));
   emitChange();
 }
@@ -144,13 +155,21 @@ function currentTrack() {
   return tracks.find((t) => t.id === settings.musicTrack) || tracks[0];
 }
 
-// Points the one <audio> element at a track's file — only that file is ever loaded.
+// A genre starts on a random song, so it isn't always the same one first
+const randomSong = (track) => Math.floor(Math.random() * (track?.songs.length || 1));
+
+// Points the one <audio> element at the current song of a genre — only that file is ever loaded.
+// A genre plays its songs one after another (a genre with one song just loops it); the genre
+// only changes when the player picks another.
 function loadTrack(track) {
   if (!track) return;
   if (!musicEl) {
     musicEl = new Audio();
-    // A track loops so the mood stays — mood changes only happen when the player picks one.
-    musicEl.loop = true;
+    musicEl.addEventListener('ended', () => {
+      songIdx++;
+      loadTrack(currentTrack());
+      emitChange();
+    });
     // A missing/broken file shouldn't leave the game silent: fall back to the generated loop.
     musicEl.addEventListener('error', () => {
       console.warn('Could not load music file, using generated music instead');
@@ -163,7 +182,8 @@ function loadTrack(track) {
   settings.musicTrack = track.id;
   save();
   musicFileFailed = false;
-  musicEl.src = track.file;
+  musicEl.loop = track.songs.length === 1;
+  musicEl.src = track.songs[songIdx % track.songs.length].file;
   stopMusic(); // swap the generated loop for the file
   if (settings.music) startMusic();
 }
@@ -181,6 +201,10 @@ export function playTrack(id) {
   clearTimeout(trackSwitchTimer);
   const swap = () => {
     trackSwitchTimer = null;
+    if (songTarget !== null) {
+      songIdx = songTarget;
+      songTarget = null;
+    } else songIdx = randomSong(track);
     loadTrack(track);
     musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2); // and in
     emitChange();
@@ -191,13 +215,17 @@ export function playTrack(id) {
   } else swap();
 }
 
-export function nextTrack() {
-  if (tracks.length) playTrack(tracks[(tracks.indexOf(currentTrack()) + 1) % tracks.length].id);
+// ⏭ / ⏮: the next or previous song of the genre playing now
+let songTarget = null;
+function skipSong(step) {
+  const cur = currentTrack();
+  if (!cur) return;
+  const n = cur.songs.length;
+  songTarget = (((songIdx % n) + step) % n + n) % n;
+  playTrack(cur.id);
 }
-
-export function prevTrack() {
-  if (tracks.length) playTrack(tracks[(tracks.indexOf(currentTrack()) - 1 + tracks.length) % tracks.length].id);
-}
+export const nextTrack = () => skipSong(1);
+export const prevTrack = () => skipSong(-1);
 
 export function setSound(on) {
   settings.sound = on;

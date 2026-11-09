@@ -1,7 +1,34 @@
 {
   "music": [
-    { "id": "lofi", "label": "Lo-fi", "title": "lofi hip hop", "artist": "omfgdude (OpenGameArt)", "file": "music-lofi-2.mp3" },
-    { "id": "jazz", "label": "Slow jazz", "title": "Faster Does It", "artist": "Kevin MacLeod", "file": "music-energetic.mp3" },
-    { "id": "energetic", "label": "Energetic", "title": "Wallpaper", "artist": "Kevin MacLeod", "file": "music-jazz.mp3" }
+    {
+      "id": "lofi",
+      "label": "Lo-fi",
+      "songs": [
+        { "title": "lofi hip hop", "artist": "omfgdude (OpenGameArt)", "file": "music-lofi-2.mp3" },
+        { "title": "Chill Lofi", "artist": "omfgdude (OpenGameArt)", "file": "music-lofi-chill.mp3" },
+        { "title": "Lofi again", "artist": "omfgdude (OpenGameArt)", "file": "music-lofi-again.mp3" },
+        { "title": "Quickie Trix", "artist": "iamoneabe (OpenGameArt)", "file": "music-lofi-quickie.mp3" }
+      ]
+    },
+    {
+      "id": "jazz",
+      "label": "Slow jazz",
+      "songs": [
+        { "title": "Faster Does It", "artist": "Kevin MacLeod", "file": "music-energetic.mp3" },
+        { "title": "Lobby Time", "artist": "Kevin MacLeod", "file": "music-jazz-lobby.mp3" },
+        { "title": "Bossa Antigua", "artist": "Kevin MacLeod", "file": "music-jazz-bossa.mp3" },
+        { "title": "Hep Cats", "artist": "Kevin MacLeod", "file": "music-jazz-hepcats.mp3" }
+      ]
+    },
+    {
+      "id": "energetic",
+      "label": "Energetic",
+      "songs": [
+        { "title": "Wallpaper", "artist": "Kevin MacLeod", "file": "music-jazz.mp3" },
+        { "title": "Monkeys Spinning Monkeys", "artist": "Kevin MacLeod", "file": "music-energetic-monkeys.mp3" },
+        { "title": "Pixel Peeker Polka (faster)", "artist": "Kevin MacLeod", "file": "music-energetic-polka.mp3" },
+        { "title": "Run Amok", "artist": "Kevin MacLeod", "file": "music-energetic-amok.mp3" }
+      ]
+    }
   ]
 }

@@ -1043,14 +1043,15 @@ function renderPlayer() {
   // The track section only exists once sounds.json has loaded a playlist; the volumes always show.
   for (const el of [$('player-now'), $('player-controls'), els.playerList]) el.classList.toggle('hidden', list.length === 0);
   const cur = list.find((t) => t.id === s.musicTrack) || list[0];
-  els.playerLabel.textContent = cur ? cur.label : '';
-  els.playerTitle.textContent = cur ? [cur.title, cur.artist].filter(Boolean).join(' — ') : '';
+  const song = s.song || cur;
+  els.playerLabel.textContent = cur ? cur.label + (s.song?.of > 1 ? ` · ${s.song.n}/${s.song.of}` : '') : '';
+  els.playerTitle.textContent = song ? [song.title, song.artist].filter(Boolean).join(' — ') : '';
   els.playerPlay.textContent = s.music ? '⏸' : '▶';
   els.playerList.innerHTML = '';
   for (const t of list) {
     const b = document.createElement('button');
     b.className = t === cur ? 'active' : '';
-    b.innerHTML = `${escapeHtml(t.label)}<small>${escapeHtml([t.title, t.artist].filter(Boolean).join(' — '))}</small>`;
+    b.innerHTML = `${escapeHtml(t.label)}<small>${t.songs > 1 ? `${t.songs} songs` : escapeHtml([t.title, t.artist].filter(Boolean).join(' — '))}</small>`;
     b.addEventListener('click', () => playTrack(t.id));
     els.playerList.appendChild(b);
   }
