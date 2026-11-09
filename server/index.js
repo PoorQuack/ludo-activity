@@ -116,6 +116,22 @@ app.post('/api/admin/coins', (req, res) => {
   res.json({ userId, coins });
 });
 
+// Tell everyone a server update is coming: a line in every room's chat and a note on screen.
+// scripts/deploy.sh calls this (VM only) a few seconds before restarting the server.
+const UPDATE_SOON = "🔧 Updating the game in a few seconds. You'll be disconnected briefly and reconnect on your own: your game is saved.";
+function announce(text, kind = 'soon') {
+  for (const room of directory.rooms.values()) room.systemChat(text);
+  const msg = JSON.stringify({ type: 'notice', kind, text });
+  for (const ws of wss.clients) if (ws.readyState === 1) ws.send(msg);
+}
+app.post('/api/admin/announce', (req, res) => {
+  if (!fromVm(req)) return res.status(404).end();
+  const text = String(req.body?.text || '').slice(0, 300).trim() || UPDATE_SOON;
+  announce(text, req.body?.kind === 'info' ? 'info' : 'soon');
+  console.log(`Admin: announced "${text}"`);
+  res.json({ ok: true, connected: wss.clients.size });
+});
+
 // How busy the server is, for scripts/deploy.sh --when-quiet. Only answered on the VM itself:
 // requests through the Cloudflare tunnel carry cf-connecting-ip and get a 404.
 app.get('/api/status', (req, res) => {
@@ -173,6 +189,7 @@ function restoreRooms() {
   try {
     const n = directory.restore(JSON.parse(fs.readFileSync(ROOMS_FILE, 'utf8')), { extra: roomExtra });
     if (n) console.log(`Restored ${n} room${n === 1 ? '' : 's'} from before the restart`);
+    for (const room of directory.rooms.values()) room.systemChat('✅ Update finished, welcome back! The game carries on where it was.');
   } catch (err) {
     console.error(`Couldn't read saved rooms (${err.message}) — starting with none`);
   }
@@ -477,11 +494,19 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
     if (stopping) return;
     stopping = true;
+    // Rooms keep a chat line about it (saved with them), and open pages get a note and a
+    // "service restart" close, so they say "updating" while they reconnect instead of just "offline".
+    try {
+      announce('🔧 Restarting for an update. Reconnecting in a few seconds…', 'restart');
+    } catch (err) {
+      console.error(`Couldn't announce the restart: ${err.message}`);
+    }
     saveRooms();
     store.flush();
     leaderboard.flush();
     quests.flush();
-    process.exit(0);
+    for (const ws of wss.clients) ws.close(1012, 'Server update');
+    setTimeout(() => process.exit(0), 300); // a moment for those messages to go out
   });
 }
 

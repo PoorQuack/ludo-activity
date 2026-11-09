@@ -6,7 +6,8 @@
 #  - The server only restarts when server code changed (server/, shared/, packages). A page-only
 #    update (look, sounds, client/) goes live with no restart at all: players get it on refresh.
 #  - When it does restart, open games are saved and picked back up (see ROOMS_FILE in
-#    server/index.js): players see "Reconnecting…" for a moment and carry on.
+#    server/index.js). Players get a heads-up in the game chat and on screen ~8s before
+#    (ANNOUNCE_WAIT=seconds to change it), see "Updating the game…" for a moment, and carry on.
 # Rolls back if anything fails.
 #
 #   bash scripts/deploy.sh                  normal update
@@ -146,7 +147,15 @@ if [ -z "$NEED_RESTART" ]; then
   exit 0
 fi
 
+# Warn whoever is online first: a line in every game's chat and a note on screen, then a few
+# seconds for them to read it. (An older server without /api/admin/announce just skips this.)
+if curl -fsS --max-time 5 -X POST "http://localhost:${PORT}/api/admin/announce" >/dev/null 2>&1; then
+  echo "Told players an update is coming, restarting in ${ANNOUNCE_WAIT:-8}s"
+  sleep "${ANNOUNCE_WAIT:-8}"
+fi
+
 # pm2 sends SIGINT: the server saves open games to data/rooms.json and the new one loads them.
+# (It also tells open pages it's restarting, and they reconnect on their own.)
 if ! { pm2 restart ludo --update-env && wait_healthy; }; then
   rollback live
   exit 1

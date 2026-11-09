@@ -852,6 +852,7 @@ html, body {
 .chat-log > li:first-child { margin-top: auto; }
 .chat-log .who { font-weight: 700; margin-right: 6px; }
 .chat-log .empty { color: var(--muted); }
+.chat-log .system { color: var(--muted); font-style: italic; font-size: 0.92em; }
 .chat-form { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); }
 .chat-form input {
   flex: 1;
@@ -977,6 +978,7 @@ html, body {
   animation: toast-in 0.25s ease-out;
 }
 .toast.ok { background: var(--ok); }
+.toast.notice { background: #3b6fd8; max-width: min(92vw, 520px); text-align: center; }
 .toast.win { background: linear-gradient(180deg, #ffd45e, var(--accent) 55%, #f5a91c); color: var(--on-accent); max-width: min(92vw, 520px); text-align: center; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 

@@ -440,6 +440,13 @@ export class Room {
     this.onChange(this); // nothing in the game changed, so skip automate()
   }
 
+  // A line from the game itself (e.g. "updating, back in a few seconds"), shown in everyone's chat.
+  systemChat(text) {
+    this.chat.push({ id: ++this.chatSeq, userId: 'system', name: '', text, at: Date.now(), system: true });
+    if (this.chat.length > CHAT_KEEP) this.chat.shift();
+    this.onChange(this);
+  }
+
   // A "still typing" ping (throttled server-side so a keymashing client can't flood), or
   // `on` false: they stopped (emptied the box, left it), so the line goes at once.
   typing(user, on = true) {

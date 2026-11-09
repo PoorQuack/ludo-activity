@@ -100,6 +100,7 @@ let roomList = []; // rooms you could join, from the server
 let newVisibility = 'public'; // the Public/Private choice for "Create room"
 let clockOffset = 0;
 let reconnectDelay = 500;
+let updating = false; // the server said it's restarting for an update: reconnecting is expected
 let screen = 'loading';
 let shopTab = 'token';
 let freeShop = false; // server is in testing mode: everything costs 0
@@ -178,7 +179,7 @@ function guestLogin() {
 }
 
 function connect() {
-  setLoading(state ? 'Reconnecting…' : 'Joining game…');
+  setLoading(updating ? '🔧 Updating the game… back in a few seconds' : state ? 'Reconnecting…' : 'Joining game…');
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}${BASE}/ws`);
   ws.onopen = () => {
@@ -191,6 +192,10 @@ function connect() {
     if (msg.type === 'welcome') {
       me = msg.you;
       els.loading.classList.add('hidden');
+      if (updating) {
+        updating = false;
+        toast('✅ Update done, you\'re back!', 'ok', 3500);
+      }
       if (screen === 'loading') showScreen('menu');
     } else if (msg.type === 'profile') onProfile(msg.profile);
     else if (msg.type === 'rooms') {
@@ -208,8 +213,14 @@ function connect() {
     else if (msg.type === 'state') onState(msg.state);
     else if (msg.type === 'left') onLeft(msg.message);
     else if (msg.type === 'error') toast(msg.message);
+    else if (msg.type === 'notice') {
+      if (msg.kind === 'restart') updating = true;
+      toast(msg.text, msg.kind === 'info' ? 'ok' : 'notice', msg.kind === 'soon' ? 9000 : 6000);
+    }
   };
-  ws.onclose = () => {
+  ws.onclose = (e) => {
+    if (e.code === 1012) updating = true; // "service restart": the server is updating
+    if (updating) setLoading('🔧 Updating the game… back in a few seconds');
     els.loading.classList.remove('hidden');
     setTimeout(connect, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, 8000);
@@ -441,6 +452,13 @@ function renderChat() {
     }
     for (const m of msgs) {
       const li = document.createElement('li');
+      if (m.system) {
+        // A note from the game itself (updates): no name, set apart from what players say
+        li.className = 'system';
+        li.textContent = m.text;
+        list.appendChild(li);
+        continue;
+      }
       const who = document.createElement('span');
       who.className = 'who';
       // Players' names in their colour (and shape); watchers in the normal text colour
