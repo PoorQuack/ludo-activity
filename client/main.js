@@ -473,15 +473,28 @@ function renderChat() {
   for (const box of els.chats) {
     const list = box.querySelector('.chat-log');
     const readingAt = list.scrollTop; // kept when you're scrolled up reading
-    list.innerHTML = '';
+    // New messages are added to the end; the rest stay as they are. (Rebuilding the whole list
+    // for every message made the chat flash on phones and restarted every animated sticker.)
+    const fresh = list._ver !== chatVersion || !msgs.length || !list._lastId || !msgs.some((m) => m.id === list._lastId);
+    if (fresh) {
+      list.innerHTML = '';
+      list._ver = chatVersion;
+    } else {
+      // messages that dropped out of the server's last-N window
+      while (list.firstElementChild && Number(list.firstElementChild.dataset.id) < msgs[0].id) list.firstElementChild.remove();
+    }
     if (!msgs.length) {
       const li = document.createElement('li');
       li.className = 'empty';
       li.textContent = 'No messages yet. Say hi!';
       list.appendChild(li);
     }
+    const after = fresh ? 0 : list._lastId;
+    list._lastId = latest;
     for (const m of msgs) {
+      if (m.id <= after) continue;
       const li = document.createElement('li');
+      li.dataset.id = m.id;
       if (m.system) {
         // A note from the game itself (updates): no name, set apart from what players say
         li.className = 'system';
@@ -681,7 +694,9 @@ function renderEmojiPop(box, groups, current) {
       const pos = input.selectionStart ?? input.value.length;
       input.setRangeText(e.insert, pos, input.selectionEnd ?? pos, 'end');
       input.dispatchEvent(new Event('input'));
-      input.focus();
+      // On phones the box keeps (or doesn't have) focus as it was: focusing it here popped the
+      // keyboard open again after every sticker, and the whole game jumped.
+      if (!TOUCH) input.focus();
       pop.classList.add('hidden');
       rememberSticker(e.insert);
       renderEmojiPops(); // so Recent is up to date next time
@@ -718,6 +733,8 @@ window.visualViewport?.addEventListener('scroll', refitPickers);
 // the page or a panel scrolled under it (but not the picker's own sticker list)
 document.addEventListener('scroll', (e) => e.target.closest?.('.emoji-pop') || refitPickers(), true);
 
+const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches; // phones and tablets
+
 let lastTypingSent = 0;
 function stopTyping() {
   if (!lastTypingSent) return;
@@ -735,6 +752,15 @@ for (const box of els.chats) {
     pop.classList.toggle('hidden');
     fitPicker(pop);
   });
+  // Tapping the sticker button, a pack tab or a sticker mustn't take focus from the text box:
+  // that closed the phone keyboard (and the layout jumped back), then reopened it.
+  for (const el of [emojiBtn, pop]) {
+    for (const ev of ['pointerdown', 'mousedown']) {
+      el.addEventListener(ev, (e) => {
+        if (e.target.closest('button')) e.preventDefault();
+      });
+    }
+  }
   // "0/100" beside the box: yellow when nearly full, red at the limit
   const count = document.createElement('span');
   count.className = 'chat-count';
@@ -788,13 +814,28 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   const root = document.documentElement;
   const vv = window.visualViewport;
   const isChat = (el) => !!el?.matches?.('.chat-form input');
+  // Once a frame at most, and only when the visible area really changed: the keyboard sends a
+  // stream of resize/scroll events while it slides, and re-laying the game out for each one made
+  // it shudder.
+  let fitQueued = false;
+  let shown = '';
   const fit = () => {
-    if (!root.classList.contains('kb-open')) return;
-    root.style.setProperty('--kb-h', `${Math.round(vv ? vv.height : window.innerHeight)}px`);
-    root.style.setProperty('--kb-top', `${Math.round(vv ? vv.offsetTop : 0)}px`);
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(() => {
+      fitQueued = false;
+      if (!root.classList.contains('kb-open')) return;
+      const h = Math.round(vv ? vv.height : window.innerHeight);
+      const top = Math.round(vv ? vv.offsetTop : 0);
+      if (`${h}|${top}` === shown) return;
+      shown = `${h}|${top}`;
+      root.style.setProperty('--kb-h', `${h}px`);
+      root.style.setProperty('--kb-top', `${top}px`);
+    });
   };
   document.addEventListener('focusin', (e) => {
     if (!isChat(e.target) || screen !== 'game') return;
+    shown = '';
     root.classList.add('kb-open');
     fit();
   });
@@ -804,6 +845,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
     setTimeout(() => {
       if (isChat(document.activeElement)) return;
       root.classList.remove('kb-open');
+      shown = '';
       window.scrollTo(0, 0); // iPhones leave the page scrolled after the keyboard goes
     }, 150);
   });
@@ -1975,8 +2017,10 @@ let lastWasFast = false;
 // The board's box, measured only when it changes (measuring it every frame forced the page
 // to lay itself out again 60 times a second).
 let boardBox = 0;
+let boxChangedAt = 0;
 new ResizeObserver(([e]) => {
   boardBox = Math.min(e.contentRect.width, e.contentRect.height);
+  boxChangedAt = performance.now();
 }).observe(els.canvas.parentElement);
 let timerShown = '';
 function frame(now) {
@@ -2003,7 +2047,17 @@ function frame(now) {
     const wrap = els.canvas.parentElement.getBoundingClientRect();
     boardBox = Math.min(wrap.width, wrap.height);
   }
-  renderer.resize(Math.max(200, boardBox));
+  // While the box is still changing size (the phone keyboard sliding in or out) the last drawing
+  // is just stretched to fit; the board is redrawn at its new size once it settles. Redrawing the
+  // whole board at every step of the slide made opening the chat stutter.
+  const target = Math.floor(Math.max(200, boardBox));
+  if (renderer.size && target !== renderer.size && now - boxChangedAt < 220) {
+    els.canvas.style.width = els.canvas.style.height = `${target}px`;
+  } else {
+    renderer.resize(target);
+    // (back to the size it already had: undo the stretch)
+    if (els.canvas.style.width !== `${renderer.size}px`) els.canvas.style.width = els.canvas.style.height = `${renderer.size}px`;
+  }
 
   const seat = playSeat();
   const active =
