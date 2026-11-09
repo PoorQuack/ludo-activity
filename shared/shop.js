@@ -62,6 +62,7 @@ export const SHOP_ITEMS = [
   { id: 'emote-dancekitten', type: 'emote', name: 'Dancing kitten', img: '/emotes/cats/dancekitten.webp', slug: 'dancekitten', price: 150 },
   { id: 'emote-angrycat', type: 'emote', name: 'Angry cat', img: '/emotes/cats/angrycat.png', slug: 'angrycat', price: 150 },
   { id: 'emote-shooshoo', type: 'emote', name: 'Shoo shoo cat', img: '/emotes/cats/shooshoo.webp', slug: 'shooshoo', price: 150 },
+  { id: 'emote-rudecat', type: 'emote', name: 'Rude cat', img: '/emotes/cats/rudecat.png', slug: 'rudecat', price: 150 },
   // Was in the Hamster pack by mistake: anyone with that pack keeps it for free
   { id: 'emote-nervouscat', type: 'emote', name: 'Nervous cat', img: '/emotes/cats/nervouscat.png', slug: 'nervouscat', price: 150, freeWith: 'emote-pack-hamster' },
   // Emote packs: one purchase unlocks a set of image emotes, served from /emotes/.
