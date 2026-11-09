@@ -1745,6 +1745,7 @@ function showFinish() {
   const why = {
     bots: 'No coins for games against bots only — play with friends to earn.',
     abandoned: 'Everyone left and nobody came back, so no coins this time.',
+    test: '🧪 Test game (rigged dice): no coins or points.',
   }[state.noCoins];
   const title = state.noCoins === 'abandoned' ? 'Game ended' : 'Game over!';
   const note = why ? `<div class="banner-note">${why}</div>` : '';
@@ -1768,6 +1769,7 @@ function showTeamFinish() {
   const why = {
     bots: 'No coins for games against bots only — play with friends to earn.',
     abandoned: 'Everyone left and nobody came back, so no coins this time.',
+    test: '🧪 Test game (rigged dice): no coins or points.',
   }[state.noCoins];
   const mine = teamOfSeat(mySeat());
   const title = state.noCoins === 'abandoned' ? 'Game ended' : mine < 0 ? 'Game over!' : mine === state.teamOrder[0] ? 'Your team wins! 🎉' : 'Game over!';

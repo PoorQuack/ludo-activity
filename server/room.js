@@ -4,6 +4,7 @@ import { MODES, boardFor, teamsOf } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, bestBotScore, progressShare, BOT_LEVELS } from './rules.js';
 import { cleanText } from './filter.js';
+import { isRigged } from './rig.js';
 
 const BOT_DELAY_MS = 900;
 const NO_MOVE_DELAY_MS = 1400;
@@ -34,7 +35,7 @@ const SAVED_FIELDS = [
   'tokens', 'turn', 'dice', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
   'lastRoll', 'winners', 'teamOrder', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
-  'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'decider', 'actor', 'racePoints',
+  'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'decider', 'actor', 'racePoints', 'rigged',
 ];
 
 export class Room {
@@ -111,7 +112,8 @@ export class Room {
     this.timer = null;
     this.pausedAt = null; // set while the game waits for its players to come back
     this.pauseTimer = null;
-    this.noCoins = null; // why a finished game paid nothing: 'bots' (no other human) or 'abandoned'
+    this.noCoins = null; // why a finished game paid nothing: 'bots' (no other human), 'abandoned' or 'test'
+    this.rigged = false; // a rigged roll happened (scripts/rig-dice.sh): the game pays nothing
   }
 
   // ---------- connections ----------
@@ -354,6 +356,7 @@ export class Room {
     this.rewardCapped = [];
     this.rewardPartial = [];
     this.noCoins = null;
+    this.rigged = false;
     this.clearPause();
     this.lastMove = null;
     this.log = [];
@@ -541,6 +544,7 @@ export class Room {
     this.clearTimer();
     this.clearPause();
     this.noCoins = null;
+    this.rigged = false;
     this.phase = 'lobby';
     // Drop disconnected humans, keep everyone else seated.
     this.seats = this.seats.map((s) => (s && (s.bot || s.connected) ? s : null));
@@ -573,6 +577,11 @@ export class Room {
   // 6 in a row, which loses the turn, counts against it).
   luckyRoll() {
     const actor = this.seats[this.actorSeat()];
+    // Testing (scripts/rig-dice.sh): two 6s to start every turn, then a roll that isn't a 6
+    if (actor && !actor.bot && isRigged(actor.userId)) {
+      this.rigged = true;
+      return this.rolls.length < MAX_SIXES - 1 ? 6 : randomInt(1, 6);
+    }
     const first = this.rng();
     if (!actor?.bot || actor.level !== 'impossible' || Math.random() >= 0.35) return first;
     const second = this.rng();
@@ -899,6 +908,10 @@ export class Room {
       this.noCoins = 'bots';
       return;
     }
+    if (this.rigged) {
+      this.noCoins = 'test'; // someone's dice were rigged for testing: nothing counts
+      return;
+    }
     const results = [];
     // Places: one seat each, or in team games one whole team each (teammates share the place).
     const groups = this.teamOrder ? this.teamOrder.map((t) => this.teams[t].filter((s) => this.seats[s])) : this.winners.map((s) => [s]);
@@ -1154,7 +1167,7 @@ export class Room {
   // Daily quests count what humans do in games against other people (never against bots alone).
   stat(seat, stat, n = 1) {
     const s = this.seats[seat];
-    if (!s || s.bot || this.activeSeats().filter((i) => !this.seats[i].bot).length < 2) return;
+    if (!s || s.bot || this.rigged || this.activeSeats().filter((i) => !this.seats[i].bot).length < 2) return;
     this.onStat(s.userId, s.name, stat, n);
   }
 

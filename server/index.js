@@ -11,6 +11,7 @@ import { ProfileStore } from './store.js';
 import { Leaderboard } from './leaderboard.js';
 import { QuestBook } from './quests.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
+import { rig, unrig, riggedList } from './rig.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -114,6 +115,23 @@ app.post('/api/admin/coins', (req, res) => {
   store.flush();
   console.log(`Admin: ${amount >= 0 ? 'gave' : 'took'} ${Math.abs(amount)} coins ${amount >= 0 ? 'to' : 'from'} ${userId} (now ${coins})`);
   res.json({ userId, coins });
+});
+
+// Testing (scripts/rig-dice.sh), VM only: a player starts every turn with two 6s for a while.
+// Games with a rigged roll pay no coins or leaderboard points. Cleared by a restart.
+app.post('/api/admin/rig', (req, res) => {
+  if (!fromVm(req)) return res.status(404).end();
+  const userId = String(req.body?.userId || '');
+  if (req.body?.off) {
+    unrig(userId);
+    console.log(`Admin: dice back to normal for ${userId}`);
+  } else if (userId) {
+    if (!/^(\d{5,25}|guest-[a-z0-9-]{8,48})$/i.test(userId)) return res.status(400).json({ error: 'userId should be a Discord user id (digits)' });
+    const minutes = Math.min(24 * 60, Math.max(1, Number(req.body?.minutes) || 60));
+    rig(userId, minutes);
+    console.log(`Admin: rigged dice for ${userId} for ${minutes} min`);
+  }
+  res.json({ rigged: riggedList() });
 });
 
 // Tell everyone a server update is coming: a line in every room's chat and a note on screen.
