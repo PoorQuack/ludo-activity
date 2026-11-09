@@ -1354,6 +1354,8 @@ function renderPanel() {
     for (const [id, m] of Object.entries(MODES)) {
       const b = button(m.label, () => send('setMode', { mode: id }));
       b.classList.toggle('active', id === state.mode);
+      b.classList.toggle('team', !!m.teams);
+      if (m.teams) b.title = 'Team game: teammates sit opposite each other';
       b.disabled = !isHost();
       els.modePicker.appendChild(b);
     }
@@ -1376,6 +1378,16 @@ function renderPanel() {
     top.className = 'seat-top';
     top.innerHTML = `<span class="seat-dot"></span><span class="seat-name"></span>`;
     top.querySelector('.seat-name').textContent = s ? s.name : capitalize(colorName);
+    const team = teamOfSeat(i);
+    if (team >= 0) {
+      // Team games: which side this seat is on (teammates sit opposite each other)
+      const tag = document.createElement('span');
+      tag.className = `seat-team t${team}`;
+      tag.textContent = 'AB'[team];
+      tag.title = `Team ${'AB'[team]}: ${teamLabel(board, team)}`;
+      top.appendChild(tag);
+      card.classList.add(`team-${team}`);
+    }
     if (isColorBlind()) {
       // The seat's shape in place of the plain dot
       const dot = top.querySelector('.seat-dot');
@@ -1395,10 +1407,17 @@ function renderPanel() {
       const missed = state.timeouts?.[i] || 0;
       // Just dropped out: the server waits a few seconds for them before playing for them
       const away = s.disconnectedAt && state.serverNow - s.disconnectedAt < state.disconnectGrace ? ' · reconnecting…' : ' · offline (auto)';
+      const teamPlace = state.teamOrder ? state.teamOrder.indexOf(team) : -1;
       sub.textContent =
-        place >= 0
-          ? `🏆 ${ordinal(place + 1)} place`
-          : `${home}/4 home${s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
+        teamPlace === 0
+          ? '🏆 Winning team'
+          : teamPlace > 0
+            ? `${ordinal(teamPlace + 1)} team`
+            : team >= 0 && place >= 0
+              ? '🏠 All home · waiting for the team'
+              : place >= 0
+                ? `🏆 ${ordinal(place + 1)} place`
+                : `${home}/4 home${s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
     }
     card.appendChild(sub);
 
@@ -1463,7 +1482,11 @@ function renderPanel() {
     if (state.paused) {
       text = `Paused — every player left. The game ends in ${Math.round(state.pauseMs / 1000)}s if nobody comes back`;
       els.turnText.textContent = `⏸️ ${text}`;
-    } else els.turnText.textContent = sym(board.colors[state.turn]) + text + extra;
+    } else {
+      const team = teamOfSeat(state.turn);
+      const side = team >= 0 && !myTurn && seat >= 0 ? ` · ${teamOfSeat(seat) === team ? 'your team' : 'other team'}` : '';
+      els.turnText.textContent = sym(board.colors[state.turn]) + text + side + extra;
+    }
     els.turnText.style.color = col(board.colors[state.turn]);
   }
   const racing = phase === 'playing' && seat >= 0 && !state.seats[seat].surrendered && !state.winners.includes(seat);
@@ -1477,7 +1500,26 @@ function renderPanel() {
   renderEmojiPops();
 }
 
+// Team games: the team a seat plays for (0, 1…), or -1 when everyone plays for themselves.
+function teamOfSeat(seat) {
+  return state?.teams ? state.teams.findIndex((t) => t.includes(seat)) : -1;
+}
+
+// "Red & Yellow"
+function teamLabel(board, team) {
+  return state.teams[team].map((s) => capitalize(board.colors[s])).join(' & ');
+}
+
+function rewardNote(s) {
+  const coins = state.rewards?.[s];
+  const capped = state.rewardCapped?.includes(s);
+  const partial = state.rewardPartial?.includes(s);
+  const note = [capped ? 'daily limit reached' : '', partial ? 'ended early' : ''].filter(Boolean).join(', ');
+  return coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '';
+}
+
 function showFinish() {
+  if (state.teamOrder) return showTeamFinish();
   const lines = state.winners.map((s, i) => {
     const coins = state.rewards?.[s];
     const capped = state.rewardCapped?.includes(s);
@@ -1491,6 +1533,27 @@ function showFinish() {
     abandoned: 'Everyone left and nobody came back, so no coins this time.',
   }[state.noCoins];
   const title = state.noCoins === 'abandoned' ? 'Game ended' : 'Game over!';
+  const note = why ? `<div class="banner-note">${why}</div>` : '';
+  els.banner.innerHTML = `<div class="banner-title">${title}</div>${lines.join('<br>')}${note}`;
+  els.banner.classList.remove('hidden');
+}
+
+// Team games: one line per team, winners first, with each player's coins
+function showTeamFinish() {
+  const board = boardFor(state.mode);
+  const lines = state.teamOrder.map((t, i) => {
+    const players = state.teams[t]
+      .filter((s) => state.seats[s])
+      .map((s) => `${escapeHtml(state.seats[s].name)}${rewardNote(s)}`)
+      .join(', ');
+    return `${MEDALS[i] || `${i + 1}.`} <b>${teamLabel(board, t)}</b>: ${players}`;
+  });
+  const why = {
+    bots: 'No coins for games against bots only — play with friends to earn.',
+    abandoned: 'Everyone left and nobody came back, so no coins this time.',
+  }[state.noCoins];
+  const mine = teamOfSeat(mySeat());
+  const title = state.noCoins === 'abandoned' ? 'Game ended' : mine < 0 ? 'Game over!' : mine === state.teamOrder[0] ? 'Your team wins! 🎉' : 'Game over!';
   const note = why ? `<div class="banner-note">${why}</div>` : '';
   els.banner.innerHTML = `<div class="banner-title">${title}</div>${lines.join('<br>')}${note}`;
   els.banner.classList.remove('hidden');
@@ -1770,6 +1833,7 @@ function frame(now) {
       turn: state.phase === 'playing' ? state.turn : null,
       dice: diceView(now, board),
       emotes: floaters,
+      teams: state.teams ? board.colors.map((_, s) => teamOfSeat(s)) : null,
     },
     now,
   );

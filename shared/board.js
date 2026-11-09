@@ -24,7 +24,18 @@ export const MODES = {
   '2p': { label: '2 Players', arms: 4, seats: [0, 2] },
   '4p': { label: '4 Players', arms: 4, seats: [0, 1, 2, 3] },
   '6p': { label: '6 Players', arms: 6, seats: [0, 1, 2, 3, 4, 5] },
+  // Team modes: teammates sit opposite each other, so turns alternate between the teams.
+  // 2 vs 2: red + yellow against green + blue. 3 vs 3: every other seat.
+  '2v2': { label: '2 vs 2', arms: 4, seats: [0, 1, 2, 3], teams: [[0, 2], [1, 3]] },
+  '3v3': { label: '3 vs 3', arms: 6, seats: [0, 1, 2, 3, 4, 5], teams: [[0, 2, 4], [1, 3, 5]] },
 };
+
+// Seat -> team number for a mode. Without teams every seat is its own team, so rules can
+// treat "my team" the same way in every mode.
+export function teamsOf(mode, arms = MODES[mode]?.arms ?? 4) {
+  const teams = MODES[mode]?.teams;
+  return Array.from({ length: arms }, (_, s) => (teams ? teams.findIndex((t) => t.includes(s)) : s));
+}
 
 const PALETTES = {
   4: ['red', 'green', 'yellow', 'blue'],

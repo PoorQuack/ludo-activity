@@ -585,8 +585,10 @@ html, body {
   white-space: nowrap;
 }
 
-.mode-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
-.mode-picker .btn { background: transparent; color: var(--muted); padding: 7px 4px; }
+.mode-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 10px; }
+/* three player-count modes on top, the two team modes underneath */
+.mode-picker .btn { grid-column: span 2; background: transparent; color: var(--muted); padding: 7px 4px; }
+.mode-picker .btn.team { grid-column: span 3; }
 .mode-picker .btn.active { background: var(--accent); color: var(--on-accent); opacity: 1; }
 .mode-picker .btn:disabled:not(.active) { opacity: 0.6; }
 
@@ -1101,3 +1103,8 @@ canvas.my-turn {
 
 /* Pixel-art stickers stay crisp when scaled */
 img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
+
+/* Team games: a small tag on each seat card */
+.seat-team { margin-left: auto; flex: 0 0 auto; width: 18px; height: 18px; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; border-radius: 50%; }
+.seat-team.t0 { background: rgba(255, 194, 58, 0.18); color: #ffd36b; }
+.seat-team.t1 { background: rgba(120, 170, 255, 0.18); color: #9cc0ff; }

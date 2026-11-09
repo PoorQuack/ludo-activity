@@ -362,17 +362,19 @@ export class BoardRenderer {
     // Two or more tokens of one colour on a track square make a pair, which is safe like a star
     const onTrack = (seat, p) => p >= 0 && p <= board.lastTrack;
     const counts = new Map();
+    // (in team games a teammate's token counts too: view.teams is seat -> team)
+    const side = (seat) => (view.teams ? view.teams[seat] : seat);
     for (const seat of view.active) {
       for (const p of view.tokens[seat]) {
         if (!onTrack(seat, p)) continue;
-        const key = `${seat}:${board.trackIndex(seat, p)}`;
+        const key = `${side(seat)}:${board.trackIndex(seat, p)}`;
         counts.set(key, (counts.get(key) || 0) + 1);
       }
     }
     const isSafe = (seat, p) => {
       if (!onTrack(seat, p)) return false;
       const idx = board.trackIndex(seat, p);
-      return board.safe.has(idx) || counts.get(`${seat}:${idx}`) >= 2;
+      return board.safe.has(idx) || counts.get(`${side(seat)}:${idx}`) >= 2;
     };
     for (const seat of view.active) {
       for (let t = 0; t < 4; t++) {

@@ -1,6 +1,6 @@
 // One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
 import { randomInt } from 'node:crypto';
-import { MODES, boardFor } from '../shared/board.js';
+import { MODES, boardFor, teamsOf } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, progressShare } from './rules.js';
 import { cleanText } from './filter.js';
@@ -32,7 +32,7 @@ const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 const SAVED_FIELDS = [
   'id', 'code', 'visibility', 'instanceId', 'chatOn', 'mode', 'seats', 'hostId', 'phase',
   'tokens', 'turn', 'dice', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
-  'lastRoll', 'winners', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
+  'lastRoll', 'winners', 'teamOrder', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
   'emoteSeq', 'chat', 'chatSeq', 'noCoins',
 ];
@@ -82,6 +82,7 @@ export class Room {
     this.skipped = false; // three 6s in a row: the turn is lost
     this.lastRoll = null;
     this.winners = [];
+    this.teamOrder = null; // team games, once over: team numbers from first to last
     this.forfeited = []; // seats that surrendered, in order
     this.captures = [];
     this.timeouts = []; // seat -> turns in a row that ran out
@@ -318,10 +319,12 @@ export class Room {
     this.requireHost(user);
     const active = this.activeSeats();
     if (active.length < 2) throw new Error('Need at least 2 players (add a bot!)');
+    if (this.teams && active.length < MODES[this.mode].seats.length) throw new Error('Team games need every seat filled (add bots!)');
     if (!active.some((i) => !this.seats[i].bot)) throw new Error('At least one human must play');
     this.phase = 'playing';
     this.tokens = newTokens(this.board.arms);
     this.winners = [];
+    this.teamOrder = null;
     this.forfeited = [];
     for (const i of active) delete this.seats[i].surrendered;
     this.captures = Array(this.board.arms).fill(0);
@@ -517,6 +520,7 @@ export class Room {
     this.resetTurn();
     this.lastMove = null;
     this.winners = [];
+    this.teamOrder = null;
     this.forfeited = [];
     for (const s of this.seats) if (s) delete s.surrendered;
     this.rewards = null;
@@ -625,7 +629,7 @@ export class Room {
     const seat = this.turn;
     const name = this.seats[seat].name;
     const value = this.rolls[idx];
-    const result = applyMove(this.tokens, seat, token, value, this.activeSeats(), this.board);
+    const result = applyMove(this.tokens, seat, token, value, this.activeSeats(), this.board, this.teamMap);
     this.rolls.splice(idx, 1);
     this.seq++;
     this.lastMove = { ...result, dice: value, seq: this.seq };
@@ -645,7 +649,9 @@ export class Room {
 
     if (result.allHome) {
       this.winners.push(seat);
-      this.addLog(`🏆 ${name} finished ${PLACES[this.winners.length - 1]}!`);
+      // In a team game a player who's finished sits out until their whole team is home
+      if (this.teams) this.addLog(`🏠 ${name} has every token home!`);
+      else this.addLog(`🏆 ${name} finished ${PLACES[this.winners.length - 1]}!`);
       if (!this.endIfOver()) this.nextTurn();
       return;
     }
@@ -668,11 +674,56 @@ export class Room {
   // The game ends when at most one player is left racing, or only bots are.
   // Anyone left is ranked by how far their tokens got; those who surrendered come last.
   endIfOver() {
+    if (this.teams) return this.endTeamGameIfOver();
     const left = this.inPlay();
     if (left.length > 1 && left.some((s) => !this.seats[s].bot)) return false;
     const progress = (s) => this.tokens[s].reduce((sum, p) => sum + p + 1, 0);
     left.sort((a, b) => progress(b) - progress(a));
     this.winners.push(...left, ...[...this.forfeited].reverse());
+    this.finish();
+    return true;
+  }
+
+  // Team modes: [[seats of team 0], [seats of team 1], …], or null.
+  get teams() {
+    return MODES[this.mode].teams || null;
+  }
+
+  // Seat -> team number for the rules, or null when every seat plays for itself.
+  get teamMap() {
+    return this.teams ? teamsOf(this.mode, this.board.arms) : null;
+  }
+
+  teamName(t) {
+    return this.teams[t].map((s) => this.board.colors[s][0].toUpperCase() + this.board.colors[s].slice(1)).join(' & ');
+  }
+
+  // A team wins once every teammate who hasn't surrendered has all four tokens home (players
+  // who finish first sit out and wait). The game also ends when only one team is left (the
+  // rest surrendered), or when only bots are still racing. Teams are then ranked: the winners,
+  // then by how far their tokens got, and teams that surrendered completely come last.
+  endTeamGameIfOver() {
+    const teams = this.teams.map((members, t) => {
+      const alive = members.filter((s) => this.seats[s] && !this.forfeited.includes(s));
+      const racing = alive.filter((s) => !this.winners.includes(s));
+      return { t, members, alive, racing, done: alive.length > 0 && racing.length === 0, out: alive.length === 0 };
+    });
+    const done = teams.find((x) => x.done);
+    const stillIn = teams.filter((x) => !x.out);
+    const racing = teams.flatMap((x) => x.racing);
+    const onlyBots = racing.length > 0 && racing.every((s) => this.seats[s].bot);
+    if (!done && stillIn.length > 1 && !onlyBots) return false;
+    const progress = (x) => x.members.reduce((sum, s) => sum + this.tokens[s].reduce((a, p) => a + p + 1, 0), 0);
+    const order = [...teams].sort((a, b) => (b === done) - (a === done) || a.out - b.out || progress(b) - progress(a));
+    this.teamOrder = order.map((x) => x.t);
+    // winners (kept for the per-seat views): everyone in team order, finished players first
+    const left = this.inPlay();
+    this.winners = order.flatMap((x) => [
+      ...this.winners.filter((s) => x.members.includes(s)),
+      ...x.members.filter((s) => left.includes(s)),
+      ...x.members.filter((s) => this.forfeited.includes(s) && !this.winners.includes(s)),
+    ]).filter((s, i, a) => this.seats[s] && a.indexOf(s) === i);
+    this.addLog(`🏆 Team ${this.teamName(this.teamOrder[0])} wins!`);
     this.finish();
     return true;
   }
@@ -698,10 +749,14 @@ export class Room {
       return;
     }
     const results = [];
-    // The humans in finishing order (anyone who surrendered comes last): leaderboard points
-    // only count the people you beat, so bots neither add to them nor take the win.
-    const humanOrder = this.winners.filter((s) => !this.seats[s].bot);
-    this.winners.forEach((s, place) => {
+    // Places: one seat each, or in team games one whole team each (teammates share the place).
+    const groups = this.teamOrder ? this.teamOrder.map((t) => this.teams[t].filter((s) => this.seats[s])) : this.winners.map((s) => [s]);
+    const placeOf = (s) => groups.findIndex((g) => g.includes(s));
+    // The humans' places (anyone who surrendered comes last): leaderboard points only count the
+    // people you beat, so bots neither add to them nor take the win.
+    const humanGroups = groups.map((g) => g.filter((s) => !this.seats[s].bot)).filter((g) => g.length);
+    this.winners.forEach((s) => {
+      const place = placeOf(s);
       const seat = this.seats[s];
       if (seat.bot || this.forfeited.includes(s)) return;
       // A game cut short by a surrender pays for how far you got; a game that ran
@@ -714,14 +769,14 @@ export class Room {
       if (granted < coins) this.rewardCapped.push(s);
       // Leaderboard points: LB_PER_BEATEN for each human you finished ahead of, plus LB_WIN_BONUS
       // for beating them all, scaled like the coins when the game was cut short.
-      const humanPlace = humanOrder.indexOf(s);
-      const beaten = humanOrder.length - 1 - humanPlace;
+      const humanPlace = humanGroups.findIndex((g) => g.includes(s));
+      const beaten = humanGroups.slice(humanPlace + 1).reduce((n, g) => n + g.length, 0);
       const won = humanPlace === 0;
       const points = Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
       results.push({ userId: seat.userId, name: seat.name, points, won });
       this.stat(s, 'game');
       if (won) this.stat(s, 'win');
-      if (place <= 1) this.stat(s, 'top2');
+      if (place <= (this.teamOrder ? 0 : 1)) this.stat(s, 'top2');
     });
     this.onGameEnd(results);
   }
@@ -792,7 +847,7 @@ export class Room {
         else {
           // Plays the rolls in order, each on its best token.
           const idx = this.options.findIndex((o) => o.length > 0);
-          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.activeSeats(), this.board);
+          const t = idx < 0 ? null : chooseBotMove(this.tokens, this.turn, this.rolls[idx], this.activeSeats(), this.board, this.teamMap);
           if (t !== null) this.doMove(t, idx);
         }
       } catch (err) {
@@ -1005,6 +1060,8 @@ export class Room {
       skipped: this.skipped,
       lastRoll: this.lastRoll,
       winners: this.winners,
+      teams: this.teams,
+      teamOrder: this.teamOrder,
       rewards: this.rewards,
       rewardCapped: this.rewardCapped,
       rewardPartial: this.rewardPartial,
