@@ -212,7 +212,15 @@ function connect() {
     } else if (msg.type === 'questsDone') showQuestsDone(msg.completed);
     else if (msg.type === 'state') onState(msg.state);
     else if (msg.type === 'left') onLeft(msg.message);
-    else if (msg.type === 'error') toast(msg.message);
+    else if (msg.type === 'error') {
+      toast(msg.message);
+      // A roll or move that was already playing out but the server refused: undo it
+      if (current?.predicted) {
+        current = null;
+        shownTokens = latestTokens;
+      }
+      if (dice.mode === 'spin' && dice.waiting) dice = { mode: 'ready', seat: dice.seat, t0: performance.now() };
+    }
     else if (msg.type === 'notice') {
       if (msg.kind === 'restart') updating = true;
       toast(msg.text, msg.kind === 'info' ? 'ok' : 'notice', msg.kind === 'soon' ? 9000 : 6000);
@@ -318,8 +326,23 @@ function onState(next) {
     }
   } else {
     if (next.lastMove && next.lastMove.seq > lastMoveSeq) {
-      events.push({ type: 'move', move: next.lastMove, start: latestTokens, final: next.tokens });
-      lastMoveSeq = next.lastMove.seq;
+      const m = next.lastMove;
+      const guess = current?.predicted ? current.move : null;
+      if (guess && guess.seat === m.seat && guess.token === m.token && guess.from === m.from && guess.to === m.to) {
+        // The move already hopping since the tap: it's confirmed, with what it captured
+        current.predicted = false;
+        current.move = m;
+        current.final = next.tokens;
+        current.duration = current.moveMs + (m.captured.length ? CAPTURE_MS : 120);
+      } else {
+        if (guess) {
+          // Guessed wrong (shouldn't happen): drop the guess and play the real move from the start
+          current = null;
+          shownTokens = latestTokens;
+        }
+        events.push({ type: 'move', move: m, start: latestTokens, final: next.tokens });
+      }
+      lastMoveSeq = m.seq;
     }
     if (next.lastRoll && next.lastRoll.seq > lastRollSeq) {
       // 6s already kept this turn stay on show while the next roll tumbles
@@ -1587,8 +1610,15 @@ function stepAnimations(now, dt) {
   const holding =
     events[0]?.type === 'move' && dice.mode === 'shown' && now - dice.t0 < HOLD_MS && events.length < 3;
   if (!current && events.length && !holding) startEvent(events.shift(), now);
+  if (current?.predicted && now - current.sentAt > 3000) {
+    // No answer to a move: put the pin back where the server has it
+    current = null;
+    shownTokens = latestTokens;
+  }
+  if (dice.mode === 'spin' && dice.waiting && now - dice.t0 > 3000) dice = { mode: 'ready', seat: dice.seat, t0: now }; // no roll came back
   if (current) {
     current.elapsed += dt * (events.length >= 2 ? 2 : 1); // hurry when falling behind
+    if (current.predicted) current.elapsed = Math.min(current.elapsed, current.moveMs - 1); // land once confirmed
     if (current.type === 'move') current.overrides = moveOverrides(current);
     if (current.elapsed >= current.duration) endEvent(current, now);
   }
@@ -1615,6 +1645,15 @@ function startEvent(ev, now) {
   ev.elapsed = 0;
   if (ev.type === 'roll') {
     ev.duration = SPIN_MS;
+    if (dice.mode === 'spin' && dice.waiting && dice.seat === ev.seat) {
+      // Already tumbling since the tap: keep the same turn and speed, now heading for the real value.
+      // (While waiting the angle kept going at the roll's starting speed; pick the axes that match
+      // that angle in whole turns, so the hand-over doesn't jump.)
+      const w = (now - dice.t0) / SPIN_MS;
+      const axes = dice.axes.map((a) => a * (1 - 3 * w) + Math.round(3 * w * a));
+      dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes, bank: ev.bank };
+      return;
+    }
     // A different tumble each roll: 2–3 turns one way, 1–2 the other.
     const axes = [(2 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), 1 + Math.random()];
     dice = { mode: 'spin', seat: ev.seat, value: ev.value, t0: now, axes, bank: ev.bank };
@@ -1749,8 +1788,17 @@ function updateDice(now) {
 let rollPending = null; // { seq, at }
 
 function sendRoll() {
-  rollPending = { seq: state.lastRoll?.seq ?? null, at: performance.now() };
+  const now = performance.now();
+  rollPending = { seq: state.lastRoll?.seq ?? null, at: now };
   send('roll');
+  // Start tumbling right away instead of waiting for the server's answer (in Discord that goes
+  // through their proxy, and a dice that sat still for that moment felt laggy). The tumble
+  // carries on smoothly into the real roll once it arrives (startEvent).
+  if (dice.mode === 'ready') {
+    const axes = [(2 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), 1 + Math.random()];
+    dice = { mode: 'spin', waiting: true, seat: dice.seat, value: 1 + Math.floor(Math.random() * 6), t0: now, axes };
+    sfx('roll');
+  }
 }
 
 function canRoll() {
@@ -1771,6 +1819,21 @@ function canMove() {
 
 // ---------------- choosing a roll ----------------
 
+// Move a pin: it starts hopping at once, along the squares it's sure to take, and the server's
+// answer (captures, reaching home) joins in on the way. It waits on its last hop if the answer is
+// slow, and snaps to the server's board if no answer comes.
+function sendMove(token, roll) {
+  send('move', { token, roll });
+  const seat = mySeat();
+  const from = latestTokens?.[seat]?.[token];
+  const value = state.rolls?.[roll];
+  if (!idle() || from === undefined || !value) return;
+  const to = from < 0 ? 0 : from + value;
+  const final = latestTokens.map((t, s) => (s === seat ? t.map((p, i) => (i === token ? to : p)) : t));
+  const ev = { type: 'move', predicted: true, sentAt: performance.now(), move: { seat, token, from, to, captured: [] }, start: latestTokens, final };
+  startEvent(ev, performance.now());
+}
+
 // You tapped a pin: with one usable roll it just moves; with several, a small
 // chooser pops up above the pin showing the dice you can use on it.
 function tapToken(token, layoutItem) {
@@ -1780,7 +1843,7 @@ function tapToken(token, layoutItem) {
     if (tokens.includes(token) && !usable.some((j) => rolls[j] === rolls[i])) usable.push(i);
   });
   if (usable.length === 0) return;
-  if (usable.length === 1) return send('move', { token, roll: usable[0] });
+  if (usable.length === 1) return sendMove(token, usable[0]);
 
   const box = els.rollChooser;
   box.innerHTML = '<span class="label">Use</span>';
@@ -1798,7 +1861,7 @@ function tapToken(token, layoutItem) {
     b.addEventListener('click', (e) => {
       e.stopPropagation();
       closeChooser();
-      send('move', { token, roll: i });
+      sendMove(token, i);
     });
     box.appendChild(b);
   }
@@ -1819,6 +1882,13 @@ function closeChooser() {
 // ---------------- frame loop ----------------
 
 let lastBoardDraw = 0;
+// The board's box, measured only when it changes (measuring it every frame forced the page
+// to lay itself out again 60 times a second).
+let boardBox = 0;
+new ResizeObserver(([e]) => {
+  boardBox = Math.min(e.contentRect.width, e.contentRect.height);
+}).observe(els.canvas.parentElement);
+let timerShown = '';
 function frame(now) {
   requestAnimationFrame(frame);
   // Real elapsed time, so the queue keeps up even when frames are slow (e.g. a background tab).
@@ -1827,14 +1897,21 @@ function frame(now) {
   if (!state) return;
   stepAnimations(now, dt);
   if (screen !== 'game') return;
-  // 120 Hz phones would otherwise redraw the board 120 times a second; 60 looks the same
-  if (now - lastBoardDraw < 15) return;
+  // Full speed (60/s) only while something moves: a token, the rolling dice, a sticker, a burst.
+  // The rest of the time only gentle pulses change (turn glow, tokens you can move), and 30/s
+  // looks the same while halving the work, which is what keeps phones cool and smooth.
+  // (120 Hz phones would otherwise redraw it 120 times a second.)
+  const fast = current || dice.mode === 'spin' || floaters.length || renderer.fast;
+  if (now - lastBoardDraw < (fast ? 15 : 32)) return;
   lastBoardDraw = now;
 
   const board = boardFor(state.mode);
   renderer.setBoard(board, myTheme());
-  const wrap = els.canvas.parentElement.getBoundingClientRect();
-  renderer.resize(Math.max(200, Math.min(wrap.width, wrap.height)));
+  if (!boardBox) {
+    const wrap = els.canvas.parentElement.getBoundingClientRect();
+    boardBox = Math.min(wrap.width, wrap.height);
+  }
+  renderer.resize(Math.max(200, boardBox));
 
   const seat = mySeat();
   const active =
@@ -1859,9 +1936,14 @@ function frame(now) {
   // Turn timer
   if (state.phase === 'playing' && state.turnDeadline) {
     const left = state.turnDeadline - (Date.now() + clockOffset);
+    // Moved with a transform (no page layout), and only when it visibly changes
     const pct = Math.max(0, Math.min(1, left / state.turnTimeout));
-    els.timerBar.style.width = `${pct * 100}%`;
-    els.timerBar.style.background = col(board.colors[state.turn]);
+    const shown = `${pct.toFixed(2)}|${state.turn}`;
+    if (shown !== timerShown) {
+      timerShown = shown;
+      els.timerBar.style.transform = `scaleX(${pct.toFixed(2)})`;
+      els.timerBar.style.background = col(board.colors[state.turn]);
+    }
   }
 }
 
@@ -1878,6 +1960,7 @@ function diceView(now, board) {
   }
   return {
     mode: dice.mode,
+    waiting: dice.waiting,
     t: now - dice.t0,
     value,
     bank,

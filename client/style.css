@@ -629,7 +629,7 @@ html, body {
 
 .turn-text { font-weight: 700; font-size: 16px; }
 .timer { height: 6px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
-#timer-bar { height: 100%; width: 100%; background: var(--accent); transition: width 0.25s linear; }
+#timer-bar { height: 100%; width: 100%; background: var(--accent); transform-origin: left; transition: transform 0.25s linear; will-change: transform; }
 
 .emote-bar { display: flex; flex-wrap: wrap; gap: 6px; }
 .emote-bar:empty { display: none; }

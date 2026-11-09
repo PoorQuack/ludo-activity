@@ -332,6 +332,7 @@ export class BoardRenderer {
    *  emotes: [{ seat, emoji, start }]
    */
   draw(view, now) {
+    this.fast = this.particles.length > 0; // set when something needs smooth frames (see main.js)
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -469,6 +470,7 @@ export class BoardRenderer {
     }
     const shield = p.safe && this.theme.art?.shield;
     const grow = shield ? easeOutBack(Math.min(1, p.shieldAge / 450)) : 0;
+    if (p.moving || (shield && p.shieldAge < 450)) this.fast = true;
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'back');
     drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash, sign: this.board.colors[p.seat] });
     // Colour-blind mode: the player's shape on the token's body (each shape has its own spot)
@@ -750,6 +752,13 @@ export class BoardRenderer {
       scale = easeOutBack(Math.min(1, d.t / 320));
       hop = (0.5 + 0.5 * Math.sin(now / 260)) * size * 0.08;
       value = null;
+    } else if (d.mode === 'spin' && d.waiting) {
+      // Rolled, the answer not back yet: tumble on at the speed a roll starts with
+      // (main.js picks up from this exact angle when the result arrives)
+      const left = 1 - (3 * d.t) / SPIN_MS;
+      const [ax, ay] = d.axes;
+      spin = mul(rotX(ax * TAU * left), rotY(ay * TAU * left));
+      tilt = 1;
     } else if (d.mode === 'spin') {
       // Tumbles end over end and settles with the rolled face towards you
       const k = Math.min(1, d.t / SPIN_MS);
