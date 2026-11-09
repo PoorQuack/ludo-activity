@@ -1071,11 +1071,13 @@ try {
 } catch {
   // no storage: decide automatically
 }
-const smoothButtons = [...document.querySelectorAll('[data-smooth]')];
+// ⚙ Settings → Graphics: Full effects / Smooth
+const gfxButtons = [...document.querySelectorAll('[data-gfx]')];
 function renderSmoothToggles() {
-  for (const b of smoothButtons) {
-    b.textContent = smoothPref === 'on' ? 'On' : 'Off';
-    b.classList.toggle('off', smoothPref !== 'on');
+  for (const b of gfxButtons) {
+    const on = (b.dataset.gfx === 'smooth') === (smoothPref === 'on');
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', String(on));
   }
   renderer.setLite(smoothPref === 'on');
 }
@@ -1088,7 +1090,7 @@ function setSmooth(on) {
   }
   renderSmoothToggles();
 }
-for (const b of smoothButtons) b.addEventListener('click', () => setSmooth(smoothPref !== 'on'));
+for (const b of gfxButtons) b.addEventListener('click', () => setSmooth(b.dataset.gfx === 'smooth'));
 renderSmoothToggles();
 
 // Watching for stutter: the time between frames while something moves (they should come every
@@ -1102,7 +1104,7 @@ function watchSmoothness(gap) {
   moveFrames.length = 0;
   if (avg > 26) {
     setSmooth(true);
-    toast('Smooth mode is on: fewer board effects so this device keeps up. You can turn it off in ☰.', 'ok', 6000);
+    toast('Graphics set to Smooth: fewer board effects so this device keeps up. Change it in ⚙ Settings.', 'ok', 6000);
   }
 }
 

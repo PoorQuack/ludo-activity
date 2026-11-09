@@ -28,8 +28,8 @@
               <button class="btn small shop-btn" data-go="shop">
                 Shop<i class="tw tw-a"></i><i class="tw tw-b"></i>
               </button>
-              <button class="btn small icon-btn" data-player-btn aria-label="Music &amp; sound" aria-expanded="false">
-                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 12V3.5l7-1.5v8.5" /><circle cx="4.25" cy="12" r="1.75" /><circle cx="11.25" cy="10.5" r="1.75" /></svg>
+              <button class="btn small icon-btn" data-player-btn aria-label="Settings" title="Settings: sound, graphics, colour-blind mode" aria-expanded="false">
+                <svg class="ico gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
               </button>
             </div>
           </header>
@@ -112,16 +112,6 @@
                 <div class="menu-links">
                   <button class="btn quiet" data-go="howto">How to play</button>
                 </div>
-                <div class="audio" data-audio>
-                  <div class="setting">
-                    <span title="Shapes + safe colours for every player">Colour-blind mode <small>(shapes + safe colours)</small></span>
-                    <button class="btn small toggle" data-cb></button>
-                  </div>
-                  <div class="setting">
-                    <span title="Fewer moving effects on the board, for phones that stutter">Smooth mode <small>(fewer board effects)</small></span>
-                    <button class="btn small toggle" data-smooth></button>
-                  </div>
-                </div>
               </footer>
             </div>
           </div>
@@ -192,7 +182,7 @@
             <li>Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).</li>
             <li>Every game against other people also scores leaderboard points: 10 for each player you finish ahead of, plus 10 for beating them all (bots don't count). Your three daily quests add points too (new ones every day at midnight UTC; finish all three for a bonus). The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.</li>
             <li>Spend coins in the shop on tokens, dice, boards and emotes. Your board theme is just for you: everyone plays on the board they picked.</li>
-            <li>Colour-blind? Turn on <b>Colour-blind mode</b> on the menu or under ☰ in a game: every player gets safer colours and a shape of their own.</li>
+            <li>Colour-blind? Turn on <b>Colour-blind mode</b> in ⚙ Settings (top right, on the menu and in a game): every player gets safer colours and a shape of their own.</li>
           </ul>
           <h3>🎵 Music &amp; sounds</h3>
           <p>
@@ -217,7 +207,7 @@
           <header class="panel-head">
             <span id="phase-tag" class="tag"></span>
             <span class="coins small"><span class="coin"></span><b>0</b></span>
-            <button class="btn small icon-btn" data-player-btn aria-label="Music & sound" aria-expanded="false">🎵</button>
+            <button class="btn small icon-btn gear-btn" data-player-btn aria-label="Settings" title="Settings: sound, graphics, colour-blind mode" aria-expanded="false"><svg class="ico gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></button>
             <button id="drawer-btn" class="btn small icon-btn" aria-label="Menu" aria-expanded="false">☰</button>
           </header>
           <p id="room-info" class="room-info"></p>
@@ -246,17 +236,6 @@
             <div class="people">
               <div class="people-head">People in this room</div>
               <ul id="people-list" class="people-list"></ul>
-            </div>
-
-            <div class="audio" data-audio>
-              <div class="setting">
-                <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
-                <button class="btn small toggle" data-cb></button>
-              </div>
-              <div class="setting">
-                <span>Smooth mode <small>(fewer board effects)</small></span>
-                <button class="btn small toggle" data-smooth></button>
-              </div>
             </div>
           </div>
 
@@ -293,8 +272,10 @@
         </aside>
       </main>
 
-      <!-- Music player popover (shared: opened from the 🎵 header buttons) -->
+      <!-- Settings (shared: opened from the ⚙ header buttons): music and sound, graphics, colour-blind mode -->
       <div id="player-pop" class="player-pop hidden">
+        <div class="set-title">Settings</div>
+        <div class="set-label">Music &amp; sound</div>
         <div class="player-now" id="player-now">
           <b id="player-label"></b>
           <span id="player-title"></span>
@@ -317,6 +298,21 @@
             <input type="range" min="0" max="100" step="1" data-volume="sound" aria-label="Sound volume" />
             <b data-volume-value="sound"></b>
             <button class="btn small toggle" data-toggle="sound"></button>
+          </div>
+        </div>
+        <div class="set-group">
+          <div class="set-label">Graphics</div>
+          <div class="seg" role="radiogroup" aria-label="Graphics">
+            <button type="button" data-gfx="full" role="radio">✨ Full effects</button>
+            <button type="button" data-gfx="smooth" role="radio">⚡ Smooth</button>
+          </div>
+          <small class="set-note">Smooth turns off the moving water, snow, sparkles and glows on the board, for phones that stutter when the dice rolls or pins move.</small>
+        </div>
+        <div class="set-group">
+          <div class="set-label">Accessibility</div>
+          <div class="setting">
+            <span>Colour-blind mode <small>(shapes + safe colours)</small></span>
+            <button class="btn small toggle" data-cb></button>
           </div>
         </div>
       </div>
