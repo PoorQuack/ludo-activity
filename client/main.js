@@ -1737,6 +1737,7 @@ function closeChooser() {
 
 // ---------------- frame loop ----------------
 
+let lastBoardDraw = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   // Real elapsed time, so the queue keeps up even when frames are slow (e.g. a background tab).
@@ -1745,6 +1746,9 @@ function frame(now) {
   if (!state) return;
   stepAnimations(now, dt);
   if (screen !== 'game') return;
+  // 120 Hz phones would otherwise redraw the board 120 times a second; 60 looks the same
+  if (now - lastBoardDraw < 15) return;
+  lastBoardDraw = now;
 
   const board = boardFor(state.mode);
   renderer.setBoard(board, myTheme());

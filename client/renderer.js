@@ -17,6 +17,8 @@ export class BoardRenderer {
     this.theme = null;
     this.layer = document.createElement('canvas');
     this.under = document.createElement('canvas'); // the board's surface, seen through gaps and windows
+    this.anim = document.createElement('canvas'); // surface + drifting texture, small and refreshed ~20×/s
+    this.animAt = -Infinity;
     this.particles = [];
     this.lastNow = 0;
     this.shieldSince = new Map(); // "seat-token" -> when it stepped onto a safe square
@@ -43,7 +45,9 @@ export class BoardRenderer {
   }
 
   resize(cssSize) {
-    const dpr = window.devicePixelRatio || 1;
+    // Phones report 3× pixel density; drawing at 2× looks the same on a board this size and is
+    // well under half the pixels to fill every frame.
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
     const size = Math.floor(cssSize);
     if (size === this.size && dpr === this.dpr) return;
     this.size = size;
@@ -57,6 +61,9 @@ export class BoardRenderer {
     }
     this.canvas.style.width = `${size}px`;
     this.canvas.style.height = `${size}px`;
+    this.anim.width = size; // one pixel per CSS pixel: the drifting textures are soft anyway
+    this.anim.height = size;
+    this.animAt = -Infinity;
     this.drawBoard();
   }
 
@@ -329,8 +336,8 @@ export class BoardRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (this.size === 0 && this.lastCss) this.resize(this.lastCss); // a texture arrived: redraw
-    ctx.drawImage(this.under, 0, 0);
     if (this.theme.art?.under) this.drawUnder(this.theme.art.under, now);
+    else ctx.drawImage(this.under, 0, 0);
     ctx.drawImage(this.layer, 0, 0);
     if (this.theme.art?.fx) this.drawAmbience(this.theme.art, now);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -472,30 +479,48 @@ export class BoardRenderer {
   }
 
   // A texture drifting slowly over the surface (water, lava…), in two layers going different
-  // ways so it ripples. It's drawn between the surface and the board, so it only shows through
-  // the grout and the window panels.
+  // ways so it ripples. It only shows through the grout and the window panels. Blending two
+  // board-sized patterns every frame at full resolution was the slowest thing on phones, so the
+  // surface and its drift are composed into a small canvas (one pixel per CSS pixel), refreshed
+  // about 20 times a second, and stretched into place each frame.
   drawUnder(spec, now) {
     const img = texture(spec.src, this);
-    if (!img) return;
-    const ctx = this.ctx;
-    const k = this.dpr * this.cell;
-    const mid = (this.dpr * this.size) / 2;
-    const half = this.span / 2;
-    const t = now / 1000;
-    ctx.save();
-    ctx.setTransform(k, 0, 0, k, mid, mid);
-    ctx.globalCompositeOperation = spec.blend || 'overlay';
-    ctx.globalAlpha = spec.alpha ?? 0.5;
-    const loop = spec.size * 4;
-    const layers = spec.single ? [[1, 0.6, 1]] : [[1, 1, 0.6], [1.35, -0.8, 0.9]];
-    for (const [scale, dx, dy] of layers) {
-      const p = ctx.createPattern(img, 'repeat');
-      const sc = (spec.size * scale) / img.width;
-      p.setTransform(new DOMMatrix([sc, 0, 0, sc, (t * spec.speed * dx) % loop, (t * spec.speed * dy) % loop]));
-      ctx.fillStyle = p;
-      ctx.fillRect(-half, -half, this.span, this.span);
+    if (!img) {
+      this.ctx.drawImage(this.under, 0, 0);
+      return;
     }
-    ctx.restore();
+    if (now - this.animAt >= 50 || now < this.animAt) {
+      this.animAt = now;
+      const a = this.anim.getContext('2d');
+      const k = this.cell; // board units → anim pixels
+      const mid = this.size / 2;
+      const half = this.span / 2;
+      const t = now / 1000;
+      a.setTransform(1, 0, 0, 1, 0, 0);
+      a.globalCompositeOperation = 'source-over';
+      a.globalAlpha = 1;
+      a.clearRect(0, 0, this.anim.width, this.anim.height);
+      a.drawImage(this.under, 0, 0, this.anim.width, this.anim.height);
+      a.setTransform(k, 0, 0, k, mid, mid);
+      a.globalCompositeOperation = spec.blend || 'overlay';
+      a.globalAlpha = spec.alpha ?? 0.5;
+      const loop = spec.size * 4;
+      const layers = spec.single ? [[1, 0.6, 1]] : [[1, 1, 0.6], [1.35, -0.8, 0.9]];
+      for (const [scale, dx, dy] of layers) {
+        const p = a.createPattern(img, 'repeat');
+        const sc = (spec.size * scale) / img.width;
+        p.setTransform(new DOMMatrix([sc, 0, 0, sc, (t * spec.speed * dx) % loop, (t * spec.speed * dy) % loop]));
+        a.fillStyle = p;
+        a.fillRect(-half, -half, this.span, this.span);
+      }
+      // keep only the board's own shape (the drift was drawn over the whole square)
+      a.setTransform(1, 0, 0, 1, 0, 0);
+      a.globalAlpha = 1;
+      a.globalCompositeOperation = 'destination-in';
+      a.drawImage(this.under, 0, 0, this.anim.width, this.anim.height);
+      a.globalCompositeOperation = 'source-over';
+    }
+    this.ctx.drawImage(this.anim, 0, 0, this.canvas.width, this.canvas.height);
   }
 
   // The theme's living layer, under the tokens: snow, embers, bubbles, fireflies, twinkles…
