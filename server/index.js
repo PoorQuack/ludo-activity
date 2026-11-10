@@ -12,6 +12,7 @@ import { Leaderboard } from './leaderboard.js';
 import { QuestBook } from './quests.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 import { rig, unrig, riggedList } from './rig.js';
+import { SupportDesk } from './support.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -23,6 +24,7 @@ const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 
 const LEADERBOARD_FILE = process.env.LEADERBOARD_FILE || path.join(path.dirname(DATA_FILE), 'leaderboard.json');
 // Today's daily quest progress (reset at midnight UTC).
 const QUESTS_FILE = process.env.QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests.json');
+const SUPPORT_FILE = process.env.SUPPORT_FILE || path.join(path.dirname(DATA_FILE), 'support.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
@@ -184,6 +186,11 @@ const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, freeShop: FRE
 const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards });
 setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon as a week or month ends
 // Finished daily quests add their points to the leaderboards.
+// Bug reports and feedback from players, forwarded to the owner's Discord DMs (see support.js)
+const support = new SupportDesk(SUPPORT_FILE, {
+  token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
+  ownerId: (process.env.SUPPORT_USER_ID || '').trim(),
+});
 const quests = new QuestBook(QUESTS_FILE, { onPoints: (userId, name, points) => leaderboard.addPoints(userId, name, points) });
 const directory = new RoomDirectory({
   idleMs: ROOM_IDLE_MS,
@@ -456,6 +463,22 @@ wss.on('connection', (ws, req) => {
       if (msg.type === 'lobby') return handleLobby(ws, msg);
       if (msg.type === 'leaderboard') return send({ type: 'leaderboard', boards: leaderboard.view(ctx.user.id) });
       if (msg.type === 'quests') return send({ type: 'quests', quests: quests.view(ctx.user.id) });
+      if (msg.type === 'support') {
+        // ⚙ Settings → Contact the developer. The room and device help with bug reports.
+        const room = ctx.room;
+        const context = {
+          room: room?.code,
+          mode: room?.mode,
+          phase: room?.phase,
+          device: String(msg.device || '').slice(0, 200),
+          version: String(msg.version || '').slice(0, 100),
+        };
+        support
+          .submit({ userId: ctx.user.id, name: ctx.user.name, kind: msg.kind, text: msg.text, context })
+          .then((r) => send({ type: 'supportSent', ...r }))
+          .catch((err) => send({ type: 'supportError', message: err.message }));
+        return;
+      }
       if (msg.type === 'action') {
         if (!ctx.room) throw new Error('Join a room first');
         return ctx.room.handle(ctx.user, msg);
@@ -523,6 +546,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     store.flush();
     leaderboard.flush();
     quests.flush();
+    support.save();
     for (const ws of wss.clients) ws.close(1012, 'Server update');
     setTimeout(() => process.exit(0), 300); // a moment for those messages to go out
   });
@@ -534,4 +558,5 @@ server.listen(PORT, () => {
   console.log(`Ludo server running on http://localhost:${PORT}`);
   if (!CLIENT_ID) console.log('⚠  DISCORD_CLIENT_ID is not set — only guest (browser) mode will work.');
   if (FREE_SHOP) console.log('🛒 FREE_SHOP is on — every shop item costs 0 coins.');
+  if (!support.enabled) console.log('📬 Support requests are only saved to data/support.json: set DISCORD_BOT_TOKEN and SUPPORT_USER_ID in .env to get them in your DMs.');
 });

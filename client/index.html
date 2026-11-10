@@ -316,6 +316,30 @@
             <button class="btn small toggle" data-cb></button>
           </div>
         </div>
+        <div class="set-group">
+          <div class="set-label">Help</div>
+          <button type="button" class="btn" id="support-open">✉️ Report a bug / send feedback</button>
+        </div>
+      </div>
+
+      <!-- Contact the developer: sent to their Discord DMs by the server (bugs now, feedback daily) -->
+      <div id="support" class="support-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="support-title">
+        <form id="support-form" class="support-card">
+          <div class="support-head">
+            <b id="support-title">Contact the developer</b>
+            <button type="button" class="btn small icon-btn" id="support-close" aria-label="Close">✕</button>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="What is it?">
+            <button type="button" data-kind="bug" role="radio">🐞 Bug</button>
+            <button type="button" data-kind="feedback" role="radio">💬 Feedback</button>
+          </div>
+          <small class="set-note" id="support-note"></small>
+          <textarea id="support-text" maxlength="1000" rows="6" placeholder=""></textarea>
+          <div class="support-foot">
+            <span class="chat-count" id="support-count">0/1000</span>
+            <button type="submit" class="btn primary" id="support-send">Send</button>
+          </div>
+        </form>
       </div>
 
       <div id="toast" class="toast hidden"></div>

@@ -221,6 +221,7 @@ function connect() {
       }
       if (dice.mode === 'spin' && dice.waiting) dice = { mode: 'ready', seat: dice.seat, t0: performance.now() };
     }
+    else if (msg.type === 'supportSent' || msg.type === 'supportError') onSupportReply(msg);
     else if (msg.type === 'notice') {
       if (msg.kind === 'restart') updating = true;
       toast(msg.text, msg.kind === 'info' ? 'ok' : 'notice', msg.kind === 'soon' ? 9000 : 6000);
@@ -1095,6 +1096,7 @@ document.addEventListener('pointerdown', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closePlayer();
+    closeSupport();
     for (const p of document.querySelectorAll('.emoji-pop:not(.hidden)')) p.classList.add('hidden');
   }
 });
@@ -1134,6 +1136,64 @@ for (const b of cbButtons) {
   });
 }
 renderColorBlindToggles();
+
+// ---------------- contact the developer ----------------
+// A bug report or feedback, sent by the server to the owner's Discord DMs. Bug reports go
+// straight away (with the room and device attached); feedback arrives in a daily digest.
+const support = {
+  wrap: $('support'),
+  form: $('support-form'),
+  text: $('support-text'),
+  note: $('support-note'),
+  count: $('support-count'),
+  send: $('support-send'),
+  kinds: [...document.querySelectorAll('[data-kind]')],
+  kind: 'bug',
+};
+const SUPPORT_NOTES = {
+  bug: 'What went wrong, and what were you doing? Bug reports go to the developer straight away.',
+  feedback: 'Ideas, wishes, anything. Feedback is read in a daily batch.',
+};
+function setSupportKind(kind) {
+  support.kind = kind;
+  for (const b of support.kinds) {
+    b.classList.toggle('active', b.dataset.kind === kind);
+    b.setAttribute('aria-checked', String(b.dataset.kind === kind));
+  }
+  support.note.textContent = SUPPORT_NOTES[kind];
+  support.text.placeholder = kind === 'bug' ? 'e.g. the dice froze after I rolled a 6 in a 2 vs 2 game' : 'e.g. a space-themed board would be cool';
+}
+function openSupport() {
+  closePlayer();
+  setSupportKind(support.kind);
+  support.wrap.classList.remove('hidden');
+  support.text.focus({ preventScroll: true });
+}
+function closeSupport() {
+  support.wrap.classList.add('hidden');
+}
+const updateSupportCount = () => (support.count.textContent = `${support.text.value.length}/${support.text.maxLength}`);
+$('support-open').addEventListener('click', openSupport);
+$('support-close').addEventListener('click', closeSupport);
+support.wrap.addEventListener('pointerdown', (e) => e.target === support.wrap && closeSupport());
+for (const b of support.kinds) b.addEventListener('click', () => setSupportKind(b.dataset.kind));
+support.text.addEventListener('input', updateSupportCount);
+support.form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = support.text.value.trim();
+  if (text.length < 10) return toast('Tell us a bit more (at least 10 characters)');
+  if (ws?.readyState !== WebSocket.OPEN) return toast('Not connected right now, try again in a moment');
+  support.send.disabled = true;
+  ws.send(JSON.stringify({ type: 'support', kind: support.kind, text, device: navigator.userAgent, version: document.querySelector('script[type=module][src]')?.getAttribute('src') || '' }));
+});
+function onSupportReply(msg) {
+  support.send.disabled = false;
+  if (msg.type === 'supportError') return toast(msg.message);
+  support.text.value = '';
+  updateSupportCount();
+  closeSupport();
+  toast(msg.when === 'now' ? `🐞 Bug report #${msg.id} sent, thank you!` : `💬 Thanks! Your message (#${msg.id}) is in.`, 'ok', 4000);
+}
 
 // ---------------- smooth mode ----------------
 // Fewer board effects (drifting water, floating particles, glows) for phones whose graphics can't
