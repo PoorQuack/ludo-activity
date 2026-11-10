@@ -1556,94 +1556,99 @@ function renderPanel() {
     }
   }
 
-  // Seats
-  els.seats.innerHTML = '';
-  els.seats.classList.toggle('six', state.seatsAllowed.length > 4);
-  for (const i of seatOrder(board, state.seatsAllowed)) {
-    const s = state.seats[i];
-    const colorName = board.colors[i];
-    const card = document.createElement('div');
-    card.className = 'seat';
-    card.style.setProperty('--seat-color', col(colorName));
-    if (phase === 'playing' && (state.actor ?? state.turn) === i) card.classList.add('turn');
-    if (s && !s.bot && me && s.userId === me.id) card.classList.add('me');
-    if (s && !s.connected) card.classList.add('offline');
+  // Seats. Left alone while a bot's difficulty list is open: rebuilding the seats (any room update
+  // does) threw the open list away, so on phones it closed by itself after a second.
+  const picking = document.activeElement?.matches?.('.bot-level') && els.seats.contains(document.activeElement);
+  if (!picking) {
+    els.seats.innerHTML = '';
+    els.seats.classList.toggle('six', state.seatsAllowed.length > 4);
+    for (const i of seatOrder(board, state.seatsAllowed)) {
+      const s = state.seats[i];
+      const colorName = board.colors[i];
+      const card = document.createElement('div');
+      card.className = 'seat';
+      card.style.setProperty('--seat-color', col(colorName));
+      if (phase === 'playing' && (state.actor ?? state.turn) === i) card.classList.add('turn');
+      if (s && !s.bot && me && s.userId === me.id) card.classList.add('me');
+      if (s && !s.connected) card.classList.add('offline');
 
-    const top = document.createElement('div');
-    top.className = 'seat-top';
-    top.innerHTML = `<span class="seat-dot"></span><span class="seat-name"></span>`;
-    top.querySelector('.seat-name').textContent = s ? s.name : capitalize(colorName);
-    const team = teamOfSeat(i);
-    if (team >= 0) {
-      // Team games: which side this seat is on (teammates sit opposite each other)
-      const tag = document.createElement('span');
-      tag.className = `seat-team t${team}`;
-      tag.textContent = 'AB'[team];
-      tag.title = `Team ${'AB'[team]}: ${teamLabel(board, team)}`;
-      top.appendChild(tag);
-      card.classList.add(`team-${team}`);
-    }
-    if (isColorBlind()) {
-      // The seat's shape in place of the plain dot
-      const dot = top.querySelector('.seat-dot');
-      dot.classList.add('sym');
-      dot.textContent = SYMBOLS[colorName];
-    }
-    card.appendChild(top);
-
-    const sub = document.createElement('div');
-    sub.className = 'seat-sub';
-    if (!s) sub.textContent = 'Empty seat';
-    else if (phase === 'lobby' && s.bot) {
-      // The bot's difficulty: the host picks it here, everyone else just sees it
-      const level = s.level || 'medium';
-      if (isHost()) {
-        const pick = document.createElement('select');
-        pick.className = `bot-level lvl-${level}`;
-        pick.setAttribute('aria-label', `${s.name}'s difficulty`);
-        for (const [id, label] of Object.entries(BOT_LEVEL_LABELS)) pick.add(new Option(`🤖 ${label}`, id, false, id === level));
-        pick.addEventListener('change', () => send('botLevel', { seat: i, level: pick.value }));
-        sub.appendChild(pick);
-      } else sub.textContent = `🤖 ${BOT_LEVEL_LABELS[level]}`;
-    } else if (phase === 'lobby') sub.textContent = s.userId === state.hostId ? 'Host' : 'Ready';
-    else if (s.surrendered) sub.textContent = '🏳️ Surrendered';
-    else if (phase === 'playing' && state.decider) {
-      const t = state.decider.players.findIndex((ps) => ps.includes(i));
-      sub.textContent = t >= 0 ? `🎲 Rolls for ${capitalize(board.colors[state.decider.colors[t]])}` : 'Out of the decider';
-    } else {
-      const home = state.tokens[i].filter((p) => p >= board.finished).length;
-      const place = state.winners.indexOf(i);
-      const missed = state.timeouts?.[i] || 0;
-      // Just dropped out: the server waits a few seconds for them before playing for them
-      const away = s.disconnectedAt && state.serverNow - s.disconnectedAt < state.disconnectGrace ? ' · reconnecting…' : ' · offline (auto)';
-      const teamPlace = state.teamOrder ? state.teamOrder.indexOf(team) : -1;
-      sub.textContent =
-        teamPlace === 0
-          ? '🏆 Winning team'
-          : teamPlace > 0
-            ? `${ordinal(teamPlace + 1)} team`
-            : team >= 0 && place >= 0
-              ? `🏠 ${ordinal(place + 1)} · +${state.pointsFor?.[place] ?? 0} for the team`
-              : place >= 0
-                ? `🏆 ${ordinal(place + 1)} place`
-                : `${home}/4 home${s.bot ? ` · ${BOT_LEVEL_LABELS[s.level || 'medium']}` : s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
-    }
-    card.appendChild(sub);
-
-    if (phase === 'lobby' && state.hostId) {
-      const actions = document.createElement('div');
-      actions.className = 'seat-actions';
-      if (!s) {
-        actions.appendChild(button(seat >= 0 ? 'Switch' : 'Sit', () => send('sit', { seat: i })));
-        if (isHost()) actions.appendChild(button('+ Bot', () => send('addBot', { seat: i })));
-      } else if (seat === i) {
-        actions.appendChild(button('Leave', () => send('stand')));
-      } else if (isHost()) {
-        actions.appendChild(button(s.bot ? 'Remove' : 'Kick', () => send('removeSeat', { seat: i })));
+      const top = document.createElement('div');
+      top.className = 'seat-top';
+      top.innerHTML = `<span class="seat-dot"></span><span class="seat-name"></span>`;
+      top.querySelector('.seat-name').textContent = s ? s.name : capitalize(colorName);
+      const team = teamOfSeat(i);
+      if (team >= 0) {
+        // Team games: which side this seat is on (teammates sit opposite each other)
+        const tag = document.createElement('span');
+        tag.className = `seat-team t${team}`;
+        tag.textContent = 'AB'[team];
+        tag.title = `Team ${'AB'[team]}: ${teamLabel(board, team)}`;
+        top.appendChild(tag);
+        card.classList.add(`team-${team}`);
       }
-      card.appendChild(actions);
+      if (isColorBlind()) {
+        // The seat's shape in place of the plain dot
+        const dot = top.querySelector('.seat-dot');
+        dot.classList.add('sym');
+        dot.textContent = SYMBOLS[colorName];
+      }
+      card.appendChild(top);
+
+      const sub = document.createElement('div');
+      sub.className = 'seat-sub';
+      if (!s) sub.textContent = 'Empty seat';
+      else if (phase === 'lobby' && s.bot) {
+        // The bot's difficulty: the host picks it here, everyone else just sees it
+        const level = s.level || 'medium';
+        if (isHost()) {
+          const pick = document.createElement('select');
+          pick.className = `bot-level lvl-${level}`;
+          pick.setAttribute('aria-label', `${s.name}'s difficulty`);
+          for (const [id, label] of Object.entries(BOT_LEVEL_LABELS)) pick.add(new Option(`🤖 ${label}`, id, false, id === level));
+          pick.addEventListener('change', () => send('botLevel', { seat: i, level: pick.value }));
+        pick.addEventListener('blur', () => setTimeout(renderUI)); // catch up on what changed meanwhile
+          sub.appendChild(pick);
+        } else sub.textContent = `🤖 ${BOT_LEVEL_LABELS[level]}`;
+      } else if (phase === 'lobby') sub.textContent = s.userId === state.hostId ? 'Host' : 'Ready';
+      else if (s.surrendered) sub.textContent = '🏳️ Surrendered';
+      else if (phase === 'playing' && state.decider) {
+        const t = state.decider.players.findIndex((ps) => ps.includes(i));
+        sub.textContent = t >= 0 ? `🎲 Rolls for ${capitalize(board.colors[state.decider.colors[t]])}` : 'Out of the decider';
+      } else {
+        const home = state.tokens[i].filter((p) => p >= board.finished).length;
+        const place = state.winners.indexOf(i);
+        const missed = state.timeouts?.[i] || 0;
+        // Just dropped out: the server waits a few seconds for them before playing for them
+        const away = s.disconnectedAt && state.serverNow - s.disconnectedAt < state.disconnectGrace ? ' · reconnecting…' : ' · offline (auto)';
+        const teamPlace = state.teamOrder ? state.teamOrder.indexOf(team) : -1;
+        sub.textContent =
+          teamPlace === 0
+            ? '🏆 Winning team'
+            : teamPlace > 0
+              ? `${ordinal(teamPlace + 1)} team`
+              : team >= 0 && place >= 0
+                ? `🏠 ${ordinal(place + 1)} · +${state.pointsFor?.[place] ?? 0} for the team`
+                : place >= 0
+                  ? `🏆 ${ordinal(place + 1)} place`
+                  : `${home}/4 home${s.bot ? ` · ${BOT_LEVEL_LABELS[s.level || 'medium']}` : s.connected ? '' : away}${missed ? ` · ⏰ ${missed}/${state.maxTimeouts}` : ''}`;
+      }
+      card.appendChild(sub);
+
+      if (phase === 'lobby' && state.hostId) {
+        const actions = document.createElement('div');
+        actions.className = 'seat-actions';
+        if (!s) {
+          actions.appendChild(button(seat >= 0 ? 'Switch' : 'Sit', () => send('sit', { seat: i })));
+          if (isHost()) actions.appendChild(button('+ Bot', () => send('addBot', { seat: i })));
+        } else if (seat === i) {
+          actions.appendChild(button('Leave', () => send('stand')));
+        } else if (isHost()) {
+          actions.appendChild(button(s.bot ? 'Remove' : 'Kick', () => send('removeSeat', { seat: i })));
+        }
+        card.appendChild(actions);
+      }
+      els.seats.appendChild(card);
     }
-    els.seats.appendChild(card);
   }
 
   // Controls
