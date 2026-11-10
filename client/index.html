@@ -397,8 +397,16 @@
             </label>
           </div>
 
+          <p class="support-status" id="support-status" role="status" aria-live="polite"></p>
           <button type="submit" class="btn primary" id="support-send">Send</button>
         </form>
+        <!-- shown once the server has it -->
+        <div class="support-card support-done hidden" id="support-done" role="status" aria-live="polite">
+          <span class="big">✅</span>
+          <b>Submitted!</b>
+          <p id="support-done-text"></p>
+          <button type="button" class="btn primary" id="support-done-close">Done</button>
+        </div>
       </div>
 
       <div id="toast" class="toast hidden"></div>

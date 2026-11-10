@@ -400,6 +400,15 @@ html, body {
 .attach { display: flex; align-items: center; gap: 8px; border: 1px dashed #5d5596; border-radius: 10px; padding: 10px; cursor: pointer; color: var(--text); font-size: 13.5px; overflow: hidden; }
 .attach input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .attach.has { border-style: solid; border-color: var(--accent); }
+.support-status { margin: 0; font-size: 13.5px; font-weight: 600; min-height: 0; }
+.support-status:empty { display: none; }
+.support-status.err { color: #ff8a8a; }
+.support-status.busy { color: var(--muted); }
+.support-done { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 18px 6px; }
+.support-done .big { font-size: 44px; line-height: 1; }
+.support-done b { font-size: 18px; }
+.support-done p { margin: 0; color: var(--muted); font-size: 14px; }
+.support-done .btn { width: 100%; }
 #support-open { width: 100%; }
 .ico.gear { stroke-width: 1.9; }
 .player-now { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -1014,7 +1023,7 @@ html, body {
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-  z-index: 30;
+  z-index: 90; /* above everything, the support form included */
   animation: toast-in 0.25s ease-out;
 }
 .toast.ok { background: var(--ok); }

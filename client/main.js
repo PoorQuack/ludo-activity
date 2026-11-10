@@ -1151,10 +1151,19 @@ const support = {
   file: $('support-file'),
   fileLabel: $('support-file-label'),
   kinds: [...document.querySelectorAll('#support [data-kind]')],
+  status: $('support-status'),
+  done: $('support-done'),
+  doneText: $('support-done-text'),
   kind: 'bug',
   picked: {}, // chip and star answers: { often: 'once', where: 'game', topic: 'idea', stars: 4 }
   pendingFile: null,
+  waitTimer: null,
 };
+// Messages show inside the form (a toast would sit behind it)
+function supportStatus(text, kind = 'err') {
+  support.status.textContent = text;
+  support.status.className = `support-status ${kind}`;
+}
 const SUPPORT_NOTES = {
   bug: 'Bug reports go to the developer straight away. A screenshot or clip helps a lot!',
   feedback: 'Ideas, wishes, anything. Feedback is read in a daily batch.',
@@ -1203,11 +1212,15 @@ function resetSupport() {
 function openSupport() {
   closePlayer();
   setSupportKind(support.kind);
+  supportStatus('', '');
+  support.form.classList.remove('hidden');
+  support.done.classList.add('hidden');
   support.wrap.classList.remove('hidden');
 }
 function closeSupport() {
   support.wrap.classList.add('hidden');
 }
+$('support-done-close').addEventListener('click', closeSupport);
 $('support-open').addEventListener('click', openSupport);
 $('support-close').addEventListener('click', closeSupport);
 support.wrap.addEventListener('pointerdown', (e) => e.target === support.wrap && closeSupport());
@@ -1226,26 +1239,34 @@ support.form.addEventListener('submit', (e) => {
         (!answers.often && 'How often does it happen?') ||
         (!answers.where && 'Where did it happen?')
       : (!answers.topic && 'What is your feedback about?') || (answers.text.length < 10 && 'Tell us a bit more (at least 10 characters)');
-  if (missing) return toast(missing);
-  if (ws?.readyState !== WebSocket.OPEN) return toast('Not connected right now, try again in a moment');
+  if (missing) return supportStatus(missing);
+  if (ws?.readyState !== WebSocket.OPEN) return supportStatus('Not connected right now, try again in a moment');
   const file = support.file.files[0] || null;
   support.pendingFile = file;
   support.send.disabled = true;
   support.send.textContent = 'Sending…';
+  supportStatus('Sending…', 'busy');
+  // No answer at all (connection dropped, or an older server): say so instead of hanging
+  clearTimeout(support.waitTimer);
+  support.waitTimer = setTimeout(() => {
+    support.send.disabled = false;
+    support.send.textContent = 'Send';
+    supportStatus("No answer from the server, so it wasn't sent. Check your connection and try again.");
+  }, 15000);
   ws.send(JSON.stringify({ type: 'support', kind: support.kind, answers, attach: file ? { size: file.size } : null, device: navigator.userAgent, version: document.querySelector('script[type=module][src]')?.getAttribute('src') || '' }));
 });
 async function onSupportReply(msg) {
-  const done = (text, kind = 'ok') => {
-    support.send.disabled = false;
-    support.send.textContent = 'Send';
-    toast(text, kind, 4500);
-  };
-  if (msg.type === 'supportError') return done(msg.message, 'error');
-  const thanks = msg.when === 'now' ? `🐞 Bug report #${msg.id} sent, thank you!` : `💬 Thanks! Your message (#${msg.id}) is in.`;
+  clearTimeout(support.waitTimer);
+  support.send.disabled = false;
+  support.send.textContent = 'Send';
+  if (msg.type === 'supportError') return supportStatus(msg.message);
   const file = support.pendingFile;
   support.pendingFile = null;
+  let fileNote = '';
   if (msg.ticket && file) {
+    support.send.disabled = true;
     support.send.textContent = 'Uploading…';
+    supportStatus(`Uploading ${file.type.startsWith('video') ? 'the video' : 'the picture'}…`, 'busy');
     try {
       const r = await fetch(`${BASE}/api/support/upload?ticket=${encodeURIComponent(msg.ticket)}`, {
         method: 'POST',
@@ -1254,19 +1275,23 @@ async function onSupportReply(msg) {
       });
       if (!r.ok) {
         const why = await r.json().catch(() => ({}));
-        resetSupport();
-        closeSupport();
-        return done(`${thanks} (The file couldn't be attached: ${why.error || 'upload failed'})`, 'notice');
+        fileNote = ` (Your file couldn't be attached: ${why.error || 'the upload failed'}.)`;
       }
     } catch {
-      resetSupport();
-      closeSupport();
-      return done(`${thanks} (The file couldn't be uploaded.)`, 'notice');
+      fileNote = " (Your file couldn't be uploaded.)";
     }
+    support.send.disabled = false;
+    support.send.textContent = 'Send';
   }
+  // The server has it: say so clearly
+  support.doneText.textContent =
+    (msg.when === 'now'
+      ? `Bug report #${msg.id} is on its way to the developer. Thank you!`
+      : `Your feedback (#${msg.id}) is in. The developer reads feedback every day. Thank you!`) + fileNote;
   resetSupport();
-  closeSupport();
-  done(thanks);
+  supportStatus('', '');
+  support.form.classList.add('hidden');
+  support.done.classList.remove('hidden');
 }
 
 // ---------------- smooth mode ----------------

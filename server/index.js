@@ -217,7 +217,7 @@ setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon a
 // Bug reports and feedback from players, forwarded to the owner's Discord DMs (see support.js)
 const support = new SupportDesk(SUPPORT_FILE, {
   token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
-  ownerId: (process.env.SUPPORT_USER_ID || '').trim(),
+  ownerId: (process.env.SUPPORT_USER_ID || '398077353785294853').trim(), // the owner's Discord id
 });
 const quests = new QuestBook(QUESTS_FILE, { onPoints: (userId, name, points) => leaderboard.addPoints(userId, name, points) });
 const directory = new RoomDirectory({
