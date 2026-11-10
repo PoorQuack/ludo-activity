@@ -68,13 +68,14 @@ export function unlockAudio() {
   activated = true;
   if (!settings.music) return;
   if (!ensureCtx()) return;
-  if (!musicEl && tracks.length) loadTrack(currentTrack());
+  if (!musicEl?.getAttribute('src') && tracks.length) loadTrack(currentTrack());
   else startMusic();
 }
 
 // The sound engine, started (or woken) when something is about to play.
 function ensureCtx() {
   if (!activated) return false;
+  setAudioSession(); // before the engine starts: iPhones decide then whether it takes over audio
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
@@ -88,7 +89,6 @@ function ensureCtx() {
     noiseBuffer = makeNoise();
     decodeSamples();
   }
-  setAudioSession();
   clearTimeout(sleepTimer);
   if (ctx.state === 'suspended') ctx.resume();
   return true;
@@ -99,6 +99,15 @@ function ensureCtx() {
 function setAudioSession() {
   try {
     if (navigator.audioSession) navigator.audioSession.type = settings.music ? 'playback' : 'ambient';
+  } catch {
+    // not supported here
+  }
+  // And don't show up as "now playing" (lock screen / Control Center) without music
+  try {
+    if (!settings.music && 'mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+    }
   } catch {
     // not supported here
   }
@@ -139,7 +148,7 @@ export function setMusic(on) {
   }
   if (on && ensureCtx()) {
     musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2);
-    if (!musicEl && tracks.length) loadTrack(currentTrack());
+    if (!musicEl?.getAttribute('src') && tracks.length) loadTrack(currentTrack());
     else startMusic();
   }
   emitChange();
@@ -228,6 +237,7 @@ function loadTrack(track) {
     });
     // A missing/broken file shouldn't leave the game silent: fall back to the generated loop.
     musicEl.addEventListener('error', () => {
+      if (!musicEl.getAttribute('src')) return; // unloaded on purpose (music off)
       console.warn('Could not load music file, using generated music instead');
       musicFileFailed = true;
       stopMusic();
@@ -333,6 +343,12 @@ function stopMusic() {
   clearInterval(musicTimer);
   musicTimer = null;
   musicEl?.pause();
+  // Music switched off: unload the file too. A paused-but-loaded track keeps the game listed as
+  // the phone's media app, which stops other apps (Spotify…) from playing.
+  if (musicEl && !settings.music && musicEl.getAttribute('src')) {
+    musicEl.removeAttribute('src');
+    musicEl.load();
+  }
 }
 
 // Schedules the notes for the next ~300 ms, so timing stays steady.
@@ -506,4 +522,5 @@ function makeNoise() {
 const now = () => ctx.currentTime;
 const freq = (midi) => 440 * 2 ** ((midi - 69) / 12);
 
+setAudioSession(); // as early as possible: with the music off, the game's sounds mix with other apps
 loadFiles(); // the genre list for the music player; nothing is played or started
