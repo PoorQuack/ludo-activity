@@ -9,7 +9,9 @@
 // and goes back to sleep a few seconds later.
 
 const SETTINGS_KEY = 'ludo-audio';
-const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicTrack: '' };
+// Music starts off: on phones, game music stops whatever the player is already listening to
+// (Spotify…), so it's theirs to switch on in ⚙ Settings. Sound effects are on.
+const settings = { music: false, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicTrack: '' };
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
   // Older versions had one volume for both: carry it over to each
