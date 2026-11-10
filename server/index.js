@@ -12,7 +12,7 @@ import { Leaderboard } from './leaderboard.js';
 import { QuestBook } from './quests.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 import { rig, unrig, riggedList } from './rig.js';
-import { SupportDesk } from './support.js';
+import { SupportDesk, SUPPORT_MAX_FILE } from './support.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -134,6 +134,16 @@ app.post('/api/admin/rig', (req, res) => {
     console.log(`Admin: rigged dice for ${userId} for ${minutes} min`);
   }
   res.json({ rigged: riggedList() });
+});
+
+// The screenshot or video for a support request, sent as the raw file with the one-time ticket the
+// request got back over the socket (the socket only takes small messages).
+app.post('/api/support/upload', express.raw({ type: () => true, limit: SUPPORT_MAX_FILE + 1024 }), async (req, res) => {
+  try {
+    res.json(await support.uploadFile(req.query.ticket, req.body));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Support setup check (scripts/support-test.sh), VM only: sends the owner a test DM and says
@@ -481,8 +491,9 @@ wss.on('connection', (ws, req) => {
           device: String(msg.device || '').slice(0, 200),
           version: String(msg.version || '').slice(0, 100),
         };
+        const attach = msg.attach && typeof msg.attach === 'object' ? { size: Number(msg.attach.size) } : null;
         support
-          .submit({ userId: ctx.user.id, name: ctx.user.name, kind: msg.kind, text: msg.text, context })
+          .submit({ userId: ctx.user.id, name: ctx.user.name, kind: msg.kind, answers: msg.answers, attach, context })
           .then((r) => send({ type: 'supportSent', ...r }))
           .catch((err) => send({ type: 'supportError', message: err.message }));
         return;

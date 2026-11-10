@@ -334,11 +334,70 @@
             <button type="button" data-kind="feedback" role="radio">💬 Feedback</button>
           </div>
           <small class="set-note" id="support-note"></small>
-          <textarea id="support-text" maxlength="1000" rows="6" placeholder=""></textarea>
-          <div class="support-foot">
-            <span class="chat-count" id="support-count">0/1000</span>
-            <button type="submit" class="btn primary" id="support-send">Send</button>
+
+          <!-- Bug report -->
+          <div class="support-fields" data-for="bug">
+            <label class="field">
+              <span>What happened? <i>*</i></span>
+              <textarea data-q="what" maxlength="1000" rows="4" placeholder="e.g. the dice stopped spinning and I couldn't move"></textarea>
+            </label>
+            <label class="field">
+              <span>What were you doing just before? <i>*</i></span>
+              <input data-q="before" maxlength="300" placeholder="e.g. I rolled a 6 in a 2 vs 2 game" />
+            </label>
+            <div class="field">
+              <span>How often does it happen? <i>*</i></span>
+              <div class="chips" data-q="often">
+                <button type="button" data-v="once">Once</button>
+                <button type="button" data-v="sometimes">Sometimes</button>
+                <button type="button" data-v="always">Every time</button>
+              </div>
+            </div>
+            <div class="field">
+              <span>Where? <i>*</i></span>
+              <div class="chips" data-q="where">
+                <button type="button" data-v="menu">Menu</button>
+                <button type="button" data-v="lobby">Lobby</button>
+                <button type="button" data-v="game">In a game</button>
+                <button type="button" data-v="shop">Shop</button>
+                <button type="button" data-v="other">Other</button>
+              </div>
+            </div>
           </div>
+
+          <!-- Feedback -->
+          <div class="support-fields" data-for="feedback">
+            <div class="field">
+              <span>What's it about? <i>*</i></span>
+              <div class="chips" data-q="topic">
+                <button type="button" data-v="idea">New idea</button>
+                <button type="button" data-v="boards">Boards &amp; skins</button>
+                <button type="button" data-v="stickers">Stickers</button>
+                <button type="button" data-v="gameplay">Gameplay</button>
+                <button type="button" data-v="other">Other</button>
+              </div>
+            </div>
+            <label class="field">
+              <span>Your feedback <i>*</i></span>
+              <textarea data-q="text" maxlength="1000" rows="4" placeholder="e.g. a space-themed board would be cool"></textarea>
+            </label>
+            <div class="field">
+              <span>How much do you enjoy the game? <small>(optional)</small></span>
+              <div class="stars" data-q="stars">
+                <button type="button" data-v="1" aria-label="1 star">★</button><button type="button" data-v="2" aria-label="2 stars">★</button><button type="button" data-v="3" aria-label="3 stars">★</button><button type="button" data-v="4" aria-label="4 stars">★</button><button type="button" data-v="5" aria-label="5 stars">★</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <span>Screenshot or short video <small>(optional, 10 MB max)</small></span>
+            <label class="attach">
+              <input type="file" id="support-file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/quicktime,video/webm" />
+              <span id="support-file-label">📎 Add a picture or video</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn primary" id="support-send">Send</button>
         </form>
       </div>
 

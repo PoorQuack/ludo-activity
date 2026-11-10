@@ -1138,20 +1138,25 @@ for (const b of cbButtons) {
 renderColorBlindToggles();
 
 // ---------------- contact the developer ----------------
-// A bug report or feedback, sent by the server to the owner's Discord DMs. Bug reports go
-// straight away (with the room and device attached); feedback arrives in a daily digest.
+// A bug report or feedback, sent by the server to the owner's Discord DMs. Set questions for
+// each kind, and an optional screenshot or short video: the answers go over the socket, then the
+// file is uploaded with the one-time ticket that comes back. Bugs go straight away; feedback
+// arrives in a daily digest.
+const SUPPORT_MAX_FILE = 10 * 1024 * 1024;
 const support = {
   wrap: $('support'),
   form: $('support-form'),
-  text: $('support-text'),
   note: $('support-note'),
-  count: $('support-count'),
   send: $('support-send'),
-  kinds: [...document.querySelectorAll('[data-kind]')],
+  file: $('support-file'),
+  fileLabel: $('support-file-label'),
+  kinds: [...document.querySelectorAll('#support [data-kind]')],
   kind: 'bug',
+  picked: {}, // chip and star answers: { often: 'once', where: 'game', topic: 'idea', stars: 4 }
+  pendingFile: null,
 };
 const SUPPORT_NOTES = {
-  bug: 'What went wrong, and what were you doing? Bug reports go to the developer straight away.',
+  bug: 'Bug reports go to the developer straight away. A screenshot or clip helps a lot!',
   feedback: 'Ideas, wishes, anything. Feedback is read in a daily batch.',
 };
 function setSupportKind(kind) {
@@ -1160,39 +1165,108 @@ function setSupportKind(kind) {
     b.classList.toggle('active', b.dataset.kind === kind);
     b.setAttribute('aria-checked', String(b.dataset.kind === kind));
   }
+  for (const f of support.form.querySelectorAll('.support-fields')) f.classList.toggle('on', f.dataset.for === kind);
   support.note.textContent = SUPPORT_NOTES[kind];
-  support.text.placeholder = kind === 'bug' ? 'e.g. the dice froze after I rolled a 6 in a 2 vs 2 game' : 'e.g. a space-themed board would be cool';
+}
+// Chips (one choice) and stars: tap to pick, tap the same star again to clear
+for (const group of support.form.querySelectorAll('.chips, .stars')) {
+  const q = group.dataset.q;
+  for (const b of group.querySelectorAll('button')) {
+    b.addEventListener('click', () => {
+      const v = q === 'stars' ? Number(b.dataset.v) : b.dataset.v;
+      support.picked[q] = support.picked[q] === v && q === 'stars' ? null : v;
+      for (const o of group.querySelectorAll('button')) {
+        const ov = q === 'stars' ? Number(o.dataset.v) : o.dataset.v;
+        o.classList.toggle('on', q === 'stars' ? support.picked[q] && ov <= support.picked[q] : ov === support.picked[q]);
+      }
+    });
+  }
+}
+function showSupportFile() {
+  const f = support.file.files[0];
+  const label = support.file.closest('.attach');
+  if (f && f.size > SUPPORT_MAX_FILE) {
+    toast('That file is too big (10 MB at most): try a shorter clip or a screenshot');
+    support.file.value = '';
+  }
+  const ok = support.file.files[0];
+  label.classList.toggle('has', !!ok);
+  support.fileLabel.textContent = ok ? `📎 ${ok.name} (${(ok.size / 1048576).toFixed(1)} MB) · tap to change` : '📎 Add a picture or video';
+}
+support.file.addEventListener('change', showSupportFile);
+function resetSupport() {
+  support.form.reset();
+  support.picked = {};
+  for (const b of support.form.querySelectorAll('.chips button, .stars button')) b.classList.remove('on');
+  showSupportFile();
 }
 function openSupport() {
   closePlayer();
   setSupportKind(support.kind);
   support.wrap.classList.remove('hidden');
-  support.text.focus({ preventScroll: true });
 }
 function closeSupport() {
   support.wrap.classList.add('hidden');
 }
-const updateSupportCount = () => (support.count.textContent = `${support.text.value.length}/${support.text.maxLength}`);
 $('support-open').addEventListener('click', openSupport);
 $('support-close').addEventListener('click', closeSupport);
 support.wrap.addEventListener('pointerdown', (e) => e.target === support.wrap && closeSupport());
 for (const b of support.kinds) b.addEventListener('click', () => setSupportKind(b.dataset.kind));
-support.text.addEventListener('input', updateSupportCount);
 support.form.addEventListener('submit', (e) => {
   e.preventDefault();
-  const text = support.text.value.trim();
-  if (text.length < 10) return toast('Tell us a bit more (at least 10 characters)');
+  const box = support.form.querySelector(`.support-fields[data-for="${support.kind}"]`);
+  const answers = {};
+  for (const el of box.querySelectorAll('textarea[data-q], input[data-q]')) answers[el.dataset.q] = el.value.trim();
+  for (const g of box.querySelectorAll('.chips, .stars')) answers[g.dataset.q] = support.picked[g.dataset.q] ?? null;
+  // the same checks as the server, so mistakes show at once
+  const missing =
+    support.kind === 'bug'
+      ? (answers.what.length < 10 && 'Tell us what happened (at least 10 characters)') ||
+        (answers.before.length < 3 && 'Tell us what you were doing just before') ||
+        (!answers.often && 'How often does it happen?') ||
+        (!answers.where && 'Where did it happen?')
+      : (!answers.topic && 'What is your feedback about?') || (answers.text.length < 10 && 'Tell us a bit more (at least 10 characters)');
+  if (missing) return toast(missing);
   if (ws?.readyState !== WebSocket.OPEN) return toast('Not connected right now, try again in a moment');
+  const file = support.file.files[0] || null;
+  support.pendingFile = file;
   support.send.disabled = true;
-  ws.send(JSON.stringify({ type: 'support', kind: support.kind, text, device: navigator.userAgent, version: document.querySelector('script[type=module][src]')?.getAttribute('src') || '' }));
+  support.send.textContent = 'Sending…';
+  ws.send(JSON.stringify({ type: 'support', kind: support.kind, answers, attach: file ? { size: file.size } : null, device: navigator.userAgent, version: document.querySelector('script[type=module][src]')?.getAttribute('src') || '' }));
 });
-function onSupportReply(msg) {
-  support.send.disabled = false;
-  if (msg.type === 'supportError') return toast(msg.message);
-  support.text.value = '';
-  updateSupportCount();
+async function onSupportReply(msg) {
+  const done = (text, kind = 'ok') => {
+    support.send.disabled = false;
+    support.send.textContent = 'Send';
+    toast(text, kind, 4500);
+  };
+  if (msg.type === 'supportError') return done(msg.message, 'error');
+  const thanks = msg.when === 'now' ? `🐞 Bug report #${msg.id} sent, thank you!` : `💬 Thanks! Your message (#${msg.id}) is in.`;
+  const file = support.pendingFile;
+  support.pendingFile = null;
+  if (msg.ticket && file) {
+    support.send.textContent = 'Uploading…';
+    try {
+      const r = await fetch(`${BASE}/api/support/upload?ticket=${encodeURIComponent(msg.ticket)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (!r.ok) {
+        const why = await r.json().catch(() => ({}));
+        resetSupport();
+        closeSupport();
+        return done(`${thanks} (The file couldn't be attached: ${why.error || 'upload failed'})`, 'notice');
+      }
+    } catch {
+      resetSupport();
+      closeSupport();
+      return done(`${thanks} (The file couldn't be uploaded.)`, 'notice');
+    }
+  }
+  resetSupport();
   closeSupport();
-  toast(msg.when === 'now' ? `🐞 Bug report #${msg.id} sent, thank you!` : `💬 Thanks! Your message (#${msg.id}) is in.`, 'ok', 4000);
+  done(thanks);
 }
 
 // ---------------- smooth mode ----------------
