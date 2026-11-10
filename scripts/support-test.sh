@@ -2,7 +2,9 @@
 # Checks that bug reports / feedback can reach your Discord DMs: sends you a test DM through the
 # app's bot and prints what Discord answered. Run it on the VM:
 #
-#   bash scripts/support-test.sh
+#   bash scripts/support-test.sh                  send yourself a test DM
+#   bash scripts/support-test.sh --send-waiting   send everything waiting for the daily feedback
+#                                                 digest right now, and list the latest requests
 #
 # Needs DISCORD_BOT_TOKEN and SUPPORT_USER_ID in .env (see .env.example), and the server
 # restarted after adding them (FORCE_RESTART=1 bash scripts/deploy.sh).
@@ -10,6 +12,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PORT=$(grep -E '^PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '[:space:]' || true)
 PORT="${PORT:-3001}"
+if [ "${1:-}" = "--send-waiting" ]; then
+  curl -fsS -X POST "http://localhost:${PORT}/api/admin/support-digest" && echo
+  exit 0
+fi
 out=$(curl -fsS -X POST "http://localhost:${PORT}/api/admin/support-test")
 echo "$out"
 case "$out" in

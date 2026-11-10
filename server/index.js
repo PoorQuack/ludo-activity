@@ -154,6 +154,16 @@ app.post('/api/admin/support-test', async (req, res) => {
   res.json({ ok, error: support.lastError, saved: support.data.requests.length, waiting: support.data.queue.length });
 });
 
+// Support, VM only (scripts/support-test.sh --send-waiting): send the digest of everything waiting
+// now instead of at the daily time, and list the latest requests.
+app.post('/api/admin/support-digest', async (req, res) => {
+  if (!fromVm(req)) return res.status(404).end();
+  const waiting = support.data.queue.length;
+  await support.digest();
+  const latest = support.data.requests.slice(-5).map((r) => ({ id: r.id, kind: r.kind, from: r.name, at: new Date(r.at).toISOString(), file: r.file?.name || null }));
+  res.json({ sentWaiting: waiting - support.data.queue.length, stillWaiting: support.data.queue.length, error: support.data.queue.length ? support.lastError : null, latest });
+});
+
 // Tell everyone a server update is coming: a line in every room's chat and a note on screen.
 // scripts/deploy.sh calls this (VM only) a few seconds before restarting the server.
 const UPDATE_SOON = "🔧 Updating the game in a few seconds. You'll be disconnected briefly and reconnect on your own: your game is saved.";
