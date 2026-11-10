@@ -3,8 +3,10 @@
 // Real recordings are used when they exist: list them in client/public/sounds/sounds.json,
 // e.g. { "roll": "dice-roll.ogg", "step": "pin-tap.ogg", "music": "music.mp3" }.
 // Anything not listed falls back to a sound generated here, so the game never goes quiet.
-// Browsers only allow sound after the player has clicked or pressed a key, so everything
-// starts on the first interaction.
+// Browsers only allow sound after the player has clicked or pressed a key. Even then the sound
+// engine (the AudioContext) only starts when something is about to play: just starting it makes
+// phones pause other apps' audio (Spotify…), so with the music off it starts for a sound effect
+// and goes back to sleep a few seconds later.
 
 const SETTINGS_KEY = 'ludo-audio';
 const settings = { music: true, sound: true, musicVolume: 0.5, soundVolume: 0.5, musicTrack: '' };
@@ -27,6 +29,9 @@ try {
 }
 
 let ctx = null;
+let activated = false; // the player has tapped or typed: sound is allowed from now on
+let sleepTimer = null;
+let sampleList = null; // sound effects listed in sounds.json, decoded once the engine starts
 let musicGain = null;
 let sfxGain = null;
 let noiseBuffer = null;
@@ -57,11 +62,22 @@ function emitChange() {
   window.dispatchEvent(new Event('ludo-audio-change'));
 }
 
-// Call on the first click/keypress; safe to call again.
+// Call on the first click/keypress; safe to call again. Starts the music if it's on; with it
+// off nothing starts here, so music from other apps keeps playing.
 export function unlockAudio() {
+  activated = true;
+  if (!settings.music) return;
+  if (!ensureCtx()) return;
+  if (!musicEl && tracks.length) loadTrack(currentTrack());
+  else startMusic();
+}
+
+// The sound engine, started (or woken) when something is about to play.
+function ensureCtx() {
+  if (!activated) return false;
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
+    if (!AC) return false;
     ctx = new AC();
     musicGain = ctx.createGain();
     sfxGain = ctx.createGain();
@@ -70,10 +86,31 @@ export function unlockAudio() {
     musicGain.gain.value = musicLevel();
     sfxGain.gain.value = soundLevel();
     noiseBuffer = makeNoise();
-    loadFiles();
+    decodeSamples();
   }
+  setAudioSession();
+  clearTimeout(sleepTimer);
   if (ctx.state === 'suspended') ctx.resume();
-  if (settings.music) startMusic();
+  return true;
+}
+
+// iPhones (and browsers with the Audio Session API): with the game's music off, its sounds mix
+// with other apps' audio instead of interrupting it.
+function setAudioSession() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = settings.music ? 'playback' : 'ambient';
+  } catch {
+    // not supported here
+  }
+}
+
+// With the music off, the engine sleeps a few seconds after the last sound effect.
+function sleepSoon() {
+  clearTimeout(sleepTimer);
+  if (settings.music || !ctx) return;
+  sleepTimer = setTimeout(() => {
+    if (!settings.music && ctx.state === 'running') ctx.suspend();
+  }, 3000);
 }
 
 // How loud each part plays: its on/off switch times its slider.
@@ -94,13 +131,22 @@ export function setMusic(on) {
   save();
   if (ctx) {
     musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2);
-    if (on) startMusic();
-    else setTimeout(() => !settings.music && stopMusic(), 800);
+    if (!on) {
+      setTimeout(() => !settings.music && stopMusic(), 800);
+      setAudioSession();
+      sleepSoon();
+    }
+  }
+  if (on && ensureCtx()) {
+    musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.2);
+    if (!musicEl && tracks.length) loadTrack(currentTrack());
+    else startMusic();
   }
   emitChange();
 }
 
-// Loads the recordings listed in sounds/sounds.json, if there is one.
+// The list in sounds/sounds.json (music genres, any recorded effects), read as the page loads.
+// The engine isn't needed for that, so the music player can show its genres straight away.
 async function loadFiles() {
   let list;
   try {
@@ -131,7 +177,23 @@ async function loadFiles() {
       continue;
     }
     // A name can list several files; one is picked at random each time, for variety.
-    const files = Array.isArray(file) ? file : [file];
+    (sampleList ||= {})[name] = Array.isArray(file) ? file : [file];
+  }
+  if (tracks.length) songIdx = randomSong(currentTrack());
+  if (ctx) {
+    decodeSamples();
+    if (settings.music && !musicEl && tracks.length) loadTrack(currentTrack());
+  }
+  window.dispatchEvent(new Event('ludo-audio-ready'));
+  emitChange();
+}
+
+// Recorded effects, decoded once both the list and the engine are there
+let decoding = false;
+async function decodeSamples() {
+  if (decoding || !sampleList || !ctx) return;
+  decoding = true;
+  for (const [name, files] of Object.entries(sampleList)) {
     samples[name] = [];
     for (const f of files) {
       try {
@@ -142,12 +204,6 @@ async function loadFiles() {
       }
     }
   }
-  if (tracks.length) {
-    songIdx = randomSong(currentTrack());
-    loadTrack(currentTrack());
-  }
-  window.dispatchEvent(new Event('ludo-audio-ready'));
-  emitChange();
 }
 
 // The saved track — or the first one, when the saved id isn't in the playlist.
@@ -193,7 +249,16 @@ let trackSwitchTimer = null; // the pending swap: rapid taps only ever load the 
 // Changes the track, fading out and back in (~0.6s) while music is playing.
 export function playTrack(id) {
   const track = tracks.find((t) => t.id === id);
-  if (!track || !ctx) return;
+  if (!track) return;
+  if (!ctx || !musicEl) {
+    // Nothing playing (music off, or not started yet): just remember the pick
+    settings.musicTrack = track.id;
+    songIdx = songTarget ?? randomSong(track);
+    songTarget = null;
+    save();
+    emitChange();
+    return;
+  }
   // The selection changes now, even though the new file fades in a little later.
   settings.musicTrack = track.id;
   save();
@@ -376,7 +441,8 @@ const EFFECTS = {
 };
 
 export function sfx(name) {
-  if (!ctx || !settings.sound || ctx.state !== 'running') return;
+  if (!settings.sound || !ensureCtx()) return;
+  sleepSoon();
   const recorded = samples[name];
   if (recorded?.length) playSample(recorded[Math.floor(Math.random() * recorded.length)], name === 'step');
   else EFFECTS[name]?.();
@@ -439,3 +505,5 @@ function makeNoise() {
 
 const now = () => ctx.currentTime;
 const freq = (midi) => 440 * 2 ** ((midi - 69) / 12);
+
+loadFiles(); // the genre list for the music player; nothing is played or started
