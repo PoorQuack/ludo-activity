@@ -121,7 +121,9 @@ export class SupportDesk {
 
   // A DM to the owner; false if it couldn't be sent (not set up, or Discord said no)
   async dm(body) {
+    this.lastError = null;
     if (!this.enabled) {
+      this.lastError = `not set up: ${!this.token ? 'DISCORD_BOT_TOKEN' : ''}${!this.token && !this.ownerId ? ' and ' : ''}${!this.ownerId ? 'SUPPORT_USER_ID' : ''} missing in .env`;
       this.log.log(`Support (no bot set up, kept in ${this.file}): ${body.content || body.embeds?.[0]?.title}`);
       return false;
     }
@@ -140,6 +142,8 @@ export class SupportDesk {
       if (!r.ok) throw new Error(`send: ${r.status} ${await r.text()}`);
       return true;
     } catch (err) {
+      this.lastError = err.message;
+      this.dmChannel = null; // open the DM again next time
       this.log.error(`Support DM failed (${err.message}); kept for the next digest`);
       return false;
     }

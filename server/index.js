@@ -136,6 +136,14 @@ app.post('/api/admin/rig', (req, res) => {
   res.json({ rigged: riggedList() });
 });
 
+// Support setup check (scripts/support-test.sh), VM only: sends the owner a test DM and says
+// what Discord answered, plus how many requests are saved and waiting.
+app.post('/api/admin/support-test', async (req, res) => {
+  if (!fromVm(req)) return res.status(404).end();
+  const ok = await support.dm({ content: '✅ Ludo support test: bug reports will arrive here.' });
+  res.json({ ok, error: support.lastError, saved: support.data.requests.length, waiting: support.data.queue.length });
+});
+
 // Tell everyone a server update is coming: a line in every room's chat and a note on screen.
 // scripts/deploy.sh calls this (VM only) a few seconds before restarting the server.
 const UPDATE_SOON = "🔧 Updating the game in a few seconds. You'll be disconnected briefly and reconnect on your own: your game is saved.";
