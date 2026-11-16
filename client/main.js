@@ -1792,6 +1792,7 @@ function renderFriends() {
     hint.textContent = data.met.length ? t('No friends yet: add people from Played with.') : t('Play a game with other people, then add them as friends here.');
   else if (friendsTab === 'met' && !people.length) hint.textContent = data.friends.length ? t('Everyone you played with is already a friend.') : t('People you play games with show up here.');
   else hint.textContent = inRoom ? '' : t('Make or join a room to invite people.');
+  $('friends-discord').classList.toggle('hidden', !data.inviteUrl);
 }
 // A second tap within 3 s removes them (no browser dialogs inside Discord)
 const removeArmed = new Map();
@@ -1810,6 +1811,14 @@ for (const b of document.querySelectorAll('[data-ftab]')) {
     renderFriends();
   });
 }
+// The Discord server invite, always on hand in the Friends card (the launch card only
+// shows until you join or say no). Same link the invite card uses.
+$('friends-discord').onclick = () => {
+  const url = friendsData?.inviteUrl;
+  if (!url) return;
+  if (discordSdk) discordSdk.commands.openExternalLink({ url }).catch(() => {});
+  else window.open(url, '_blank', 'noopener');
+};
 renderFriends();
 
 // "Sam invited you to their room"

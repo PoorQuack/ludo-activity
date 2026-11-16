@@ -285,7 +285,7 @@ async function maybeInvite(ws, userId) {
 const social = new SocialBook(SOCIAL_FILE);
 const isOnline = (id) => userSockets.has(id);
 function sendFriends(userId) {
-  sendTo(userId, { type: 'friends', ...social.view(userId, isOnline) });
+  sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null });
 }
 // Someone came online, went offline or played a game: refresh the lists that show them.
 function friendsChanged(userId) {
@@ -620,7 +620,7 @@ wss.on('connection', (ws, req) => {
         maybeInvite(ws, user.id).catch(() => {});
         claimPurchases(user.id); // bought something while the game was closed?
         if (userSockets.get(user.id).size === 1) friendsChanged(user.id); // just came online
-        else sendFriends(user.id);
+        sendFriends(user.id); // their own list, every connect (friendsChanged skips the person themselves)
         // Back after a refresh or a dropped connection: return to the same room if it's still open
         const room = msg.rejoin && directory.findCode(msg.rejoin);
         if (room) {
