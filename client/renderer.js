@@ -242,7 +242,7 @@ export class BoardRenderer {
         if (art.yardGem) gemYard(ctx, b.x, b.y, inner * 0.94, color(seat), this.board.colors[seat]);
         if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.4, color(seat), this.board.colors[seat], inner, k);
         else if (art.pins === 'dents') drawDents(ctx, b, board.baseSpread, 0.6);
-        else if (art.pins === 'cut') cutSpots(ctx, b, board.baseSpread, 0.5, color(seat), this.board.colors[seat]);
+        else if (art.pins === 'cut') cutSpots(ctx, b, board.baseSpread, 0.66, color(seat), this.board.colors[seat]);
         else if (SPOTS[art.pins]) drawSpots(ctx, art.pins, b, board.baseSpread, 0.62, color(seat));
         else drawPinSpots(ctx, b, board.baseSpread, 0.62, color(seat));
         if (art.decor === 'cat') catDecor(ctx, b.x, b.y, outer, color(seat), k);
@@ -264,7 +264,7 @@ export class BoardRenderer {
         if (art.yardGem) gemYard(ctx, b.x, b.y, b.size * 0.72, color(seat), this.board.colors[seat]); // (smaller: a round yard)
         if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.3, color(seat), this.board.colors[seat], b.size, k);
         else if (art.pins === 'dents') drawDents(ctx, b, board.baseSpread, 0.42);
-        else if (art.pins === 'cut') cutSpots(ctx, b, board.baseSpread, 0.36, color(seat), this.board.colors[seat]);
+        else if (art.pins === 'cut') cutSpots(ctx, b, board.baseSpread, 0.46, color(seat), this.board.colors[seat]);
         else if (SPOTS[art.pins]) drawSpots(ctx, art.pins, b, board.baseSpread, 0.42, color(seat));
         else drawPinSpots(ctx, b, board.baseSpread, 0.42, color(seat));
       }
@@ -324,7 +324,35 @@ export class BoardRenderer {
       ctx.lineTo(Math.cos(a + Math.PI / n) * R, Math.sin(a + Math.PI / n) * R);
       ctx.closePath();
       ctx.fillStyle = color(s);
-      if (art.base === 'outline' || art.base === 'rock') {
+      if (art.center === 'jewel') {
+        // Crystal: dark marble in the middle, each wedge's colour only as a glowing edge where
+        // its home column comes in
+        ctx.fillStyle = '#18181e';
+        ctx.fill();
+        const surf = texPattern(ctx, art.tex?.surface);
+        if (surf) {
+          ctx.save();
+          ctx.globalAlpha = 0.6;
+          ctx.fillStyle = surf;
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a - Math.PI / n) * R, Math.sin(a - Math.PI / n) * R);
+        ctx.lineTo(Math.cos(a + Math.PI / n) * R, Math.sin(a + Math.PI / n) * R);
+        ctx.shadowColor = color(s);
+        ctx.shadowBlur = 0.3 * k;
+        ctx.lineWidth = 0.1;
+        ctx.strokeStyle = color(s);
+        ctx.stroke();
+        ctx.restore();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a - Math.PI / n) * R, Math.sin(a - Math.PI / n) * R);
+        ctx.lineTo(Math.cos(a + Math.PI / n) * R, Math.sin(a + Math.PI / n) * R);
+        ctx.closePath();
+      } else if (art.base === 'outline' || art.base === 'rock') {
         ctx.fillStyle = art.base === 'outline' ? '#0c0d16' : mix(color(s), '#000000', 0.55);
         ctx.fill();
         ctx.save();

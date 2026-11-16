@@ -1288,13 +1288,13 @@ export function gemYard(ctx, x, y, R, color, name) {
   ctx.lineJoin = 'round';
   if (cut === 'emerald' || cut === 'asscher') {
     // step cut: rings of long facets stepping down to a flat table
-    const w = cut === 'emerald' ? R * 0.78 : R * 0.92;
-    const h = R * 0.95;
-    const c = cut === 'emerald' ? R * 0.3 : R * 0.36;
+    const w = cut === 'emerald' ? R * 0.84 : R * 0.93;
+    const h = R * 0.97;
+    const c = cut === 'emerald' ? R * 0.28 : R * 0.34;
     const steps = [1, 0.82, 0.64, 0.46].map((f) => oct(w * f, h * f, c * f));
     outer = steps[0];
     for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 8; j++) facet([steps[i][j], steps[i][(j + 1) % 8], steps[i + 1][(j + 1) % 8], steps[i + 1][j]], i === 1 ? 0.15 : i === 2 ? -0.1 : 0);
+      for (let j = 0; j < 8; j++) facet([steps[i][j], steps[i][(j + 1) % 8], steps[i + 1][(j + 1) % 8], steps[i + 1][j]], i === 1 ? 0.3 : i === 2 ? 0.1 : 0.15);
     }
     path(ctx, steps[3]);
     const g = ctx.createLinearGradient(x - w * 0.46, y - h * 0.46, x + w * 0.46, y + h * 0.46);
@@ -1317,8 +1317,8 @@ export function gemYard(ctx, x, y, R, color, name) {
     ctx.stroke();
   } else {
     // brilliant cuts: a rim of girdle facets, kites, star facets and a table
-    const rx = cut === 'oval' ? R * 0.74 : R * 0.95;
-    const ry = R * 0.95;
+    const rx = cut === 'oval' ? R * 0.8 : R * 0.96;
+    const ry = R * 0.98;
     const sq = cut === 'cushion' ? 0.55 : cut === 'princess' ? 6 : 0;
     const rot = cut === 'princess' ? Math.PI / 4 : Math.PI / 16;
     let rim;
@@ -1326,7 +1326,7 @@ export function gemYard(ctx, x, y, R, color, name) {
     let table;
     if (cut === 'princess') {
       // square: corners out, an X of long facets, a square table
-      const c4 = (f) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [x + a * R * 0.86 * f, y + b * R * 0.86 * f]);
+      const c4 = (f) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [x + a * R * 0.9 * f, y + b * R * 0.9 * f]);
       rim = c4(1);
       table = c4(0.48);
       const edges = (pts) => pts.map((p, j) => [(p[0] + pts[(j + 1) % 4][0]) / 2, (p[1] + pts[(j + 1) % 4][1]) / 2]);
@@ -1477,8 +1477,8 @@ export const DECOR = {
     const outerCorner = Math.sign(sx) === Math.sign(x) && Math.sign(sy) === Math.sign(y);
     if (outerCorner) {
       ctx.save();
-      ctx.translate(sx * band * 0.42, sy * band * 0.42);
-      ctx.scale(1.55, 1.55);
+      ctx.translate(sx * band * 0.55, sy * band * 0.55);
+      ctx.scale(2, 2);
       const stones = [[0, 0, 0.3, 0.2], [-sx * 0.36, sy * 0.06, 0.2, 1.3], [sx * 0.06, -sy * 0.36, 0.2, 2.1], [-sx * 0.22, -sy * 0.26, 0.17, 0.7], [sx * 0.24, sy * 0.2, 0.15, 2.8], [-sx * 0.55, sy * 0.16, 0.13, 3.6], [sx * 0.16, -sy * 0.56, 0.13, 4.4]];
       for (const [gx, gy, gr, rot] of stones) rough(ctx, gx, gy, gr, rot, color);
       ctx.restore();
@@ -2207,7 +2207,7 @@ export function paintBase(ctx, art, theme, x, y, w, h, color, k) {
   else if (style === 'frosted') ctx.fillStyle = mix(color, '#ffffff', 0.3);
   else if (style === 'celestial') ctx.fillStyle = 'rgba(8, 10, 40, 0.55)';
   else if (style === 'moonlit') ctx.fillStyle = mix(color, '#141726', 0.3);
-  else if (style === 'jewel') ctx.fillStyle = mix(color, '#000000', 0.38);
+  else if (style === 'jewel') ctx.fillStyle = mix(color, '#000000', 0.1);
   else if (art.baseLight) ctx.fillStyle = mix(color, '#ffffff', art.baseLight);
   else ctx.fillStyle = color;
   ctx.fill();
@@ -2427,7 +2427,7 @@ export function innerPanel(ctx, theme, x, y, r, color, square = true) {
   }
   if (art.panel === 'jewel') {
     // Crystal: a deeper slab of the same coloured marble, sunk into a gold frame
-    ctx.fillStyle = mix(color, '#000000', 0.62);
+    ctx.fillStyle = mix(color, '#000000', 0.42);
     ctx.fill();
     const tex = texPattern(ctx, art.tex?.panel);
     ctx.save();
@@ -2460,6 +2460,24 @@ export function innerPanel(ctx, theme, x, y, r, color, square = true) {
     ctx.lineWidth = r * 0.018;
     ctx.strokeStyle = 'rgba(255, 246, 214, 0.9)';
     ctx.stroke();
+    if (square) {
+      // a second, finer gold line inside, its corners cut in like an ornate frame
+      const q = r * 0.88;
+      const c = r * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(x - q + c, y - q);
+      ctx.lineTo(x + q - c, y - q);
+      ctx.arc(x + q, y - q, c, Math.PI, Math.PI / 2, true);
+      ctx.lineTo(x + q, y + q - c);
+      ctx.arc(x + q, y + q, c, -Math.PI / 2, Math.PI, true);
+      ctx.lineTo(x - q + c, y + q);
+      ctx.arc(x - q, y + q, c, 0, -Math.PI / 2, true);
+      ctx.lineTo(x - q, y - q + c);
+      ctx.arc(x - q, y - q, c, Math.PI / 2, 0, true);
+      ctx.lineWidth = r * 0.025;
+      ctx.strokeStyle = g;
+      ctx.stroke();
+    }
     return;
   }
   if (art.panel === 'window') {

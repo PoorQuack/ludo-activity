@@ -29,6 +29,6 @@ issue and it will be removed.
 
 | File | Source | Used in |
 | --- | --- | --- |
-| `cats/` | emoji.gg (Happy cat); stickers the owner supplied (Dancing kitten; Angry cat, white background removed; Shoo shoo cat, from a Klipy clip; Rude cat, background removed; Sad kitten, background removed; Nervous cat; Blep cat, white background removed) | Happy cat, Dancing kitten, Angry cat, Shoo shoo cat, Rude cat, Sad kitten, Nervous cat, Blep cat stickers |
+| `cats/` | emoji.gg (Happy cat); stickers the owner supplied (Dancing kitten; Angry cat, white background removed; Shoo shoo cat, from a Klipy clip; Rude cat, background removed; Sad kitten, background removed; Nervous cat; Blep cat, white background removed; Hello cat, from a Tenor clip, background removed) | Happy cat, Dancing kitten, Angry cat, Shoo shoo cat, Rude cat, Sad kitten, Nervous cat, Blep cat, Hello cat stickers |
 | `meme/dumb.png` | [dumb](https://emoji.gg/emoji/399151-dumb) (background removed) | Dumb sticker (free with the Laugh pack) |
 | `meme/dontjoke.webp` | the "don't even joke lad" chick meme, supplied by the owner (framed, background kept) | Don't even joke lad sticker |

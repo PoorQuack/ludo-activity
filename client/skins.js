@@ -402,24 +402,24 @@ export const BOARD_THEMES = {
     // YARD_GEMS), a marquise sits at every corner of the frame, rough stones spill over the
     // board's corners, and a diamond shines in the middle. Its one effect: glints of light.
     art: {
-      base: 'jewel', panel: 'jewel', frame: ['#7a5418', '#ffe39a', 0.3],
+      base: 'jewel', panel: 'jewel', center: 'jewel', frame: ['#7a5418', '#ffe39a', 0.3],
       tex: {
         surface: { src: '/textures/crystal-marble.jpg', size: 9 },
-        base: { src: '/textures/crystal-vein.jpg', size: 6, blend: 'overlay', alpha: 0.9 },
-        panel: { src: '/textures/crystal-vein.jpg', size: 4.5, blend: 'overlay', alpha: 0.85 },
+        base: { src: '/textures/crystal-gold.png', size: 6, blend: 'source-over', alpha: 0.85 },
+        panel: { src: '/textures/crystal-gold.png', size: 4.5, blend: 'source-over', alpha: 0.6 },
       },
       tile: 'facet', mark: 'sparkle', markSize: 0.3, fx: 'sparkle', fxColor: '#fff6dc', fxCount: 22,
       pins: 'cut', decor: 'jewel', hub: 'brilliant',
       shield: { kind: 'orbit', motif: 'sparkle', colors: ['#fff6dc', '#f3d27a'], glow: 'rgba(255, 226, 150, 0.45)', n: 6 },
     },
-    bg: '#16161c',
-    bg2: '#2a2a33',
-    cell: '#1d1e25',
+    bg: '#2a2a31',
+    bg2: '#3c3c46',
+    cell: '#23242b',
     safe: '#6b3fd8',
     star: '#fff6dc',
     baseInner: '#120d1c',
     // ruby, emerald, topaz, sapphire, amethyst, fire opal
-    players: { red: '#d8143f', green: '#0f9e5c', yellow: '#eeac17', blue: '#2758e0', purple: '#8a3fe6', orange: '#f2601a' },
+    players: { red: '#e8193f', green: '#14b866', yellow: '#f7bb1c', blue: '#2f66f0', purple: '#9447f2', orange: '#ff6a1c' },
   },
   // A night sky in gold lines. Each base is a window onto the stars holding its player's
   // constellation (Aries, Taurus, Cancer, Leo…), whose brightest stars are where the tokens wait.
