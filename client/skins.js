@@ -396,9 +396,10 @@ export const BOARD_THEMES = {
     players: { red: '#c8364a', green: '#23875f', yellow: '#dfa923', blue: '#3159b8', purple: '#7d3fb8', orange: '#d66a2a' },
   },
   'board-crystal': {
-    // Inside a geode: dark amethyst rock, every square cut like a gem, the pins on step-cut gems
-    // (like the Emerald and Ruby dice), crystals growing in the corners of each yard and a
-    // diamond in the middle. Its one effect: glints of light across the board.
+    // Inside a geode: dark amethyst rock, every square cut like a gem, each yard one great gem
+    // of its player's colour (a ruby for red, an emerald for green, a sapphire for blue…: see
+    // gemYard), the pins in silver settings on it, crystals growing in the corners and a diamond
+    // in the middle. Its one effect: glints of light across the board.
     art: {
       base: 'outline', frame: ['#2b1f4a', '#cdb8ff', 0.26], panel: 'window',
       tex: {
@@ -406,7 +407,7 @@ export const BOARD_THEMES = {
         tile: { src: '/textures/midnight-slate.jpg', size: 3, blend: 'multiply', alpha: 0.45 },
       },
       tile: 'facet', mark: 'sparkle', markSize: 0.3, fx: 'sparkle', fxColor: '#eaf3ff', fxCount: 24,
-      pins: 'gem', decor: 'geode', hub: 'brilliant',
+      yardGem: true, pins: 'socket', decor: 'geode', hub: 'brilliant',
       shield: { kind: 'orbit', motif: 'sparkle', colors: ['#eaf3ff', '#cdb8ff'], glow: 'rgba(205, 184, 255, 0.45)', n: 6 },
     },
     bg: '#120a24',
@@ -415,7 +416,8 @@ export const BOARD_THEMES = {
     safe: '#5a4796',
     star: '#eaf3ff',
     baseInner: '#170f2e',
-    players: { red: '#ee3355', green: '#1fc77e', yellow: '#f5bd2e', blue: '#3d82ff', purple: '#b06bff', orange: '#ff8a3a' },
+    // ruby, emerald, topaz, sapphire, amethyst, fire opal
+    players: { red: '#e0164f', green: '#11a866', yellow: '#f2b01e', blue: '#2a5fe6', purple: '#9346f0', orange: '#ff6a1f' },
   },
   // A night sky in gold lines. Each base is a window onto the stars holding its player's
   // constellation (Aries, Taurus, Cancer, Leo…), whose brightest stars are where the tokens wait.

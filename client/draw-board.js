@@ -905,6 +905,29 @@ export function blossom(ctx, r, petal, heart) {
 }
 
 export const SPOTS = {
+  // Crystal: a silver setting with four prongs, set into the yard's big gem
+  socket(ctx, r) {
+    circle(ctx, 0, 0, r * 0.62);
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.fill();
+    ctx.lineWidth = r * 0.11;
+    ctx.strokeStyle = '#e9eef8';
+    ctx.stroke();
+    ctx.lineWidth = r * 0.04;
+    ctx.strokeStyle = 'rgba(60,70,100,0.6)';
+    circle(ctx, 0, 0, r * 0.68);
+    ctx.stroke();
+    for (let j = 0; j < 4; j++) {
+      const a = (j / 4) * TAU + Math.PI / 4;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * r * 0.64, Math.sin(a) * r * 0.64, r * 0.14, r * 0.1, a, 0, TAU);
+      ctx.fillStyle = '#f4f7ff';
+      ctx.fill();
+      ctx.lineWidth = r * 0.03;
+      ctx.strokeStyle = '#8a93b0';
+      ctx.stroke();
+    }
+  },
   // Crystal: a step-cut gem in the player's colour, like the Emerald dice's pips
   gem(ctx, r, color) {
     const R = r * 1.05;
@@ -1232,6 +1255,152 @@ export const SPOTS = {
     ctx.stroke();
   },
 };
+
+// Crystal board: each yard holds one great cut gem in its player's colour, cut the way that
+// stone usually is: red a cushion-cut ruby, green an emerald cut, blue an oval sapphire, yellow
+// a princess-cut topaz, purple a round amethyst, orange an asscher-cut fire opal.
+export const YARD_GEMS = { red: 'cushion', green: 'emerald', blue: 'oval', yellow: 'princess', purple: 'round', orange: 'asscher' };
+export function gemYard(ctx, x, y, R, color, name) {
+  const cut = YARD_GEMS[name] || 'round';
+  const ring = (n, rx, ry, rot = 0, sq = 0) =>
+    Array.from({ length: n }, (_, j) => {
+      const a = (j / n) * TAU + rot;
+      const c = Math.cos(a);
+      const s2 = Math.sin(a);
+      // sq > 0 squares the circle off (a cushion)
+      const f = sq ? 1 / Math.pow(Math.abs(c) ** (2 + sq * 4) + Math.abs(s2) ** (2 + sq * 4), 1 / (2 + sq * 4)) : 1;
+      return [x + c * rx * f, y + s2 * ry * f];
+    });
+  const oct = (w, h, cc) => [[-w + cc, -h], [w - cc, -h], [w, -h + cc], [w, h - cc], [w - cc, h], [-w + cc, h], [-w, h - cc], [-w, -h + cc]].map(([a, b]) => [x + a, y + b]);
+  const lit = (pts) => {
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length - x;
+    const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length - y;
+    return Math.max(-1, Math.min(1, (-cx * 0.8 - cy) / R));
+  };
+  const tone = (l, bias = 0) => (l + bias > 0 ? mix(color, '#ffffff', Math.min(0.5, (l + bias) * 0.42)) : mix(color, '#000000', Math.min(0.6, -(l + bias) * 0.55)));
+  const facet = (pts, bias) => {
+    path(ctx, pts);
+    ctx.fillStyle = tone(lit(pts), bias);
+    ctx.fill();
+  };
+  let outer;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  if (cut === 'emerald' || cut === 'asscher') {
+    // step cut: rings of long facets stepping down to a flat table
+    const w = cut === 'emerald' ? R * 0.78 : R * 0.92;
+    const h = R * 0.95;
+    const c = cut === 'emerald' ? R * 0.3 : R * 0.36;
+    const steps = [1, 0.82, 0.64, 0.46].map((f) => oct(w * f, h * f, c * f));
+    outer = steps[0];
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 8; j++) facet([steps[i][j], steps[i][(j + 1) % 8], steps[i + 1][(j + 1) % 8], steps[i + 1][j]], i === 1 ? 0.15 : i === 2 ? -0.1 : 0);
+    }
+    path(ctx, steps[3]);
+    const g = ctx.createLinearGradient(x - w * 0.46, y - h * 0.46, x + w * 0.46, y + h * 0.46);
+    g.addColorStop(0, mix(color, '#ffffff', 0.4));
+    g.addColorStop(0.5, color);
+    g.addColorStop(1, mix(color, '#000000', 0.25));
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = R * 0.018;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    for (const st of steps) {
+      path(ctx, st);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    for (let j = 0; j < 8; j++) {
+      ctx.moveTo(...steps[0][j]);
+      ctx.lineTo(...steps[3][j]);
+    }
+    ctx.stroke();
+  } else {
+    // brilliant cuts: a rim of girdle facets, kites, star facets and a table
+    const rx = cut === 'oval' ? R * 0.74 : R * 0.95;
+    const ry = R * 0.95;
+    const sq = cut === 'cushion' ? 0.55 : cut === 'princess' ? 6 : 0;
+    const rot = cut === 'princess' ? Math.PI / 4 : Math.PI / 16;
+    let rim;
+    let mid;
+    let table;
+    if (cut === 'princess') {
+      // square: corners out, an X of long facets, a square table
+      const c4 = (f) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [x + a * R * 0.86 * f, y + b * R * 0.86 * f]);
+      rim = c4(1);
+      table = c4(0.48);
+      const edges = (pts) => pts.map((p, j) => [(p[0] + pts[(j + 1) % 4][0]) / 2, (p[1] + pts[(j + 1) % 4][1]) / 2]);
+      const re = edges(rim);
+      for (let j = 0; j < 4; j++) {
+        facet([rim[j], re[j], table[j]], 0.05);
+        facet([re[j], rim[(j + 1) % 4], table[(j + 1) % 4]], -0.05);
+        facet([re[j], table[j], table[(j + 1) % 4]], 0.2);
+      }
+      outer = rim;
+    } else {
+      rim = ring(16, rx, ry, rot, sq);
+      mid = ring(8, rx * 0.72, ry * 0.72, rot + Math.PI / 16, sq);
+      table = ring(8, rx * 0.46, ry * 0.46, rot - Math.PI / 16 + Math.PI / 8, sq * 0.6);
+      for (let j = 0; j < 8; j++) {
+        facet([rim[2 * j], rim[(2 * j + 1) % 16], mid[j]], 0);
+        facet([rim[(2 * j + 1) % 16], rim[(2 * j + 2) % 16], mid[j]], -0.1);
+        facet([mid[j], rim[(2 * j + 2) % 16], mid[(j + 1) % 8], table[(j + 1) % 8]], 0.12);
+        facet([mid[j], table[(j + 1) % 8], table[j]], 0.3);
+      }
+      outer = rim;
+    }
+    path(ctx, table);
+    const g = ctx.createRadialGradient(x - R * 0.15, y - R * 0.2, R * 0.04, x, y, R * 0.5);
+    g.addColorStop(0, mix(color, '#ffffff', 0.4));
+    g.addColorStop(1, color);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = R * 0.016;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    if (mid) {
+      for (let j = 0; j < 8; j++) {
+        ctx.moveTo(...rim[2 * j]);
+        ctx.lineTo(...mid[j]);
+        ctx.lineTo(...rim[(2 * j + 2) % 16]);
+        ctx.moveTo(...rim[(2 * j + 1) % 16]);
+        ctx.lineTo(...mid[j]);
+        ctx.lineTo(...table[(j + 1) % 8]);
+        ctx.lineTo(...mid[(j + 1) % 8]);
+      }
+    } else {
+      for (let j = 0; j < 4; j++) {
+        ctx.moveTo(...rim[j]);
+        ctx.lineTo(...table[j]);
+      }
+    }
+    ctx.stroke();
+    path(ctx, table);
+    ctx.stroke();
+  }
+  // the girdle: a bright rim, and a glow of the stone's colour round it
+  path(ctx, outer);
+  ctx.lineWidth = R * 0.045;
+  ctx.strokeStyle = mix(color, '#ffffff', 0.6);
+  ctx.shadowColor = hexA(color, 0.9);
+  ctx.shadowBlur = 0.6 * tileK;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // light caught on the top-left facets
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.beginPath();
+  ctx.ellipse(x - R * 0.42, y - R * 0.5, R * 0.16, R * 0.05, -0.75, 0, TAU);
+  ctx.fill();
+  const k = R * 0.07;
+  ctx.beginPath();
+  ctx.moveTo(x + R * 0.38, y - R * 0.55 - k * 2);
+  ctx.quadraticCurveTo(x + R * 0.38, y - R * 0.55, x + R * 0.38 + k, y - R * 0.55);
+  ctx.quadraticCurveTo(x + R * 0.38, y - R * 0.55, x + R * 0.38, y - R * 0.55 + k * 2);
+  ctx.quadraticCurveTo(x + R * 0.38, y - R * 0.55, x + R * 0.38 - k, y - R * 0.55);
+  ctx.quadraticCurveTo(x + R * 0.38, y - R * 0.55, x + R * 0.38, y - R * 0.55 - k * 2);
+  ctx.fill();
+  ctx.restore();
+}
 
 // The corners of a square yard, dressed in the theme (art.decor). (x, y) is the yard's middle,
 // `outer`/`inner` half its size and half the size of the panel inside it.
