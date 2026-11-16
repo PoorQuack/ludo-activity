@@ -780,8 +780,8 @@ function renderTyping(line) {
 }
 
 // The sticker picker: a row of tabs, one per pack you own (plus single stickers and your recent
-// ones), and the chosen pack's stickers underneath. Each sticker inserts a :slug: code that the
-// server checks you own when you send it.
+// ones), and the chosen pack's stickers underneath. Clicking a sticker sends its :slug: code
+// straight away — the server checks you own it when it arrives.
 const RECENT_KEY = 'ludo-recent-stickers';
 const RECENT_MAX = 12;
 let pickerPack = null; // the tab last opened (kept between games)
@@ -848,7 +848,6 @@ function pickedGroup(groups) {
 
 function renderEmojiPop(box, groups, current) {
   const pop = box.querySelector('.emoji-pop');
-  const input = box.querySelector('input');
   pop.innerHTML = '';
   if (!groups.length) {
     const hint = document.createElement('p');
@@ -904,21 +903,9 @@ function renderEmojiPop(box, groups, current) {
     img.loading = 'lazy';
     b.appendChild(img);
     b.addEventListener('click', () => {
-      // With chat turned off there's no box to type into: the sticker goes straight away, and
-      // floats over your base like a board reaction
-      if (document.body.classList.contains('no-chat') || chatFolded()) {
-        send('chat', { text: e.insert });
-        pop.classList.add('hidden');
-        rememberSticker(e.insert);
-        renderEmojiPops();
-        return;
-      }
-      const pos = input.selectionStart ?? input.value.length;
-      input.setRangeText(e.insert, pos, input.selectionEnd ?? pos, 'end');
-      input.dispatchEvent(new Event('input'));
-      // On phones the box keeps (or doesn't have) focus as it was: focusing it here popped the
-      // keyboard open again after every sticker, and the whole game jumped.
-      if (!TOUCH) input.focus();
+      // Tap = send: the sticker goes straight to chat and floats over your base like a
+      // board reaction — no typing box needed.
+      send('chat', { text: e.insert });
       pop.classList.add('hidden');
       rememberSticker(e.insert);
       renderEmojiPops(); // so Recent is up to date next time
