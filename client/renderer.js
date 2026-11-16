@@ -1,6 +1,6 @@
 // Draws the board, tokens, dice and effects on a <canvas>.
 // Board positions come in board units (one square = 1, centre = 0,0); see shared/board.js.
-import { DECOR, HUBS, SPOTS, TOKEN_STARS, baseDecor, drawConstellation, drawShield, drawSpots, drawTile, gemYard, innerPanel, motif, paintBase, routeTurn, setDrawingFor, setTileK, texPattern, texture } from './draw-board.js';
+import { DECOR, HUBS, SPOTS, TOKEN_STARS, baseDecor, drawConstellation, drawShield, drawSpots, cutSpots, drawTile, gemYard, innerPanel, motif, paintBase, routeTurn, setDrawingFor, setTileK, texPattern, texture } from './draw-board.js';
 import { drawDice, drawDiceCube } from './draw-dice.js';
 import { PAWN_STYLES, TOKEN_MARKS, drawToken, glowSprite } from './draw-tokens.js';
 import { IDENTITY, TAU, TEAM_COLORS, catDecor, circle, drawDents, drawPinSpots, drawShape, easeInOut, easeOutBack, easeOutCubic, emoteImg, hexA, inkOn, mix, mul, path, rnd, rotX, rotY, roundRect, sparkle, teamBadge } from './draw-util.js';
@@ -242,6 +242,7 @@ export class BoardRenderer {
         if (art.yardGem) gemYard(ctx, b.x, b.y, inner * 0.94, color(seat), this.board.colors[seat]);
         if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.4, color(seat), this.board.colors[seat], inner, k);
         else if (art.pins === 'dents') drawDents(ctx, b, board.baseSpread, 0.6);
+        else if (art.pins === 'cut') cutSpots(ctx, b, board.baseSpread, 0.5, color(seat), this.board.colors[seat]);
         else if (SPOTS[art.pins]) drawSpots(ctx, art.pins, b, board.baseSpread, 0.62, color(seat));
         else drawPinSpots(ctx, b, board.baseSpread, 0.62, color(seat));
         if (art.decor === 'cat') catDecor(ctx, b.x, b.y, outer, color(seat), k);
@@ -263,6 +264,7 @@ export class BoardRenderer {
         if (art.yardGem) gemYard(ctx, b.x, b.y, b.size * 0.72, color(seat), this.board.colors[seat]); // (smaller: a round yard)
         if (art.pins === 'constellation') drawConstellation(ctx, b, board.baseSpread, 0.3, color(seat), this.board.colors[seat], b.size, k);
         else if (art.pins === 'dents') drawDents(ctx, b, board.baseSpread, 0.42);
+        else if (art.pins === 'cut') cutSpots(ctx, b, board.baseSpread, 0.36, color(seat), this.board.colors[seat]);
         else if (SPOTS[art.pins]) drawSpots(ctx, art.pins, b, board.baseSpread, 0.42, color(seat));
         else drawPinSpots(ctx, b, board.baseSpread, 0.42, color(seat));
       }
