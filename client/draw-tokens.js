@@ -258,7 +258,7 @@ export const TOKEN_MARKS = {
   robot: { y: 0.72, x: 0, size: 0.7 },
   penguin: { y: 0.6, x: 0, size: 0.7 },
   sakura: { y: 0.5, x: 0, size: 0.62 },
-  dino: { y: 0.55, x: 0.05, size: 0.62 },
+  dino: { y: 0.95, x: 0, size: 0.6 },
   ufo: { y: 0.95, x: 0, size: 0.6 },
   dragon: { y: 0.6, x: 0, size: 0.7 },
 };
@@ -390,10 +390,34 @@ export function eye(ctx, x, y, w, h, look = 0) {
   ctx.fill();
 }
 
+// The Dino tokens are painted pictures, one dinosaur per colour, each on its own pedestal:
+// a triceratops for red (orange too), a T. rex for green (purple too), a long-neck for yellow
+// and a stegosaurus with crystal plates for blue. They load once; until they have, the token
+// is drawn (dinoDrawn), and when one arrives the cached token pictures are thrown away.
+const dinoArt = {};
+function dinoPicture(name) {
+  const file = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(name) ? name : 'green';
+  let img = dinoArt[file];
+  if (!img) {
+    if (typeof Image === 'undefined') return null;
+    img = dinoArt[file] = new Image();
+    img.onload = () => pawnSprites.clear();
+    img.src = `/tokens/dino-${file}.webp`;
+  }
+  return img.complete && img.naturalWidth ? img : null;
+}
+
 export const TOKEN_SHAPES = {
-  // A little dinosaur sitting up in the player's colour: a pale belly, a big friendly eye, tiny
-  // arms, and crystal points down its back and tail, cut like the gem dice
-  dino(ctx, r, hex) {
+  dino(ctx, r, hex, sign) {
+    const img = dinoPicture(sign);
+    if (!img) return TOKEN_SHAPES.dinoDrawn(ctx, r, hex);
+    const h = r * 2.8;
+    const w = (h * img.naturalWidth) / img.naturalHeight;
+    ctx.drawImage(img, -w / 2, -h + r * 0.28, w, h);
+  },
+  // (stand-in while the picture loads) A little dinosaur sitting up in the player's colour: a
+  // pale belly, a big friendly eye, tiny arms, and crystal points down its back and tail
+  dinoDrawn(ctx, r, hex) {
     outline(ctx, r, hex);
     const dark = mix(hex, '#000000', 0.4);
     const crystal = (x, y, h, w, rot) => {
