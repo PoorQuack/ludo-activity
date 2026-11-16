@@ -1,6 +1,8 @@
 // Friends. "Played with" is everyone you've started a game with (newest first); from there you
-// can add people as friends, see who's online, and invite them to your room. An invite pops up
-// in their game if they're on, and otherwise arrives as a Discord DM from the app's bot.
+// can send someone a friend request. Friendship is two-way: it starts when they accept, and
+// ends for both when either removes the other. Friends see each other online and can invite
+// each other to their room. An invite pops up in their game if they're on, and otherwise
+// arrives as a Discord DM from the app's bot.
 // Kept in data/social.json. Guests (browser testing) are kept in memory only.
 
 import fs from 'node:fs';
@@ -8,6 +10,7 @@ import path from 'node:path';
 
 const MAX_MET = 30;
 const MAX_FRIENDS = 100;
+const MAX_REQUESTS = 50; // waiting requests, each way
 const SAVE_DELAY_MS = 2000;
 const INVITE_GAP_MS = 60 * 1000; // the same friend once a minute
 const INVITES_PER_HOUR = 20;
@@ -19,7 +22,7 @@ export class SocialBook {
   constructor(file, { now = Date.now } = {}) {
     this.file = file;
     this.now = now;
-    this.users = new Map(); // id -> { met: [{ id, at }], friends: [id] }
+    this.users = new Map(); // id -> { met: [{ id, at }], friends: [id], in: [{ id, at }], out: [{ id, at }] }
     this.names = new Map(); // id -> latest display name
     this.avatars = new Map(); // id -> Discord avatar hash ('' for the default avatar)
     this.sent = new Map(); // `${from}>${to}` -> time; and from -> [times] for the hourly cap
@@ -31,9 +34,12 @@ export class SocialBook {
           this.users.set(id, {
             met: (u.met || []).filter((m) => m && typeof m.id === 'string').slice(0, MAX_MET),
             friends: (u.friends || []).filter((f) => typeof f === 'string').slice(0, MAX_FRIENDS),
+            in: (u.in || []).filter((r) => r && typeof r.id === 'string').slice(0, MAX_REQUESTS),
+            out: (u.out || []).filter((r) => r && typeof r.id === 'string').slice(0, MAX_REQUESTS),
             ...(u.noInvites ? { noInvites: true } : {}),
           });
         }
+        this.migrateOneWay();
         for (const [id, n] of Object.entries(doc.names || {})) this.names.set(id, String(n));
         for (const [id, a] of Object.entries(doc.avatars || {})) this.avatars.set(id, String(a));
       } catch (err) {
@@ -46,8 +52,30 @@ export class SocialBook {
 
   user(id) {
     let u = this.users.get(id);
-    if (!u) this.users.set(id, (u = { met: [], friends: [] }));
+    if (!u) this.users.set(id, (u = { met: [], friends: [], in: [], out: [] }));
+    u.in ||= [];
+    u.out ||= [];
     return u;
+  }
+
+  // Before requests, adding a friend was one-way: A could list B without B ever knowing. Each
+  // one-way friendship becomes a request from A to B (B gets it in their inbox); both-way ones
+  // stay friends.
+  migrateOneWay() {
+    const t = this.now();
+    let changed = false;
+    for (const [id, u] of this.users) {
+      for (const f of [...u.friends]) {
+        if (this.users.get(f)?.friends.includes(id)) continue;
+        u.friends = u.friends.filter((x) => x !== f);
+        this.user(id);
+        if (!u.out.some((r) => r.id === f)) u.out.push({ id: f, at: t });
+        const v = this.user(f);
+        if (!v.in.some((r) => r.id === id)) v.in.push({ id, at: t });
+        changed = true;
+      }
+    }
+    if (changed) this.save();
   }
 
   // Seen on login: keep their name and avatar fresh for everyone's lists.
@@ -72,20 +100,71 @@ export class SocialBook {
     this.save();
   }
 
-  addFriend(id, friendId) {
-    if (id === friendId) throw new Error("That's you!");
+  // A friend request. Returns what happened: 'sent', 'accepted' (they had already asked you, so
+  // you're friends now), 'pending' (already asked) or 'friends' (already friends).
+  request(id, other) {
+    if (id === other) throw new Error("That's you!");
     const u = this.user(id);
-    if (!u.met.some((m) => m.id === friendId)) throw new Error('You can add people you have played with');
-    if (u.friends.includes(friendId)) return;
+    if (u.friends.includes(other)) return 'friends';
+    if (u.in.some((r) => r.id === other)) {
+      this.accept(id, other);
+      return 'accepted';
+    }
+    if (u.out.some((r) => r.id === other)) return 'pending';
+    if (!u.met.some((m) => m.id === other)) throw new Error('You can add people you have played with');
     if (u.friends.length >= MAX_FRIENDS) throw new Error(`You can have up to ${MAX_FRIENDS} friends`);
-    u.friends.unshift(friendId);
+    if (u.out.length >= MAX_REQUESTS) throw new Error('You have a lot of requests waiting: give people time to answer');
+    const v = this.user(other);
+    if (v.in.length >= MAX_REQUESTS) throw new Error("They have a lot of requests waiting, try again later");
+    const t = this.now();
+    u.out.unshift({ id: other, at: t });
+    v.in.unshift({ id, at: t });
+    this.save();
+    return 'sent';
+  }
+
+  // Accept someone's request: friends both ways.
+  accept(id, from) {
+    const u = this.user(id);
+    if (!u.in.some((r) => r.id === from)) throw new Error('That request is gone');
+    const v = this.user(from);
+    if (u.friends.length >= MAX_FRIENDS) throw new Error(`You can have up to ${MAX_FRIENDS} friends`);
+    this.dropRequest(from, id);
+    if (!u.friends.includes(from)) u.friends.unshift(from);
+    if (!v.friends.includes(id)) v.friends.unshift(id);
     this.save();
   }
 
+  // Say no to a request (they aren't told), or take back one you sent
+  decline(id, from) {
+    this.dropRequest(from, id);
+    this.save();
+  }
+
+  cancel(id, to) {
+    this.dropRequest(id, to);
+    this.save();
+  }
+
+  dropRequest(from, to) {
+    const a = this.user(from);
+    const b = this.user(to);
+    a.out = a.out.filter((r) => r.id !== to);
+    b.in = b.in.filter((r) => r.id !== from);
+  }
+
+  // Unfriend: gone from both lists
   removeFriend(id, friendId) {
     const u = this.user(id);
     u.friends = u.friends.filter((f) => f !== friendId);
+    const v = this.users.get(friendId);
+    if (v) v.friends = v.friends.filter((f) => f !== id);
     this.save();
+  }
+
+  // Requests waiting for this player's answer, newest first
+  requests(id) {
+    return (this.users.get(id)?.in || []).map((r) => ({ id: r.id, name: this.names.get(r.id) || 'Player', avatar: !isGuest(r.id), at: r.at }));
   }
 
   // ⚙ Settings → General → "Receive invitations from my friends"
@@ -106,12 +185,17 @@ export class SocialBook {
 
   // The friends card: friends first, then people played with who aren't friends yet.
   view(id, isOnline = () => false) {
-    const u = this.users.get(id) || { met: [], friends: [] };
+    const u = this.users.get(id) || { met: [], friends: [], in: [], out: [] };
     const person = (pid, extra = {}) => ({ id: pid, name: this.names.get(pid) || 'Player', avatar: !isGuest(pid), online: isOnline(pid), ...extra });
+    const sent = new Set((u.out || []).map((r) => r.id));
+    const asked = new Set((u.in || []).map((r) => r.id));
     return {
       invitesOn: !u.noInvites,
       friends: u.friends.map((f) => person(f)),
-      met: u.met.filter((m) => !u.friends.includes(m.id)).map((m) => person(m.id, { at: m.at })),
+      // requests waiting for your answer (shown in the inbox and on the Friends card)
+      requests: (u.in || []).map((r) => person(r.id, { at: r.at })),
+      // people played with: "sent" = you asked them, "asked" = they asked you
+      met: u.met.filter((m) => !u.friends.includes(m.id)).map((m) => person(m.id, { at: m.at, ...(sent.has(m.id) ? { sent: true } : {}), ...(asked.has(m.id) ? { asked: true } : {}) })),
     };
   }
 

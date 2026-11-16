@@ -20,24 +20,72 @@ test('a started game puts everyone on each other\'s "played with" list, newest f
   assert.deepEqual(book.view('22222').met.map((m) => m.name), ['Ann']);
 });
 
-test('friends: only people you played with, no duplicates, removable, saved', () => {
+test('friend requests: only to people you played with; friends once they accept, both ways', () => {
   const file = tmp();
   const book = new SocialBook(file);
   book.played([{ userId: '11111', name: 'Ann' }, { userId: '22222', name: 'Bob' }]);
-  assert.throws(() => book.addFriend('11111', '99999'), /played with/);
-  assert.throws(() => book.addFriend('11111', '11111'), /you/);
-  book.addFriend('11111', '22222');
-  book.addFriend('11111', '22222');
+  assert.throws(() => book.request('11111', '99999'), /played with/);
+  assert.throws(() => book.request('11111', '11111'), /you/);
+  assert.equal(book.request('11111', '22222'), 'sent');
+  assert.equal(book.request('11111', '22222'), 'pending');
+  // not friends yet: Ann sees "sent", Bob has a request waiting
+  assert.equal(book.isFriend('11111', '22222'), false);
+  assert.equal(book.view('11111').met[0].sent, true);
+  assert.deepEqual(book.requests('22222').map((r) => r.name), ['Ann']);
+  assert.equal(book.view('22222').met[0].asked, true);
+  book.accept('22222', '11111');
+  assert.equal(book.isFriend('11111', '22222'), true);
+  assert.equal(book.isFriend('22222', '11111'), true);
+  assert.equal(book.requests('22222').length, 0);
   let v = book.view('11111', (id) => id === '22222');
   assert.deepEqual(v.friends.map((f) => [f.name, f.online]), [['Bob', true]]);
   assert.equal(v.met.length, 0); // friends aren't listed twice
   book.flush();
   const again = new SocialBook(file);
-  assert.equal(again.isFriend('11111', '22222'), true);
-  again.removeFriend('11111', '22222');
+  assert.equal(again.isFriend('22222', '11111'), true);
+  // removing works for both
+  again.removeFriend('22222', '11111');
+  assert.equal(again.isFriend('11111', '22222'), false);
   v = again.view('11111');
   assert.equal(v.friends.length, 0);
   assert.equal(v.met.length, 1);
+});
+
+test('asking someone who already asked you makes you friends at once; declining and cancelling clear it', () => {
+  const book = new SocialBook(null);
+  book.played([{ userId: '1', name: 'A' }, { userId: '2', name: 'B' }, { userId: '3', name: 'C' }]);
+  book.request('1', '2');
+  assert.equal(book.request('2', '1'), 'accepted');
+  assert.equal(book.isFriend('1', '2'), true);
+  assert.equal(book.request('1', '2'), 'friends');
+  book.request('1', '3');
+  book.decline('3', '1');
+  assert.equal(book.requests('3').length, 0);
+  assert.equal(book.view('1').met.find((m) => m.id === '3').sent, undefined);
+  book.request('3', '1');
+  book.cancel('3', '1');
+  assert.equal(book.requests('1').length, 0);
+  assert.throws(() => book.accept('1', '3'), /gone/);
+});
+
+test('old one-way friends become a request to the other person; two-way ones stay friends', () => {
+  const file = tmp();
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      users: {
+        11111: { met: [{ id: '22222', at: 1 }, { id: '33333', at: 1 }], friends: ['22222', '33333'] },
+        22222: { met: [{ id: '11111', at: 1 }], friends: [] },
+        33333: { met: [{ id: '11111', at: 1 }], friends: ['11111'] },
+      },
+      names: { 11111: 'Ann', 22222: 'Bob', 33333: 'Cat' },
+    }),
+  );
+  const book = new SocialBook(file);
+  assert.equal(book.isFriend('11111', '22222'), false);
+  assert.deepEqual(book.requests('22222').map((r) => r.name), ['Ann']);
+  assert.equal(book.isFriend('11111', '33333'), true);
+  assert.equal(book.isFriend('33333', '11111'), true);
 });
 
 test('guests only meet guests, and are never saved', () => {

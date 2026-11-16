@@ -459,11 +459,12 @@ export class BoardRenderer {
   //    nothing else
   // Neither looks at what the game is doing, so a roll or a move can't disturb them.
   // Scene lighting (scene.js) for themes that ask for it: the finished board, lit, with the
-  // images its moving effect needs. null when the theme has none, lighting is switched off
-  // (Settings), or the device is in lite mode.
+  // images its moving effect needs. null when the theme has none or lighting is switched off
+  // (Settings). Lite (Smooth) mode keeps it: it's painted once, so it costs next to nothing;
+  // only its moving parts stand still there.
   litScene() {
     const art = this.theme.art || {};
-    if (!art.scene || art.under || !sceneSwitch.on || this.lite || !this.size || !this.layer.width) return null;
+    if (!art.scene || art.under || !sceneSwitch.on || !this.size || !this.layer.width) return null;
     if (!this.lit) {
       const flat = document.createElement('canvas');
       flat.width = flat.height = this.layer.width;
@@ -500,6 +501,19 @@ export class BoardRenderer {
         b.drawImage(this.layer, 0, 0);
       }
     }
+    if (lit && this.lite) {
+      // Smooth mode on a lit board: the light, shade and petals, painted once and left still
+      if (this.fxStill !== lit) {
+        this.fxStill = lit;
+        this.fxLive = true;
+        const f = this.fx.getContext('2d');
+        f.setTransform(1, 0, 0, 1, 0, 0);
+        f.clearRect(0, 0, this.fx.width, this.fx.height);
+        drawSceneFx(f, lit, this.fxScale * this.cell, this.fx.width / 2, this.span / 2, 0, this.fx.width);
+      }
+      return;
+    }
+    this.fxStill = null;
     const live = art.fx && !this.lite;
     if (!live) {
       if (this.fxLive !== false) {
@@ -554,7 +568,7 @@ export class BoardRenderer {
       const lit = this.litScene();
       if (lit) {
         ctx.drawImage(lit.canvas, 0, 0);
-        drawSceneFx(ctx, lit, this.dpr * this.cell, (this.dpr * this.size) / 2, this.span / 2, now, this.canvas.width);
+        drawSceneFx(ctx, lit, this.dpr * this.cell, (this.dpr * this.size) / 2, this.span / 2, this.lite ? 0 : now, this.canvas.width);
       } else {
         ctx.drawImage(art.under && this.animReady ? this.animFull : this.under, 0, 0);
         ctx.drawImage(this.layer, 0, 0);
@@ -725,7 +739,7 @@ export class BoardRenderer {
     if (p.moving || (shield && p.shieldAge < 450)) this.fast = true;
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'back');
     if (p.fade < 1) ctx.globalAlpha = p.fade;
-    if (this.lit && this.theme.art?.scene && sceneSwitch.on && !this.lite) pieceShadow(ctx, x, y - p.lift * s * 0.3, r); // lit boards: a long shadow, like the trees'
+    if (this.lit && this.theme.art?.scene && sceneSwitch.on) pieceShadow(ctx, x, y - p.lift * s * 0.3, r); // lit boards: a long shadow, like the trees'
     drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash, sign: this.board.colors[p.seat], t: this.lite ? null : now });
     ctx.globalAlpha = 1;
     // Colour-blind mode: the player's shape on the token's body (each shape has its own spot)

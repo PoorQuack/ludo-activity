@@ -30,6 +30,7 @@
               </button>
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn" data-go="howto" aria-label="How to play" title="How to play"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6M12 16.9v.1" /></svg></button>
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn" data-player-btn aria-label="Music" title="Music" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg></button>
+              <button data-i18n-attr="title,aria-label" class="btn small icon-btn inbox-btn" data-inbox-btn aria-label="Inbox" title="Inbox: friend requests and news"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" /></svg><span class="inbox-badge hidden" aria-hidden="true"></span></button>
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn" data-settings-btn aria-label="Settings" title="Settings: sound, graphics, colour-blind modes"><svg class="ico gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></button>
               <div id="profile-card" class="profile-card" title="" role="button" tabindex="0">
                 <span class="avatar" data-avatar></span>
@@ -183,7 +184,7 @@
                 <div class="sec-head">
                   <h2 data-i18n class="sec-title">Friends</h2>
                   <nav class="mini-tabs" role="tablist">
-                    <button class="active" data-ftab="friends" role="tab"><span data-i18n>Friends</span> <span id="friends-count"></span></button>
+                    <button class="active" data-ftab="friends" role="tab"><span data-i18n>Friends</span> <span id="friends-count"></span><i id="friends-req-dot" class="new-dot hidden" aria-hidden="true"></i></button>
                     <button data-i18n data-ftab="met" role="tab">Played with</button>
                   </nav>
                 </div>
@@ -316,6 +317,7 @@
           <header class="panel-head">
             <span id="phase-tag" class="tag"></span>
             <button data-i18n-attr="title,aria-label" class="btn small icon-btn gear-btn" data-player-btn aria-label="Music" title="Music" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg></button>
+            <button data-i18n-attr="title,aria-label" class="btn small icon-btn inbox-btn gear-btn" data-inbox-btn aria-label="Inbox" title="Inbox: friend requests and news"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" /></svg><span class="inbox-badge hidden" aria-hidden="true"></span></button>
             <button data-i18n-attr="title,aria-label" class="btn small icon-btn gear-btn" data-settings-btn aria-label="Settings" title="Settings: sound, graphics, colour-blind modes"><svg class="ico gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></button>
             <button data-i18n-attr="aria-label" id="drawer-btn" class="btn small icon-btn" aria-label="Menu" aria-expanded="false">☰</button>
           </header>
@@ -420,6 +422,31 @@
       </div>
 
       <!-- ⚙ Settings: sections on the left (tabs along the top on phones) -->
+      <!-- Inbox: friend requests waiting for an answer, then notices and announcements -->
+      <div id="inbox" class="modal-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="inbox-title">
+        <div class="modal-card inbox-card">
+          <div class="inbox-head">
+            <b id="inbox-title" data-i18n>Inbox</b>
+            <button type="button" class="set-close" id="inbox-close" aria-label="Close" data-i18n-attr="aria-label"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+          </div>
+          <form id="inbox-compose" class="inbox-compose hidden" autocomplete="off">
+            <div class="set-label" data-i18n>Post an announcement</div>
+            <input id="announce-title" name="title" maxlength="80" required placeholder="Title…" aria-label="Title" data-i18n-attr="placeholder,aria-label" />
+            <textarea id="announce-body" name="body" maxlength="600" rows="3" placeholder="Message to every player (optional)…" aria-label="Message" data-i18n-attr="placeholder,aria-label"></textarea>
+            <button type="submit" class="btn small primary" data-i18n>Post to everyone</button>
+          </form>
+          <section id="inbox-requests" class="inbox-section hidden">
+            <div class="set-label" data-i18n>Friend requests</div>
+            <ul id="inbox-request-list" class="inbox-list"></ul>
+          </section>
+          <section class="inbox-section">
+            <div class="set-label" data-i18n>Notifications</div>
+            <ul id="inbox-list" class="inbox-list" aria-live="polite"></ul>
+            <p id="inbox-empty" class="inbox-empty hidden" data-i18n>Nothing new. Friend requests and news show up here.</p>
+          </section>
+        </div>
+      </div>
+
       <div id="settings" class="modal-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div class="modal-card settings-card">
           <nav class="set-nav" aria-label="Settings sections" data-i18n-attr="aria-label">

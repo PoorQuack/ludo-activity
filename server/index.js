@@ -16,6 +16,7 @@ import { rig, unrig, riggedList } from './rig.js';
 import { SupportDesk, SUPPORT_MAX_FILE } from './support.js';
 import { ServerInvite, SNOOZE_MS } from './invite.js';
 import { SocialBook, sendDm } from './social.js';
+import { Inbox } from './inbox.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -37,6 +38,9 @@ const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const ALLOW_GUESTS = (process.env.ALLOW_GUESTS ?? 'true') === 'true';
 // For testing skins: every shop item costs 0 coins.
 const FREE_SHOP = process.env.FREE_SHOP === 'true';
+const INBOX_FILE = process.env.INBOX_FILE || path.join(path.dirname(DATA_FILE), 'inbox.json');
+// Discord user ids (comma-separated) who can post announcements from inside the game
+const ADMIN_IDS = new Set((process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean));
 const ROOM_IDLE_MS = 2 * 60_000; // an empty room waits this long (for a refresh to rejoin) before closing
 const LIST_EVERY_MS = 1000; // the room list in everyone's menu refreshes at most this often
 
@@ -154,6 +158,26 @@ app.post('/api/admin/coins', (req, res) => {
   store.flush();
   console.log(`Admin: ${amount >= 0 ? 'gave' : 'took'} ${Math.abs(amount)} coins ${amount >= 0 ? 'to' : 'from'} ${userId} (now ${coins})`);
   res.json({ userId, coins });
+});
+
+// Announcements (scripts/announce.sh), VM only: everyone gets it in their inbox, live if they're
+// online. { title, body } posts; { delete: id } takes one down.
+app.post('/api/admin/announce', (req, res) => {
+  if (!fromVm(req)) return res.status(404).end();
+  try {
+    if (req.body?.delete) {
+      const deleted = inbox.unannounce(String(req.body.delete));
+      for (const id of userSockets.keys()) sendInbox(id);
+      return res.json({ deleted });
+    }
+    const item = inbox.announce(req.body?.title, req.body?.body);
+    inbox.flush();
+    announceToAll(item);
+    console.log(`Admin: announced "${item.title}"`);
+    res.json(item);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Testing (scripts/rig-dice.sh), VM only: a player starts every turn with two 6s for a while.
@@ -286,6 +310,22 @@ const social = new SocialBook(SOCIAL_FILE);
 const isOnline = (id) => userSockets.has(id);
 function sendFriends(userId) {
   sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null });
+}
+// The inbox: personal notices, announcements, and (from the friends book) requests waiting
+const inbox = new Inbox(INBOX_FILE);
+function sendInbox(userId) {
+  sendTo(userId, { type: 'inbox', ...inbox.view(userId), requests: social.requests(userId), canAnnounce: ADMIN_IDS.has(userId) });
+}
+function announceToAll(item) {
+  for (const id of userSockets.keys()) sendInbox(id);
+  for (const id of userSockets.keys()) sendTo(id, { type: 'announcement', item });
+}
+// Two people's friends lists and inboxes changed (a request sent, answered or a friend removed)
+function bothChanged(a, b) {
+  for (const id of [a, b]) {
+    sendFriends(id);
+    sendInbox(id);
+  }
 }
 // Someone came online, went offline or played a game: refresh the lists that show them.
 function friendsChanged(userId) {
@@ -621,6 +661,7 @@ wss.on('connection', (ws, req) => {
         claimPurchases(user.id); // bought something while the game was closed?
         if (userSockets.get(user.id).size === 1) friendsChanged(user.id); // just came online
         sendFriends(user.id); // their own list, every connect (friendsChanged skips the person themselves)
+        sendInbox(user.id);
         // Back after a refresh or a dropped connection: return to the same room if it's still open
         const room = msg.rejoin && directory.findCode(msg.rejoin);
         if (room) {
@@ -648,9 +689,42 @@ wss.on('connection', (ws, req) => {
       if (msg.type === 'friend') {
         const id = String(msg.id || '');
         if (msg.op === 'invites') social.setInvites(ctx.user.id, !!msg.on);
-        else if (msg.op === 'add') social.addFriend(ctx.user.id, id);
-        else if (msg.op === 'remove') social.removeFriend(ctx.user.id, id);
+        else if (msg.op === 'add') {
+          const r = social.request(ctx.user.id, id);
+          if (r === 'sent') sendTo(id, { type: 'friendRequest', from: { id: ctx.user.id, name: ctx.user.name } });
+          if (r === 'accepted') inbox.add(id, { kind: 'friendAccepted', from: ctx.user.id, name: ctx.user.name });
+          send({ type: 'friendResult', result: r, id });
+          return bothChanged(ctx.user.id, id);
+        } else if (msg.op === 'accept') {
+          social.accept(ctx.user.id, id);
+          inbox.add(id, { kind: 'friendAccepted', from: ctx.user.id, name: ctx.user.name });
+          return bothChanged(ctx.user.id, id);
+        } else if (msg.op === 'decline') {
+          social.decline(ctx.user.id, id);
+          return bothChanged(ctx.user.id, id);
+        } else if (msg.op === 'cancel') {
+          social.cancel(ctx.user.id, id);
+          return bothChanged(ctx.user.id, id);
+        } else if (msg.op === 'remove') {
+          social.removeFriend(ctx.user.id, id);
+          return bothChanged(ctx.user.id, id);
+        }
         return sendFriends(ctx.user.id);
+      }
+      if (msg.type === 'inbox') {
+        if (msg.op === 'read') inbox.markRead(ctx.user.id);
+        return sendInbox(ctx.user.id);
+      }
+      if (msg.type === 'announce') {
+        if (!ADMIN_IDS.has(ctx.user.id)) throw new Error('Only the game\'s owner can post announcements');
+        if (msg.op === 'delete') {
+          inbox.unannounce(String(msg.id || ''));
+          for (const uid of userSockets.keys()) sendInbox(uid);
+          return;
+        }
+        const item = inbox.announce(msg.title, msg.body);
+        console.log(`Announcement by ${ctx.user.id}: ${item.title}`);
+        return announceToAll(item);
       }
       if (msg.type === 'friendInvite') return inviteFriend(ws, String(msg.to || ''));
       if (msg.type === 'support') {
@@ -754,6 +828,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     weekly.flush();
     support.save();
     social.flush();
+    inbox.flush();
     for (const ws of wss.clients) ws.close(1012, 'Server update');
     setTimeout(() => process.exit(0), 300); // a moment for those messages to go out
   });

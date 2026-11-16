@@ -282,6 +282,20 @@ function connect() {
       friendsData = msg;
       renderFriends();
       renderPrefs();
+    } else if (msg.type === 'inbox') {
+      inboxData = msg;
+      renderInbox();
+    } else if (msg.type === 'friendRequest') {
+      sfx('turn');
+      toast(t('👋 {name} sent you a friend request', { name: msg.from.name }), 'notice', 4500);
+    } else if (msg.type === 'friendResult') {
+      const name = friendsData?.met?.find((m) => m.id === msg.id)?.name || friendsData?.friends?.find((f) => f.id === msg.id)?.name || t('them');
+      if (msg.result === 'sent') toast(t('Friend request sent to {name}', { name }), 'ok', 3000);
+      else if (msg.result === 'accepted') toast(t('🤝 You and {name} are friends now', { name }), 'ok', 3500);
+      else if (msg.result === 'pending') toast(t('Already sent: waiting for {name} to answer', { name }), 'notice', 3000);
+    } else if (msg.type === 'announcement') {
+      sfx('turn');
+      toast(t('📣 {title}', { title: msg.item.title }), 'notice', 5000);
     } else if (msg.type === 'purchased') {
       sfx('buy');
       if (msg.kind === 'coins') toast(t('💰 +{coins} coins! Thank you for your support', { coins: msg.coins }), 'ok', 5000);
@@ -1405,6 +1419,7 @@ window.addEventListener('keydown', (e) => {
     closePlayer();
     closeSupport();
     closeSettings();
+    closeInbox();
     for (const p of document.querySelectorAll('.emoji-pop:not(.hidden)')) p.classList.add('hidden');
   }
 });
@@ -1739,10 +1754,120 @@ function onDailyRoll({ roll, coins, day, doubled }) {
 $('daily-roll').addEventListener('click', rollDaily);
 $('daily-btn').addEventListener('click', rollDaily);
 
+// ---------------- inbox ----------------
+// The bell: friend requests waiting for an answer, "X accepted your request", and announcements
+// from the game's owner. The red count is unread notices plus waiting requests.
+let inboxData = { items: [], unread: 0, requests: [], canAnnounce: false };
+let inboxFresh = new Set(); // unread when the inbox was opened: stays highlighted while it's open
+const inboxEl = $('inbox');
+function renderInbox() {
+  const reqs = inboxData.requests || [];
+  const n = (inboxData.unread || 0) + reqs.length;
+  for (const b of document.querySelectorAll('[data-inbox-btn]')) {
+    const badge = b.querySelector('.inbox-badge');
+    badge.textContent = n > 9 ? '9+' : String(n);
+    badge.classList.toggle('hidden', !n);
+    b.setAttribute('aria-label', n ? t('Inbox: {n} new', { n }) : t('Inbox'));
+  }
+  $('inbox-compose').classList.toggle('hidden', !inboxData.canAnnounce);
+  $('inbox-requests').classList.toggle('hidden', !reqs.length);
+  const rl = $('inbox-request-list');
+  rl.innerHTML = '';
+  for (const r of reqs) {
+    const li = document.createElement('li');
+    li.className = 'inbox-item unread';
+    const av = document.createElement('span');
+    av.className = 'avatar';
+    fillAvatar(av, r);
+    const txt = document.createElement('div');
+    txt.className = 'inbox-text';
+    txt.innerHTML = '<b></b><small></small>';
+    txt.querySelector('b').textContent = r.name;
+    txt.querySelector('small').textContent = `${t('Wants to be friends')} · ${ago(r.at)}`;
+    const acts = document.createElement('div');
+    acts.className = 'inbox-acts';
+    for (const [label, cls, op] of [[t('Accept'), 'primary', 'accept'], [t('Decline'), 'quiet', 'decline']]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `btn small ${cls}`;
+      b.textContent = label;
+      b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op, id: r.id })));
+      acts.appendChild(b);
+    }
+    li.append(av, txt, acts);
+    rl.appendChild(li);
+  }
+  const list = $('inbox-list');
+  list.innerHTML = '';
+  for (const it of inboxData.items || []) {
+    const li = document.createElement('li');
+    li.className = `inbox-item${!it.read || inboxFresh.has(it.id) ? ' unread' : ''}`;
+    const icon = document.createElement('span');
+    icon.className = 'inbox-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    const txt = document.createElement('div');
+    txt.className = 'inbox-text';
+    if (it.kind === 'news') {
+      icon.textContent = '📣';
+      txt.innerHTML = '<b></b><p></p><small></small>';
+      txt.querySelector('b').textContent = it.title;
+      txt.querySelector('p').textContent = it.body || '';
+      if (!it.body) txt.querySelector('p').remove();
+      txt.querySelector('small').textContent = `${t('Announcement')} · ${ago(it.at)}`;
+    } else {
+      icon.textContent = '🤝';
+      txt.innerHTML = '<b></b><small></small>';
+      txt.querySelector('b').textContent = t('{name} accepted your friend request', { name: it.name || t('Someone') });
+      txt.querySelector('small').textContent = ago(it.at);
+    }
+    li.append(icon, txt);
+    if (it.kind === 'news' && inboxData.canAnnounce) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn small quiet inbox-del';
+      del.textContent = '✕';
+      del.title = t('Take this announcement down');
+      del.setAttribute('aria-label', del.title);
+      del.addEventListener('click', () => {
+        if (confirmRemove({ id: it.id, name: it.title })) ws?.send(JSON.stringify({ type: 'announce', op: 'delete', id: it.id }));
+      });
+      li.appendChild(del);
+    }
+    list.appendChild(li);
+  }
+  $('inbox-empty').classList.toggle('hidden', (inboxData.items || []).length > 0 || reqs.length > 0);
+}
+function openInbox() {
+  closePlayer();
+  closeSettings();
+  inboxFresh = new Set((inboxData.items || []).filter((i) => !i.read).map((i) => i.id));
+  inboxEl.classList.remove('hidden');
+  renderInbox();
+  $('inbox-close').focus();
+  if (inboxData.unread) ws?.send(JSON.stringify({ type: 'inbox', op: 'read' }));
+}
+function closeInbox() {
+  if (inboxEl.classList.contains('hidden')) return;
+  inboxEl.classList.add('hidden');
+  inboxFresh = new Set();
+  renderInbox();
+}
+for (const b of document.querySelectorAll('[data-inbox-btn]')) b.addEventListener('click', openInbox);
+$('inbox-close').addEventListener('click', closeInbox);
+inboxEl.addEventListener('pointerdown', (e) => e.target === inboxEl && closeInbox());
+$('inbox-compose').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const title = $('announce-title').value.trim();
+  if (!title) return;
+  ws?.send(JSON.stringify({ type: 'announce', title, body: $('announce-body').value.trim() }));
+  $('announce-title').value = '';
+  $('announce-body').value = '';
+});
+
 // ---------------- friends ----------------
 
-function ago(t) {
-  const m = Math.floor((Date.now() - t) / 60_000);
+function ago(at) {
+  const m = Math.floor((Date.now() - at) / 60_000);
   if (m < 60) return m <= 1 ? t('just now') : t('{m} min ago', { m });
   const h = Math.floor(m / 60);
   if (h < 24) return t('{h}h ago', { h });
@@ -1757,7 +1882,8 @@ function renderFriends() {
   for (const b of document.querySelectorAll('[data-ftab]')) b.classList.toggle('active', b.dataset.ftab === friendsTab);
   const online = data.friends.filter((f) => f.online).length;
   $('friends-count').textContent = data.friends.length ? `(${online ? t('{n} on', { n: online }) : data.friends.length})` : '';
-  const people = friendsTab === 'friends' ? [...data.friends].sort((a, b) => b.online - a.online) : data.met;
+  const requests = friendsTab === 'friends' ? data.requests || [] : [];
+  const people = friendsTab === 'friends' ? [...requests.map((r) => ({ ...r, request: true })), ...[...data.friends].sort((a, b) => b.online - a.online)] : data.met;
   list.innerHTML = '';
   const inRoom = !!state?.code;
   for (const p of people) {
@@ -1769,7 +1895,13 @@ function renderFriends() {
     who.className = 'friend-who';
     who.innerHTML = `<b></b><small class="${p.online ? 'on' : ''}"></small>`;
     who.querySelector('b').textContent = p.name;
-    who.querySelector('small').textContent = p.online ? t('Online') : friendsTab === 'met' && p.at ? t('Played {when}', { when: ago(p.at) }) : t('Offline');
+    who.querySelector('small').textContent = p.request
+      ? t('Wants to be friends')
+      : p.online
+        ? t('Online')
+        : friendsTab === 'met' && p.at
+          ? t('Played {when}', { when: ago(p.at) })
+          : t('Offline');
     li.append(av, who);
     const btn = (label, cls, title, fn) => {
       const b = document.createElement('button');
@@ -1780,14 +1912,27 @@ function renderFriends() {
       li.appendChild(b);
       return b;
     };
+    const friendOp = (op) => () => ws?.send(JSON.stringify({ type: 'friend', op, id: p.id }));
+    if (p.request) {
+      li.classList.add('is-request');
+      btn(t('Accept'), 'primary', t('Become friends'), friendOp('accept'));
+      btn(t('Decline'), 'quiet', t('Say no (they are not told)'), friendOp('decline'));
+      list.appendChild(li);
+      continue;
+    }
     if (inRoom) btn(t('Invite'), 'primary', p.online ? t('Pops up in their game') : t('Sent to their Discord DMs'), () => ws?.send(JSON.stringify({ type: 'friendInvite', to: p.id })));
-    if (friendsTab === 'met') btn(t('+ Add'), '', t('Add as a friend'), () => ws?.send(JSON.stringify({ type: 'friend', op: 'add', id: p.id })));
-    else
+    if (friendsTab === 'met') {
+      if (p.asked) btn(t('Accept'), 'primary', t('They sent you a friend request'), friendOp('accept'));
+      else if (p.sent) btn(t('Requested'), 'quiet', t('Waiting for them to accept. Tap to take it back.'), friendOp('cancel'));
+      else btn(t('+ Add'), '', t('Send a friend request'), friendOp('add'));
+    } else
       btn('✕', 'quiet', t('Remove friend'), () => {
         if (confirmRemove(p)) ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: p.id }));
       });
     list.appendChild(li);
   }
+  const reqCount = (data.requests || []).length;
+  $('friends-req-dot').classList.toggle('hidden', !reqCount);
   if (friendsTab === 'friends' && !people.length)
     hint.textContent = data.met.length ? t('No friends yet: add people from Played with.') : t('Play a game with other people, then add them as friends here.');
   else if (friendsTab === 'met' && !people.length) hint.textContent = data.friends.length ? t('Everyone you played with is already a friend.') : t('People you play games with show up here.');
@@ -3618,8 +3763,8 @@ function uiSoundFor(b) {
   if (b.dataset.sfx) return b.dataset.sfx;
   if (b.matches('[role=switch], .switch, .toggle, [role=radio], [data-visibility]')) return 'toggle';
   if (b.matches('[role=tab], .tab, [data-ftab], [data-set-tab], [data-lb], #shop-tabs button, .howto-tabs button')) return 'tab';
-  if (b.matches('[data-go=menu], .set-close, [aria-label=Close], #settings-close, #support-close, .item-close, #invite-no, #room-invite-no')) return 'back';
-  if (b.matches('[data-go], [data-settings-btn]')) return 'open';
+  if (b.matches('[data-go=menu], .set-close, [aria-label=Close], #settings-close, #inbox-close, #support-close, .item-close, #invite-no, #room-invite-no')) return 'back';
+  if (b.matches('[data-go], [data-settings-btn], [data-inbox-btn]')) return 'open';
   return 'click';
 }
 document.addEventListener('click', (e) => {
