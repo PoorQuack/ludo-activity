@@ -25,6 +25,9 @@ try {
     saved.musicTrack ??= saved.musicStyle;
     delete saved.musicStyle;
   }
+  // Nothing saved yet on a computer (mouse, no touch screen): start with the music on, so the
+  // menu isn't silent. Phones keep it off, for the reason above.
+  if (saved.music === undefined && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) saved.music = true;
   Object.assign(settings, saved);
 } catch {
   // storage unavailable: keep the defaults
@@ -355,6 +358,9 @@ function stopMusic() {
 
 // Schedules the notes for the next ~300 ms, so timing stays steady.
 function scheduleMusic() {
+  // In a background tab this timer only runs now and then: skip the notes it missed instead of
+  // playing them all at once when the tab comes back.
+  if (nextNote < ctx.currentTime) nextNote = ctx.currentTime + 0.05;
   while (nextNote < ctx.currentTime + 0.3) {
     const chord = CHORDS[Math.floor(step / 8) % CHORDS.length];
     const i = step % 8;
@@ -450,15 +456,221 @@ const EFFECTS = {
   hurry() {
     for (let i = 0; i < 4; i++) tone(i % 2 ? 1100 : 1500, now() + i * 0.16, 0.06, 'square', 0.08);
   },
+  // --- the special tokens' own ways home (signatures.js), one sound each ---
+  // Rocket: a rumble that climbs into a whoosh
+  launch() {
+    noise(now(), 0.5, 180, 0.3);
+    tone(70, now(), 0.55, 'sawtooth', 0.16, 240);
+    noise(now() + 0.35, 0.75, 1400, 0.3);
+    tone(240, now() + 0.35, 0.7, 'sawtooth', 0.1, 1500);
+  },
+  // UFO: a wobbling hum sliding upward, and back down as it is set down
+  beam() {
+    for (let i = 0; i < 6; i++) tone(420 + i * 90 + (i % 2 ? 40 : 0), now() + i * 0.1, 0.16, 'sine', 0.16);
+    for (let i = 0; i < 5; i++) tone(900 - i * 100, now() + 0.85 + i * 0.09, 0.16, 'sine', 0.13);
+  },
+  // Constellation, Robot: folding away into a point, and out again
+  warp() {
+    tone(900, now(), 0.3, 'sine', 0.2, 2600);
+    tone(2400, now() + 0.6, 0.35, 'triangle', 0.16, 700);
+    [1568, 2093, 2637].forEach((f, i) => tone(f, now() + 0.72 + i * 0.05, 0.3, 'sine', 0.1));
+  },
+  // Royal: a shower of coins
+  coins() {
+    for (let i = 0; i < 9; i++) tone(1900 + ((i * 577) % 1400), now() + i * 0.045, 0.14, 'triangle', 0.13);
+    [1047, 1319, 1568].forEach((f, i) => tone(f, now() + 0.75 + i * 0.07, 0.3, 'triangle', 0.16));
+  },
+  // Dragon: wingbeats and a roar
+  fly() {
+    for (let i = 0; i < 4; i++) noise(now() + i * 0.22, 0.14, 420, 0.22);
+    tone(170, now() + 0.1, 0.7, 'sawtooth', 0.12, 80);
+    noise(now() + 0.1, 0.6, 600, 0.14);
+  },
+  // Ghost: a soft moan sliding down
+  fade() {
+    tone(660, now(), 0.7, 'sine', 0.16, 300);
+    tone(990, now() + 0.05, 0.6, 'sine', 0.07, 450);
+  },
+  // Slime: a wet splat, then a pop
+  splat() {
+    noise(now(), 0.16, 500, 0.4);
+    tone(200, now(), 0.2, 'sine', 0.2, 70);
+    tone(300, now() + 0.72, 0.14, 'sine', 0.2, 760);
+  },
+  // Penguin: a long slide over ice
+  slide() {
+    noise(now(), 0.7, 3200, 0.2);
+    tone(900, now(), 0.7, 'sine', 0.05, 500);
+  },
+  // Duck, Cat, Checker: boing, boing
+  bounce() {
+    for (let i = 0; i < 3; i++) tone(300 + i * 60, now() + i * 0.26, 0.2, 'sine', 0.2, 620 + i * 60);
+  },
+  // Neon, Robot: flickering out, flickering on
+  blink() {
+    for (let i = 0; i < 5; i++) tone(i % 2 ? 1500 : 1100, now() + i * 0.07, 0.05, 'square', 0.08);
+    for (let i = 0; i < 4; i++) tone(i % 2 ? 1300 : 1700, now() + 0.55 + i * 0.07, 0.05, 'square', 0.08);
+  },
+  // The winner's token taking its bow: a little fanfare over the win tune
+  bow() {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, now() + 0.5 + i * 0.11, 0.4, 'triangle', 0.22));
+    [1047, 1319, 1568].forEach((f) => tone(f, now() + 1.15, 0.9, 'triangle', 0.14));
+  },
+  // --- revenge and capture streaks ---
+  // a big low hit, then a rising brass stab
+  revenge() {
+    const t = now();
+    tone(70, t, 0.5, 'sine', 0.6, 40);
+    noise(t, 0.3, 300, 0.35);
+    for (const f of [220, 277, 330]) voice(t + 0.12, { f, f2: f * 2, len: 0.55, type: 'sawtooth', vol: 0.07, filter: { f: 2200 } });
+  },
+  // two quick bright notes
+  double() {
+    const t = now();
+    tone(988, t, 0.18, 'square', 0.1);
+    tone(1319, t + 0.11, 0.3, 'square', 0.1);
+  },
+  // a crunchy power chord, twice
+  rampage() {
+    const t = now();
+    for (const at of [0, 0.22]) for (const f of [110, 165, 220]) voice(t + at, { f, len: 0.4, type: 'sawtooth', vol: 0.08, filter: { f: 1400, q: 1.5 } });
+  },
+  // --- taunts (taunts.js): each one timed to its scene ---
+  // a whoosh, the hammer's thud and squeak, then little birds for the dizzy stars
+  'taunt-bonk'() {
+    const t = now();
+    noise(t + 0.35, 0.35, 700, 0.12);
+    tone(130, t + 0.7, 0.35, 'sine', 0.6, 45);
+    noise(t + 0.7, 0.08, 1200, 0.35);
+    voice(t + 0.72, { f: 300, f2: 900, len: 0.22, type: 'square', vol: 0.12, filter: { f: 1600 } });
+    for (let i = 0; i < 3; i++) voice(t + 1.0 + i * 0.16, { f: 2200, f2: 3000, len: 0.08, type: 'sine', vol: 0.1 });
+  },
+  // a slide whistle, all the way down
+  'taunt-bye'() {
+    const t = now();
+    voice(t + 0.5, { f: 1500, f2: 260, len: 1.6, type: 'sine', vol: 0.22, vib: 18, vibRate: 7 });
+  },
+  // the saddest little tune
+  'taunt-violin'() {
+    const t = now();
+    [[440, 0.45], [415, 0.45], [392, 0.45], [370, 1.2]].reduce((at, [f, len]) => {
+      voice(t + at, { f, len, type: 'sawtooth', vol: 0.12, vib: 7, vibRate: 5.5, filter: { f: 1800, q: 2 } });
+      return at + len * 0.92;
+    }, 0.15);
+  },
+  // shades dropping, a click, and two bright chimes
+  'taunt-ggez'() {
+    const t = now();
+    voice(t + 0.4, { f: 1800, f2: 400, len: 0.5, type: 'sine', vol: 0.06 });
+    tone(2400, t + 0.91, 0.04, 'square', 0.12);
+    tone(1319, t + 0.98, 0.5, 'triangle', 0.25);
+    tone(1760, t + 1.12, 0.7, 'triangle', 0.25);
+  },
+  // a skull cackling, each "ha" lower than the last
+  'taunt-cackle'() {
+    const t = now();
+    for (let i = 0; i < 9; i++) ha(t + 0.3 + i * 0.2 + (i > 4 ? 0.15 : 0), 330 - i * 14);
+  },
+  // three airhorn blasts, then the fireworks cracking
+  'taunt-fireworks'() {
+    const t = now();
+    for (const at of [0.38, 1.0, 1.6]) for (const f of [452, 458, 465]) voice(t + at, { f, f2: f * 1.04, len: 0.42, type: 'sawtooth', vol: 0.09, filter: { f: 2400 } });
+    for (const b of [0.24, 0.4, 0.56, 0.7, 0.82]) {
+      noise(t + b * 3.4, 0.35, 160, 0.4);
+      for (let i = 0; i < 6; i++) noise(t + b * 3.4 + 0.1 + i * 0.05 + Math.random() * 0.03, 0.03, 4000 + Math.random() * 2000, 0.15);
+    }
+  },
+  // HONK. HONK.
+  'taunt-clown'() {
+    const t = now();
+    honk(t + 0.72);
+    honk(t + 1.32);
+  },
+  // the stamp coming down, and the paper
+  'taunt-skill'() {
+    const t = now();
+    tone(95, t + 0.75, 0.3, 'sine', 0.6, 40);
+    noise(t + 0.75, 0.12, 500, 0.4);
+    noise(t + 1.05, 0.25, 3200, 0.08);
+  },
+  // the L landing, then a wah-wah trombone going down
+  'taunt-l'() {
+    const t = now();
+    tone(80, t + 0.77, 0.35, 'sine', 0.55, 40);
+    noise(t + 0.77, 0.25, 300, 0.3);
+    [[196, 0.4], [185, 0.4], [175, 0.4], [165, 1.3]].reduce((at, [f, len], i) => {
+      trombone(t + at, f, len, i === 3);
+      return at + len;
+    }, 1.0);
+  },
+  // the chicken flopping down, then one very long squeak
+  'taunt-chicken'() {
+    const t = now();
+    tone(140, t + 0.68, 0.18, 'sine', 0.35, 70);
+    voice(t + 0.88, { f: 900, f2: 1250, len: 1.15, type: 'sawtooth', vol: 0.14, vib: 60, vibRate: 13, filter: { type: 'bandpass', f: 1500, q: 3 } });
+  },
   win() {
     [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, now() + i * 0.12, 0.35, 'triangle', 0.25));
   },
   chat() {
     tone(1250, now(), 0.06, 'sine', 0.15);
   },
+
+  // ---- menus and the shop ----
+  // A soft wooden "tock" for any button
+  click() {
+    tone(560, now(), 0.07, 'sine', 0.2, 360);
+    noise(now(), 0.015, 3800, 0.06);
+  },
+  // Barely there: the mouse moving onto a shop card
+  hover() {
+    tone(1900 + Math.random() * 120, now(), 0.03, 'sine', 0.035);
+  },
+  // Switching tabs: a quick upward flick
+  tab() {
+    tone(620, now(), 0.06, 'triangle', 0.16, 880);
+  },
+  // Going back or closing something: the same flick, downwards
+  back() {
+    tone(700, now(), 0.08, 'triangle', 0.14, 420);
+  },
+  // A page or close-up opening: a little airy swoosh
+  open() {
+    tone(320, now(), 0.16, 'sine', 0.12, 760);
+    noise(now(), 0.12, 1400, 0.07);
+  },
+  // On/off switches
+  toggle() {
+    tone(1050, now(), 0.035, 'square', 0.05);
+    tone(1500, now() + 0.045, 0.035, 'square', 0.04);
+  },
+  // Bought something: coins dropping in, then a sparkle
+  buy() {
+    [0, 0.06, 0.11].forEach((d, i) => {
+      tone(2093 + i * 140, now() + d, 0.09, 'sine', 0.12);
+      noise(now() + d, 0.03, 6000, 0.08);
+    });
+    [1319, 1760, 2637].forEach((f, i) => tone(f, now() + 0.2 + i * 0.07, 0.4, 'triangle', 0.2));
+  },
+  // Put something on: a round "pop"
+  equip() {
+    tone(380, now(), 0.1, 'sine', 0.26, 900);
+    tone(1200, now() + 0.06, 0.12, 'triangle', 0.08);
+  },
+  // Can't do that (not enough coins…): two low, short buzzes
+  error() {
+    tone(196, now(), 0.1, 'square', 0.07);
+    tone(165, now() + 0.13, 0.14, 'square', 0.07);
+  },
 };
 
+let lastSfx = 0;
+// Did something just play (within the last few ms)? The menus' click sound stays quiet then,
+// so a button with its own sound doesn't also "tock".
+export const playedJustNow = (ms = 60) => performance.now() - lastSfx < ms;
+
 export function sfx(name) {
+  lastSfx = performance.now();
   if (!settings.sound || !ensureCtx()) return;
   sleepSoon();
   const recorded = samples[name];
@@ -475,8 +687,6 @@ function envelope(t, len, vol) {
   return g;
 }
 
-// One "ha": a buzzy voice shaped like an "ah" (or another vowel), with a breathy "h" in front.
-// A trombone-ish note: a "wah" filter sweep, and a wobble that sags on the long last note.
 // `vary`: nudge the pitch a little so repeated taps don't sound identical.
 function playSample(buffer, vary) {
   const src = ctx.createBufferSource();
@@ -512,6 +722,72 @@ function noise(t, len, center, vol) {
   src.connect(f).connect(g).connect(sfxGain);
   src.start(t);
   src.stop(t + len + 0.02);
+}
+
+// One sustained note: optional pitch slide (f -> f2), vibrato (`vib` Hz deep at `vibRate`), and a
+// filter (lowpass unless told otherwise).
+function voice(t, { f, f2 = null, len, type = 'sawtooth', vol = 0.2, vib = 0, vibRate = 6, filter = null }) {
+  const osc = ctx.createOscillator();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f, t);
+  if (f2) osc.frequency.exponentialRampToValueAtTime(f2, t + len);
+  if (vib) {
+    const lfo = ctx.createOscillator();
+    const depth = ctx.createGain();
+    lfo.frequency.value = vibRate;
+    depth.gain.value = vib;
+    lfo.connect(depth).connect(osc.frequency);
+    lfo.start(t);
+    lfo.stop(t + len + 0.05);
+  }
+  let out = osc;
+  if (filter) {
+    const bq = ctx.createBiquadFilter();
+    bq.type = filter.type || 'lowpass';
+    bq.frequency.value = filter.f;
+    bq.Q.value = filter.q || 1;
+    out = osc.connect(bq);
+  }
+  out.connect(envelope(t, len, vol)).connect(sfxGain);
+  osc.start(t);
+  osc.stop(t + len + 0.05);
+}
+
+// One "ha": a buzzy voice through an "ah" shaped filter, with a breathy "h" in front.
+function ha(t, f) {
+  noise(t, 0.05, 1800, 0.08);
+  voice(t + 0.03, { f, f2: f * 0.85, len: 0.13, type: 'sawtooth', vol: 0.16, filter: { type: 'bandpass', f: 850, q: 1.6 } });
+}
+
+// A clown horn: two reedy notes squeezed together, dipping in pitch
+function honk(t) {
+  for (const f of [370, 466]) voice(t, { f: f * 1.08, f2: f * 0.92, len: 0.32, type: 'sawtooth', vol: 0.1, filter: { type: 'bandpass', f: 1100, q: 2.5 } });
+}
+
+// A trombone-ish note: a "wah" filter sweep, and a wobble that sags on the long last note.
+function trombone(t, f, len, last) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(f, t);
+  if (last) {
+    const lfo = ctx.createOscillator();
+    const depth = ctx.createGain();
+    lfo.frequency.value = 5;
+    depth.gain.value = 6;
+    lfo.connect(depth).connect(osc.frequency);
+    lfo.start(t);
+    lfo.stop(t + len + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.88, t + len);
+  }
+  const bq = ctx.createBiquadFilter();
+  bq.type = 'lowpass';
+  bq.Q.value = 6;
+  bq.frequency.setValueAtTime(350, t);
+  bq.frequency.exponentialRampToValueAtTime(1400, t + Math.min(0.15, len * 0.4));
+  bq.frequency.exponentialRampToValueAtTime(420, t + len);
+  osc.connect(bq).connect(envelope(t, len, 0.2)).connect(sfxGain);
+  osc.start(t);
+  osc.stop(t + len + 0.05);
 }
 
 function makeNoise() {

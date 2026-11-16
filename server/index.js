@@ -7,12 +7,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
+import { Purchases, parseSkus } from './purchases.js';
 import { ProfileStore } from './store.js';
 import { Leaderboard } from './leaderboard.js';
 import { QuestBook } from './quests.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
 import { rig, unrig, riggedList } from './rig.js';
 import { SupportDesk, SUPPORT_MAX_FILE } from './support.js';
+import { ServerInvite, SNOOZE_MS } from './invite.js';
+import { SocialBook, sendDm } from './social.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -24,7 +27,10 @@ const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 
 const LEADERBOARD_FILE = process.env.LEADERBOARD_FILE || path.join(path.dirname(DATA_FILE), 'leaderboard.json');
 // Today's daily quest progress (reset at midnight UTC).
 const QUESTS_FILE = process.env.QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests.json');
+const WEEKLY_QUESTS_FILE = process.env.WEEKLY_QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests-weekly.json');
 const SUPPORT_FILE = process.env.SUPPORT_FILE || path.join(path.dirname(DATA_FILE), 'support.json');
+// Friends and "played with" lists
+const SOCIAL_FILE = process.env.SOCIAL_FILE || path.join(path.dirname(DATA_FILE), 'social.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 // Guests = playing in a normal browser tab without Discord (handy for testing).
@@ -53,6 +59,7 @@ const MAX_SOCKETS_TOTAL = 1500;
 const connLimiter = new KeyedLimiter({ max: 300, windowMs: 60_000 }); // new sockets per IP per minute
 const helloLimiter = new KeyedLimiter({ max: 300, windowMs: 60_000 }); // hellos per IP per minute
 const tokenLimiter = new KeyedLimiter({ max: 200, windowMs: 60_000 }); // token exchanges per IP per minute
+const purchaseLimiter = new KeyedLimiter({ max: 10, windowMs: 60_000 }); // purchase checks with Discord per player per minute
 const MAX_SOCKETS_PER_USER = 5;
 const HELLO_TIMEOUT_MS = 15_000;
 const socketsByIp = new Map(); // ip -> open socket count
@@ -61,12 +68,42 @@ const tokenCache = new TtlCache({ ttlMs: 10 * 60_000, maxEntries: 5000 });
 setInterval(() => {
   connLimiter.prune();
   helloLimiter.prune();
+  purchaseLimiter.prune();
   tokenLimiter.prune();
   tokenCache.prune();
 }, 60_000).unref();
 
+// "Buy me a coffee" for any amount: a Ko-fi / Buy Me a Coffee page (the fixed coffees and the
+// coin packs are paid through Discord, see SHOP_SKUS)
+const TIP_URL = /^https:\/\/\S+$/.test((process.env.TIP_URL || '').trim()) ? process.env.TIP_URL.trim() : '';
 app.get('/api/config', (_req, res) => {
-  res.json({ clientId: CLIENT_ID, allowGuests: ALLOW_GUESTS, freeShop: FREE_SHOP });
+  res.json({ clientId: CLIENT_ID, allowGuests: ALLOW_GUESTS, freeShop: FREE_SHOP, paid: { skus: purchases.enabled ? purchases.list() : [], tipUrl: TIP_URL } });
+});
+
+// Discord profile pictures, fetched from Discord's CDN by the server: the Activity can't load
+// outside images itself. Kept in memory for an hour.
+const avatarCache = new TtlCache({ ttlMs: 60 * 60_000, maxEntries: 500 });
+app.get('/api/avatar/:id', async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^\d{5,25}$/.test(id)) return res.status(404).end();
+  const hash = social.avatars.get(id);
+  if (hash === undefined) return res.status(404).end();
+  const key = `${id}/${hash}`;
+  let img = avatarCache.get(key);
+  if (!img) {
+    const url = hash
+      ? `https://cdn.discordapp.com/avatars/${id}/${hash}.png?size=128`
+      : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(id) >> 22n) % 6n)}.png`;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) return res.status(404).end();
+      img = { type: r.headers.get('content-type') || 'image/png', body: Buffer.from(await r.arrayBuffer()) };
+      avatarCache.set(key, img);
+    } catch {
+      return res.status(502).end();
+    }
+  }
+  res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=3600' }).send(img.body);
 });
 
 // Exchange the OAuth code from the Embedded App SDK for an access token.
@@ -210,7 +247,23 @@ const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16 * 1024 });
 
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const userSockets = new Map();
-const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, freeShop: FREE_SHOP });
+const store = new ProfileStore(DATA_FILE, { onChange: sendProfile, onBadge: (id, reached) => sendTo(id, { type: 'badges', reached }), freeShop: FREE_SHOP });
+// Coin packs and coffees bought with real money through Discord (SHOP_SKUS in .env)
+const purchases = new Purchases({
+  appId: CLIENT_ID,
+  token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
+  skus: parseSkus(process.env.SHOP_SKUS),
+  store,
+});
+// Pay out anything this player bought that hasn't been paid yet, and tell them.
+function claimPurchases(userId) {
+  purchases
+    .claim(userId)
+    .then((granted) => {
+      for (const g of granted) sendTo(userId, { type: 'purchased', ...g });
+    })
+    .catch((err) => console.error(`Purchases for ${userId}: ${err.message}`));
+}
 const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards });
 setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon as a week or month ends
 // Finished daily quests add their points to the leaderboards.
@@ -219,12 +272,81 @@ const support = new SupportDesk(SUPPORT_FILE, {
   token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
   ownerId: (process.env.SUPPORT_USER_ID || '398077353785294853').trim(), // the owner's Discord id
 });
-const quests = new QuestBook(QUESTS_FILE, { onPoints: (userId, name, points) => leaderboard.addPoints(userId, name, points) });
+// "Join our Discord server" card in the menu (see invite.js). INVITE_URL= (empty) turns it off.
+const invite = new ServerInvite({
+  url: (process.env.INVITE_URL ?? 'https://discord.gg/vByCBThFbM').trim(),
+  token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
+});
+async function maybeInvite(ws, userId) {
+  if (!invite.enabled || !store.wantsInvite(userId)) return;
+  if ((await invite.isMember(userId)) === true) return store.answerInvite(userId, 'join'); // already in
+  if (ws.readyState === 1 && store.wantsInvite(userId)) ws.send(JSON.stringify({ type: 'invite', url: invite.url }));
+}
+const social = new SocialBook(SOCIAL_FILE);
+const isOnline = (id) => userSockets.has(id);
+function sendFriends(userId) {
+  sendTo(userId, { type: 'friends', ...social.view(userId, isOnline) });
+}
+// Someone came online, went offline or played a game: refresh the lists that show them.
+function friendsChanged(userId) {
+  for (const other of userSockets.keys()) {
+    const u = social.users.get(other);
+    if (other === userId || u?.friends.includes(userId) || u?.met.some((m) => m.id === userId)) sendFriends(other);
+  }
+}
+// DM invites to people who weren't online: if one opens the game for the first time, whoever
+// invited them gets the referral. Kept in memory for a week (a restart forgets them).
+const dmInvites = new Map();
+setInterval(() => {
+  for (const [id, v] of dmInvites) if (Date.now() - v.at > 7 * 86_400_000) dmInvites.delete(id);
+}, 3_600_000).unref();
+async function inviteFriend(ws, toId) {
+  const { user, room } = ws.ctx;
+  const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
+  try {
+    if (!room?.code) throw new Error('Make or join a room first, then invite');
+    const u = social.users.get(user.id);
+    if (!u?.friends.includes(toId) && !u?.met.some((m) => m.id === toId)) throw new Error('You can invite friends and people you have played with');
+    if (room.seats.some((s) => s?.userId === toId) || room.people?.has(toId)) throw new Error("They're already in your room");
+    const name = social.names.get(toId) || 'them';
+    if (!social.acceptsInvites(toId)) throw new Error(`${name} has turned off invitations`);
+    social.checkInvite(user.id, toId);
+    if (isOnline(toId)) {
+      sendTo(toId, { type: 'roomInvite', from: user.name, fromId: user.id, code: room.code });
+      return send({ type: 'friendInvited', name, how: 'game' });
+    }
+    if (toId.startsWith('guest-')) throw new Error(`${name} isn't online`);
+    await sendDm(
+      (process.env.DISCORD_BOT_TOKEN || '').trim(),
+      toId,
+      `🎲 **${user.name.replace(/[*_~`|>]/g, '')}** invited you to play Ludo! Open the Ludo activity in Discord and join with the code **${room.code}**.`,
+    );
+    if (!dmInvites.has(toId)) dmInvites.set(toId, { from: user.id, at: Date.now() });
+    send({ type: 'friendInvited', name, how: 'dm' });
+  } catch (err) {
+    send({ type: 'error', message: err.message });
+  }
+}
+
+// Daily quests pay coins. (The leaderboards only count games.)
+const quests = new QuestBook(QUESTS_FILE, { onCoins: (userId, name, coins) => store.rewardCoins(userId, coins) });
+const weekly = new QuestBook(WEEKLY_QUESTS_FILE, { period: 'week', onCoins: (userId, name, coins) => store.rewardCoins(userId, coins) });
 const directory = new RoomDirectory({
   idleMs: ROOM_IDLE_MS,
   roomOptions: {
     profiles: store,
-    onGameEnd: (results) => leaderboard.record(results),
+    onGameEnd: (results) => {
+      leaderboard.record(results);
+      // Someone's first game since being invited: pay whoever invited them
+      for (const r of results) {
+        const paid = r.userId && store.gameFinished(r.userId);
+        if (paid) sendTo(paid.to, { type: 'referral', name: r.name, coins: paid.coins });
+      }
+    },
+    onGameStart: (players) => {
+      social.played(players);
+      for (const p of players) sendFriends(p.userId);
+    },
     onStat: questProgress,
     onChange: (room) => {
       broadcast(room);
@@ -271,13 +393,16 @@ function sendProfile(userId) {
 
 // Progress from a game: update the player's quest card, and tell them about finished quests.
 function questProgress(userId, name, stat, n) {
-  const { changed, completed } = quests.track(userId, name, stat, n);
-  if (changed) sendQuests(userId);
+  store.addStat(userId, stat, n); // lifetime totals for the badges
+  const day = quests.track(userId, name, stat, n);
+  const week = weekly.track(userId, name, stat, n);
+  if (day.changed || week.changed) sendQuests(userId);
+  const completed = [...day.completed, ...week.completed];
   if (completed.length) sendTo(userId, { type: 'questsDone', completed });
 }
 
 function sendQuests(userId) {
-  sendTo(userId, { type: 'quests', quests: quests.view(userId) });
+  sendTo(userId, { type: 'quests', quests: quests.view(userId), weekly: weekly.view(userId) });
 }
 
 function sendTo(userId, obj) {
@@ -375,6 +500,19 @@ function handleLobby(ws, msg) {
     directory.join(room, user, { instanceId, withCode });
     return enterRoom(ws, room);
   }
+  if (msg.op === 'play') {
+    // "Play now": sit down in an open game, or start a public one for others to find
+    const open = directory.findOpen(user, instanceId);
+    if (open) {
+      leaveRoom(ws);
+      directory.join(open, user, { instanceId });
+      return enterRoom(ws, open);
+    }
+    leaveRoom(ws);
+    const room = directory.create(user, { visibility: 'public', instanceId, extra: { onKick: (userId) => kickFromRoom(room, userId) } });
+    enterRoom(ws, room);
+    return ws.send(JSON.stringify({ type: 'playNew' }));
+  }
   if (msg.op === 'leave') return leaveRoom(ws);
   if (msg.op === 'list') return sendList(ws);
 }
@@ -389,7 +527,7 @@ async function resolveUser(hello) {
     });
     if (!r.ok) throw new Error('Discord auth failed');
     const u = await r.json();
-    const user = { id: u.id, name: u.global_name || u.username };
+    const user = { id: u.id, name: u.global_name || u.username, avatar: u.avatar || '' };
     tokenCache.set(tokenKey, user);
     return user;
   }
@@ -466,13 +604,23 @@ wss.on('connection', (ws, req) => {
         ctx.instanceId = String(msg.instanceId || 'local').slice(0, 100);
         if (!userSockets.has(user.id)) userSockets.set(user.id, new Set());
         userSockets.get(user.id).add(ws);
+        const isNew = !store.peek(user.id);
         store.get(user.id);
-        send({ type: 'welcome', you: user });
+        // A first visit through someone's invite: Discord's share link says who shared it; a DM
+        // invite sent while they were away counts too.
+        if (isNew) store.setReferrer(user.id, msg.referrerId || dmInvites.get(user.id)?.from);
+        dmInvites.delete(user.id);
+        social.seen(user.id, user.name, user.id.startsWith('guest-') ? undefined : user.avatar);
+        send({ type: 'welcome', you: { id: user.id, name: user.name, avatar: !user.id.startsWith('guest-') } });
         sendProfile(user.id);
         sendList(ws);
         listsChanged(); // everyone's "players online" count
         sendAwards(user.id); // any leaderboard prizes won while they were away
         sendQuests(user.id);
+        maybeInvite(ws, user.id).catch(() => {});
+        claimPurchases(user.id); // bought something while the game was closed?
+        if (userSockets.get(user.id).size === 1) friendsChanged(user.id); // just came online
+        else sendFriends(user.id);
         // Back after a refresh or a dropped connection: return to the same room if it's still open
         const room = msg.rejoin && directory.findCode(msg.rejoin);
         if (room) {
@@ -489,8 +637,22 @@ wss.on('connection', (ws, req) => {
       }
       if (!ctx.user) return send({ type: 'error', message: 'Not connected yet' });
       if (msg.type === 'lobby') return handleLobby(ws, msg);
+      if (msg.type === 'claimPurchases') {
+        if (!purchaseLimiter.hit(ctx.user.id)) return;
+        return claimPurchases(ctx.user.id);
+      }
       if (msg.type === 'leaderboard') return send({ type: 'leaderboard', boards: leaderboard.view(ctx.user.id) });
-      if (msg.type === 'quests') return send({ type: 'quests', quests: quests.view(ctx.user.id) });
+      if (msg.type === 'quests') return send({ type: 'quests', quests: quests.view(ctx.user.id), weekly: weekly.view(ctx.user.id) });
+      if (msg.type === 'invite') return store.answerInvite(ctx.user.id, String(msg.answer), SNOOZE_MS);
+      if (msg.type === 'daily') return send({ type: 'daily', ...store.rollDaily(ctx.user.id) });
+      if (msg.type === 'friend') {
+        const id = String(msg.id || '');
+        if (msg.op === 'invites') social.setInvites(ctx.user.id, !!msg.on);
+        else if (msg.op === 'add') social.addFriend(ctx.user.id, id);
+        else if (msg.op === 'remove') social.removeFriend(ctx.user.id, id);
+        return sendFriends(ctx.user.id);
+      }
+      if (msg.type === 'friendInvite') return inviteFriend(ws, String(msg.to || ''));
       if (msg.type === 'support') {
         // ⚙ Settings → Contact the developer. The room and device help with bug reports.
         const room = ctx.room;
@@ -514,7 +676,20 @@ wss.on('connection', (ws, req) => {
       }
       if (msg.type === 'shop') {
         if (msg.op === 'buy') store.buy(ctx.user.id, msg.item);
+        else if (msg.op === 'buySet') store.buySet(ctx.user.id, msg.item);
         else if (msg.op === 'equip') store.equip(ctx.user.id, msg.item);
+        else if (msg.op === 'gift') {
+          // only to a person sitting in your room (not a bot, not yourself)
+          const seat = ctx.room?.seats.find((x) => x && !x.bot && x.userId === msg.to && x.userId !== ctx.user.id);
+          if (!seat) throw new Error('You can only gift to someone in your room');
+          store.gift(ctx.user.id, seat.userId, msg.item);
+          const note = JSON.stringify({ type: 'gift', from: ctx.user.name, item: msg.item });
+          for (const sock of userSockets.get(seat.userId) || []) if (sock.readyState === 1) sock.send(note);
+          send({ type: 'gifted', to: seat.name, item: msg.item });
+        }
+        // badges: the title under your name, and the badges pinned beside it
+        else if (msg.op === 'title') store.setTitle(ctx.user.id, typeof msg.badge === 'string' ? msg.badge : '');
+        else if (msg.op === 'pins') store.setPins(ctx.user.id, msg.pins);
         else return;
         if (ctx.room) broadcast(ctx.room); // skins and themes are visible to everyone
       }
@@ -535,6 +710,7 @@ wss.on('connection', (ws, req) => {
     if (sockets?.size === 0) {
       userSockets.delete(user.id);
       listsChanged(); // one fewer online
+      friendsChanged(user.id);
     }
     if (room) {
       ws.ctx.room = null;
@@ -575,7 +751,9 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     store.flush();
     leaderboard.flush();
     quests.flush();
+    weekly.flush();
     support.save();
+    social.flush();
     for (const ws of wss.clients) ws.close(1012, 'Server update');
     setTimeout(() => process.exit(0), 300); // a moment for those messages to go out
   });

@@ -50,16 +50,16 @@ test('private rooms need the code unless you are in the same call', () => {
   dir.destroy();
 });
 
-test('the host can switch public/private and turn chat off', () => {
+test('the host can switch public/private (but not turn chat off)', () => {
   const dir = new RoomDirectory();
   const room = dir.create(ann, { visibility: 'public' });
   dir.join(room, bob, {});
   assert.throws(() => room.handle(bob, { action: 'setVisibility', visibility: 'private' }), /Only the host/);
   room.handle(ann, { action: 'setVisibility', visibility: 'private' });
   assert.equal(room.visibility, 'private');
+  // chat is each player's own choice now: an old client asking to turn it off changes nothing
   room.handle(ann, { action: 'setChat', on: false });
-  assert.throws(() => room.say(bob, 'hello'), /chat off/);
-  room.handle(ann, { action: 'setChat', on: true });
+  assert.equal(room.chatOn, true);
   room.say(bob, 'hello you shit');
   assert.equal(room.chat.at(-1).text, 'hello you ****');
   dir.destroy();
@@ -134,4 +134,22 @@ test('when the host leaves, someone else takes over; an empty room closes', asyn
   await new Promise((r) => setTimeout(r, 60));
   assert.deepEqual(removed, [room.id]);
   assert.equal(dir.get(room.id), null);
+});
+
+test('play now: the fullest open lobby (your call first), never a full, private, started or banned one', () => {
+  const dir = new RoomDirectory();
+  const dan = { id: 'dan', name: 'Dan' };
+  const eve = { id: 'eve', name: 'Eve' };
+  assert.equal(dir.findOpen(eve, 'call-9'), null);
+  const quiet = dir.create(ann, { visibility: 'public', instanceId: 'call-1' });
+  const busy = dir.create(bob, { visibility: 'public', instanceId: 'call-2' });
+  dir.join(busy, cat, { instanceId: 'call-2' });
+  const secret = dir.create(dan, { visibility: 'private', instanceId: 'call-3' });
+  assert.equal(dir.findOpen(eve, 'call-9'), busy, 'the fuller public room');
+  assert.equal(dir.findOpen(eve, 'call-1'), quiet, 'your own call comes first');
+  assert.equal(dir.findOpen(eve, 'call-3'), secret, 'a private room in your own call is fine');
+  busy.banned.add('eve');
+  assert.equal(dir.findOpen(eve, 'call-9'), quiet);
+  assert.equal(dir.findOpen(ann, 'call-9'), busy, 'not the room you are already sitting in');
+  dir.destroy();
 });

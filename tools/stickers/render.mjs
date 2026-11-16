@@ -1,12 +1,12 @@
-// Renders the stickers in brainrot.mjs: node render.mjs <out dir>
+// Renders a sticker file: node render.mjs <out dir> [./brainrot.mjs | ./pals.mjs]  (brainrot.mjs if left out)
 // Writes <out>/<pack>/<slug>-<frame>.png for every frame (frame 0 only for still stickers),
 // then pack.py turns those into the game's PNG / animated WebP files.
 import fs from 'node:fs';
 import chromium from '@sparticuz/chromium';
 import { chromium as pw } from 'playwright-core';
-import { PACKS, svgFor } from './brainrot.mjs';
 
 const out = process.argv[2] || '/tmp/stickers';
+const { PACKS, svgFor } = await import(process.argv[3] || './brainrot.mjs');
 const b = await pw.launch({ executablePath: await chromium.executablePath(), args: chromium.args, headless: true });
 const p = await b.newPage({ viewport: { width: 192, height: 192 }, deviceScaleFactor: 1 });
 for (const [pack, { stickers }] of Object.entries(PACKS)) {

@@ -81,6 +81,24 @@ export class RoomDirectory {
     return room;
   }
 
+  // "Play now": the best lobby `user` can sit straight down in. Rooms from their own Discord call
+  // first, then public ones; the fullest first (closer to starting). null when there is none.
+  findOpen(user, instanceId = null) {
+    let best = null;
+    let bestRank = -Infinity;
+    for (const r of this.rooms.values()) {
+      if (r.empty || r.phase !== 'lobby' || !r.hostId || r.banned.has(user.id)) continue;
+      const sameCall = !!instanceId && r.instanceId === instanceId;
+      if (r.visibility !== 'public' && !sameCall) continue;
+      const seats = MODES[r.mode].seats;
+      const taken = seats.filter((i) => r.seats[i]).length;
+      if (taken >= seats.length || r.seatOf(user.id) >= 0) continue;
+      const rank = (sameCall ? 100 : 0) + taken / seats.length;
+      if (rank > bestRank) (best = r), (bestRank = rank);
+    }
+    return best;
+  }
+
   // Someone's last connection to the room went away: close it once it has been empty a while.
   left(room) {
     if (!room.empty || this.idleTimers.has(room.id)) return;

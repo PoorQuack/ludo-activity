@@ -164,3 +164,44 @@ test('a game cut short scales the points by how far you got', () => {
   assert.equal(r.b[1], true);
   assert.ok(r.b[0] < 20); // tokens all still in base: a surrender this early is worth (almost) nothing
 });
+
+test('a surrender after someone has finished is a real result: full pay, no "ended early"', () => {
+  const ended = [];
+  const room = new Room('t', { onGameEnd: (r) => ended.push(r) });
+  const [a, b, c] = ['a', 'b', 'c'].map((id) => ({ id, name: id.toUpperCase() }));
+  room.connect(a);
+  room.host(a);
+  for (const u of [b, c]) {
+    room.connect(u);
+    room.join(u);
+  }
+  room.start(a);
+  const [sa, sb, sc] = [a, b, c].map((u) => room.seatOf(u.id));
+  // A got all four home and finished 1st; C is barely out of base
+  room.tokens[sa] = Array(4).fill(room.board.finished);
+  room.winners.push(sa);
+  room.tokens[sc] = [2, -1, -1, -1];
+  room.surrender(b); // B gives up: C is the last one racing, so the game ends
+  assert.equal(room.phase, 'finished');
+  assert.equal(room.endedEarly, false);
+  assert.deepEqual(room.rewardPartial, []);
+  const pts = Object.fromEntries(ended[0].map((r) => [r.userId, r.points]));
+  assert.equal(pts.a, 30); // beat two people, +10 for beating them all
+  assert.equal(pts.c, 10); // finished ahead of B, at full value
+  room.destroy();
+});
+
+test('a surrender before anyone finishes still pays by progress', () => {
+  const room = new Room('t');
+  const [a, b] = ['a', 'b'].map((id) => ({ id, name: id.toUpperCase() }));
+  room.connect(a);
+  room.host(a);
+  room.connect(b);
+  room.join(b);
+  room.start(a);
+  room.tokens[room.seatOf('b')] = [10, -1, -1, -1];
+  room.surrender(a);
+  assert.equal(room.endedEarly, true);
+  assert.deepEqual(room.rewardPartial, [room.seatOf('b')]);
+  room.destroy();
+});

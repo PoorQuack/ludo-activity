@@ -16,7 +16,17 @@ const DISCONNECT_GRACE_MS = 12_000;
 // Every player still racing has left: the game pauses this long, then ends with no coins.
 const PAUSE_MS = 60_000;
 const MAX_TIMEOUTS = 3; // turns in a row a player can let run out before they're surrendered
-const MAX_SIXES = 3; // this many 6s in a row loses the turn
+const MAX_SIXES = 3; // this many throws with a 6 in a row loses the turn
+// 6-arm boards (6 players, 3 vs 3) roll two dice per throw: one dice made those games drag.
+const diceFor = (arms) => (arms === 6 ? 2 : 1);
+
+// The decider's two colours: the first team's first colour and the colour straight across the
+// board, so the race starts from opposite sides. In 2v2 the opposite colour is a teammate's
+// seat, so the second team races that colour for the decider.
+export function deciderColors(teams, arms) {
+  const first = teams[0][0];
+  return [first, (first + arms / 2) % arms];
+}
 const STUCK_TURNS = 5; // dead turns (no 6) with every token in base before the next roll is a free 6
 const EMOTE_COOLDOWN_MS = 1200;
 const CHAT_COOLDOWN_MS = 700;
@@ -31,9 +41,9 @@ const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 // What toSave() keeps of a room (see "surviving a server restart" below).
 const SAVED_FIELDS = [
-  'id', 'code', 'visibility', 'instanceId', 'chatOn', 'mode', 'seats', 'hostId', 'phase',
-  'tokens', 'turn', 'dice', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
-  'lastRoll', 'winners', 'teamOrder', 'forfeited', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
+  'id', 'code', 'visibility', 'quick', 'tally', 'instanceId', 'mode', 'seats', 'hostId', 'phase',
+  'tokens', 'turn', 'dice', 'diceValues', 'sixThrows', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
+  'lastRoll', 'winners', 'teamOrder', 'forfeited', 'feud', 'streak', 'revenges', 'hits', 'wasLast', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
   'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'decider', 'actor', 'racePoints', 'rigged',
 ];
@@ -41,17 +51,19 @@ const SAVED_FIELDS = [
 export class Room {
   constructor(
     id,
-    { onChange, onKick, onGameEnd, onStat, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
+    { onChange, onKick, onGameEnd, onGameStart, onStat, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
   ) {
     this.id = id;
     this.code = code; // short code anyone can join with, e.g. "K7QX"
     this.visibility = visibility; // 'public': listed for everyone; 'private': your Discord call or the code
+    this.quick = false; // quick game: two tokens each instead of four (the host's choice, in the lobby)
     this.instanceId = instanceId; // the Discord call it was created in
-    this.chatOn = true; // the host can turn typed chat off (emotes still work)
+    this.chatOn = true; // (always on: each player turns typed chat off for themselves in ⚙ Settings)
     this.banned = new Set(); // userIds the host kicked: they can't come back
     this.onKick = onKick || (() => {}); // the server takes a kicked player out of the room
     this.onChange = onChange || (() => {});
     this.onGameEnd = onGameEnd || (() => {}); // results of a game that paid out (for the leaderboards)
+    this.onGameStart = onGameStart || (() => {}); // the humans in a game that just started (for friends lists)
     this.onStat = onStat || (() => {}); // things players did, for daily quests: (userId, name, stat, n)
     this.rng = rng;
     this.delays = {
@@ -77,12 +89,20 @@ export class Room {
     this.dice = null; // the latest roll
     this.rolled = false; // true once the rolling is done and the rolls are being played
     this.rolls = []; // rolls still to play this turn (a 6 is kept and rolled again)
+    this.diceValues = []; // every dice of the latest throw (two on 6-arm boards)
+    this.sixThrows = 0; // throws in a row this turn that had a 6
     this.options = []; // for each roll: the tokens it can move
     this.movable = []; // every token at least one roll can move
     this.extraTurns = 0; // turns earned by captures and tokens reaching home
     this.skipped = false; // three 6s in a row: the turn is lost
     this.lastRoll = null;
     this.winners = [];
+    this.tally = {}; // seat -> { six, capture, home, out }: this game's numbers, for the finish card
+    this.feud = {}; // seat -> the seat that last captured it: capture them back for revenge
+    this.streak = {}; // seat -> captures in a row without being captured
+    this.revenges = {}; // seat -> revenges taken this game (each pays REWARDS.revenge)
+    this.hits = {}; // seat -> times its tokens were captured this game (the Untouchable badge)
+    this.wasLast = {}; // seat -> true once it has been last in the race (the Comeback badge)
     this.teamOrder = null; // team games, once over: team numbers from first to last
     // Team games score places (2v2: 3/2/1/0 points). A tie goes to a decider round: one colour per
     // team, teammates taking turns with it ({ colors: team -> seat, players: team -> seats, next }).
@@ -179,6 +199,7 @@ export class Room {
       people: this.connected.size,
       phase: this.phase,
       visibility: this.visibility,
+      quick: this.quick,
       sameCall: !!instanceId && instanceId === this.instanceId,
     };
   }
@@ -217,7 +238,8 @@ export class Room {
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
       case 'setVisibility': return this.setVisibility(user, msg.visibility);
-      case 'setChat': return this.setChat(user, msg.on);
+      case 'setQuick': return this.setQuick(user, msg.quick);
+      case 'setChat': return; // gone: chat is each player's own choice now (old clients may still send it)
       case 'kick': return this.kick(user, msg.userId);
       default: throw new Error('Unknown action');
     }
@@ -341,7 +363,14 @@ export class Room {
     if (!active.some((i) => !this.seats[i].bot)) throw new Error('At least one human must play');
     this.phase = 'playing';
     this.tokens = newTokens(this.board.arms);
+    if (this.quick) for (const seat of this.tokens) seat[2] = seat[3] = this.board.finished;
     this.winners = [];
+    this.tally = {}; // seat -> { six, capture, home, out }: this game's numbers, for the finish card
+    this.feud = {}; // seat -> the seat that last captured it: capture them back for revenge
+    this.streak = {}; // seat -> captures in a row without being captured
+    this.revenges = {}; // seat -> revenges taken this game (each pays REWARDS.revenge)
+    this.hits = {}; // seat -> times its tokens were captured this game (the Untouchable badge)
+    this.wasLast = {}; // seat -> true once it has been last in the race (the Comeback badge)
     this.teamOrder = null;
     this.decider = null;
     this.actor = null;
@@ -364,6 +393,8 @@ export class Room {
     this.resetTurn();
     this.addLog(`Game started! ${this.seats[this.turn].name} goes first.`);
     this.changed();
+    const humans = active.filter((i) => !this.seats[i].bot).map((i) => ({ userId: this.seats[i].userId, name: this.seats[i].name }));
+    if (humans.length > 1) this.onGameStart(humans);
   }
 
   roll(user) {
@@ -403,9 +434,11 @@ export class Room {
       this.decider.players = this.decider.players.map((ps) => ps.filter((s) => s !== seat));
     } else this.tokens[seat] = [-1, -1, -1, -1];
     this.addLog(message);
-    // A game that ends here was cut short: survivors get progress-scaled pay.
+    // A game that ends here before anyone got all their tokens home was cut short: the
+    // survivors get progress-scaled pay (a game handed over isn't worth full price). Once
+    // someone has finished, the race had a real winner and everyone is paid in full.
     // If the game continues, it wasn't ended by this — put the flag back.
-    this.endedEarly = true;
+    this.endedEarly = !this.winners.some((s) => !this.forfeited.includes(s));
     if (this.endIfOver()) return;
     this.endedEarly = false;
     if (wasActing) {
@@ -435,7 +468,6 @@ export class Room {
   // The host can end a game at any time; once a game is over, anyone can start the next one.
   // Chat is open to everyone in the Activity, players and watchers alike.
   say(user, text) {
-    if (!this.chatOn) throw new Error('The host turned chat off in this room');
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -496,9 +528,12 @@ export class Room {
     this.changed();
   }
 
-  setChat(user, on) {
+  // Quick game: everyone races two tokens instead of four, so a game takes about half as long.
+  // (The other two start already home: the rules, the win and the payout are all unchanged.)
+  setQuick(user, quick) {
     this.requireHost(user);
-    this.chatOn = !!on;
+    this.requirePhase('lobby');
+    this.quick = !!quick;
     this.changed();
   }
 
@@ -554,6 +589,12 @@ export class Room {
     this.resetTurn();
     this.lastMove = null;
     this.winners = [];
+    this.tally = {}; // seat -> { six, capture, home, out }: this game's numbers, for the finish card
+    this.feud = {}; // seat -> the seat that last captured it: capture them back for revenge
+    this.streak = {}; // seat -> captures in a row without being captured
+    this.revenges = {}; // seat -> revenges taken this game (each pays REWARDS.revenge)
+    this.hits = {}; // seat -> times its tokens were captured this game (the Untouchable badge)
+    this.wasLast = {}; // seat -> true once it has been last in the race (the Comeback badge)
     this.teamOrder = null;
     this.decider = null;
     this.actor = null;
@@ -580,13 +621,13 @@ export class Room {
     // Testing (scripts/rig-dice.sh): two 6s to start every turn, then a roll that isn't a 6
     if (actor && !actor.bot && isRigged(actor.userId)) {
       this.rigged = true;
-      return this.rolls.length < MAX_SIXES - 1 ? 6 : randomInt(1, 6);
+      return this.sixThrows < MAX_SIXES - 1 ? 6 : randomInt(1, 6);
     }
     const first = this.rng();
     if (!actor?.bot || actor.level !== 'impossible' || Math.random() >= 0.35) return first;
     const second = this.rng();
     const worth = (v) => {
-      if (v === 6 && this.rolls.length >= MAX_SIXES - 1) return -1000;
+      if (v === 6 && this.sixThrows >= MAX_SIXES - 1) return -1000;
       const s = bestBotScore(this.tokens, this.turn, v, this.raceSeats(), this.board, this.teamMap);
       return (s === -Infinity ? -50 : s) + (v === 6 ? 20 : 0);
     };
@@ -601,20 +642,26 @@ export class Room {
   doRoll() {
     if (this.rolled) throw new Error('Already rolled');
     const seat = this.turn;
-    // Stuck in base for STUCK_TURNS dead turns: this roll is a guaranteed 6.
-    // Random rolls are untouched — only the first roll of such a turn is forced.
-    const pity = this.rolls.length === 0 && this.allInBase(seat) && this.stuck[seat] >= STUCK_TURNS;
-    const dice = pity ? 6 : this.luckyRoll();
-    if (dice === 6) this.stat(this.actorSeat(), 'six');
-    if (dice === 6) this.stuck[seat] = 0; // any 6 ends the drought, forced or not
-    this.dice = dice;
-    this.rolls.push(dice);
+    // Stuck in base for STUCK_TURNS dead turns: this throw has a guaranteed 6.
+    // Random rolls are untouched — only the first throw of such a turn is forced.
+    const pity = this.sixThrows === 0 && this.rolls.length === 0 && this.allInBase(seat) && this.stuck[seat] >= STUCK_TURNS;
+    // One dice, or two on 6-arm boards: each dice is its own roll to play.
+    const values = [];
+    for (let i = 0; i < diceFor(this.board.arms); i++) values.push(pity && i === 0 ? 6 : this.luckyRoll());
+    const sixes = values.filter((v) => v === 6).length;
+    if (sixes) this.stat(this.actorSeat(), 'six', sixes);
+    if (sixes) this.stuck[seat] = 0; // any 6 ends the drought, forced or not
+    this.dice = values.at(-1);
+    this.diceValues = values;
+    this.rolls.push(...values);
     this.seq++;
-    this.lastRoll = { seq: this.seq, seat, value: dice };
+    this.lastRoll = { seq: this.seq, seat, value: values.at(-1), values };
     this.lastMove = null;
-    // Three 6s in a row: the whole turn is lost, kept 6s and earned extra turns included.
-    if (dice === 6 && this.rolls.length >= MAX_SIXES) {
-      this.addLog(`${this.turnName()} rolled three 6s — turn skipped!`);
+    const what = values.length > 1 ? values.join(' and ') : `a ${values[0]}`;
+    if (sixes) this.sixThrows++;
+    // Three throws in a row with a 6: the whole turn is lost, kept rolls and earned extra turns included.
+    if (sixes && this.sixThrows >= MAX_SIXES) {
+      this.addLog(`${this.turnName()} rolled ${values.length > 1 ? 'a 6 three times in a row' : 'three 6s'} — turn skipped!`);
       this.rolled = true;
       this.skipped = true;
       this.rolls = [];
@@ -624,8 +671,8 @@ export class Room {
       this.schedule(this.delays.noMove, () => this.nextTurn());
       return;
     }
-    if (dice === 6) {
-      this.addLog(`${this.turnName()} rolled a 6 — rolls again`);
+    if (sixes) {
+      this.addLog(`${this.turnName()} rolled ${what} — rolls again`);
       this.turnDeadline = Date.now() + this.delays.timeout;
       this.changed();
       return;
@@ -675,6 +722,7 @@ export class Room {
     this.extraTurns--;
     this.rolled = false;
     this.rolls = [];
+    this.sixThrows = 0;
     this.options = [];
     this.movable = [];
     this.turnDeadline = Date.now() + this.delays.timeout;
@@ -695,8 +743,36 @@ export class Room {
     this.options = [];
     this.movable = [];
     this.captures[by] += result.captured.length;
-    if (result.captured.length) this.stat(by, 'capture', result.captured.length);
+    if (result.captured.length) {
+      this.stat(by, 'capture', result.captured.length);
+      // Revenge: capturing whoever last captured you. Then every seat captured now owes `by` one.
+      const revenge = this.feud[by] !== undefined && result.captured.some((c) => c.seat === this.feud[by]);
+      if (revenge) {
+        delete this.feud[by];
+        this.revenges[by] = (this.revenges[by] || 0) + 1;
+        this.stat(by, 'revenge');
+      }
+      const streak = (this.streak[by] || 0) + result.captured.length;
+      this.streak[by] = streak;
+      if (streak >= 3 && streak - result.captured.length < 3) this.stat(by, 'rampage');
+      for (const c of result.captured) {
+        this.streak[c.seat] = 0;
+        this.feud[c.seat] = by;
+        this.hits[c.seat] = (this.hits[c.seat] || 0) + 1;
+      }
+      // Whoever is now furthest behind in the race has been last (a win from there is a comeback)
+      const racing = this.inPlay();
+      if (racing.length > 1) {
+        const got = (seat) => this.tokens[seat].reduce((n, p) => n + Math.max(0, p), 0);
+        const least = Math.min(...racing.map(got));
+        const last = racing.filter((seat) => got(seat) === least);
+        if (last.length === 1) this.wasLast[last[0]] = true;
+      }
+      this.lastMove.revenge = revenge;
+      this.lastMove.streak = streak;
+    }
     if (result.finishedToken) this.stat(by, 'home');
+    if (result.from < 0) this.stat(by, 'out');
 
     // One line for every move, then any capture.
     if (result.finishedToken) this.addLog(`${name} used a ${value} and brought a token home!`);
@@ -774,8 +850,12 @@ export class Room {
   }
 
   // Seat -> team number for the rules, or null when every seat plays for itself.
+  // In the decider a colour belongs to the team racing it (in 2v2 that's not its usual team),
+  // and the colours left out belong to nobody.
   get teamMap() {
-    return this.teams ? teamsOf(this.mode, this.board.arms) : null;
+    if (!this.teams) return null;
+    if (this.decider) return Array.from({ length: this.board.arms }, (_, s) => (this.decider.colors.includes(s) ? this.decider.colors.indexOf(s) : 100 + s));
+    return teamsOf(this.mode, this.board.arms);
   }
 
   teamName(t) {
@@ -858,17 +938,23 @@ export class Room {
     return true;
   }
 
-  // A tie on points: one colour per team (each team's first colour), every token back in base,
-  // and teammates take turns rolling for it. First colour with all four home wins.
+  // A tie on points: one colour per team, on OPPOSITE sides of the board, every token back in
+  // base, and teammates take turns rolling for it. First colour with all four home wins.
   startDecider() {
     this.racePoints = this.teamPoints();
     const players = this.teams.map((members) => members.filter((s) => this.seats[s] && !this.forfeited.includes(s)));
-    const colors = this.teams.map((members) => members[0]);
+    const colors = deciderColors(this.teams, this.board.arms);
     const first = randomInt(colors.length);
     this.decider = { colors, players, next: players.map((ps, t) => (t === first ? 1 % ps.length : 0)) };
     this.tokens = newTokens(this.board.arms);
     this.stuck = Array(this.board.arms).fill(0);
     this.winners = [];
+    this.tally = {}; // seat -> { six, capture, home, out }: this game's numbers, for the finish card
+    this.feud = {}; // seat -> the seat that last captured it: capture them back for revenge
+    this.streak = {}; // seat -> captures in a row without being captured
+    this.revenges = {}; // seat -> revenges taken this game (each pays REWARDS.revenge)
+    this.hits = {}; // seat -> times its tokens were captured this game (the Untouchable badge)
+    this.wasLast = {}; // seat -> true once it has been last in the race (the Comeback badge)
     this.lastMove = null;
     this.clearTimer();
     this.turn = colors[first];
@@ -927,7 +1013,7 @@ export class Room {
       // its course pays the full placement even if the last-placed seat didn't finish.
       const share = this.endedEarly ? progressShare(this.tokens, s, this.board) : 1;
       if (share < 1) this.rewardPartial.push(s);
-      const coins = Math.round(REWARDS.place[place] * share + this.captures[s] * REWARDS.capture);
+      const coins = Math.round(REWARDS.place[place] * share + this.captures[s] * REWARDS.capture + (this.revenges[s] || 0) * REWARDS.revenge);
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
@@ -939,7 +1025,12 @@ export class Room {
       const points = Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
       results.push({ userId: seat.userId, name: seat.name, points, won });
       this.stat(s, 'game');
-      if (won) this.stat(s, 'win');
+      if (won) {
+        this.stat(s, 'win');
+        if (!this.hits[s]) this.stat(s, 'clean');
+        if (this.wasLast[s]) this.stat(s, 'comeback');
+        if (this.quick) this.stat(s, 'quickwin');
+      }
       if (place <= (this.teamOrder ? 0 : 1)) this.stat(s, 'top2');
     });
     this.onGameEnd(results);
@@ -979,6 +1070,7 @@ export class Room {
   resetTurn() {
     this.rolled = false;
     this.rolls = [];
+    this.sixThrows = 0;
     this.options = [];
     this.movable = [];
     this.extraTurns = 0;
@@ -1117,6 +1209,9 @@ export class Room {
     for (const k of SAVED_FIELDS) if (data[k] !== undefined) room[k] = data[k];
     room.banned = new Set(data.banned || []);
     room.board = boardFor(room.mode);
+    // Saved before two-dice boards: one dice per throw, so the kept 6s are the throws so far.
+    room.diceValues ??= room.dice ? [room.dice] : [];
+    room.sixThrows ??= room.rolled ? 0 : (room.rolls || []).length;
     return room;
   }
 
@@ -1166,6 +1261,9 @@ export class Room {
 
   // Daily quests count what humans do in games against other people (never against bots alone).
   stat(seat, stat, n = 1) {
+    // (every seat's numbers are kept for the finish card, bots' too; only people earn quests)
+    const mine = (this.tally[seat] ||= {});
+    mine[stat] = (mine[stat] || 0) + n;
     const s = this.seats[seat];
     if (!s || s.bot || this.rigged || this.activeSeats().filter((i) => !this.seats[i].bot).length < 2) return;
     this.onStat(s.userId, s.name, stat, n);
@@ -1212,6 +1310,7 @@ export class Room {
       roomName: this.name,
       code: this.code,
       visibility: this.visibility,
+      quick: this.quick,
       chatOn: this.chatOn,
       mode: this.mode,
       seatsAllowed: MODES[this.mode].seats,
@@ -1225,11 +1324,14 @@ export class Room {
             ...s,
             color: this.board.colors[i],
             skins: s.bot ? DEFAULT_EQUIPPED : this.equipped(s.userId),
+            look: s.bot ? null : this.profiles?.badgeLook(s.userId) || null, // title and pinned badges
           },
       ),
       tokens: this.tokens,
       turn: this.turn,
       dice: this.dice,
+      diceValues: this.diceValues,
+      diceCount: diceFor(this.board.arms),
       rolled: this.rolled,
       rolls: this.rolls,
       options: this.options,
@@ -1238,6 +1340,9 @@ export class Room {
       skipped: this.skipped,
       lastRoll: this.lastRoll,
       winners: this.winners,
+      tally: this.tally,
+      feud: this.feud,
+      streak: this.streak,
       teams: this.teams,
       teamOrder: this.teamOrder,
       // team games: points so far (or the race's final points once it's settled), and the decider

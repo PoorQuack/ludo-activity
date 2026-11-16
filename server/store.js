@@ -2,9 +2,18 @@
 // Guests (plain-browser testing) are never written to disk.
 import fs from 'node:fs';
 import path from 'node:path';
-import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem } from '../shared/shop.js';
+import { randomInt } from 'node:crypto';
+import { BADGES, BADGES_BY_ID, BADGE_STATS, LEVELS, MAX_PINS, badgeValue, levelFor } from '../shared/badges.js';
+import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem, SETS_BY_ID, setPrice, priceOf } from '../shared/shop.js';
 
 const SAVE_DELAY_MS = 1000;
+// The daily chest: a d20, 5 coins a pip
+export const DAILY_DIE = 20;
+export const DAILY_PER_PIP = 5;
+export const STREAK_DAYS = 7; // roll 7 days in a row: day 7 pays double
+
+// Referrals: invite someone new and you get this many coins once they've finished their first game
+export const REFERRAL_COINS = 50;
 
 export const CURRENT_VERSION = 2;
 
@@ -15,9 +24,10 @@ export const CURRENT_VERSION = 2;
 const MIGRATIONS = [(v1) => ({ version: 2, profiles: v1 })];
 
 export class ProfileStore {
-  constructor(file, { onChange, freeShop = false, now = Date.now } = {}) {
+  constructor(file, { onChange, onBadge, freeShop = false, now = Date.now } = {}) {
     this.file = file;
     this.onChange = onChange || (() => {});
+    this.onBadge = onBadge || (() => {}); // (id, [{ badge, level, coins }]) when badge levels are reached
     this.freeShop = freeShop; // testing: everything costs 0
     this.now = now;
     this.profiles = new Map();
@@ -80,7 +90,59 @@ export class ProfileStore {
   // in the shop are kept in the save file but hidden here.
   view(id) {
     const p = this.profiles.get(id);
-    return p ? { ...p, owned: p.owned.filter((itemId) => ITEMS[itemId]) } : null;
+    if (!p) return null;
+    const { invite, daily, streak, ref, bought, ...rest } = p; // the server-invite answer isn't the client's business
+    return {
+      ...rest,
+      owned: p.owned.filter((itemId) => ITEMS[itemId]),
+      dailyReady: daily !== this.dayKey(),
+      streakDay: this.streakDay(p), // today's place in the 7-day strip (1–7)
+      dailyNext: Date.parse(`${this.dayKey()}T00:00:00Z`) + 86_400_000, // next UTC midnight
+      referrals: { count: ref.count, coins: ref.count * REFERRAL_COINS, per: REFERRAL_COINS },
+    };
+  }
+
+  // Where today sits in the 7-day streak: rolled today -> that day; rolled yesterday -> the next
+  // day (after day 7, day 1 again); a missed day starts over at day 1.
+  streakDay(p) {
+    const today = this.dayKey();
+    if (p.daily === today) return p.streak || 1;
+    const yesterday = new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    return p.daily === yesterday ? (p.streak % STREAK_DAYS) + 1 : 1;
+  }
+
+  // The daily chest: a d20 once a UTC day, DAILY_PER_PIP coins per pip (5–100), doubled on day 7
+  // of a streak. Paid outside the daily earning cap. Returns { roll, coins, day, doubled }.
+  rollDaily(id, rng = () => randomInt(1, DAILY_DIE + 1)) {
+    const p = this.get(id);
+    if (p.daily === this.dayKey()) throw new Error('Already rolled today: come back after midnight UTC');
+    const day = this.streakDay(p);
+    const roll = rng();
+    const doubled = day === STREAK_DAYS;
+    const coins = roll * DAILY_PER_PIP * (doubled ? 2 : 1);
+    p.daily = this.dayKey();
+    p.streak = day;
+    p.coins += coins;
+    if (doubled) p.stats.week = (p.stats.week || 0) + 1; // a whole 7-day streak (the Regular badge)
+    this.changed(id);
+    this.checkBadges(id);
+    return { roll, coins, day, doubled };
+  }
+
+  // Should this player be asked to join the Discord server now?
+  wantsInvite(id) {
+    const p = this.get(id);
+    return !p.invite.status && this.now() >= p.invite.until;
+  }
+
+  // answer: 'join' (opened the invite), 'never' (ticked "Don't ask again"), 'later' (plain "No thanks": a week)
+  answerInvite(id, answer, snoozeMs) {
+    const p = this.get(id);
+    if (answer === 'join') p.invite = { status: 'joined', until: 0 };
+    else if (answer === 'never') p.invite = { status: 'never', until: 0 };
+    else if (answer === 'later') p.invite = { status: '', until: this.now() + snoozeMs };
+    else return;
+    this.save();
   }
 
   // Grants up to what's left under the daily earning cap and returns the granted amount.
@@ -95,9 +157,55 @@ export class ProfileStore {
     return granted;
   }
 
+  // A brand-new player came in through someone's invite: remember who, to pay them later.
+  // Only real Discord accounts on both sides, an inviter who has played before, never yourself.
+  setReferrer(id, by) {
+    const p = this.profiles.get(id);
+    by = String(by || '');
+    if (!p || p.ref.by || !/^\d{5,25}$/.test(by) || by === id || id.startsWith('guest-') || !this.profiles.has(by)) return false;
+    p.ref.by = by;
+    this.changed(id);
+    return true;
+  }
+
+  // A player finished a game. If it's the first since someone invited them, that someone gets
+  // REFERRAL_COINS (outside the daily cap). Returns { to, coins } when a payout was made.
+  gameFinished(id) {
+    const p = this.profiles.get(id);
+    if (!p?.ref.by || p.ref.paid) return null;
+    p.ref.paid = true;
+    this.changed(id);
+    const inviter = this.profiles.get(p.ref.by);
+    if (!inviter) return null;
+    inviter.coins += REFERRAL_COINS;
+    inviter.ref.count += 1;
+    this.changed(p.ref.by);
+    return { to: p.ref.by, coins: REFERRAL_COINS };
+  }
+
+  // A real-money purchase (a Discord entitlement): pays its coins once. The entitlement id is
+  // kept so the same purchase can never pay twice. Returns whether it paid now.
+  grantPurchase(id, entitlementId, coins) {
+    const p = this.get(id);
+    if (p.bought.includes(entitlementId)) return false;
+    p.bought.push(entitlementId);
+    p.coins += coins;
+    this.changed(id);
+    this.flush(); // money: write it now, not in a second
+    return true;
+  }
+
   // Leaderboard prizes: paid in full, outside the daily earning cap.
   grantPrize(id, coins) {
     if (id.startsWith('guest-')) return 0;
+    const p = this.get(id);
+    p.coins += coins;
+    this.changed(id);
+    return coins;
+  }
+
+  // Daily quest rewards: paid in full, outside the daily earning cap (guests too, for testing).
+  rewardCoins(id, coins) {
     const p = this.get(id);
     p.coins += coins;
     this.changed(id);
@@ -121,12 +229,49 @@ export class ProfileStore {
     if (!item) throw new Error('Unknown item');
     const p = this.get(id);
     if (ownsItem(p, itemId)) throw new Error('You already own that');
-    const price = this.freeShop ? 0 : item.price;
+    const price = this.freeShop ? 0 : priceOf(item, this.dayKey()); // (today's deal is 30% off)
     if (p.coins < price) throw new Error('Not enough coins');
     p.coins -= price;
     p.owned.push(itemId);
     if (!['emote', 'emote-pack'].includes(item.type)) p.equipped[item.type] = itemId;
     this.changed(id);
+    this.checkBadges(id); // (Collector)
+  }
+
+  // A gift: `id` pays today's price and `toId` gets the item (not put on: that's theirs to do).
+  // Free items and things they already own can't be given.
+  gift(id, toId, itemId) {
+    const item = ITEMS[itemId];
+    if (!item || !item.price) throw new Error('Unknown item');
+    if (!toId || toId === id) throw new Error("You can't gift that to yourself");
+    const to = this.get(toId);
+    if (ownsItem(to, itemId)) throw new Error('They already own that');
+    const p = this.get(id);
+    const price = this.freeShop ? 0 : priceOf(item, this.dayKey());
+    if (p.coins < price) throw new Error('Not enough coins');
+    p.coins -= price;
+    to.owned.push(itemId);
+    p.stats.gift = (p.stats.gift || 0) + 1;
+    this.changed(id);
+    this.changed(toId);
+    this.checkBadges(id);
+    this.checkBadges(toId);
+  }
+
+  // A whole set: the missing items at 10% off, and the whole look put on.
+  buySet(id, setId) {
+    const set = SETS_BY_ID[setId];
+    if (!set) throw new Error('Unknown item');
+    const p = this.get(id);
+    const { price, missing } = setPrice(set, p);
+    if (!missing.length) throw new Error('You already own that');
+    const cost = this.freeShop ? 0 : price;
+    if (p.coins < cost) throw new Error('Not enough coins');
+    p.coins -= cost;
+    p.owned.push(...missing);
+    for (const itemId of set.items) p.equipped[ITEMS[itemId].type] = itemId;
+    this.changed(id);
+    this.checkBadges(id);
   }
 
   equip(id, itemId) {
@@ -136,6 +281,58 @@ export class ProfileStore {
     if (!ownsItem(p, itemId)) throw new Error("You don't own that yet");
     p.equipped[item.type] = itemId;
     this.changed(id);
+  }
+
+  // ---------- badges (shared/badges.js) ----------
+
+  // A stat from a game against people (captures, wins…): lifetime totals for the badges
+  addStat(id, stat, n = 1) {
+    if (!BADGE_STATS.includes(stat) || !(n > 0)) return [];
+    const p = this.get(id);
+    p.stats[stat] = (p.stats[stat] || 0) + n;
+    this.changed(id);
+    return this.checkBadges(id);
+  }
+
+  // Pays for any badge levels newly reached (each level once, ever) and says so
+  checkBadges(id) {
+    const p = this.get(id);
+    const reached = [];
+    for (const b of BADGES) {
+      const level = levelFor(b, badgeValue(b, p));
+      for (let l = (p.badges[b.id] || 0) + 1; l <= level; l++) reached.push({ badge: b.id, level: l, coins: LEVELS[l - 1].coins });
+      if (level > (p.badges[b.id] || 0)) p.badges[b.id] = level;
+    }
+    if (!reached.length) return reached;
+    for (const r of reached) p.coins += r.coins; // (outside the daily earning limit, like quests)
+    this.changed(id);
+    this.onBadge(id, reached);
+    return reached;
+  }
+
+  // The title worn under your name: a gold badge's title, or none ('')
+  setTitle(id, badgeId) {
+    const p = this.get(id);
+    if (badgeId && (!BADGES_BY_ID[badgeId] || (p.badges[badgeId] || 0) < LEVELS.length)) throw new Error('Get that badge to gold first');
+    p.title = badgeId || '';
+    this.changed(id);
+  }
+
+  // Up to three badges shown beside your name
+  setPins(id, pins) {
+    const p = this.get(id);
+    if (!Array.isArray(pins)) throw new Error('Bad pins');
+    const ok = [...new Set(pins)].filter((b) => BADGES_BY_ID[b] && (p.badges[b] || 0) > 0);
+    if (ok.length !== pins.length || ok.length > MAX_PINS) throw new Error('Bad pins');
+    p.pins = ok;
+    this.changed(id);
+  }
+
+  // What other players see of someone's badges: their title and pinned badges (with levels)
+  badgeLook(id) {
+    const p = this.peek(id);
+    if (!p) return null;
+    return { title: p.title || '', pins: p.pins.map((b) => ({ id: b, level: p.badges[b] || 0 })) };
   }
 
   changed(id) {
@@ -196,7 +393,30 @@ function normalize(p) {
   const earned = /^\d{4}-\d{2}-\d{2}$/.test(p.earned?.day || '') && Number.isFinite(p.earned.coins) && p.earned.coins >= 0
     ? { day: p.earned.day, coins: p.earned.coins }
     : { day: '', coins: 0 };
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, earned, owned, equipped: { ...DEFAULT_EQUIPPED } };
+  const invite = {
+    status: ['joined', 'never'].includes(p.invite?.status) ? p.invite.status : '',
+    until: Number.isFinite(p.invite?.until) ? p.invite.until : 0,
+  };
+  const daily = /^\d{4}-\d{2}-\d{2}$/.test(p.daily || '') ? p.daily : ''; // the UTC day the daily d20 was last rolled
+  const streak = Number.isInteger(p.streak) && p.streak >= 0 && p.streak <= STREAK_DAYS ? p.streak : 0; // days in a row, ending on `daily`
+  // Referrals: who brought this player in (paid once they finish a game), and how many players
+  // this one has brought in
+  const ref = {
+    by: typeof p.ref?.by === 'string' && /^\d{5,25}$/.test(p.ref.by) ? p.ref.by : '',
+    paid: p.ref?.paid === true,
+    count: Number.isInteger(p.ref?.count) && p.ref.count >= 0 ? p.ref.count : 0,
+  };
+  // Discord entitlement ids already paid out (see grantPurchase). Never trimmed: it's what stops a
+  // purchase paying twice.
+  const bought = Array.isArray(p.bought) ? p.bought.filter((e) => typeof e === 'string' && /^\d{5,25}$/.test(e)) : [];
+  // Badges: lifetime stat totals, the level reached on each badge (0-3), the title worn, the pins
+  const stats = {};
+  for (const k of BADGE_STATS) if (Number.isInteger(p.stats?.[k]) && p.stats[k] > 0) stats[k] = p.stats[k];
+  const badges = {};
+  for (const b of BADGES) if (Number.isInteger(p.badges?.[b.id]) && p.badges[b.id] > 0) badges[b.id] = Math.min(LEVELS.length, p.badges[b.id]);
+  const title = BADGES_BY_ID[p.title] && badges[p.title] === LEVELS.length ? p.title : '';
+  const pins = Array.isArray(p.pins) ? [...new Set(p.pins)].filter((b) => badges[b]).slice(0, MAX_PINS) : [];
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, badges, title, pins };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }

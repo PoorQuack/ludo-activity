@@ -1,6 +1,7 @@
 // Every dice and board sold in the shop has a look defined (a missing one would draw as Classic).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { SHOP_ITEMS } from '../shared/shop.js';
 import { DICE_STYLES, BOARD_THEMES } from '../client/skins.js';
 
@@ -32,4 +33,17 @@ test('the Nervous cat comes free with the Hamster pack, and the pack has no cat 
   assert.equal(ownsItem({ owned: [] }, 'emote-nervouscat'), false);
   assert.equal(ownsItem({ owned: ['emote-nervouscat'] }, 'emote-nervouscat'), true);
   assert.ok(ITEMS['emote-pack-hamster'].emotes.every((e) => e.img.startsWith('/emotes/hamster/') && !/cat/.test(e.img)));
+});
+
+test('every sticker pack is our own art: its files exist and live in our own folders', () => {
+  const ours = ['hamster', 'fox', 'kitty', 'pixel', 'brainrot', 'dicerot'];
+  const slugs = new Set();
+  for (const pack of SHOP_ITEMS.filter((i) => i.type === 'emote-pack')) {
+    for (const e of pack.emotes) {
+      assert.ok(ours.includes(e.img.split('/')[2]), `${pack.id}: ${e.img} is not in one of our folders`);
+      assert.ok(fs.existsSync(new URL(`../client/public${e.img}`, import.meta.url)), `${e.img} is missing`);
+      assert.ok(!slugs.has(e.slug), `two stickers share the code :${e.slug}:`);
+      slugs.add(e.slug);
+    }
+  }
 });

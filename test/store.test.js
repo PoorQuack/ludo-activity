@@ -148,3 +148,70 @@ test('flush keeps the previous file as .bak', () => {
   assert.equal(bak.u?.coins ?? bak.profiles?.u?.coins, 1); // the pre-flush content
   fs.rmSync(dir, { recursive: true });
 });
+
+test("today's deal: one item a day at 30% off, the same for everyone, and the server charges that price", async () => {
+  const { dailyDeal, priceOf, ITEMS } = await import('../shared/shop.js');
+  const day = '2026-11-15';
+  const deal = dailyDeal(day);
+  assert.ok(['token', 'dice', 'board'].includes(deal.type) && deal.price > 0);
+  assert.equal(dailyDeal(day).id, deal.id, 'the same all day');
+  assert.ok(new Set(Array.from({ length: 30 }, (_, i) => dailyDeal(`2026-12-${String(i + 1).padStart(2, '0')}`).id)).size > 10, 'it changes from day to day');
+  assert.equal(priceOf(deal, day), Math.round((deal.price * 0.7) / 10) * 10);
+  const other = Object.values(ITEMS).find((i) => i.type === 'token' && i.price > 0 && i.id !== deal.id);
+  assert.equal(priceOf(other, day), other.price);
+  const store = new ProfileStore(null, { now: () => Date.parse(`${day}T12:00:00Z`) });
+  store.adminCoins('u', 5000);
+  const before = store.get('u').coins;
+  store.buy('u', deal.id);
+  assert.equal(before - store.get('u').coins, priceOf(deal, day));
+});
+
+test('a gift: the giver pays, the friend owns it, and nothing they already have can be given', () => {
+  const store = new ProfileStore(null, { now: () => Date.parse('2026-11-16T12:00:00Z') });
+  store.adminCoins('ann', 5000);
+  const before = store.get('ann').coins;
+  store.gift('ann', 'bob', 'token-star');
+  assert.ok(store.get('bob').owned.includes('token-star'));
+  assert.ok(!store.get('ann').owned.includes('token-star'), 'the giver does not get one too');
+  assert.notEqual(store.get('bob').equipped.token, 'token-star', 'it is theirs to put on');
+  assert.ok(before - store.get('ann').coins >= 140);
+  assert.throws(() => store.gift('ann', 'bob', 'token-star'), /already own/);
+  assert.throws(() => store.gift('ann', 'ann', 'token-gem'), /yourself/);
+  assert.throws(() => store.gift('ann', 'bob', 'token-classic'), /Unknown item/);
+  assert.throws(() => store.gift('cat', 'bob', 'token-gem'), /Not enough coins/);
+});
+
+test('badges: lifetime stats reach levels that pay once; gold unlocks the title; pins need the badge', async () => {
+  const { BADGES_BY_ID } = await import('../shared/badges.js');
+  const told = [];
+  const store = new ProfileStore(null, { onBadge: (id, r) => told.push(...r) });
+  const start = store.get('ann').coins;
+  store.addStat('ann', 'capture', 24);
+  assert.deepEqual(told, []);
+  store.addStat('ann', 'capture', 1); // 25: bronze
+  assert.deepEqual(told, [{ badge: 'menace', level: 1, coins: 50 }]);
+  assert.equal(store.get('ann').coins, start + 50);
+  store.addStat('ann', 'capture', 1000); // straight past silver and gold: both pay
+  assert.deepEqual(told.slice(1).map((r) => r.level), [2, 3]);
+  assert.equal(store.get('ann').coins, start + 600);
+  store.addStat('ann', 'capture', 1000);
+  assert.equal(told.length, 3, 'each level pays once');
+  store.addStat('ann', 'game', 5); // not a badge stat
+  assert.equal(store.get('ann').stats.game, undefined);
+  assert.throws(() => store.setTitle('ann', 'champion'), /gold/);
+  store.setTitle('ann', 'menace');
+  assert.equal(store.badgeLook('ann').title, 'menace');
+  assert.throws(() => store.setPins('ann', ['menace', 'lucky']), /Bad pins/);
+  store.setPins('ann', ['menace']);
+  assert.deepEqual(store.badgeLook('ann').pins, [{ id: 'menace', level: 3 }]);
+  assert.equal(BADGES_BY_ID.menace.goals[2], 500);
+  // a gift counts for Generous
+  store.adminCoins('ann', 5000);
+  store.gift('ann', 'bob', 'token-star');
+  assert.ok(told.some((r) => r.badge === 'generous' && r.level === 1));
+  // and survives a save/load round trip
+  const copy = new ProfileStore(null);
+  copy.applySave(JSON.stringify({ version: 2, profiles: { ann: store.get('ann') } }));
+  assert.equal(copy.get('ann').badges.menace, 3);
+  assert.equal(copy.get('ann').title, 'menace');
+});

@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newTokens, applyMove, capturesAt, isPair } from '../server/rules.js';
-import { Room } from '../server/room.js';
+import { Room, deciderColors } from '../server/room.js';
 import { ProfileStore } from '../server/store.js';
 import { BOARDS, MODES, teamsOf } from '../shared/board.js';
 import { REWARDS } from '../shared/shop.js';
@@ -270,11 +270,12 @@ test('1st and last against 2nd and 3rd is a tie: the decider starts', () => {
   assert.equal(room.endIfOver(), true);
   assert.equal(room.phase, 'playing');
   assert.deepEqual(room.racePoints, [3, 3]);
-  assert.deepEqual(room.decider.colors, [0, 1]); // red for team 0, green for team 1
+  // opposite sides: red for team 0, yellow's colour (straight across) for team 1
+  assert.deepEqual(room.decider.colors, [0, 2]);
   assert.deepEqual(room.decider.players, [[0, 2], [1, 3]]);
   assert.deepEqual(room.tokens, newTokens(4)); // everything back in base
   assert.deepEqual(room.winners, []);
-  assert.deepEqual(room.raceSeats(), [0, 1]);
+  assert.deepEqual(room.raceSeats(), [0, 2]);
   assert.ok(room.log.some((l) => /draw, 3 points each/.test(l.text ?? l)));
   room.destroy();
 });
@@ -290,7 +291,7 @@ test('in the decider the colours alternate and teammates take turns rolling', ()
   }
   // colours alternate; each colour's players take turns
   const red = turns.filter((t) => t.startsWith('0:')).map((t) => t.split(':')[1]);
-  const green = turns.filter((t) => t.startsWith('1:')).map((t) => t.split(':')[1]);
+  const green = turns.filter((t) => t.startsWith('2:')).map((t) => t.split(':')[1]); // team 1's colour
   assert.equal(red.length, 4);
   assert.equal(green.length, 4);
   for (const seq of [red, green]) for (let i = 1; i < seq.length; i++) assert.notEqual(seq[i], seq[i - 1]);
@@ -314,9 +315,9 @@ test('the first colour home wins the decider, and both teammates share the win',
   room.start(users[0]);
   room.winners = [0, 1, 3];
   room.endIfOver();
-  // green (team 1) is one step from home with its last token, and it's green's go
-  room.tokens[1] = [B4.finished, B4.finished, B4.finished, B4.finished - 1];
-  room.turn = 1;
+  // team 1's colour (yellow's, across from red) is one step from home, and it's team 1's go
+  room.tokens[2] = [B4.finished, B4.finished, B4.finished, B4.finished - 1];
+  room.turn = 2;
   room.actor = 3;
   room.rolled = true;
   room.rolls = [1];
@@ -397,5 +398,31 @@ test('a decider plays to the end with a human and bots taking turns', async () =
   assert.ok(room.decider.colors.some((c) => room.tokens[c].every((p) => p === B4.finished)));
   assert.ok(humanTurns > 0, 'the human rolled for red in the decider');
   assert.equal(room.winners.length, 4);
+  room.destroy();
+});
+
+test('decider colours start on opposite sides of the board (2v2 and 3v3)', () => {
+  assert.deepEqual(deciderColors([[0, 2], [1, 3]], 4), [0, 2]);
+  assert.deepEqual(deciderColors([[0, 2, 4], [1, 3, 5]], 6), [0, 3]);
+});
+
+test('in the decider the two colours are opponents: they can capture each other', () => {
+  const { room, users } = teamRoom();
+  room.winners = [0, 1, 3];
+  room.endIfOver();
+  assert.deepEqual(room.decider.colors, [0, 2]);
+  assert.equal(room.teamMap[0], 0);
+  assert.equal(room.teamMap[2], 1); // yellow's colour races for team 1 here
+  // a team 1 token (yellow's colour) sits 3 squares ahead of a red token; red rolls a 3
+  const redStart = B4.startIndex[0];
+  room.tokens[0] = [redStart + 1 - redStart, -1, -1, -1]; // red on its 2nd square
+  room.tokens[2] = [at(2, redStart + 4), -1, -1, -1]; // yellow's colour 3 squares further
+  room.turn = 0;
+  room.actor = room.decider.players[0][0];
+  room.rolled = true;
+  room.rolls = [3];
+  room.options = [[0]];
+  room.move(users[room.actor], 0, 0);
+  assert.equal(room.tokens[2][0], -1, "team 1's token was sent home");
   room.destroy();
 });

@@ -550,7 +550,7 @@ test('a sticker-only chat message also floats over your base', () => {
   room.host(u); // seated at 0
   room.say(u, ':bonk:');
   assert.equal(room.chat.at(-1).text, ':bonk:');
-  assert.equal(room.emotes.at(-1).img, '/emotes/hamster/bonkhamster.png');
+  assert.equal(room.emotes.at(-1).img, '/emotes/hamster/bonk.png');
   assert.equal(room.emotes.at(-1).seat, 0);
   room.lastChat.clear();
   room.say(u, 'nice :bonk: move'); // a sticker inside text stays chat-only
@@ -569,8 +569,83 @@ test('emote packs: idx picks an image entry, ownership is required', () => {
   store.get('u').owned.push('emote-pack-hamster');
   assert.throws(() => room.emote(u, 'emote-pack-hamster', 99), /Unknown emote/);
   room.emote(u, 'emote-pack-hamster', 0);
-  assert.equal(room.emotes[0].img, '/emotes/hamster/thumbsuphamster.png');
+  assert.equal(room.emotes[0].img, '/emotes/hamster/thumbsup.png');
   assert.equal(room.emotes[0].emoji, undefined);
   assert.throws(() => store.equip('u', 'emote-pack-hamster'), /can't be equipped/);
+  room.destroy();
+});
+
+// A 6-player room (two dice per throw) with two connected humans in seats 0 and 3, seat 0 to play.
+function sixPlayerRoom(rolls = []) {
+  const room = new Room('t6', {
+    rng: () => rolls.shift() ?? 1,
+    delays: { bot: 10_000, noMove: 10_000, autoMove: 20, timeout: 60_000 },
+  });
+  const a = { id: 'a', name: 'A' };
+  const b = { id: 'b', name: 'B' };
+  room.connect(a);
+  room.connect(b);
+  room.host(a);
+  room.setMode(a, '6p');
+  room.sit(b, 3);
+  room.start(a);
+  room.turn = 0;
+  return { room, a, b };
+}
+
+test('6-player boards roll two dice, and each dice is its own roll to play', () => {
+  const { room, a } = sixPlayerRoom([3, 4]);
+  room.tokens[0] = [5, 10, -1, -1];
+  room.roll(a);
+  assert.deepEqual(room.diceValues, [3, 4]);
+  assert.deepEqual(room.lastRoll.values, [3, 4]);
+  assert.equal(room.snapshot().diceCount, 2);
+  assert.deepEqual(room.rolls, [3, 4]);
+  assert.equal(room.rolled, true);
+  room.move(a, 0, 0); // the 3 on token 0
+  room.move(a, 1, 0); // the 4 on token 1
+  assert.deepEqual(room.tokens[0], [8, 14, -1, -1]);
+  assert.equal(room.turn, 3);
+  room.destroy();
+});
+
+test('6-player: a throw with a 6 rolls again; three such throws in a row skip the turn', async () => {
+  // throw 1: 6+2, throw 2: 1+6, throw 3: 6+6 -> skipped
+  const { room, a } = sixPlayerRoom([6, 2, 1, 6, 6, 6]);
+  room.delays.noMove = 20;
+  room.tokens[0] = [5, -1, -1, -1];
+  room.roll(a);
+  assert.equal(room.rolled, false); // a 6 in the throw: roll again
+  assert.deepEqual(room.rolls, [6, 2]);
+  room.roll(a);
+  assert.equal(room.rolled, false);
+  room.roll(a);
+  assert.equal(room.skipped, true);
+  assert.deepEqual(room.rolls, []);
+  assert.equal(room.log.at(-1), 'A rolled a 6 three times in a row — turn skipped!');
+  await new Promise((r) => setTimeout(r, 80));
+  assert.equal(room.turn, 3);
+  assert.deepEqual(room.tokens[0], [5, -1, -1, -1]); // nothing moved
+  room.destroy();
+});
+
+test('6-player: two throws with a 6, then one without: every dice is played', () => {
+  const { room, a } = sixPlayerRoom([6, 1, 2, 6, 3, 4]);
+  room.tokens[0] = [5, -1, -1, -1];
+  room.roll(a);
+  room.roll(a);
+  room.roll(a);
+  assert.equal(room.rolled, true);
+  assert.equal(room.skipped, false);
+  assert.deepEqual(room.rolls, [6, 1, 2, 6, 3, 4]);
+  room.destroy();
+});
+
+test('4-player boards still roll one dice', () => {
+  const { room, a } = twoPlayerRoom([4]);
+  room.tokens[0] = [5, -1, -1, -1];
+  room.roll(a);
+  assert.deepEqual(room.diceValues, [4]);
+  assert.deepEqual(room.rolls, [4]);
   room.destroy();
 });

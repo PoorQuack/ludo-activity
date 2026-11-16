@@ -98,14 +98,13 @@ test('lobbies, kicked players and settings survive too', () => {
   const room = old.create(ann, { visibility: 'public', mode: '4p' });
   old.join(room, bob, {});
   room.handle(ann, { action: 'kick', userId: 'bob' });
-  room.handle(ann, { action: 'setChat', on: false });
   const saved = JSON.parse(JSON.stringify(old.save()));
   old.destroy();
   const fresh = newDir();
   fresh.restore(saved, { graceMs: 60_000 });
   const back = fresh.findCode(room.code);
   assert.equal(back.phase, 'lobby');
-  assert.equal(back.chatOn, false);
+  assert.equal(back.chatOn, true, 'chat is no longer the host\'s to turn off');
   assert.throws(() => fresh.join(back, bob, { withCode: true }), /removed you/);
   fresh.join(back, ann, {});
   assert.equal(back.seatOf('ann'), 0);
