@@ -438,7 +438,10 @@ html, body {
 .player-now b { font-size: 13px; }
 .player-now span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-controls { display: flex; gap: 8px; justify-content: center; }
-.player-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow: auto; }
+/* No scroll box of its own: on phones a nested one got squeezed to a single row (only Lo-fi showed).
+   The whole popover scrolls instead. */
+.player-list { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.player-pop > * { flex-shrink: 0; }
 .player-list button {
   text-align: left;
   padding: 7px 10px;
@@ -1793,7 +1796,9 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 /* ---------- profile: badges, title, pins ---------- */
 .profile-card { cursor: pointer; transition: box-shadow 0.15s; }
 .profile-card:hover, .profile-card:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); outline: none; }
-.profile-body { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 860px; margin: 0 auto; padding-bottom: 24px; }
+.profile-body { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 860px; margin: 0 auto; padding-bottom: 24px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* every section keeps its full height; the page scrolls instead of squashing them */
+.profile-body > * { flex-shrink: 0; }
 .prof-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
 .prof-who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .prof-name { font-size: 20px; font-weight: 800; }

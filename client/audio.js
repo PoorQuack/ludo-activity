@@ -229,8 +229,7 @@ function currentTrack() {
 const randomSong = (track) => Math.floor(Math.random() * (track?.songs.length || 1));
 
 // Points the one <audio> element at the current song of a genre — only that file is ever loaded.
-// A genre plays its songs one after another (a genre with one song just loops it); the genre
-// only changes when the player picks another.
+// The song repeats until the player picks another song (⏮ ⏭) or another genre.
 function loadTrack(track) {
   if (!track) return;
   if (!musicEl) {
@@ -253,7 +252,7 @@ function loadTrack(track) {
   settings.musicTrack = track.id;
   save();
   musicFileFailed = false;
-  musicEl.loop = track.songs.length === 1;
+  musicEl.loop = true; // one song repeats; ⏮ ⏭ change the song, the list changes the genre
   musicEl.src = track.songs[songIdx % track.songs.length].file;
   stopMusic(); // swap the generated loop for the file
   if (settings.music) startMusic();
