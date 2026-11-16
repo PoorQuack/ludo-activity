@@ -232,6 +232,7 @@ export const PAWN_STYLES = {
   'token-robot': { shape: 'robot' },
   'token-penguin': { shape: 'penguin' },
   'token-sakura': { shape: 'sakura' },
+  'token-dino': { shape: 'dino' },
   // Legendary: a figure of their own, with an effect that moves (TOKEN_FX), and a way of their
   // own of going back to base when captured (TOKEN_SIGNATURES in skins.js)
   'token-crown': { shape: 'king', fx: 'glitter' },
@@ -257,6 +258,7 @@ export const TOKEN_MARKS = {
   robot: { y: 0.72, x: 0, size: 0.7 },
   penguin: { y: 0.6, x: 0, size: 0.7 },
   sakura: { y: 0.5, x: 0, size: 0.62 },
+  dino: { y: 0.55, x: 0.05, size: 0.62 },
   ufo: { y: 0.95, x: 0, size: 0.6 },
   dragon: { y: 0.6, x: 0, size: 0.7 },
 };
@@ -389,6 +391,109 @@ export function eye(ctx, x, y, w, h, look = 0) {
 }
 
 export const TOKEN_SHAPES = {
+  // A little dinosaur sitting up in the player's colour: a pale belly, a big friendly eye, tiny
+  // arms, and crystal points down its back and tail, cut like the gem dice
+  dino(ctx, r, hex) {
+    outline(ctx, r, hex);
+    const dark = mix(hex, '#000000', 0.4);
+    const crystal = (x, y, h, w, rot) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      path(ctx, [[-w, 0], [-w, -h * 0.62], [0, -h], [0, 0]]);
+      ctx.fillStyle = '#f2f7ff';
+      ctx.fill();
+      path(ctx, [[0, 0], [0, -h], [w, -h * 0.62], [w, 0]]);
+      ctx.fillStyle = mix(hex, '#ffffff', 0.45);
+      ctx.fill();
+      path(ctx, [[-w, 0], [-w, -h * 0.62], [0, -h], [w, -h * 0.62], [w, 0]]);
+      ctx.lineWidth = Math.max(0.8, r * 0.035);
+      ctx.strokeStyle = dark;
+      ctx.stroke();
+      ctx.restore();
+    };
+    // tail, curling round to the right, with its own little crystals
+    ctx.beginPath();
+    ctx.moveTo(r * 0.3, -r * 0.12);
+    ctx.quadraticCurveTo(r * 1.05, -r * 0.05, r * 1.05, -r * 0.5);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = r * 0.3;
+    ctx.strokeStyle = dark;
+    ctx.stroke();
+    ctx.lineWidth = r * 0.2;
+    ctx.strokeStyle = hex;
+    ctx.stroke();
+    outline(ctx, r, hex);
+    crystal(r * 0.78, -r * 0.24, r * 0.26, r * 0.07, 0.9);
+    crystal(r * 1.0, -r * 0.48, r * 0.2, r * 0.055, 1.25);
+    // back crystals, behind the body
+    crystal(r * 0.56, -r * 0.48, r * 0.46, r * 0.12, 1.15);
+    crystal(r * 0.62, -r * 0.86, r * 0.56, r * 0.14, 0.85);
+    crystal(r * 0.42, -r * 1.2, r * 0.56, r * 0.14, 0.5);
+    crystal(r * 0.18, -r * 1.86, r * 0.42, r * 0.11, 0.15);
+    // feet
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(sx * r * 0.36, -r * 0.06, r * 0.24, r * 0.12, 0, 0, TAU);
+      ctx.fillStyle = dark;
+      ctx.fill();
+    }
+    // body: a round pear shape
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.58, -r * 0.08);
+    ctx.bezierCurveTo(-r * 0.78, -r * 0.7, -r * 0.48, -r * 1.12, -r * 0.05, -r * 1.12);
+    ctx.bezierCurveTo(r * 0.4, -r * 1.12, r * 0.74, -r * 0.7, r * 0.58, -r * 0.08);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.68, hex);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.06, -r * 0.5, r * 0.32, r * 0.42, 0, 0, TAU);
+    ctx.fillStyle = mix(hex, '#fff6dc', 0.72);
+    ctx.fill();
+    ctx.lineWidth = Math.max(0.8, r * 0.03);
+    ctx.strokeStyle = mix(hex, '#fff6dc', 0.35);
+    ctx.beginPath();
+    for (const y of [-0.72, -0.52, -0.32]) {
+      ctx.moveTo(-r * 0.3, y * r);
+      ctx.quadraticCurveTo(-r * 0.06, y * r + r * 0.05, r * 0.2, y * r);
+    }
+    ctx.stroke();
+    outline(ctx, r, hex);
+    // tiny arms
+    for (const [x, rot] of [[-r * 0.5, -0.5], [r * 0.34, 0.5]]) {
+      ctx.beginPath();
+      ctx.ellipse(x, -r * 0.72, r * 0.13, r * 0.07, rot, 0, TAU);
+      ctx.fillStyle = hex;
+      ctx.fill();
+      ctx.stroke();
+    }
+    // head: big and round, snout to the left
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.08, -r * 1.48, r * 0.58, r * 0.46, -0.08, 0, TAU);
+    ctx.fillStyle = cylinder(ctx, r * 0.58, hex);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.46, -r * 1.36, r * 0.3, r * 0.24, 0.15, 0, TAU);
+    ctx.fillStyle = mix(hex, '#ffffff', 0.15);
+    ctx.fill();
+    ctx.stroke();
+    // nostril, smile, cheek, eye
+    circle(ctx, -r * 0.64, -r * 1.42, r * 0.035);
+    ctx.fillStyle = dark;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.68, -r * 1.24);
+    ctx.quadraticCurveTo(-r * 0.46, -r * 1.12, -r * 0.24, -r * 1.24);
+    ctx.lineWidth = Math.max(0.8, r * 0.04);
+    ctx.strokeStyle = dark;
+    ctx.stroke();
+    circle(ctx, -r * 0.14, -r * 1.3, r * 0.08);
+    ctx.fillStyle = 'rgba(255, 120, 150, 0.45)';
+    ctx.fill();
+    eye(ctx, -r * 0.08, -r * 1.6, r * 0.15, r * 0.17, -1);
+  },
   // A cherry blossom on a stem: the base and stem in the player's colour, two leaves, and a
   // five-petal pink flower for a head (each petal with the little notch at its tip)
   sakura(ctx, r, hex) {

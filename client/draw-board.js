@@ -601,6 +601,57 @@ export function crackLines(ctx, r) {
 
 // Each is drawn over a tile already filled, in the tile's own frame (-0.45..0.45), path still set.
 export const TILE_STYLES = {
+  // Crystal: each square cut like a gem seen from above: a flat table in the middle, four
+  // bevelled facets round it (lit from the top-left), a bright edge, and now and then a glint
+  facet(ctx, fill, theme, r) {
+    ctx.save();
+    ctx.clip();
+    const o = 0.5;
+    const i = 0.27;
+    const side = (pts, f) => {
+      path(ctx, pts);
+      ctx.fillStyle = f;
+      ctx.fill();
+    };
+    side([[-o, -o], [o, -o], [i, -i], [-i, -i]], 'rgba(255,255,255,0.34)'); // top
+    side([[-o, -o], [-i, -i], [-i, i], [-o, o]], 'rgba(255,255,255,0.16)'); // left
+    side([[o, -o], [o, o], [i, i], [i, -i]], 'rgba(0,0,0,0.16)'); // right
+    side([[-o, o], [-i, i], [i, i], [o, o]], 'rgba(0,0,0,0.3)'); // bottom
+    const g = ctx.createLinearGradient(-i, -i, i, i);
+    g.addColorStop(0, 'rgba(255,255,255,0.22)');
+    g.addColorStop(0.5, 'rgba(255,255,255,0.02)');
+    g.addColorStop(1, 'rgba(255,255,255,0.1)');
+    ctx.fillStyle = g;
+    ctx.fillRect(-i, -i, i * 2, i * 2);
+    ctx.lineWidth = 0.014;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      ctx.moveTo(x * o, y * o);
+      ctx.lineTo(x * i, y * i);
+    }
+    ctx.stroke();
+    ctx.strokeRect(-i, -i, i * 2, i * 2);
+    if (rnd(r * 17 + 3) < 0.22) {
+      // a glint on the table
+      const x = (rnd(r * 5 + 1) - 0.5) * 0.3;
+      const y = (rnd(r * 9 + 2) - 0.5) * 0.3;
+      const k = 0.07;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(x, y - k * 1.6);
+      ctx.quadraticCurveTo(x, y, x + k, y);
+      ctx.quadraticCurveTo(x, y, x, y + k * 1.6);
+      ctx.quadraticCurveTo(x, y, x - k, y);
+      ctx.quadraticCurveTo(x, y, x, y - k * 1.6);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.lineWidth = 0.035;
+    ctx.strokeStyle = 'rgba(214, 196, 255, 0.55)';
+    roundRect(ctx, -0.45, -0.45, 0.9, 0.9, 0.08);
+    ctx.stroke();
+  },
   // Knitted squares: two columns of V stitches pointing the way the route runs, inside a
   // twisted-yarn edge. Safe and start squares are plain felt.
   knit(ctx, fill, theme, r, role, turn) {
@@ -854,6 +905,57 @@ export function blossom(ctx, r, petal, heart) {
 }
 
 export const SPOTS = {
+  // Crystal: a step-cut gem in the player's colour, like the Emerald dice's pips
+  gem(ctx, r, color) {
+    const R = r * 1.05;
+    const oct = (w, h, c) => [[-w + c, -h], [w - c, -h], [w, -h + c], [w, h - c], [w - c, h], [-w + c, h], [-w, h - c], [-w, -h + c]];
+    const outer = oct(R * 0.86, R, R * 0.3);
+    const inner = oct(R * 0.48, R * 0.6, R * 0.16);
+    ctx.save();
+    ctx.shadowColor = hexA(color, 0.8);
+    ctx.shadowBlur = 0.35 * tileK;
+    path(ctx, outer);
+    ctx.fillStyle = mix(color, '#000000', 0.35);
+    ctx.fill();
+    ctx.restore();
+    // the crown facets, each lit by which way it faces
+    for (let j = 0; j < 8; j++) {
+      const a = outer[j];
+      const b = outer[(j + 1) % 8];
+      const c = inner[(j + 1) % 8];
+      const d = inner[j];
+      const nx = (a[0] + b[0]) / 2;
+      const ny = (a[1] + b[1]) / 2;
+      const light = Math.max(-1, Math.min(1, (-nx - ny) / (R * 1.1)));
+      path(ctx, [a, b, c, d]);
+      ctx.fillStyle = light > 0 ? mix(color, '#ffffff', light * 0.55) : mix(color, '#000000', -light * 0.4);
+      ctx.fill();
+    }
+    path(ctx, inner);
+    const g = ctx.createLinearGradient(-R * 0.5, -R * 0.6, R * 0.5, R * 0.6);
+    g.addColorStop(0, mix(color, '#ffffff', 0.45));
+    g.addColorStop(0.55, color);
+    g.addColorStop(1, mix(color, '#000000', 0.2));
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = r * 0.04;
+    ctx.strokeStyle = hexA('#ffffff', 0.4);
+    ctx.beginPath();
+    outer.forEach(([x, y], j) => {
+      ctx.moveTo(x, y);
+      ctx.lineTo(...inner[j]);
+    });
+    ctx.stroke();
+    path(ctx, outer);
+    ctx.lineWidth = r * 0.06;
+    ctx.strokeStyle = mix(color, '#ffffff', 0.55);
+    ctx.stroke();
+    // a glint
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(-R * 0.22, -R * 0.3, R * 0.14, R * 0.06, -0.6, 0, TAU);
+    ctx.fill();
+  },
   // Swamp: a lily pad, a notch cut out of it
   lily(ctx, r, color, seed) {
     ctx.rotate(rnd(seed) * TAU);
@@ -1160,6 +1262,37 @@ export const PIXEL_BUG = ['..#..#..', '.######.', '##.##.##', '########', '.#.##
 export const PIXEL_HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
 
 export const DECOR = {
+  // Crystal: a cluster of crystal points growing out of the corner, in the player's colour, with
+  // a clear quartz one among them
+  geode(ctx, sx, sy, i, color) {
+    ctx.rotate(Math.atan2(-sy, -sx) - Math.PI / 2 + Math.PI); // points lean in, away from the corner
+    ctx.scale(1.35, 1.35);
+    const shards = [[-0.15, 0.05, -0.45, 0.32, color], [0.16, 0.06, 0.4, 0.3, color], [0.02, 0.1, 0.02, 0.44, '#eaf2ff'], [-0.27, 0.12, -0.9, 0.2, color], [0.28, 0.12, 0.9, 0.2, mix(color, '#ffffff', 0.25)]];
+    for (const [x, y, lean, len, c] of shards) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(lean * 0.6);
+      const w = 0.06 + len * 0.12;
+      const tip = -len;
+      // two faces of a hexagonal point: a lit one and a shaded one
+      path(ctx, [[-w, 0], [-w, tip + w * 1.2], [0, tip], [0, 0]]);
+      ctx.fillStyle = mix(c, '#ffffff', 0.4);
+      ctx.fill();
+      path(ctx, [[0, 0], [0, tip], [w, tip + w * 1.2], [w, 0]]);
+      ctx.fillStyle = mix(c, '#000000', 0.25);
+      ctx.fill();
+      path(ctx, [[-w, 0], [-w, tip + w * 1.2], [0, tip], [w, tip + w * 1.2], [w, 0]]);
+      ctx.lineWidth = 0.018;
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.stroke();
+      ctx.restore();
+    }
+    // the rock they grow from
+    ctx.beginPath();
+    ctx.ellipse(0, 0.14, 0.36, 0.1, 0, 0, TAU);
+    ctx.fillStyle = '#2a1f40';
+    ctx.fill();
+  },
   // Haunted: a leaning headstone
   grave(ctx, sx, sy, i) {
     ctx.rotate((rnd(i + 3) - 0.5) * 0.5);
@@ -1436,6 +1569,78 @@ export function compassStar(ctx, r, light, dark) {
 // The emblem in the middle of the board (art.hub), radius r. The players' triangles stay visible
 // round it; the dice lands on top of it.
 export const HUBS = {
+  // Crystal: a brilliant-cut diamond seen from above: an octagonal table, star and kite facets
+  // in icy blues and whites, and flashes of colour (its fire)
+  brilliant(ctx, r) {
+    const R = r * 1.02;
+    const ring = (n, rad, rot = 0) => Array.from({ length: n }, (_, j) => [Math.cos((j / n) * TAU + rot) * rad, Math.sin((j / n) * TAU + rot) * rad]);
+    const rim = ring(16, R, Math.PI / 16);
+    const mid = ring(8, R * 0.72, Math.PI / 8);
+    const table = ring(8, R * 0.45, 0);
+    ctx.save();
+    ctx.shadowColor = 'rgba(190, 220, 255, 0.9)';
+    ctx.shadowBlur = 0.5 * tileK;
+    path(ctx, rim);
+    ctx.fillStyle = '#b9cdf2';
+    ctx.fill();
+    ctx.restore();
+    const shadeOf = (pts) => {
+      const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+      const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+      return Math.max(-1, Math.min(1, (-cx - cy) / R));
+    };
+    const fire = ['#ffd1e6', '#c7ffe9', '#fff1b8', '#d4ddff'];
+    // the girdle facets: between the rim and the middle ring
+    for (let j = 0; j < 16; j++) {
+      const m = mid[Math.floor(((j + 1) % 16) / 2) % 8];
+      const pts = [rim[j], rim[(j + 1) % 16], m];
+      const l = shadeOf(pts);
+      path(ctx, pts);
+      ctx.fillStyle = j % 5 === 2 ? fire[j % 4] : l > 0 ? mix('#cfe0ff', '#ffffff', l * 0.8) : mix('#cfe0ff', '#5a6fb8', -l * 0.7);
+      ctx.fill();
+    }
+    // the kites: middle ring to the table's corners
+    for (let j = 0; j < 8; j++) {
+      const pts = [mid[j], table[(j + 1) % 8], table[j]];
+      const pts2 = [mid[j], rim[(2 * j + 1) % 16], table[(j + 1) % 8]];
+      for (const [q, k] of [[pts, 0], [pts2, 1]]) {
+        const l = shadeOf(q);
+        path(ctx, q);
+        ctx.fillStyle = (j + k) % 6 === 1 ? fire[(j + k) % 4] : l > 0 ? mix('#e3ecff', '#ffffff', l) : mix('#e3ecff', '#7b8fd0', -l * 0.6);
+        ctx.fill();
+      }
+      path(ctx, [mid[j], rim[(2 * j) % 16], table[j]]);
+      ctx.fillStyle = mix('#dbe6ff', shadeOf([mid[j], table[j]]) > 0 ? '#ffffff' : '#6c80c4', 0.35);
+      ctx.fill();
+    }
+    path(ctx, table);
+    const g = ctx.createLinearGradient(-R * 0.45, -R * 0.45, R * 0.45, R * 0.45);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.5, '#dfe9ff');
+    g.addColorStop(1, '#b4c6ef');
+    ctx.fillStyle = g;
+    ctx.fill();
+    // the lines between the facets
+    ctx.lineWidth = r * 0.025;
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath();
+    for (let j = 0; j < 8; j++) {
+      ctx.moveTo(...table[j]);
+      ctx.lineTo(...mid[j]);
+      ctx.lineTo(...table[(j + 1) % 8]);
+      ctx.moveTo(...mid[j]);
+      ctx.lineTo(...rim[(2 * j) % 16]);
+      ctx.moveTo(...mid[j]);
+      ctx.lineTo(...rim[(2 * j + 1) % 16]);
+    }
+    ctx.stroke();
+    path(ctx, table);
+    ctx.stroke();
+    path(ctx, rim);
+    ctx.lineWidth = r * 0.06;
+    ctx.strokeStyle = '#f4f8ff';
+    ctx.stroke();
+  },
   // Haunted: a ghost's face in the fog
   ghost(ctx, r) {
     ctx.beginPath();

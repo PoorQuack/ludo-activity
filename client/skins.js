@@ -395,6 +395,28 @@ export const BOARD_THEMES = {
     baseInner: '#3a2068',
     players: { red: '#c8364a', green: '#23875f', yellow: '#dfa923', blue: '#3159b8', purple: '#7d3fb8', orange: '#d66a2a' },
   },
+  'board-crystal': {
+    // Inside a geode: dark amethyst rock, every square cut like a gem, the pins on step-cut gems
+    // (like the Emerald and Ruby dice), crystals growing in the corners of each yard and a
+    // diamond in the middle. Its one effect: glints of light across the board.
+    art: {
+      base: 'outline', frame: ['#2b1f4a', '#cdb8ff', 0.26], panel: 'window',
+      tex: {
+        base: { src: '/textures/midnight-slate.jpg', size: 5, blend: 'soft-light', alpha: 0.5 },
+        tile: { src: '/textures/midnight-slate.jpg', size: 3, blend: 'multiply', alpha: 0.45 },
+      },
+      tile: 'facet', mark: 'sparkle', markSize: 0.3, fx: 'sparkle', fxColor: '#eaf3ff', fxCount: 24,
+      pins: 'gem', decor: 'geode', hub: 'brilliant',
+      shield: { kind: 'orbit', motif: 'sparkle', colors: ['#eaf3ff', '#cdb8ff'], glow: 'rgba(205, 184, 255, 0.45)', n: 6 },
+    },
+    bg: '#120a24',
+    bg2: '#2a1650',
+    cell: '#3a2f63',
+    safe: '#5a4796',
+    star: '#eaf3ff',
+    baseInner: '#170f2e',
+    players: { red: '#ee3355', green: '#1fc77e', yellow: '#f5bd2e', blue: '#3d82ff', purple: '#b06bff', orange: '#ff8a3a' },
+  },
   // A night sky in gold lines. Each base is a window onto the stars holding its player's
   // constellation (Aries, Taurus, Cancer, Leo…), whose brightest stars are where the tokens wait.
   'board-constellation': {
@@ -534,6 +556,7 @@ export const TOKEN_SIGNATURES = {
   'token-checker': { home: 'bounce', hops: 5, ms: 900, colors: ['#ffffff', '#ffd23f', '#d24d47'] },
   'token-penguin': { home: 'slide', ms: 800, colors: ['#ffffff', '#dff3fc', '#9fd4f0'] },
   'token-sakura': { home: 'fade', ms: 900, colors: ['#fff3f7', '#ffb7d0', '#ff8fb6'] },
+  'token-dino': { home: 'bounce', hops: 2, ms: 850, colors: ['#eaf3ff', '#cdb8ff', '#7ef0b8'] },
   'token-robot': { home: 'blink', ms: 900, colors: ['#5cf2ff', '#ffffff', '#9aa6ba'] },
   'token-neon': { home: 'blink', ms: 800, colors: ['#2ef2ff', '#ff2fd1', '#ffe04a'] },
 };

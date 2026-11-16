@@ -39,6 +39,7 @@ export const SHOP_ITEMS = [
   { id: 'token-robot', type: 'token', name: 'Robot', rarity: 'epic', price: 450 },
   { id: 'token-penguin', type: 'token', name: 'Penguin', rarity: 'epic', price: 450 },
   { id: 'token-sakura', type: 'token', name: 'Sakura', rarity: 'epic', price: 450 },
+  { id: 'token-dino', type: 'token', name: 'Dino', rarity: 'epic', price: 450 },
   { id: 'token-ufo', type: 'token', name: 'UFO', rarity: 'legendary', price: 1200, perk: 'When captured, a beam of light carries it back to its base.' },
   { id: 'token-dragon', type: 'token', name: 'Dragon', rarity: 'legendary', price: 1200, perk: 'When captured, it flies home on its own wings.' },
 
@@ -90,6 +91,7 @@ export const SHOP_ITEMS = [
   { id: 'board-lava', type: 'board', name: 'Lava', rarity: 'epic', price: 550 },
   { id: 'board-desert', type: 'board', name: 'Desert', rarity: 'rare', price: 350 },
   { id: 'board-sakura', type: 'board', name: 'Sakura', rarity: 'epic', price: 450 },
+  { id: 'board-crystal', type: 'board', name: 'Crystal', rarity: 'epic', price: 450 },
   { id: 'board-arcade', type: 'board', name: 'Arcade', rarity: 'epic', price: 500 },
   { id: 'board-haunted', type: 'board', name: 'Haunted', rarity: 'epic', price: 500 },
   { id: 'board-swamp', type: 'board', name: 'Swamp', rarity: 'epic', price: 450 },
@@ -320,6 +322,7 @@ export const SETS = [
   { id: 'set-checker', name: 'Checker set', items: ['token-checker', 'dice-ludo'] },
   { id: 'set-candy', name: 'Candy set', items: ['token-candy', 'dice-candy', 'board-candy'] },
   { id: 'set-sakura', name: 'Sakura set', items: ['token-sakura', 'dice-sakura', 'board-sakura'] },
+  { id: 'set-crystal', name: 'Crystal set', items: ['token-dino', 'board-crystal'] },
   { id: 'set-lava', name: 'Lava set', items: ['dice-lava', 'board-lava'] },
   { id: 'set-ice', name: 'Ice set', items: ['dice-ice', 'board-ice'] },
   { id: 'set-wood', name: 'Wood set', items: ['dice-wood', 'board-wood'] },
@@ -378,4 +381,4 @@ export const PAID_ITEMS = Object.fromEntries([...COIN_PACKS.map((p) => [p.id, { 
 // Shop items new in the latest update: tagged "New" in the shop until the player has looked at
 // them (on each device). Change this list with each update that adds items; items added later
 // than a player's first visit are tagged automatically anyway.
-export const NEW_ITEMS = new Set(['emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
+export const NEW_ITEMS = new Set(['token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
