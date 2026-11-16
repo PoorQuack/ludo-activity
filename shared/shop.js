@@ -111,6 +111,7 @@ export const SHOP_ITEMS = [
   { id: 'emote-rudecat', type: 'emote', name: 'Rude cat', rarity: 'common', img: '/emotes/cats/rudecat.png', slug: 'rudecat', price: 150 },
   { id: 'emote-sadkitten', type: 'emote', name: 'Sad kitten', rarity: 'common', img: '/emotes/cats/sadkitten.png', slug: 'sadkitten', price: 150 },
   { id: 'emote-blepcat', type: 'emote', name: 'Blep cat', rarity: 'common', img: '/emotes/cats/blepcat.png', slug: 'blepcat', price: 150 },
+  { id: 'emote-cathello', type: 'emote', name: 'Hello cat', rarity: 'common', img: '/emotes/cats/cathello.webp', slug: 'cathello', price: 150 },
   { id: 'emote-dontjoke', type: 'emote', name: "Don't even joke lad", rarity: 'common', img: '/emotes/meme/dontjoke.webp', slug: 'dontjoke', price: 150 },
   // Was in the Hamster pack by mistake: anyone with that pack keeps it for free
   { id: 'emote-nervouscat', type: 'emote', name: 'Nervous cat', rarity: 'common', img: '/emotes/cats/nervouscat.png', slug: 'nervouscat', price: 150, freeWith: 'emote-pack-hamster' },
@@ -381,4 +382,4 @@ export const PAID_ITEMS = Object.fromEntries([...COIN_PACKS.map((p) => [p.id, { 
 // Shop items new in the latest update: tagged "New" in the shop until the player has looked at
 // them (on each device). Change this list with each update that adds items; items added later
 // than a player's first visit are tagged automatically anyway.
-export const NEW_ITEMS = new Set(['token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
+export const NEW_ITEMS = new Set(['emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);

@@ -396,28 +396,30 @@ export const BOARD_THEMES = {
     players: { red: '#c8364a', green: '#23875f', yellow: '#dfa923', blue: '#3159b8', purple: '#7d3fb8', orange: '#d66a2a' },
   },
   'board-crystal': {
-    // Inside a geode: dark amethyst rock, every square cut like a gem, each yard one great gem
-    // of its player's colour (a ruby for red, an emerald for green, a sapphire for blue…: see
-    // gemYard), the pins in silver settings on it, crystals growing in the corners and a diamond
-    // in the middle. Its one effect: glints of light across the board.
+    // A jeweller's board: dark marble veined with gold, black squares cut like gems, and each
+    // yard a slab of its own stone's colour in a gold frame. The pins wait on gems cut the way
+    // that stone usually is (a ruby for red, an emerald for green, a sapphire for blue…: see
+    // YARD_GEMS), a marquise sits at every corner of the frame, rough stones spill over the
+    // board's corners, and a diamond shines in the middle. Its one effect: glints of light.
     art: {
-      base: 'outline', frame: ['#2b1f4a', '#cdb8ff', 0.26], panel: 'window',
+      base: 'jewel', panel: 'jewel', center: 'jewel', frame: ['#7a5418', '#ffe39a', 0.3],
       tex: {
-        base: { src: '/textures/midnight-slate.jpg', size: 5, blend: 'soft-light', alpha: 0.5 },
-        tile: { src: '/textures/midnight-slate.jpg', size: 3, blend: 'multiply', alpha: 0.45 },
+        surface: { src: '/textures/crystal-marble.jpg', size: 9 },
+        base: { src: '/textures/crystal-gold.png', size: 6, blend: 'source-over', alpha: 0.85 },
+        panel: { src: '/textures/crystal-gold.png', size: 4.5, blend: 'source-over', alpha: 0.6 },
       },
-      tile: 'facet', mark: 'sparkle', markSize: 0.3, fx: 'sparkle', fxColor: '#eaf3ff', fxCount: 24,
-      yardGem: true, pins: 'socket', decor: 'geode', hub: 'brilliant',
-      shield: { kind: 'orbit', motif: 'sparkle', colors: ['#eaf3ff', '#cdb8ff'], glow: 'rgba(205, 184, 255, 0.45)', n: 6 },
+      tile: 'facet', mark: 'sparkle', markSize: 0.3, fx: 'sparkle', fxColor: '#fff6dc', fxCount: 22,
+      pins: 'cut', decor: 'jewel', hub: 'brilliant',
+      shield: { kind: 'orbit', motif: 'sparkle', colors: ['#fff6dc', '#f3d27a'], glow: 'rgba(255, 226, 150, 0.45)', n: 6 },
     },
-    bg: '#120a24',
-    bg2: '#2a1650',
-    cell: '#3a2f63',
-    safe: '#5a4796',
-    star: '#eaf3ff',
-    baseInner: '#170f2e',
+    bg: '#2a2a31',
+    bg2: '#3c3c46',
+    cell: '#23242b',
+    safe: '#6b3fd8',
+    star: '#fff6dc',
+    baseInner: '#120d1c',
     // ruby, emerald, topaz, sapphire, amethyst, fire opal
-    players: { red: '#e0164f', green: '#11a866', yellow: '#f2b01e', blue: '#2a5fe6', purple: '#9346f0', orange: '#ff6a1f' },
+    players: { red: '#e8193f', green: '#14b866', yellow: '#f7bb1c', blue: '#2f66f0', purple: '#9447f2', orange: '#ff6a1c' },
   },
   // A night sky in gold lines. Each base is a window onto the stars holding its player's
   // constellation (Aries, Taurus, Cancer, Leo…), whose brightest stars are where the tokens wait.

@@ -1288,13 +1288,13 @@ export function gemYard(ctx, x, y, R, color, name) {
   ctx.lineJoin = 'round';
   if (cut === 'emerald' || cut === 'asscher') {
     // step cut: rings of long facets stepping down to a flat table
-    const w = cut === 'emerald' ? R * 0.78 : R * 0.92;
-    const h = R * 0.95;
-    const c = cut === 'emerald' ? R * 0.3 : R * 0.36;
+    const w = cut === 'emerald' ? R * 0.84 : R * 0.93;
+    const h = R * 0.97;
+    const c = cut === 'emerald' ? R * 0.28 : R * 0.34;
     const steps = [1, 0.82, 0.64, 0.46].map((f) => oct(w * f, h * f, c * f));
     outer = steps[0];
     for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 8; j++) facet([steps[i][j], steps[i][(j + 1) % 8], steps[i + 1][(j + 1) % 8], steps[i + 1][j]], i === 1 ? 0.15 : i === 2 ? -0.1 : 0);
+      for (let j = 0; j < 8; j++) facet([steps[i][j], steps[i][(j + 1) % 8], steps[i + 1][(j + 1) % 8], steps[i + 1][j]], i === 1 ? 0.3 : i === 2 ? 0.1 : 0.15);
     }
     path(ctx, steps[3]);
     const g = ctx.createLinearGradient(x - w * 0.46, y - h * 0.46, x + w * 0.46, y + h * 0.46);
@@ -1317,8 +1317,8 @@ export function gemYard(ctx, x, y, R, color, name) {
     ctx.stroke();
   } else {
     // brilliant cuts: a rim of girdle facets, kites, star facets and a table
-    const rx = cut === 'oval' ? R * 0.74 : R * 0.95;
-    const ry = R * 0.95;
+    const rx = cut === 'oval' ? R * 0.8 : R * 0.96;
+    const ry = R * 0.98;
     const sq = cut === 'cushion' ? 0.55 : cut === 'princess' ? 6 : 0;
     const rot = cut === 'princess' ? Math.PI / 4 : Math.PI / 16;
     let rim;
@@ -1326,7 +1326,7 @@ export function gemYard(ctx, x, y, R, color, name) {
     let table;
     if (cut === 'princess') {
       // square: corners out, an X of long facets, a square table
-      const c4 = (f) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [x + a * R * 0.86 * f, y + b * R * 0.86 * f]);
+      const c4 = (f) => [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [x + a * R * 0.9 * f, y + b * R * 0.9 * f]);
       rim = c4(1);
       table = c4(0.48);
       const edges = (pts) => pts.map((p, j) => [(p[0] + pts[(j + 1) % 4][0]) / 2, (p[1] + pts[(j + 1) % 4][1]) / 2]);
@@ -1413,7 +1413,7 @@ export function baseDecor(ctx, kind, x, y, outer, inner, color) {
   [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy], i) => {
     ctx.save();
     ctx.translate(sx * m, sy * m);
-    DECOR[kind](ctx, sx, sy, i, color, outer - inner);
+    DECOR[kind](ctx, sx, sy, i, color, outer - inner, x, y);
     ctx.restore();
   });
   ctx.restore();
@@ -1430,7 +1430,95 @@ export function pixelArt(ctx, rows, u, color) {
 export const PIXEL_BUG = ['..#..#..', '.######.', '##.##.##', '########', '.#.##.#.', '#.#..#.#'];
 export const PIXEL_HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
 
+// A rough-cut stone: an uneven polygon, its faces lit from the top-left
+function rough(ctx, x, y, r, seed, color) {
+  const n = 6;
+  const pts = Array.from({ length: n }, (_, j) => {
+    const a = (j / n) * TAU + seed;
+    const d = r * (0.75 + 0.35 * rnd(seed * 31 + j));
+    return [x + Math.cos(a) * d, y + Math.sin(a) * d * 0.9];
+  });
+  const top = [x - r * 0.15, y - r * 0.2];
+  for (let j = 0; j < n; j++) {
+    const a = pts[j];
+    const b = pts[(j + 1) % n];
+    const l = Math.max(-1, Math.min(1, (-(a[0] + b[0] - 2 * x) - (a[1] + b[1] - 2 * y)) / (2 * r)));
+    path(ctx, [top, a, b]);
+    ctx.fillStyle = l > 0 ? mix(color, '#ffffff', l * 0.5) : mix(color, '#000000', -l * 0.5);
+    ctx.fill();
+  }
+  path(ctx, pts);
+  ctx.lineWidth = r * 0.06;
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.stroke();
+}
+
+// Crystal: where each pin waits, a gem of the yard's own cut (see YARD_GEMS) in a gold setting
+export function cutSpots(ctx, b, spread, r, color, name) {
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([ox, oy]) => {
+    const x = b.x + ox * spread;
+    const y = b.y + oy * spread;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 0.15 * tileK;
+    ctx.shadowOffsetY = 0.04 * tileK;
+    circle(ctx, x, y, r * 1.02);
+    ctx.fillStyle = mix(color, '#000000', 0.7);
+    ctx.fill();
+    ctx.restore();
+    gemYard(ctx, x, y, r * 0.92, color, name);
+  });
+}
+
 export const DECOR = {
+  // Crystal: a marquise gem of the yard's colour in a gold setting at each corner of its frame,
+  // and on the board's outer corner a heap of rough-cut stones spilling over the edge
+  jewel(ctx, sx, sy, i, color, band, x, y) {
+    const outerCorner = Math.sign(sx) === Math.sign(x) && Math.sign(sy) === Math.sign(y);
+    if (outerCorner) {
+      ctx.save();
+      ctx.translate(sx * band * 0.55, sy * band * 0.55);
+      ctx.scale(2, 2);
+      const stones = [[0, 0, 0.3, 0.2], [-sx * 0.36, sy * 0.06, 0.2, 1.3], [sx * 0.06, -sy * 0.36, 0.2, 2.1], [-sx * 0.22, -sy * 0.26, 0.17, 0.7], [sx * 0.24, sy * 0.2, 0.15, 2.8], [-sx * 0.55, sy * 0.16, 0.13, 3.6], [sx * 0.16, -sy * 0.56, 0.13, 4.4]];
+      for (const [gx, gy, gr, rot] of stones) rough(ctx, gx, gy, gr, rot, color);
+      ctx.restore();
+    }
+    // the marquise, pointing along the diagonal
+    ctx.rotate(Math.atan2(sy, sx));
+    ctx.scale(1.35, 1.35);
+    const L = 0.26;
+    const W = 0.11;
+    ctx.beginPath();
+    ctx.moveTo(-L, 0);
+    ctx.quadraticCurveTo(0, -W * 2, L, 0);
+    ctx.quadraticCurveTo(0, W * 2, -L, 0);
+    ctx.closePath();
+    ctx.lineWidth = 0.07;
+    ctx.strokeStyle = '#d6a640';
+    ctx.stroke();
+    const g = ctx.createLinearGradient(0, -W, 0, W);
+    g.addColorStop(0, mix(color, '#ffffff', 0.5));
+    g.addColorStop(0.5, color);
+    g.addColorStop(1, mix(color, '#000000', 0.45));
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 0.012;
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(-L, 0);
+    ctx.lineTo(L, 0);
+    ctx.moveTo(-L * 0.4, -W * 0.85);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(L * 0.4, -W * 0.85);
+    ctx.moveTo(-L * 0.4, W * 0.85);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(L * 0.4, W * 0.85);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(-L * 0.25, -W * 0.45, L * 0.18, W * 0.16, 0, 0, TAU);
+    ctx.fill();
+  },
   // Crystal: a cluster of crystal points growing out of the corner, in the player's colour, with
   // a clear quartz one among them
   geode(ctx, sx, sy, i, color) {
@@ -1742,6 +1830,37 @@ export const HUBS = {
   // in icy blues and whites, and flashes of colour (its fire)
   brilliant(ctx, r) {
     const R = r * 1.02;
+    // light pouring out of it, and gold scrollwork round it
+    const halo = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 2.2);
+    halo.addColorStop(0, 'rgba(255, 250, 230, 0.75)');
+    halo.addColorStop(0.4, 'rgba(255, 236, 180, 0.25)');
+    halo.addColorStop(1, 'rgba(255, 236, 180, 0)');
+    ctx.fillStyle = halo;
+    circle(ctx, 0, 0, R * 2.2);
+    ctx.fill();
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#d9ab45';
+    ctx.lineWidth = R * 0.07;
+    circle(ctx, 0, 0, R * 1.14);
+    ctx.stroke();
+    for (let j = 0; j < 4; j++) {
+      ctx.save();
+      ctx.rotate((j * Math.PI) / 2 + Math.PI / 4);
+      ctx.lineWidth = R * 0.06;
+      ctx.beginPath();
+      for (const sd of [-1, 1]) {
+        ctx.moveTo(R * 1.14, 0);
+        ctx.bezierCurveTo(R * 1.35, sd * R * 0.05, R * 1.45, sd * R * 0.35, R * 1.3, sd * R * 0.42);
+        ctx.quadraticCurveTo(R * 1.2, sd * R * 0.45, R * 1.22, sd * R * 0.33);
+      }
+      ctx.stroke();
+      path(ctx, [[R * 1.32, 0], [R * 1.55, -R * 0.09], [R * 1.72, 0], [R * 1.55, R * 0.09]]);
+      ctx.fillStyle = '#f3d27a';
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
     const ring = (n, rad, rot = 0) => Array.from({ length: n }, (_, j) => [Math.cos((j / n) * TAU + rot) * rad, Math.sin((j / n) * TAU + rot) * rad]);
     const rim = ring(16, R, Math.PI / 16);
     const mid = ring(8, R * 0.72, Math.PI / 8);
@@ -2088,6 +2207,7 @@ export function paintBase(ctx, art, theme, x, y, w, h, color, k) {
   else if (style === 'frosted') ctx.fillStyle = mix(color, '#ffffff', 0.3);
   else if (style === 'celestial') ctx.fillStyle = 'rgba(8, 10, 40, 0.55)';
   else if (style === 'moonlit') ctx.fillStyle = mix(color, '#141726', 0.3);
+  else if (style === 'jewel') ctx.fillStyle = mix(color, '#000000', 0.1);
   else if (art.baseLight) ctx.fillStyle = mix(color, '#ffffff', art.baseLight);
   else ctx.fillStyle = color;
   ctx.fill();
@@ -2137,6 +2257,19 @@ export function paintBase(ctx, art, theme, x, y, w, h, color, k) {
     ctx.stroke();
     ctx.lineWidth = 0.06;
     ctx.strokeStyle = '#fff1b8';
+    ctx.stroke();
+  } else if (style === 'jewel') {
+    // a gold frame: a broad band lit from the top-left, a bright line along it
+    const g = ctx.createLinearGradient(x, y, x + w, y + h);
+    g.addColorStop(0, '#ffe7a3');
+    g.addColorStop(0.45, '#c9962e');
+    g.addColorStop(0.7, '#f3d27a');
+    g.addColorStop(1, '#8a6420');
+    ctx.lineWidth = 0.2;
+    ctx.strokeStyle = g;
+    ctx.stroke();
+    ctx.lineWidth = 0.035;
+    ctx.strokeStyle = 'rgba(255, 246, 214, 0.85)';
     ctx.stroke();
   } else if (style === 'frosted') {
     ctx.lineWidth = 0.2;
@@ -2290,6 +2423,61 @@ export function innerPanel(ctx, theme, x, y, r, color, square = true) {
     ctx.fillStyle = g;
     ctx.fillRect(x - r * 1.5, y - r * 1.5, r * 3, r * 3);
     ctx.restore();
+    return;
+  }
+  if (art.panel === 'jewel') {
+    // Crystal: a deeper slab of the same coloured marble, sunk into a gold frame
+    ctx.fillStyle = mix(color, '#000000', 0.42);
+    ctx.fill();
+    const tex = texPattern(ctx, art.tex?.panel);
+    ctx.save();
+    if (tex) {
+      ctx.globalCompositeOperation = art.tex.panel.blend || 'overlay';
+      ctx.globalAlpha = art.tex.panel.alpha ?? 0.8;
+      ctx.fillStyle = tex;
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    ctx.clip();
+    const glow = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.05, x, y, r * 1.3);
+    glow.addColorStop(0, hexA(mix(color, '#ffffff', 0.2), 0.35));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - r * 1.5, y - r * 1.5, r * 3, r * 3);
+    ctx.lineWidth = r * 0.16;
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; // sunk: shadow inside the rim
+    ctx.stroke();
+    ctx.restore();
+    const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    g.addColorStop(0, '#ffe7a3');
+    g.addColorStop(0.45, '#c9962e');
+    g.addColorStop(0.7, '#f3d27a');
+    g.addColorStop(1, '#8a6420');
+    ctx.lineWidth = r * 0.075;
+    ctx.strokeStyle = g;
+    ctx.stroke();
+    ctx.lineWidth = r * 0.018;
+    ctx.strokeStyle = 'rgba(255, 246, 214, 0.9)';
+    ctx.stroke();
+    if (square) {
+      // a second, finer gold line inside, its corners cut in like an ornate frame
+      const q = r * 0.88;
+      const c = r * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(x - q + c, y - q);
+      ctx.lineTo(x + q - c, y - q);
+      ctx.arc(x + q, y - q, c, Math.PI, Math.PI / 2, true);
+      ctx.lineTo(x + q, y + q - c);
+      ctx.arc(x + q, y + q, c, -Math.PI / 2, Math.PI, true);
+      ctx.lineTo(x - q + c, y + q);
+      ctx.arc(x - q, y + q, c, 0, -Math.PI / 2, true);
+      ctx.lineTo(x - q, y - q + c);
+      ctx.arc(x - q, y - q, c, Math.PI / 2, 0, true);
+      ctx.lineWidth = r * 0.025;
+      ctx.strokeStyle = g;
+      ctx.stroke();
+    }
     return;
   }
   if (art.panel === 'window') {
