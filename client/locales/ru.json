@@ -754,5 +754,9 @@
  "Your game": "Ваша игра",
  "Sakura set": "Набор «Сакура»",
  "Board lighting": "Освещение доски",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Солнечный свет, тени и свечение на досках, где они есть, например «Сакура». Выключите, если игра тормозит."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Солнечный свет, тени и свечение на досках, где они есть, например «Сакура». Выключите, если игра тормозит.",
+ "Time of day": "Время суток",
+ "☀️ Day": "☀️ День",
+ "🌇 Golden hour": "🌇 Золотой час",
+ "🌙 Night": "🌙 Ночь"
 }

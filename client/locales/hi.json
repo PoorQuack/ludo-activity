@@ -754,5 +754,9 @@
  "Your game": "आपका खेल",
  "Sakura set": "साकुरा सेट",
  "Board lighting": "बोर्ड की रोशनी",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "जिन बोर्ड में यह है (जैसे साकुरा) उन पर धूप, परछाइयाँ और चमक। खेल धीमा लगे तो इसे बंद कर दें।"
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "जिन बोर्ड में यह है (जैसे साकुरा) उन पर धूप, परछाइयाँ और चमक। खेल धीमा लगे तो इसे बंद कर दें।",
+ "Time of day": "दिन का समय",
+ "☀️ Day": "☀️ दिन",
+ "🌇 Golden hour": "🌇 सुनहरा समय",
+ "🌙 Night": "🌙 रात"
 }

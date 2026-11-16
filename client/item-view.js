@@ -7,7 +7,8 @@ import { ownsItem, rarityOf, setRarity, ITEMS, setPrice, SET_DISCOUNT, priceOf }
 export { rarityOf };
 import { BoardRenderer, drawToken, drawDice, drawTumblingDice } from './renderer.js';
 import { drawTauntPreview } from './taunts.js';
-import { playerColor } from './skins.js';
+import { playerColor, BOARD_THEMES } from './skins.js';
+import { sceneSwitch, setSceneMode, SCENE_MODES } from './scene.js';
 import { t } from './i18n.js';
 import { sfx } from './audio.js';
 
@@ -55,6 +56,10 @@ function build() {
           <button type="button" class="item-action btn small"></button>
           <button type="button" class="item-try btn small"></button>
         </div>
+        <div class="item-scene hidden">
+          <span class="item-scene-label"></span>
+          <div class="seg item-scene-seg" role="radiogroup"></div>
+        </div>
       </div>
       <div class="item-right">
         <div class="item-tags"><span class="rarity"></span><span class="item-type"></span></div>
@@ -72,6 +77,34 @@ function build() {
   el.addEventListener('pointerdown', (e) => e.target === el && closeItemView());
   el.querySelector('.item-close').addEventListener('click', closeItemView);
   window.addEventListener('keydown', (e) => e.key === 'Escape' && open && closeItemView());
+}
+
+// Boards lit like a place (the Sakura board) can be seen by day, at golden hour or at night:
+// the player picks here, and the preview (and their games) change straight away.
+const MODE_LABEL = { day: '☀️ Day', golden: '🌇 Golden hour', night: '🌙 Night' };
+function sceneRow(boardId) {
+  const box = el.querySelector('.item-scene');
+  const lit = !!BOARD_THEMES[boardId]?.art?.scene;
+  box.classList.toggle('hidden', !lit);
+  if (!lit) return;
+  box.querySelector('.item-scene-label').textContent = t('Time of day');
+  const seg = box.querySelector('.item-scene-seg');
+  seg.setAttribute('aria-label', t('Time of day'));
+  seg.style.gridTemplateColumns = `repeat(${SCENE_MODES.length}, 1fr)`;
+  seg.innerHTML = '';
+  for (const m of SCENE_MODES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(sceneSwitch.mode === m));
+    b.className = sceneSwitch.mode === m ? 'active' : '';
+    b.textContent = t(MODE_LABEL[m]);
+    b.addEventListener('click', () => {
+      setSceneMode(m);
+      sceneRow(boardId);
+    });
+    seg.appendChild(b);
+  }
 }
 
 // What the player has on now: the demo dresses the rest of the scene in it
@@ -139,6 +172,7 @@ function renderInfo() {
   const iconFor = { dice: 'dice', token: 'token', board: 'board', taunt: 'token' }[type] || 'emote';
   el.querySelector('.item-card').dataset.rarity = rarity.id;
   giftRow(item, ctx);
+  sceneRow(item.type === 'board' ? item.id : null);
   el.querySelector('.rarity').textContent = `✦ ${t(rarity.label)}`;
   el.querySelector('.item-type').innerHTML = `${ico(iconFor)}<span></span>`;
   el.querySelector('.item-type span').textContent = t(info.label);
@@ -192,6 +226,7 @@ function renderInfo() {
 // A set: what's in it, what it would cost apart, and 10% off that.
 function renderSetInfo() {
   giftRow(null, open.ctx); // (sets aren't gifted whole: give the pieces)
+  sceneRow(open.item.items.find((id) => id.startsWith('board-')));
   const { item: set, ctx } = open;
   const { profile, freeShop } = ctx;
   const { full, price, missing } = setPrice(set, profile);

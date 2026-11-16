@@ -754,5 +754,9 @@
  "Your game": "لعبتك",
  "Sakura set": "طقم الساكورا",
  "Board lighting": "إضاءة اللوحة",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "ضوء الشمس والظلال والتوهج على اللوحات التي تدعمها، مثل ساكورا. أوقفها إذا شعرت أن اللعبة بطيئة."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "ضوء الشمس والظلال والتوهج على اللوحات التي تدعمها، مثل ساكورا. أوقفها إذا شعرت أن اللعبة بطيئة.",
+ "Time of day": "وقت اليوم",
+ "☀️ Day": "☀️ نهار",
+ "🌇 Golden hour": "🌇 الساعة الذهبية",
+ "🌙 Night": "🌙 ليل"
 }

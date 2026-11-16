@@ -754,5 +754,9 @@
  "Your game": "La tua partita",
  "Sakura set": "Set Sakura",
  "Board lighting": "Illuminazione del tabellone",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Luce del sole, ombre e bagliore sui tabelloni che li hanno, come Sakura. Disattivala se il gioco sembra lento."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Luce del sole, ombre e bagliore sui tabelloni che li hanno, come Sakura. Disattivala se il gioco sembra lento.",
+ "Time of day": "Momento del giorno",
+ "☀️ Day": "☀️ Giorno",
+ "🌇 Golden hour": "🌇 Ora d’oro",
+ "🌙 Night": "🌙 Notte"
 }

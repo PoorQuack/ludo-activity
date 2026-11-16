@@ -754,5 +754,9 @@
  "Your game": "Ваша гра",
  "Sakura set": "Набір «Сакура»",
  "Board lighting": "Освітлення дошки",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Сонячне світло, тіні та сяйво на дошках, де вони є, наприклад «Сакура». Вимкніть, якщо гра гальмує."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Сонячне світло, тіні та сяйво на дошках, де вони є, наприклад «Сакура». Вимкніть, якщо гра гальмує.",
+ "Time of day": "Час доби",
+ "☀️ Day": "☀️ День",
+ "🌇 Golden hour": "🌇 Золота година",
+ "🌙 Night": "🌙 Ніч"
 }

@@ -4,7 +4,7 @@ import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, d
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop, itemPreview, commitShopSeen } from './shop-ui.js';
 import { TAUNT_FX } from './taunts.js';
-import { setSceneLighting } from './scene.js';
+import { setSceneLighting, setSceneMode, sceneSwitch } from './scene.js';
 import { renderProfile, lookHtml, medalHtml } from './profile.js';
 import { BADGES, BADGES_BY_ID, levelFor } from '../shared/badges.js';
 import { openItemView, refreshItemView, closeItemView } from './item-view.js';
@@ -1510,6 +1510,7 @@ function renderPrefs() {
   $('pref-taunts').setAttribute('aria-checked', String(prefs.taunts));
   $('pref-lighting').setAttribute('aria-checked', String(prefs.lighting));
   setSceneLighting(prefs.lighting);
+  renderSceneSeg();
   $('pref-invites').setAttribute('aria-checked', String(friendsData?.invitesOn !== false));
 }
 $('pref-chat').addEventListener('click', () => {
@@ -1524,6 +1525,18 @@ $('pref-taunts').addEventListener('click', () => {
   if (!prefs.taunts) renderer.clearTaunts();
   renderPrefs();
 });
+// Time of day for lit boards (Sakura): also picked on the board's page in the shop
+function renderSceneSeg() {
+  const seg = $('pref-scene');
+  seg.classList.toggle('hidden', !prefs.lighting);
+  for (const b of seg.querySelectorAll('[data-scene]')) {
+    const on = b.dataset.scene === sceneSwitch.mode;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', String(on));
+  }
+}
+for (const b of document.querySelectorAll('[data-scene]')) b.addEventListener('click', () => setSceneMode(b.dataset.scene));
+window.addEventListener('ludo-scene-mode', renderSceneSeg);
 $('pref-lighting').addEventListener('click', () => {
   prefs.lighting = !prefs.lighting;
   savePrefs();

@@ -754,5 +754,9 @@
  "Your game": "Jouw spel",
  "Sakura set": "Sakura-set",
  "Board lighting": "Bordverlichting",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Zonlicht, schaduwen en gloed op borden die dat hebben, zoals Sakura. Zet het uit als het spel traag aanvoelt."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Zonlicht, schaduwen en gloed op borden die dat hebben, zoals Sakura. Zet het uit als het spel traag aanvoelt.",
+ "Time of day": "Tijd van de dag",
+ "☀️ Day": "☀️ Dag",
+ "🌇 Golden hour": "🌇 Gouden uur",
+ "🌙 Night": "🌙 Nacht"
 }

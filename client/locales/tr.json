@@ -754,5 +754,9 @@
  "Your game": "Senin oyunun",
  "Sakura set": "Sakura seti",
  "Board lighting": "Tahta ışıklandırması",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Sakura gibi destekleyen tahtalarda güneş ışığı, gölgeler ve parıltı. Oyun yavaş geliyorsa kapat."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "Sakura gibi destekleyen tahtalarda güneş ışığı, gölgeler ve parıltı. Oyun yavaş geliyorsa kapat.",
+ "Time of day": "Günün saati",
+ "☀️ Day": "☀️ Gündüz",
+ "🌇 Golden hour": "🌇 Altın saat",
+ "🌙 Night": "🌙 Gece"
 }

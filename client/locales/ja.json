@@ -754,5 +754,9 @@
  "Your game": "あなたのゲーム",
  "Sakura set": "サクラセット",
  "Board lighting": "ボードのライティング",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "サクラなど対応ボードの日差し・影・輝き。動作が重いときはオフにしてください。"
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "サクラなど対応ボードの日差し・影・輝き。動作が重いときはオフにしてください。",
+ "Time of day": "時間帯",
+ "☀️ Day": "☀️ 昼",
+ "🌇 Golden hour": "🌇 夕暮れ",
+ "🌙 Night": "🌙 夜"
 }

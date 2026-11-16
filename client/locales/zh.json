@@ -754,5 +754,9 @@
  "Your game": "你的这局",
  "Sakura set": "樱花套装",
  "Board lighting": "棋盘光影",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "在支持的棋盘（如樱花）上显示阳光、阴影和光晕。游戏卡顿时可以关闭。"
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "在支持的棋盘（如樱花）上显示阳光、阴影和光晕。游戏卡顿时可以关闭。",
+ "Time of day": "时间",
+ "☀️ Day": "☀️ 白天",
+ "🌇 Golden hour": "🌇 黄金时刻",
+ "🌙 Night": "🌙 夜晚"
 }

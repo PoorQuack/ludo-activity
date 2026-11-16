@@ -754,5 +754,9 @@
  "Your game": "내 게임",
  "Sakura set": "사쿠라 세트",
  "Board lighting": "보드 조명",
- "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "사쿠라처럼 지원하는 보드의 햇빛, 그림자, 빛 번짐 효과입니다. 게임이 느리면 끄세요."
+ "Sunlight, shadows and glow on boards that have them, like Sakura. Turn it off if the game feels slow.": "사쿠라처럼 지원하는 보드의 햇빛, 그림자, 빛 번짐 효과입니다. 게임이 느리면 끄세요.",
+ "Time of day": "시간대",
+ "☀️ Day": "☀️ 낮",
+ "🌇 Golden hour": "🌇 골든 아워",
+ "🌙 Night": "🌙 밤"
 }
