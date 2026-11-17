@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "{name} arkadaşlık isteğini kabul etti",
  "👋 {name} sent you a friend request": "👋 {name} sana arkadaşlık isteği gönderdi",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 {name} ile artık arkadaşsınız"
+ "🤝 You and {name} are friends now": "🤝 {name} ile artık arkadaşsınız",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Botlara karşı aynı takımda: jeton var ama sıralama puanı yok. Sıralamada yükselmek için birbirinize karşı oynayın."
 }

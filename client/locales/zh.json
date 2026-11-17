@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "{name} 接受了你的好友请求",
  "👋 {name} sent you a friend request": "👋 {name} 向你发送了好友请求",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了"
+ "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "同队对战机器人：可以获得金币，但没有排行榜积分。互相对战才能在排行榜上攀升。"
 }

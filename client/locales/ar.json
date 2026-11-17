@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "قبل {name} طلب صداقتك",
  "👋 {name} sent you a friend request": "👋 أرسل لك {name} طلب صداقة",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 أنت و{name} صديقان الآن"
+ "🤝 You and {name} are friends now": "🤝 أنت و{name} صديقان الآن",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "فريق واحد ضد الروبوتات: عملات، لكن بلا نقاط في لوحة الصدارة. العبوا ضد بعضكم لتتقدموا في الترتيب."
 }

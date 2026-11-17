@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "{name}님이 친구 요청을 수락했어요",
  "👋 {name} sent you a friend request": "👋 {name}님이 친구 요청을 보냈어요",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 이제 {name}님과 친구예요"
+ "🤝 You and {name} are friends now": "🤝 이제 {name}님과 친구예요",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "봇을 상대로 한 팀: 코인은 받지만 순위표 점수는 없어요. 순위를 올리려면 서로 맞붙어 보세요."
 }

@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "{name} hat deine Freundschaftsanfrage angenommen",
  "👋 {name} sent you a friend request": "👋 {name} hat dir eine Freundschaftsanfrage geschickt",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 Du und {name} seid jetzt Freunde"
+ "🤝 You and {name} are friends now": "🤝 Du und {name} seid jetzt Freunde",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Gemeinsam gegen Bots: Münzen, aber keine Ranglistenpunkte. Spielt gegeneinander, um in der Rangliste aufzusteigen."
 }

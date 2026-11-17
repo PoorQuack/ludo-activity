@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "{name}さんがフレンド申請を承認しました",
  "👋 {name} sent you a friend request": "👋 {name}さんからフレンド申請が届きました",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 {name}さんとフレンドになりました"
+ "🤝 You and {name} are friends now": "🤝 {name}さんとフレンドになりました",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "ボット相手に同じチーム：コインはもらえますが、ランキングポイントはありません。ランキングを上げるにはお互いに対戦しましょう。"
 }

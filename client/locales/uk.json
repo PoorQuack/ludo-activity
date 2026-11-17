@@ -799,5 +799,6 @@
  "{name} accepted your friend request": "{name} приймає твій запит у друзі",
  "👋 {name} sent you a friend request": "👋 {name} надсилає тобі запит у друзі",
  "📣 {title}": "📣 {title}",
- "🤝 You and {name} are friends now": "🤝 Тепер ви з {name} друзі"
+ "🤝 You and {name} are friends now": "🤝 Тепер ви з {name} друзі",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Разом проти ботів: монети є, очок рейтингу немає. Грайте одне проти одного, щоб піднятися в рейтингу."
 }

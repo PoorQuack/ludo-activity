@@ -3041,7 +3041,8 @@ function showTeamFinish() {
   }[state.noCoins];
   const mine = teamOfSeat(mySeat());
   const title = state.noCoins === 'abandoned' ? t('Game ended') : mine < 0 ? t('Game over!') : mine === state.teamOrder[0] ? `${t('Your team wins!')} 🎉` : t('Game over!');
-  const note = why ? `<div class="banner-note">${why}</div>` : '';
+  const coop = !why && state.noPoints === 'coop' ? t('Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.') : '';
+  const note = why || coop ? `<div class="banner-note">${why || coop}</div>` : '';
   els.banner.innerHTML = `<div class="banner-title">${title}</div>${lines.join('<br>')}${note}${myGameSummary()}`;
   els.banner.classList.remove('hidden');
 }

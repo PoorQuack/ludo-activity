@@ -45,7 +45,7 @@ const SAVED_FIELDS = [
   'tokens', 'turn', 'dice', 'diceValues', 'sixThrows', 'rolled', 'rolls', 'options', 'movable', 'extraTurns', 'skipped',
   'lastRoll', 'winners', 'teamOrder', 'forfeited', 'feud', 'streak', 'revenges', 'hits', 'wasLast', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
-  'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'decider', 'actor', 'racePoints', 'rigged',
+  'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'noPoints', 'decider', 'actor', 'racePoints', 'rigged',
 ];
 
 export class Room {
@@ -133,6 +133,7 @@ export class Room {
     this.pausedAt = null; // set while the game waits for its players to come back
     this.pauseTimer = null;
     this.noCoins = null; // why a finished game paid nothing: 'bots' (no other human), 'abandoned' or 'test'
+    this.noPoints = null; // 'coop': coins paid, but no leaderboard points (every human on one team against bots)
     this.rigged = false; // a rigged roll happened (scripts/rig-dice.sh): the game pays nothing
   }
 
@@ -385,6 +386,7 @@ export class Room {
     this.rewardCapped = [];
     this.rewardPartial = [];
     this.noCoins = null;
+    this.noPoints = null;
     this.rigged = false;
     this.clearPause();
     this.lastMove = null;
@@ -579,6 +581,7 @@ export class Room {
     this.clearTimer();
     this.clearPause();
     this.noCoins = null;
+    this.noPoints = null;
     this.rigged = false;
     this.phase = 'lobby';
     // Drop disconnected humans, keep everyone else seated.
@@ -1005,6 +1008,11 @@ export class Room {
     // The humans' places (anyone who surrendered comes last): leaderboard points only count the
     // people you beat, so bots neither add to them nor take the win.
     const humanGroups = groups.map((g) => g.filter((s) => !this.seats[s].bot)).filter((g) => g.length);
+    // Every human on the same team against bots: nobody beat anybody. Coins are paid for the
+    // real place, but no leaderboard points and no win (else two friends could farm points
+    // by teaming up against easy bots).
+    const coop = !!this.teamOrder && humanGroups.length === 1;
+    if (coop) this.noPoints = 'coop';
     this.winners.forEach((s) => {
       const place = placeOf(s);
       const seat = this.seats[s];
@@ -1021,8 +1029,8 @@ export class Room {
       // for beating them all, scaled like the coins when the game was cut short.
       const humanPlace = humanGroups.findIndex((g) => g.includes(s));
       const beaten = humanGroups.slice(humanPlace + 1).reduce((n, g) => n + g.length, 0);
-      const won = humanPlace === 0;
-      const points = Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
+      const won = !coop && humanPlace === 0;
+      const points = coop ? 0 : Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
       results.push({ userId: seat.userId, name: seat.name, points, won });
       this.stat(s, 'game');
       if (won) {
@@ -1031,7 +1039,7 @@ export class Room {
         if (this.wasLast[s]) this.stat(s, 'comeback');
         if (this.quick) this.stat(s, 'quickwin');
       }
-      if (place <= (this.teamOrder ? 0 : 1)) this.stat(s, 'top2');
+      if (!coop && place <= (this.teamOrder ? 0 : 1)) this.stat(s, 'top2');
     });
     this.onGameEnd(results);
   }
