@@ -6,6 +6,7 @@ import path from 'node:path';
 import { Leaderboard, periodId, periodEnd, PRIZES } from '../server/leaderboard.js';
 import { ProfileStore } from '../server/store.js';
 import { Room } from '../server/room.js';
+import { REWARDS } from '../shared/shop.js';
 
 const at = (iso) => Date.parse(iso);
 const clock = (iso) => {
@@ -208,4 +209,46 @@ test('a surrender before anyone finishes still pays by progress', () => {
   assert.equal(room.endedEarly, true);
   assert.deepEqual(room.rewardPartial, [room.seatOf('b')]);
   room.destroy();
+});
+
+test('friends on one team against bots: coins for the place, but no leaderboard points or win', () => {
+  for (const botsWin of [true, false]) {
+    const ended = [];
+    const room = new Room('t', { onGameEnd: (r) => ended.push(...r) });
+    const [a, b] = ['a', 'b'].map((id) => ({ id, name: id.toUpperCase() }));
+    room.connect(a);
+    room.host(a);
+    room.connect(b);
+    room.setMode(a, '2v2');
+    room.sit(a, 0); // team 0: seats 0 and 2
+    room.sit(b, 2);
+    room.addBot(a, 1); // team 1: two bots
+    room.addBot(a, 3);
+    room.start(a);
+    room.winners = botsWin ? [1, 3] : [0, 2];
+    room.endIfOver();
+    assert.equal(room.noPoints, 'coop');
+    assert.deepEqual(Object.fromEntries(ended.map((r) => [r.userId, [r.points, r.won]])), { a: [0, false], b: [0, false] });
+    assert.equal(room.rewards[0], REWARDS.place[botsWin ? 1 : 0]); // coins still follow the real place
+    room.destroy();
+  }
+});
+
+test('friends on opposite teams, each with a bot: the winning side scores as usual', () => {
+  const ended = [];
+  const room = new Room('t', { onGameEnd: (r) => ended.push(...r) });
+  const [a, b] = ['a', 'b'].map((id) => ({ id, name: id.toUpperCase() }));
+  room.connect(a);
+  room.host(a);
+  room.connect(b);
+  room.setMode(a, '2v2');
+  room.sit(a, 0);
+  room.sit(b, 1);
+  room.addBot(a, 2);
+  room.addBot(a, 3);
+  room.start(a);
+  room.winners = [1, 3];
+  room.endIfOver();
+  assert.equal(room.noPoints, null);
+  assert.deepEqual(Object.fromEntries(ended.map((r) => [r.userId, [r.points, r.won]])), { b: [20, true], a: [0, false] });
 });

@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 Er zijn testdobbelstenen gebruikt: iedereen krijgt zijn inzet terug.",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} edelstenen! Bedankt voor je steun",
  "💰 {names} split the pot: {n} coins!": "💰 {names} delen de pot: {n} munten!",
- "💰 {names} takes the pot: {n} coins!": "💰 {names} pakt de pot: {n} munten!"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names} pakt de pot: {n} munten!",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Samen tegen bots: munten, maar geen ranglijstpunten. Speel tegen elkaar om te stijgen op de ranglijst."
 }

@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 استُخدم نرد تجريبي: يستعيد الجميع رهانهم.",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} جوهرة! شكرًا لدعمك",
  "💰 {names} split the pot: {n} coins!": "💰 {names} يتقاسمون الرهان: {n} عملة!",
- "💰 {names} takes the pot: {n} coins!": "💰 {names} يأخذ الرهان: {n} عملة!"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names} يأخذ الرهان: {n} عملة!",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "فريق واحد ضد الروبوتات: عملات، لكن بلا نقاط في لوحة الصدارة. العبوا ضد بعضكم لتتقدموا في الترتيب."
 }

@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 Використано тестові кубики: усі отримують ставку назад.",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} самоцвітів! Дякуємо за підтримку",
  "💰 {names} split the pot: {n} coins!": "💰 {names} ділять банк: {n} монет!",
- "💰 {names} takes the pot: {n} coins!": "💰 {names} забирає банк: {n} монет!"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names} забирає банк: {n} монет!",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Разом проти ботів: монети є, очок рейтингу немає. Грайте одне проти одного, щоб піднятися в рейтингу."
 }

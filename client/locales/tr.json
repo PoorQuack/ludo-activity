@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 Test zarları kullanıldı: herkes bahsini geri alır.",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} mücevher! Desteğin için teşekkürler",
  "💰 {names} split the pot: {n} coins!": "💰 {names} potu paylaşıyor: {n} jeton!",
- "💰 {names} takes the pot: {n} coins!": "💰 {names} potu alıyor: {n} jeton!"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names} potu alıyor: {n} jeton!",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Botlara karşı aynı takımda: jeton var ama sıralama puanı yok. Sıralamada yükselmek için birbirinize karşı oynayın."
 }

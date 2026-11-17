@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 Se usaron dados de prueba: todos recuperan su apuesta.",
  "💎 +{gems} gems! Thank you for your support": "💎 ¡+{gems} gemas! Gracias por tu apoyo",
  "💰 {names} split the pot: {n} coins!": "💰 ¡{names} se reparten el bote: {n} monedas!",
- "💰 {names} takes the pot: {n} coins!": "💰 ¡{names} se lleva el bote: {n} monedas!"
+ "💰 {names} takes the pot: {n} coins!": "💰 ¡{names} se lleva el bote: {n} monedas!",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "En equipo contra bots: monedas, pero sin puntos de clasificación. Jugad uno contra otro para subir en la tabla."
 }

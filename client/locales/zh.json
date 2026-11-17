@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 使用了测试骰子：所有人拿回赌注。",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} 宝石！感谢你的支持",
  "💰 {names} split the pot: {n} coins!": "💰 {names} 平分奖池：{n} 金币！",
- "💰 {names} takes the pot: {n} coins!": "💰 {names} 拿走奖池：{n} 金币！"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names} 拿走奖池：{n} 金币！",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "同队对战机器人：可以获得金币，但没有排行榜积分。互相对战才能在排行榜上攀升。"
 }

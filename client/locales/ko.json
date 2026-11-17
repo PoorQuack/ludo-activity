@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 테스트 주사위를 썼어요: 모두 판돈을 돌려받아요.",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems}젬! 응원해 줘서 고마워요",
  "💰 {names} split the pot: {n} coins!": "💰 {names}님이 팟을 나눠 가져요: {n}코인!",
- "💰 {names} takes the pot: {n} coins!": "💰 {names}님이 팟을 가져가요: {n}코인!"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names}님이 팟을 가져가요: {n}코인!",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "봇을 상대로 한 팀: 코인은 받지만 순위표 점수는 없어요. 순위를 올리려면 서로 맞붙어 보세요."
 }

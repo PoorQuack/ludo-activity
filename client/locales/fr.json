@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 Des dés de test ont été utilisés : tout le monde récupère sa mise.",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} gemmes ! Merci pour ton soutien",
  "💰 {names} split the pot: {n} coins!": "💰 {names} se partagent le pot : {n} pièces !",
- "💰 {names} takes the pot: {n} coins!": "💰 {names} rafle le pot : {n} pièces !"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names} rafle le pot : {n} pièces !",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "En équipe contre des bots : des pièces, mais pas de points au classement. Affrontez-vous pour grimper au classement."
 }

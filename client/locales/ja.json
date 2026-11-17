@@ -875,5 +875,6 @@
  "🎲 Test dice were used: everyone got their stake back.": "🎲 テスト用のダイスが使われました：全員に賭け金が戻ります。",
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems}ジェム！応援ありがとう",
  "💰 {names} split the pot: {n} coins!": "💰 {names}がポットを山分け：{n}コイン！",
- "💰 {names} takes the pot: {n} coins!": "💰 {names}がポットを総取り：{n}コイン！"
+ "💰 {names} takes the pot: {n} coins!": "💰 {names}がポットを総取り：{n}コイン！",
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "ボット相手に同じチーム：コインはもらえますが、ランキングポイントはありません。ランキングを上げるにはお互いに対戦しましょう。"
 }
