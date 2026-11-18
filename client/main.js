@@ -3625,6 +3625,11 @@ document.addEventListener('pointerdown', (e) => {
     setDrawer(false);
   }
 });
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && drawer.classList.contains('open')) {
+    setDrawer(false);
+  }
+});
 
 confirmTap(
   els.newGameBtn,

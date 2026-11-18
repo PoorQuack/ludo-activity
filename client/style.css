@@ -1116,7 +1116,7 @@ html, body {
 
 .people { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .people-head { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.people-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.people-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; scrollbar-width: thin; }
 .people-list li { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .people-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .people-list .name.is-muted { color: var(--muted); text-decoration: line-through; }
@@ -1549,6 +1549,33 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .panel-head { order: 0; } #room-info { order: 1; } #drawer { order: 2; } #mode-picker { order: 3; } #quick-btn { order: 3; } #seats { order: 4; }
 #lobby-controls { order: 5; } #play-controls { order: 6; } #finish-controls { order: 7; } .panel .chat { order: 9; }
 
+/* ---------- PC / landscape: in game, sandwich menu opens as a floating popover dropdown so chat stays visible ---------- */
+@media (min-aspect-ratio: 1/1) {
+  #game:not([data-phase='lobby']) .panel { position: relative; }
+  #game:not([data-phase='lobby']) #drawer.open {
+    position: absolute;
+    top: 50px;
+    left: 14px;
+    right: 14px;
+    z-index: 50;
+    max-height: calc(100% - 210px);
+    overflow-y: auto;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+    padding: 12px;
+    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    animation: drawer-in 0.15s ease-out;
+    scrollbar-width: thin;
+  }
+  #game:not([data-phase='lobby']) .panel .chat {
+    margin-top: auto;
+  }
+}
+
 /* ---------- PCs: the room's options are always on show in lobby, and the lobby uses the width ---------- */
 @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
   /* In lobby: room options are always on show in the side column, no sandwich button needed */
@@ -1978,7 +2005,7 @@ button, .btn { touch-action: manipulation; }
 /* ---------- scroll areas ----------
    Reaching the end of a list doesn't drag the whole game along (on phones the activity would
    bounce or scroll behind the list). */
-:is(#menu, .room-list, .player-pop, .support-card, .shop-grid, .howto-body, .panel, .chat-log, .lb-body, .modal-card, .friend-list, .set-body, .item-stickers, .item-card, #game[data-phase='lobby'] .lobby-main, .coin-card) {
+:is(#menu, .room-list, .player-pop, .support-card, .shop-grid, .howto-body, .panel, .chat-log, .lb-body, .modal-card, .friend-list, .set-body, .item-stickers, .item-card, #game[data-phase='lobby'] .lobby-main, .coin-card, #drawer, .people-list) {
   overscroll-behavior: contain;
 }
 /* Coin counts and prices: every digit the same width, so a changing number doesn't jitter */
