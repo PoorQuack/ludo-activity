@@ -138,7 +138,9 @@ export class BoardRenderer {
     this.dpr = dpr;
     // (+ room above the top row: a standing token is taller than its square, and its head used to
     // be cut off by the canvas edge there)
-    this.span = boardReach(this.board) * 2 + 0.3 + 2 * TOKEN_HEADROOM;
+    // 6p hexagon board has angled arms (no arm pointing directly up/down), so pawns remain
+    // safely within bounds; tighter 17.9 span eliminates dead margin and makes the 6p board larger.
+    this.span = this.board.arms === 6 ? 17.9 : (boardReach(this.board) * 2 + 0.3 + 2 * TOKEN_HEADROOM);
     this.cell = size / this.span;
     this.lastCss = cssSize;
     for (const c of [this.canvas, this.layer, this.under, this.animFull, this.back]) {

@@ -2998,6 +2998,7 @@ function renderPanel() {
   els.surrenderBtn.classList.toggle('hidden', !racing);
   updateTurnNudge();
   els.screens.game.dataset.phase = phase; // the phone layout hides the seat cards while playing
+  els.screens.game.dataset.arms = String(board.arms);
 
   if (phase !== 'finished') els.banner.classList.add('hidden');
 

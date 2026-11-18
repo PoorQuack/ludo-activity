@@ -1574,6 +1574,19 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   #game:not([data-phase='lobby']) .panel .chat {
     margin-top: auto;
   }
+  /* Give the game board more vertical space on PC during active gameplay */
+  #game:not([data-phase='lobby']) {
+    padding: 6px 12px;
+    gap: 12px;
+  }
+  /* 6-player board: tighter padding and panel so the hexagon board has maximum canvas height */
+  #game[data-arms='6']:not([data-phase='lobby']) {
+    padding: 4px 10px;
+    gap: 10px;
+  }
+  #game[data-arms='6']:not([data-phase='lobby']) .panel {
+    width: clamp(290px, 25vw, 340px);
+  }
 }
 
 /* ---------- PCs: the room's options are always on show in lobby, and the lobby uses the width ---------- */
