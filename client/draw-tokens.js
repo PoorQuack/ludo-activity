@@ -9,9 +9,15 @@ import { TAU, circle, drawStar, hexA, mix, path, polygon, roundRect, sparkle, zo
 export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1, sign = 'red', t = null } = {}) {
   const gy = y + r * 0.2; // the pawn's base sits on the centre of its square
   const shrink = 1 - Math.min(0.45, lift / (r * 4));
+  const sw = r * 0.95 * shrink;
+  const sh = r * 0.4 * shrink;
+  const sg = ctx.createRadialGradient(x, gy, 0, x, gy, sw);
+  sg.addColorStop(0, 'rgba(0,0,0,0.38)');
+  sg.addColorStop(0.55, 'rgba(0,0,0,0.18)');
+  sg.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.beginPath();
-  ctx.ellipse(x, gy, r * 0.95 * shrink, r * 0.4 * shrink, 0, 0, TAU);
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.ellipse(x, gy, sw, sh, 0, 0, TAU);
+  ctx.fillStyle = sg;
   ctx.fill();
 
   const style = PAWN_STYLES[skin] || PAWN_STYLES['token-classic'];
@@ -347,13 +353,18 @@ export function paintPawn(ctx, r, hex, style, sign) {
     ctx.fill();
   } else {
     const g = ctx.createRadialGradient(-r * 0.15, hy - r * 0.16, r * 0.04, 0, hy, r * 0.44);
-    g.addColorStop(0, mix(body, '#ffffff', 0.6));
-    g.addColorStop(0.55, body);
-    g.addColorStop(1, mix(body, '#000000', 0.35));
+    g.addColorStop(0, mix(body, '#ffffff', 0.72));
+    g.addColorStop(0.22, mix(body, '#ffffff', 0.4));
+    g.addColorStop(0.6, body);
+    g.addColorStop(0.92, mix(body, '#000000', 0.32));
+    g.addColorStop(1, mix(body, '#ffffff', 0.08));
     circle(ctx, 0, hy, r * 0.46);
     ctx.fillStyle = g;
     ctx.fill();
     ctx.stroke();
+    circle(ctx, -r * 0.16, hy - r * 0.18, r * 0.09);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.fill();
   }
   if (style.neon) {
     circle(ctx, 0, hy, r * 0.2);
@@ -1211,8 +1222,10 @@ export const TOKEN_SHAPES = {
 export function cylinder(ctx, w, color) {
   const g = ctx.createLinearGradient(-w, 0, w, 0);
   g.addColorStop(0, mix(color, '#000000', 0.22));
-  g.addColorStop(0.3, mix(color, '#ffffff', 0.28));
+  g.addColorStop(0.28, mix(color, '#ffffff', 0.32));
   g.addColorStop(0.55, color);
+  g.addColorStop(0.88, mix(color, '#000000', 0.28));
+  g.addColorStop(0.96, mix(color, '#ffffff', 0.1));
   g.addColorStop(1, mix(color, '#000000', 0.3));
   return g;
 }

@@ -41,6 +41,12 @@ export function drawTile(ctx, sq, fill, style, theme, role = 'cell', turn = 0) {
     if (rnd(seed * 19.9 + 7) < 0.5) ctx.scale(-1, 1);
   }
   if (style) TILE_STYLES[style]?.(ctx, fill, theme, seed, role, turn);
+  else {
+    ctx.lineWidth = 0.02;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+    roundRect(ctx, -0.44, -0.44, 0.88, 0.88, 0.11);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
