@@ -36,7 +36,7 @@ const EMOTE_TTL_MS = 3000;
 const LB_PER_BEATEN = 10; // leaderboard points for each human you finish ahead of
 const LB_WIN_BONUS = 10; // …and for finishing ahead of every other human
 const TYPING_MS = 2500; // "is typing…" lasts this long after the last ping (clients ping every second)
-const BOT_NAMES = ['Bot Rocky', 'Bot Pixel', 'Bot Mango', 'Bot Nova', 'Bot Ziggy', 'Bot Lumi'];
+const BOT_NAMES = ['Bot Neko', 'Bot Mila', 'Bot Gigi', 'Bot Lizzy', 'Bot SamSam'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 // What toSave() keeps of a room (see "surviving a server restart" below).
@@ -1376,5 +1376,5 @@ export class Room {
 }
 
 function newBot(seat, level = 'medium') {
-  return { userId: `bot-${seat}`, name: BOT_NAMES[seat], bot: true, connected: true, level };
+  return { userId: `bot-${seat}`, name: BOT_NAMES[seat % BOT_NAMES.length], bot: true, connected: true, level };
 }
