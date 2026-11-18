@@ -138,6 +138,7 @@ let lastEmoteId = 0;
 let floaters = []; // emotes rising over the board
 let dice = { mode: 'hidden' };
 let celebrated = false;
+let finishTimer = null;
 let lastFrame = 0;
 // The server state the panel shows. It follows the board: each animation carries the state
 // that arrived with (or after) it, and the panel moves on to that state when it finishes.
@@ -496,6 +497,10 @@ function onState(next) {
     lastRollSeq = next.lastRoll?.seq ?? 0;
     dice = { mode: 'hidden' };
     celebrated = false;
+    if (finishTimer) {
+      clearTimeout(finishTimer);
+      finishTimer = null;
+    }
     if (next.phase === 'finished') {
       celebrated = true;
       showFinish();
@@ -2311,6 +2316,10 @@ function isHost() {
 // ---------------- screens ----------------
 
 function showScreen(name) {
+  if (name !== 'game' && finishTimer) {
+    clearTimeout(finishTimer);
+    finishTimer = null;
+  }
   if (name !== 'shop') {
     closeItemView();
     if (screen === 'shop') commitShopSeen(); // what you looked at isn't new next time
@@ -3000,7 +3009,13 @@ function renderPanel() {
   els.screens.game.dataset.phase = phase; // the phone layout hides the seat cards while playing
   els.screens.game.dataset.arms = String(board.arms);
 
-  if (phase !== 'finished') els.banner.classList.add('hidden');
+  if (phase !== 'finished') {
+    if (finishTimer) {
+      clearTimeout(finishTimer);
+      finishTimer = null;
+    }
+    els.banner.classList.add('hidden');
+  }
 
   // Emotes live in chat now: the emoji button on the chat form opens the picker.
   renderEmojiPops();
@@ -3150,12 +3165,26 @@ function stepAnimations(now, dt) {
 
   if (state.phase === 'finished' && idle() && !celebrated) {
     celebrated = true;
-    showFinish();
     renderer.confetti(state.winners.slice(0, 3).map((s) => col(boardFor(state.mode).colors[s])).concat('#ffffff', '#f6cf57'));
     // the winner's own token takes a bow, in its own style
     if (state.winners.length) renderer.celebrate(state.winners[0], state.seats[state.winners[0]]?.skins?.token);
     sfx('win');
     if (state.winners.length) sfx('bow');
+
+    if (finishTimer) {
+      clearTimeout(finishTimer);
+      finishTimer = null;
+    }
+
+    // Let the winning token celebration play out visibly before showing the finish leaderboard
+    if (state.winners.length && state.noCoins !== 'abandoned') {
+      finishTimer = setTimeout(() => {
+        finishTimer = null;
+        if (state.phase === 'finished') showFinish();
+      }, 4000);
+    } else {
+      showFinish();
+    }
   }
 }
 
@@ -3665,7 +3694,21 @@ function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
   });
 }
 
+els.canvas.parentElement.addEventListener('pointerdown', () => {
+  if (finishTimer) {
+    clearTimeout(finishTimer);
+    finishTimer = null;
+    showFinish();
+  }
+});
+
 els.canvas.addEventListener('pointerdown', (e) => {
+  if (finishTimer) {
+    clearTimeout(finishTimer);
+    finishTimer = null;
+    showFinish();
+    return;
+  }
   if (canRoll() && renderer.hitDice(e.clientX, e.clientY)) return sendRoll();
   closeChooser(); // tapping anywhere else on the board cancels it
   if (!canMove()) return;
