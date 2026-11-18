@@ -534,6 +534,10 @@ const EFFECTS = {
     const t = now();
     for (const at of [0, 0.22]) for (const f of [110, 165, 220]) voice(t + at, { f, len: 0.4, type: 'sawtooth', vol: 0.08, filter: { f: 1400, q: 1.5 } });
   },
+  unstoppable() {
+    const t = now();
+    for (const at of [0, 0.18, 0.36]) for (const f of [82.4, 123.5, 164.8]) voice(t + at, { f, len: 0.5, type: 'sawtooth', vol: 0.09, filter: { f: 1600, q: 1.8 } });
+  },
   // --- taunts (taunts.js): each one timed to its scene ---
   // a whoosh, the hammer's thud and squeak, then little birds for the dizzy stars
   'taunt-bonk'() {

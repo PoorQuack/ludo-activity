@@ -3281,7 +3281,7 @@ function moveOverrides(ev) {
       if (streak >= 2) {
         const word = streak === 2 ? t('Double!') : streak === 3 ? t('Rampage!') : t('Unstoppable!');
         renderer.callout(word, color, ev.move.revenge ? 1 : 0, who);
-        sfx(streak >= 3 ? 'rampage' : 'double');
+        sfx(streak >= 4 ? 'unstoppable' : streak === 3 ? 'rampage' : 'double');
       }
       sfx('capture');
     }
