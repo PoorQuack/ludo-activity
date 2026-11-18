@@ -281,6 +281,7 @@ function connect() {
     else if (msg.type === 'friends') {
       friendsData = msg;
       renderFriends();
+      if (!$('room-friends-modal').classList.contains('hidden')) renderRoomFriends();
       renderPrefs();
     } else if (msg.type === 'inbox') {
       inboxData = msg;
@@ -1966,6 +1967,74 @@ $('friends-discord').onclick = () => {
 };
 renderFriends();
 
+// ---------- room invite-friends modal ----------
+let roomFriendsTab = 'friends';
+function renderRoomFriends() {
+  const list = $('room-friend-list');
+  const hint = $('room-friends-hint');
+  const data = friendsData || { friends: [], met: [] };
+  for (const b of document.querySelectorAll('[data-room-ftab]')) b.classList.toggle('active', b.dataset.roomFtab === roomFriendsTab);
+  const online = data.friends.filter((f) => f.online).length;
+  $('room-friends-count').textContent = data.friends.length ? `(${online ? t('{n} on', { n: online }) : data.friends.length})` : '';
+  const people = roomFriendsTab === 'friends' ? [...data.friends].sort((a, b) => b.online - a.online) : data.met;
+  list.innerHTML = '';
+  for (const p of people) {
+    const li = document.createElement('li');
+    const av = document.createElement('span');
+    av.className = `avatar${p.online ? ' online' : ''}`;
+    fillAvatar(av, p);
+    const who = document.createElement('div');
+    who.className = 'friend-who';
+    who.innerHTML = `<b></b><small class="${p.online ? 'on' : ''}"></small>`;
+    who.querySelector('b').textContent = p.name;
+    who.querySelector('small').textContent = p.online ? t('Online') : t('Offline');
+    li.append(av, who);
+    // Invite button
+    const ib = document.createElement('button');
+    ib.className = 'btn small primary';
+    ib.textContent = t('Invite');
+    ib.title = p.online ? t('Pops up in their game') : t('Sent to their Discord DMs');
+    ib.addEventListener('click', () => {
+      ws?.send(JSON.stringify({ type: 'friendInvite', to: p.id }));
+      ib.textContent = t('Sent!');
+      ib.disabled = true;
+      setTimeout(() => { ib.textContent = t('Invite'); ib.disabled = false; }, 3000);
+    });
+    li.appendChild(ib);
+    // Add friend button for "met" tab
+    if (roomFriendsTab === 'met') {
+      if (p.asked) {
+        const ab = document.createElement('button');
+        ab.className = 'btn small';
+        ab.textContent = t('+ Add');
+        ab.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'accept', id: p.id })));
+        li.appendChild(ab);
+      } else if (!p.sent) {
+        const ab = document.createElement('button');
+        ab.className = 'btn small';
+        ab.textContent = t('+ Add');
+        ab.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'add', id: p.id })));
+        li.appendChild(ab);
+      }
+    }
+    list.appendChild(li);
+  }
+  if (!people.length) hint.textContent = roomFriendsTab === 'friends'
+    ? t('No friends yet — add people from Played with.')
+    : t('People you play games with show up here.');
+  else hint.textContent = '';
+}
+$('room-invite-friends-btn').addEventListener('click', () => {
+  setDrawer(false);
+  $('room-friends-modal').classList.remove('hidden');
+  renderRoomFriends();
+});
+$('room-friends-close').addEventListener('click', () => $('room-friends-modal').classList.add('hidden'));
+$('room-friends-modal').addEventListener('click', (e) => { if (e.target === $('room-friends-modal')) $('room-friends-modal').classList.add('hidden'); });
+for (const b of document.querySelectorAll('[data-room-ftab]')) {
+  b.addEventListener('click', () => { roomFriendsTab = b.dataset.roomFtab; renderRoomFriends(); });
+}
+
 // "Sam invited you to their room"
 let roomInviteTimer = null;
 function showRoomInvite({ from, fromId, code }) {
@@ -3551,6 +3620,11 @@ function setDrawer(open) {
 }
 drawerBtn.addEventListener('click', () => setDrawer(!drawer.classList.contains('open')));
 for (const b of drawer.querySelectorAll('[data-go]')) b.addEventListener('click', () => setDrawer(false));
+document.addEventListener('pointerdown', (e) => {
+  if (drawer.classList.contains('open') && !drawer.contains(e.target) && !drawerBtn.contains(e.target)) {
+    setDrawer(false);
+  }
+});
 
 confirmTap(
   els.newGameBtn,

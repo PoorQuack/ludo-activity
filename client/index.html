@@ -350,6 +350,7 @@
             <div id="play-controls" class="controls hidden">
               <div id="turn-text" class="turn-text"></div>
               <div id="timer" class="timer"><div id="timer-bar"></div></div>
+              <button data-i18n id="surrender-btn" class="btn surrender hidden">🏳️ Surrender</button>
             </div>
 
             <div id="finish-controls" class="controls hidden">
@@ -357,13 +358,13 @@
             </div>
           </div>
           <div class="lobby-col lobby-side">
-            <!-- The room: leave, surrender, settings, people. Behind ☰ on phones; always shown on PCs -->
+            <!-- The room: leave, settings, people, invite friends. Behind ☰ (sandwich panel) -->
             <div id="drawer" class="drawer">
               <div class="menu-row">
                 <button data-i18n class="btn" data-go="menu">← Main menu</button>
                 <button data-i18n id="leave-room-btn" class="btn">🚪 Leave room</button>
               </div>
-              <button data-i18n id="surrender-btn" class="btn surrender">🏳️ Surrender</button>
+              <button data-i18n id="room-invite-friends-btn" class="btn room-invite-friends-btn" type="button">👋 Invite friends</button>
 
               <!-- Host only -->
               <div id="room-settings" class="room-settings">
@@ -651,6 +652,22 @@
         </div>
       </div>
 
+
+      <!-- Invite friends from inside a room -->
+      <div id="room-friends-modal" class="room-friends-modal hidden">
+        <div class="room-friends-card">
+          <div class="room-friends-head">
+            <h2 data-i18n>Invite friends</h2>
+            <button data-i18n-attr="aria-label" type="button" id="room-friends-close" class="btn small icon-btn" aria-label="Close">✕</button>
+          </div>
+          <nav class="mini-tabs" role="tablist">
+            <button class="active" data-room-ftab="friends" role="tab"><span data-i18n>Friends</span> <span id="room-friends-count"></span></button>
+            <button data-i18n data-room-ftab="met" role="tab">Played with</button>
+          </nav>
+          <ul id="room-friend-list" class="friend-list"></ul>
+          <p id="room-friends-hint" class="friends-hint"></p>
+        </div>
+      </div>
       <div id="toast" class="toast hidden"></div>
     </div>
     <script type="module" src="./main.js"></script>

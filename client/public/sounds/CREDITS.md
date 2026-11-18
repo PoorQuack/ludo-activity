@@ -27,9 +27,8 @@ Note: the file names are historical — music-energetic.mp3 ("Faster Does It") i
 
 ## Sound effects
 
-None — the game synthesises dice, moves and other effects with the Web Audio API
-(see client/audio.js). To add recordings later, list them in `sounds.json`
-(CC0 or CC-BY only; CC-BY also needs a credit line here and in game).
+- `revenge.mp3`, `double.mp3`, `rampage.mp3`: Original arcade finisher announcer voice effects synthesized via Gemini TTS (Algenib voice) with arena stereo delay and sub-bass harmonics. Original and uncopyrighted.
+- `taunt-violin.mp3`: Acoustic solo sad violin performance of the classic "Hearts and Flowers" melancholy motif (Alphons Czibulka, 1893, Public Domain), sampled from FluidR3_GM (Public Domain / CC0).
 
 Files were converted to MP3 (128 kbps stereo, loudness-normalised to about -20 LUFS).
 No changes were made to the underlying works beyond format conversion, trimming and

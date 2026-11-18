@@ -1549,13 +1549,10 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .panel-head { order: 0; } #room-info { order: 1; } #drawer { order: 2; } #mode-picker { order: 3; } #quick-btn { order: 3; } #seats { order: 4; }
 #lobby-controls { order: 5; } #play-controls { order: 6; } #finish-controls { order: 7; } .panel .chat { order: 9; }
 
-/* ---------- PCs: the room's options are always on show, and the lobby uses the width ---------- */
+/* ---------- PCs: the room's options are always on show in lobby, and the lobby uses the width ---------- */
 @media (min-aspect-ratio: 1/1) and (min-width: 900px) {
-  /* Leave / surrender / main menu never hide behind ☰ */
-  #game .drawer:not(.open) { display: flex; animation: none; }
-  /* In a game: just those buttons, under the turn; ☰ adds room settings and people */
-  #game:not([data-phase='lobby']) .drawer:not(.open) :is(.room-settings, .people) { display: none; }
-  #game:not([data-phase='lobby']) #drawer { order: 8; }
+  /* In lobby: room options are always on show in the side column, no sandwich button needed */
+  #game[data-phase='lobby'] .drawer:not(.open) { display: flex; animation: none; }
   #game[data-phase='lobby'] #drawer-btn { display: none; }
 
   /* The lobby: mode and seats on the left, the room and chat on the right */
@@ -2027,3 +2024,13 @@ button, .btn { touch-action: manipulation; }
 .friend-list li.is-request { background: color-mix(in srgb, var(--panel-2) 88%, var(--accent)); border-radius: 10px; }
 .new-dot { display: inline-block; width: 8px; height: 8px; margin-inline-start: 5px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
 .inbox-acts .btn { width: auto; padding-inline: 14px; }
+
+/* ---- Room invite-friends modal ---- */
+.room-invite-friends-btn { margin-top: 8px; width: 100%; }
+.room-friends-modal { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+.room-friends-modal.hidden { display: none; }
+.room-friends-card { background: var(--panel); border-radius: 16px; padding: 18px 20px; width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - 64px); display: flex; flex-direction: column; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,.4); animation: modalIn .2s ease-out; }
+@keyframes modalIn { from { opacity: 0; transform: scale(.92); } }
+.room-friends-head { display: flex; align-items: center; justify-content: space-between; }
+.room-friends-head h2 { margin: 0; font-size: 16px; }
+.room-friends-card .friend-list { max-height: 50vh; overflow-y: auto; }
