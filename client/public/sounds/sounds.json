@@ -83,5 +83,14 @@
   "double": "double.mp3",
   "rampage": "rampage.mp3",
   "taunt-violin": "taunt-violin.mp3",
-  "unstoppable": "unstoppable.mp3"
+  "unstoppable": "unstoppable.mp3",
+  "taunt-bonk": "taunt-bonk.mp3",
+  "taunt-bye": "taunt-bye.mp3",
+  "taunt-chicken": "taunt-chicken.mp3",
+  "taunt-clown": "taunt-clown.mp3",
+  "taunt-l": "taunt-l.mp3",
+  "taunt-ggez": "taunt-ggez.mp3",
+  "taunt-skill": "taunt-skill.mp3",
+  "taunt-cackle": "taunt-cackle.mp3",
+  "taunt-fireworks": "taunt-fireworks.mp3"
 }

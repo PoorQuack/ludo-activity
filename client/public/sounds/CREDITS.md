@@ -33,3 +33,17 @@ Note: the file names are historical — music-energetic.mp3 ("Faster Does It") i
 Files were converted to MP3 (128 kbps stereo, loudness-normalised to about -20 LUFS).
 No changes were made to the underlying works beyond format conversion, trimming and
 loudness adjustment.
+
+## Taunt sound effects
+
+All taunts feature studio-quality acoustic and Foley sound effects:
+- `taunt-bonk.mp3`: Comic whoosh, rubber squeak, wooden mallet impact, and dizzy tweety birds (FluidR3_GM bird_tweet, CC0 / Public Domain).
+- `taunt-bye.mp3`: Classic cartoon slide whistle descending glissando with bubble pop landing.
+- `taunt-chicken.mp3`: Comic flop thud and authentic prolonged rubber chicken screech.
+- `taunt-violin.mp3`: Acoustic solo sad violin "Hearts and Flowers" motif (Alphons Czibulka, 1893, Public Domain / FluidR3_GM).
+- `taunt-clown.mp3`: Dual circus bulb horn HONK HONK (FluidR3_GM trumpet, CC0 / Public Domain).
+- `taunt-l.mp3`: Heavy thud and authentic acoustic brass Sad Trombone wah-wah-wah-waaaah (FluidR3_GM trombone, CC0 / Public Domain).
+- `taunt-ggez.mp3`: Slide whoosh, sunglasses frame click, 808 sub bass drop, and sparkling glockenspiel meme chord (FluidR3_GM, CC0 / Public Domain).
+- `taunt-skill.mp3`: Heavy administrative desk thud, rubber stamp ink slap, and paper rustle.
+- `taunt-cackle.mp3`: Spooky cartoon skull cackle synthesized via Gemini TTS (Puck voice) with dungeon stereo reverb.
+- `taunt-fireworks.mp3`: Stadium triple airhorn blasts with whistling fireworks rocket explosions and crackles.
