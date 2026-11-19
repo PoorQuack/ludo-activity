@@ -119,12 +119,12 @@ function setAudioSession() {
 }
 
 // With the music off, the engine sleeps a few seconds after the last sound effect.
-function sleepSoon() {
+function sleepSoon(ms = 3000) {
   clearTimeout(sleepTimer);
   if (settings.music || !ctx) return;
   sleepTimer = setTimeout(() => {
     if (!settings.music && ctx.state === 'running') ctx.suspend();
-  }, 3000);
+  }, Math.max(3000, ms));
 }
 
 // How loud each part plays: its on/off switch times its slider.
@@ -465,8 +465,38 @@ const EFFECTS = {
   },
   // UFO: a wobbling hum sliding upward, and back down as it is set down
   beam() {
-    for (let i = 0; i < 6; i++) tone(420 + i * 90 + (i % 2 ? 40 : 0), now() + i * 0.1, 0.16, 'sine', 0.16);
-    for (let i = 0; i < 5; i++) tone(900 - i * 100, now() + 0.85 + i * 0.09, 0.16, 'sine', 0.13);
+    const t = now();
+    voice(t, { f: 420, f2: 860, len: 0.55, type: 'sine', vol: 0.22, vib: 35, vibRate: 14 });
+    voice(t + 0.05, { f: 840, f2: 1280, len: 0.5, type: 'triangle', vol: 0.12, vib: 25, vibRate: 16 });
+    for (let i = 0; i < 4; i++) tone(1600 + i * 280, t + 0.08 + i * 0.08, 0.12, 'sine', 0.08);
+    voice(t + 0.9, { f: 860, f2: 320, len: 0.45, type: 'sine', vol: 0.18, vib: 25, vibRate: 14 });
+    tone(180, t + 1.2, 0.2, 'sine', 0.25, 60);
+  },
+  // UFO capture: sci-fi tractor beam cow-abduction, flying saucer flight glide, and base deposit
+  'ufo-capture'() {
+    const t = now();
+    // 1. Tractor beam lock-on: eerie oscillating theremin sweep rising as token is beamed up
+    voice(t, { f: 340, f2: 820, len: 0.42, type: 'sine', vol: 0.24, vib: 45, vibRate: 16 });
+    voice(t + 0.04, { f: 680, f2: 1240, len: 0.38, type: 'triangle', vol: 0.14, vib: 30, vibRate: 18 });
+    // Shimmering particle chimes
+    for (let i = 0; i < 4; i++) {
+      tone(1760 + i * 330, t + 0.08 + i * 0.07, 0.12, 'sine', 0.09);
+    }
+
+    // 2. Flying saucer propulsion across the board: warbling dual-harmonic rotary hum
+    voice(t + 0.4, { f: 580, f2: 440, len: 0.85, type: 'sine', vol: 0.2, vib: 35, vibRate: 11 });
+    voice(t + 0.42, { f: 586, f2: 446, len: 0.85, type: 'triangle', vol: 0.16, vib: 35, vibRate: 11 });
+    // Rhythmic anti-gravity propulsion blips
+    for (let i = 0; i < 5; i++) {
+      tone(i % 2 ? 520 : 460, t + 0.45 + i * 0.16, 0.14, 'sine', 0.12);
+    }
+
+    // 3. Depositing token into base: descending power-down beam and soft plasma landing ring
+    voice(t + 1.25, { f: 880, f2: 220, len: 0.32, type: 'sine', vol: 0.2, vib: 25, vibRate: 16 });
+    voice(t + 1.28, { f: 1320, f2: 330, len: 0.28, type: 'triangle', vol: 0.12 });
+    tone(160, t + 1.42, 0.28, 'sine', 0.35, 50);
+    noise(t + 1.42, 0.16, 1100, 0.15);
+    tone(1047, t + 1.48, 0.18, 'triangle', 0.15);
   },
   // Constellation, Robot: folding away into a point, and out again
   warp() {
@@ -672,12 +702,66 @@ let lastSfx = 0;
 // so a button with its own sound doesn't also "tock".
 export const playedJustNow = (ms = 60) => performance.now() - lastSfx < ms;
 
+// Voice lines, combat announcements and taunts that must never talk or play simultaneously.
+// Durations define the active speech/sound window before the next voice line can start.
+const VOICE_LINES = {
+  revenge: 1.35,      // Announcer shouting "REVENGE!"
+  double: 1.35,       // Announcer shouting "DOUBLE KILL!"
+  rampage: 1.55,      // Announcer shouting "RAMPAGE!"
+  unstoppable: 1.75,  // Announcer shouting "UNSTOPPABLE!"
+  'taunt-ggez': 2.4,  // Puck voice: "GG... Easy."
+  'taunt-skill': 2.2, // Puck voice: "Skill issue!"
+  'taunt-cackle': 2.2,// Puck skull laughing
+  'taunt-bonk': 1.8,
+  'taunt-bye': 2.0,
+  'taunt-chicken': 2.0,
+  'taunt-clown': 1.8,
+  'taunt-l': 2.0,
+  'taunt-violin': 2.6,
+  'taunt-fireworks': 2.6,
+};
+
+let voiceNextTime = 0; // AudioContext timestamp when the current voice channel becomes free
+
+export function clearVoiceQueue() {
+  voiceNextTime = 0;
+}
+
+function isVoiceSound(name) {
+  return name in VOICE_LINES || name.startsWith('taunt-');
+}
+
 export function sfx(name) {
   lastSfx = performance.now();
   if (!settings.sound || !ensureCtx()) return;
-  sleepSoon();
+
   const recorded = samples[name];
-  if (recorded?.length) playSample(recorded[Math.floor(Math.random() * recorded.length)], name === 'step');
+  const buffer = recorded?.length ? recorded[Math.floor(Math.random() * recorded.length)] : null;
+
+  if (isVoiceSound(name)) {
+    const now = ctx.currentTime;
+    // If a voice line or taunt is currently playing or scheduled, start after it finishes!
+    const startTime = Math.max(now, voiceNextTime);
+    const dur = VOICE_LINES[name] || (buffer ? buffer.duration : 1.5);
+    voiceNextTime = startTime + dur;
+
+    // Keep AudioContext awake until all scheduled lines complete + 2.5s tail
+    const wakeMs = Math.ceil((voiceNextTime - now) * 1000) + 2500;
+    sleepSoon(wakeMs);
+
+    if (buffer) {
+      playSample(buffer, false, startTime);
+    } else if (EFFECTS[name]) {
+      const delayMs = Math.max(0, Math.round((startTime - now) * 1000));
+      if (delayMs <= 10) EFFECTS[name]();
+      else setTimeout(() => ensureCtx() && EFFECTS[name]?.(), delayMs);
+    }
+    return;
+  }
+
+  // Normal SFX (step, roll, land, capture, ufo-capture, etc.) play immediately with no delay
+  sleepSoon();
+  if (buffer) playSample(buffer, name === 'step');
   else EFFECTS[name]?.();
 }
 
@@ -691,12 +775,13 @@ function envelope(t, len, vol) {
 }
 
 // `vary`: nudge the pitch a little so repeated taps don't sound identical.
-function playSample(buffer, vary) {
+// `when`: AudioContext timestamp to start playing (defaults to 0 = now)
+function playSample(buffer, vary, when = 0) {
   const src = ctx.createBufferSource();
   src.buffer = buffer;
   if (vary) src.playbackRate.value = 0.92 + Math.random() * 0.16;
   src.connect(sfxGain);
-  src.start();
+  src.start(when);
 }
 
 function tone(f, t, len, type, vol, endFreq = null) {

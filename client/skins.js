@@ -548,7 +548,7 @@ export const DICE_STYLES = {
 //        first; the rest jump for joy in the middle
 export const TOKEN_SIGNATURES = {
   'token-rocket': { legend: true, home: 'launch', ms: 1500, win: 'lap', colors: ['#ffb02e', '#ff5a1a', '#e9e6f0'] },
-  'token-ufo': { legend: true, home: 'beam', ms: 1500, win: 'lap', colors: ['#aaffe6', '#5cf2ff', '#ffffff'] },
+  'token-ufo': { legend: true, home: 'beam', ms: 1600, captureMs: 1750, win: 'lap', colors: ['#aaffe6', '#5cf2ff', '#ffffff'] },
   'token-constellation': { legend: true, home: 'warp', ms: 1200, colors: ['#fff1c2', '#bcd0ff', '#f3d98a'] },
   'token-crown': { legend: true, home: 'coins', ms: 1200, colors: ['#ffd23f', '#fff1b0', '#d9a92e'] },
   'token-dragon': { legend: true, home: 'fly', ms: 1300, win: 'lap', colors: ['#ff5a1a', '#ffb02e', '#ffe14d'] },

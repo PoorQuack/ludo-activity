@@ -16,6 +16,8 @@ import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, 
 import { t, translateServer, setLanguage, languagePref, setAutoLocale, LANGUAGES, applyI18n, currentLanguage as currentLang } from './i18n.js';
 import { unlockAudio, playedJustNow, sfx, setMusic, setSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
 
+if (typeof window !== 'undefined') window.sfx = sfx;
+
 const params = new URLSearchParams(location.search);
 const inDiscord = params.has('frame_id');
 // Inside Discord every request to our server goes through Discord's proxy.
@@ -317,6 +319,15 @@ function connect() {
         shownTokens = latestTokens;
       }
       if (dice.mode === 'spin' && dice.waiting) dice = { mode: 'ready', seat: dice.seat, t0: performance.now() };
+      if (dailyAnim) {
+        dailyAnim = null;
+        if (pendingDailyProfile) {
+          const p = pendingDailyProfile;
+          pendingDailyProfile = null;
+          onProfile(p);
+        }
+        renderDaily();
+      }
     }
     else if (msg.type === 'supportSent' || msg.type === 'supportError') onSupportReply(msg);
     else if (msg.type === 'notice') {
@@ -325,6 +336,14 @@ function connect() {
     }
   };
   ws.onclose = (e) => {
+    if (dailyAnim) {
+      dailyAnim = null;
+      if (pendingDailyProfile) {
+        const p = pendingDailyProfile;
+        pendingDailyProfile = null;
+        onProfile(p);
+      }
+    }
     if (e.code === 1012) updating = true; // "service restart": the server is updating
     if (updating) setLoading(t('🔧 Updating the game… back in a few seconds'));
     els.loading.classList.remove('hidden');
@@ -366,7 +385,13 @@ function sendShop(op, item, to, extra = {}) {
 
 // ---------------- server updates ----------------
 
+let pendingDailyProfile = null;
+
 function onProfile(next) {
+  if (dailyAnim) {
+    pendingDailyProfile = next;
+    return;
+  }
   const gained = profile && next.coins > profile.coins ? next.coins - profile.coins : 0;
   profile = next;
   if (gained) {
@@ -514,7 +539,7 @@ function onState(next) {
         current.predicted = false;
         current.move = m;
         current.final = next.tokens;
-        current.duration = current.moveMs + (m.captured.length ? captureMs(m.captured) : 120);
+        current.duration = current.moveMs + (m.captured.length ? captureMs(m.captured, m.seat) : 120);
       } else {
         if (guess) {
           // Guessed wrong (shouldn't happen): drop the guess and play the real move from the start
@@ -1710,6 +1735,7 @@ function renderStreak(day, rolledToday) {
 }
 
 const d20 = new D20($('d20-canvas'));
+window.d20 = d20;
 
 function renderDaily() {
   if (!profile || dailyAnim) return;
@@ -1725,10 +1751,12 @@ function renderDaily() {
     $('daily-info').textContent = t('Day {n} of 7 · 5 coins a pip, day 7 pays double', { n: day });
     if (d20.state !== 'ready') d20.set('ready', 20);
   } else {
+    // If the die has landed and is celebrating its win, do not overwrite the win announcement
+    if (d20.state === 'landed') return;
     const left = Math.max(0, profile.dailyNext - (Date.now() + clockOffset));
     $('daily-title').textContent = t('Rolled for today');
     $('daily-info').textContent = t('Day {n} of 7 · next roll in {time}', { n: day, time: timeLeft(left) });
-    if (d20.state !== 'used' && d20.state !== 'landed') d20.set('used', 20);
+    if (d20.state !== 'used') d20.set('used', 20);
   }
   renderStreak(day, !ready);
 }
@@ -1756,6 +1784,14 @@ function onDailyRoll({ roll, coins, day, doubled }) {
     $('daily-info').textContent = doubled ? t('Day 7: doubled! A new streak starts tomorrow.') : t('Day {n} of 7 · come back tomorrow', { n: day });
     renderStreak(day || 1, true);
     sfx(roll >= 15 || doubled ? 'win' : 'step');
+
+    // Deliver the profile reward coins and bump animation now that the die has landed!
+    if (pendingDailyProfile) {
+      const p = pendingDailyProfile;
+      pendingDailyProfile = null;
+      onProfile(p);
+    }
+
     // the die shows its number in gold for a while, then greys out like any used chest
     setTimeout(() => {
       if (!dailyAnim) {
@@ -3222,7 +3258,7 @@ function startEvent(ev, now) {
   else for (let p = move.from + 1; p <= move.to; p++) ev.steps.push(p);
   ev.hopMs = move.from < 0 ? EXIT_MS : STEP_MS;
   ev.moveMs = ev.steps.length * ev.hopMs;
-  ev.duration = ev.moveMs + (move.captured.length ? captureMs(move.captured) : 120);
+  ev.duration = ev.moveMs + (move.captured.length ? captureMs(move.captured, move.seat) : 120);
   ev.lastStep = 0;
   // The dice has done its job: shrink it away.
   if (dice.mode !== 'hidden' && dice.mode !== 'leave') dice = { ...dice, mode: 'leave', t0: now };
@@ -3256,7 +3292,10 @@ function skipAnimations() {
 // A token's own way home (TOKEN_SIGNATURES), if the captured seat is using one that has one
 const signatureOf = (seat) => TOKEN_SIGNATURES[state.seats[seat]?.skins?.token] || null;
 // How long the captured tokens take to get home: the slowest of them
-const captureMs = (captured) => Math.max(CAPTURE_MS, ...captured.map((c) => signatureOf(c.seat)?.ms || 0));
+const captureMs = (captured, capturerSeat = null) => {
+  const capturerTime = capturerSeat !== null ? signatureOf(capturerSeat)?.captureMs || 0 : 0;
+  return Math.max(CAPTURE_MS, capturerTime, ...captured.map((c) => signatureOf(c.seat)?.ms || 0));
+};
 
 // Where the moving token (and anything it captured) is right now.
 function moveOverrides(ev) {
@@ -3300,18 +3339,13 @@ function moveOverrides(ev) {
       const sig = signatureOf(seat)?.legend ? signatureOf(seat) : null;
       renderer.burst(end.x, end.y, sig ? sig.colors : [color, '#ffffff', '#ffd23f'], { count: sig ? 40 : 22, speed: sig ? 6.5 : 5, life: sig ? 900 : 700 });
       if (sig) renderer.ring(end.x, end.y, sig.colors[0], 1.6);
-      // the capturer's taunt, if they wear one (and this player hasn't turned taunts off)
-      const taunt = state.seats[seat]?.skins?.taunt;
-      if (prefs.taunts && TAUNT_FX[taunt]) {
-        const v = captured[0].seat;
-        renderer.taunt(end.x, end.y, taunt, color, { seat: v, color: col(board.colors[v]), name: state.seats[v]?.name || '' });
-        sfx(taunt);
-      }
       // Revenge, and capture streaks: called out big for everyone in the room
       const who = state.seats[seat]?.name || '';
+      let announcerMs = 0;
       if (ev.move.revenge) {
         renderer.callout(t('Revenge!'), color, 0);
         sfx('revenge');
+        announcerMs += 1350;
         // (only games against other people pay coins)
         if (seat === mySeat() && state.seats.filter((x) => x && !x.bot).length >= 2) toast(`⚔️ ${t('Revenge! +{n} coins when the game ends', { n: REWARDS.revenge })}`, 'ok');
       }
@@ -3320,14 +3354,84 @@ function moveOverrides(ev) {
         const word = streak === 2 ? t('Double!') : streak === 3 ? t('Rampage!') : t('Unstoppable!');
         renderer.callout(word, color, ev.move.revenge ? 1 : 0, who);
         sfx(streak >= 4 ? 'unstoppable' : streak === 3 ? 'rampage' : 'double');
+        announcerMs += (streak >= 4 ? 1750 : streak === 3 ? 1550 : 1350);
       }
-      sfx('capture');
+      // the capturer's taunt, if they wear one (and this player hasn't turned taunts off)
+      // When an announcer line plays (Revenge / Double), stagger the taunt until the announcer
+      // voice finishes so they don't talk simultaneously and both audio and visuals land together!
+      const taunt = state.seats[seat]?.skins?.taunt;
+      if (prefs.taunts && TAUNT_FX[taunt]) {
+        const v = captured[0].seat;
+        const triggerTaunt = () => {
+          renderer.taunt(end.x, end.y, taunt, color, { seat: v, color: col(board.colors[v]), name: state.seats[v]?.name || '' });
+          sfx(taunt);
+        };
+        if (announcerMs > 0) {
+          setTimeout(triggerTaunt, announcerMs);
+        } else {
+          triggerTaunt();
+        }
+      }
+      if (state.seats[seat]?.skins?.token === 'token-ufo') sfx('ufo-capture');
+      else sfx('capture');
     }
     if (ev.move.finishedToken) {
       renderer.burst(end.x, end.y, [color, '#f6cf57', '#ffffff'], { count: 30, speed: 4, life: 900 });
       sfx('home');
     }
   }
+  const isUfoCapturer = captured.length > 0 && state.seats[seat]?.skins?.token === 'token-ufo';
+  if (isUfoCapturer) {
+    const c = captured[0];
+    const cTo = board.tokenCenter(c.seat, -1, c.token);
+    const ufoDur = 1750;
+    const ufoK = Math.min(1, (e - ev.moveMs) / ufoDur);
+    ev.sigDone ||= new Set();
+    const once = (tag) => !ev.sigDone.has(`${seat}-${token}-${tag}`) && !!ev.sigDone.add(`${seat}-${token}-${tag}`);
+
+    if (ufoK < 0.22) {
+      // Phase 1: UFO hovers directly over the square, tractor beam engages and lifts victim
+      const liftUfo = Math.min(2.2, (ufoK / 0.15) * 2.2);
+      map.set(`${seat}-${token}`, { x: end.x, y: end.y, lift: liftUfo, squash: 1 });
+      const liftC = (ufoK / 0.22) * 0.9;
+      map.set(`${c.seat}-${c.token}`, { x: end.x, y: end.y, lift: liftC, squash: 1 + 0.08 * Math.sin(ufoK * 40), scale: 0.88 });
+      if (once('ufo-start')) renderer.burst(end.x, end.y, ['#aaffe6', '#5cf2ff', '#ffffff'], { count: 12, speed: 2 });
+    } else if (ufoK < 0.72) {
+      // Phase 2: UFO flies across the board to the victim's base, carrying the beamed token under it
+      const flight = easeInOut((ufoK - 0.22) / 0.50);
+      const midX = end.x + (cTo.x - end.x) * flight;
+      const midY = end.y + (cTo.y - end.y) * flight;
+      map.set(`${seat}-${token}`, { x: midX, y: midY, lift: 2.2 + 0.14 * Math.sin(flight * Math.PI), squash: 1 });
+      map.set(`${c.seat}-${c.token}`, { x: midX, y: midY, lift: 0.9, squash: 1 + 0.05 * Math.sin(ufoK * 30), scale: 0.88 });
+      if (Math.random() < 0.3) renderer.burst(midX, midY, ['#aaffe6', '#5cf2ff'], { count: 1, speed: 1.0, life: 300 });
+    } else if (ufoK < 0.85) {
+      // Phase 3: Hovering over base, lowering victim into base slot
+      const drop = (ufoK - 0.72) / 0.13;
+      map.set(`${seat}-${token}`, { x: cTo.x, y: cTo.y, lift: 2.2, squash: 1 });
+      map.set(`${c.seat}-${c.token}`, { x: cTo.x, y: cTo.y, lift: (1 - drop) * 0.9, squash: drop > 0.8 ? 0.85 : 1, scale: 0.88 + 0.12 * drop });
+      if (ufoK > 0.82 && once('ufo-drop')) {
+        renderer.burst(cTo.x, cTo.y, ['#aaffe6', '#5cf2ff', '#ffffff'], { count: 16, speed: 3.5 });
+        renderer.ring(cTo.x, cTo.y, '#5cf2ff', 0.9);
+      }
+    } else {
+      // Phase 4: UFO zips back to its landing square
+      const ret = easeInOut((ufoK - 0.85) / 0.15);
+      map.set(`${seat}-${token}`, { x: cTo.x + (end.x - cTo.x) * ret, y: cTo.y + (end.y - cTo.y) * ret, lift: (1 - ret) * 2.2, squash: ret > 0.9 ? 0.9 : 1 });
+      map.set(`${c.seat}-${c.token}`, { x: cTo.x, y: cTo.y, lift: 0, squash: 1, scale: 1 });
+    }
+
+    // Any remaining captured tokens:
+    for (let ci = 1; ci < captured.length; ci++) {
+      const extraC = captured[ci];
+      const from = board.tokenCenter(extraC.seat, ev.start[extraC.seat][extraC.token], extraC.token);
+      const to = board.tokenCenter(extraC.seat, -1, extraC.token);
+      const ct = Math.min(1, (e - ev.moveMs) / CAPTURE_MS);
+      const k = easeInOut(ct);
+      map.set(`${extraC.seat}-${extraC.token}`, { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k, lift: Math.sin(Math.PI * ct) * 2.5, squash: 1 });
+    }
+    return map;
+  }
+
   const settle = Math.min(1, (e - ev.moveMs) / 160);
   map.set(`${seat}-${token}`, { x: end.x, y: end.y, lift: 0, squash: 0.8 + 0.2 * easeOutBack(settle) });
 

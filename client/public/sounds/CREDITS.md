@@ -43,7 +43,7 @@ All taunts feature studio-quality acoustic and Foley sound effects:
 - `taunt-violin.mp3`: Acoustic solo sad violin "Hearts and Flowers" motif (Alphons Czibulka, 1893, Public Domain / FluidR3_GM).
 - `taunt-clown.mp3`: Dual circus bulb horn HONK HONK (FluidR3_GM trumpet, CC0 / Public Domain).
 - `taunt-l.mp3`: Heavy thud and authentic acoustic brass Sad Trombone wah-wah-wah-waaaah (FluidR3_GM trombone, CC0 / Public Domain).
-- `taunt-ggez.mp3`: Slide whoosh, sunglasses frame click, 808 sub bass drop, and sparkling glockenspiel meme chord (FluidR3_GM, CC0 / Public Domain).
+- `taunt-ggez-v2.mp3`: Slide whoosh, sunglasses frame click, 808 sub bass drop, sparkling glockenspiel meme chord, and smug gamer voice saying "GG... EZ!" synthesized via Gemini TTS (Puck voice).
 - `taunt-skill.mp3`: Heavy administrative desk thud, rubber stamp ink slap, and paper rustle.
 - `taunt-cackle.mp3`: Spooky cartoon skull cackle synthesized via Gemini TTS (Puck voice) with dungeon stereo reverb.
 - `taunt-fireworks.mp3`: Stadium triple airhorn blasts with whistling fireworks rocket explosions and crackles.

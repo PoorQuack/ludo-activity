@@ -92,8 +92,9 @@ function frame(now) {
   T.roll = 400;
   T.out = T.roll + 1300; // out of base
   T.walk = T.out + 420;
+  const hitMs = look.token === 'token-ufo' ? 1800 : FLY;
   T.hit = T.walk + STEPS * HOP; // lands on the other token: it flies home
-  T.roll2 = T.hit + FLY + 500;
+  T.roll2 = T.hit + hitMs + 500;
   T.chase = T.roll2 + 1300; // the other token comes back for you
   T.caught = T.chase + 3 * HOP + 350; // …and you go home your own way
   T.win = T.caught + homeMs + 700;
@@ -153,12 +154,46 @@ function frame(now) {
       const foeColor = playerColor(look.board, board.colors[FOE]);
       renderer.taunt(end.x, end.y, look.taunt, mine, { seat: FOE, color: foeColor, name: t(board.colors[FOE][0].toUpperCase() + board.colors[FOE].slice(1)) });
       if (TAUNT_FX[look.taunt]) sfx(look.taunt);
+      if (look.token === 'token-ufo') sfx('ufo-capture');
+      else sfx('capture');
     }
-    const k = Math.min(1, (e - T.hit) / FLY);
     const from = at(FOE, foeP);
     const to = at(FOE, -1);
-    if (k < 1) overrides.set('1-0', { ...hop(from, to, k, 2.5), squash: 1 });
     tokens[FOE][0] = -1;
+    if (look.token === 'token-ufo') {
+      const k = Math.min(1, (e - T.hit) / hitMs);
+      if (k < 0.22) {
+        // UFO hovers over the token, tractor beam engages and lifts victim like an abducted cow
+        const liftUfo = Math.min(2.2, (k / 0.15) * 2.2);
+        overrides.set('0-0', { x: end.x, y: end.y, lift: liftUfo, squash: 1 });
+        const liftFoe = (k / 0.22) * 0.9;
+        overrides.set('1-0', { x: end.x, y: end.y, lift: liftFoe, squash: 1 + 0.08 * Math.sin(k * 40), scale: 0.88 });
+      } else if (k < 0.72) {
+        // UFO flies across the board carrying the beamed token under it
+        const flight = easeInOut((k - 0.22) / 0.50);
+        const midX = end.x + (to.x - end.x) * flight;
+        const midY = end.y + (to.y - end.y) * flight;
+        overrides.set('0-0', { x: midX, y: midY, lift: 2.2 + 0.14 * Math.sin(flight * Math.PI), squash: 1 });
+        overrides.set('1-0', { x: midX, y: midY, lift: 0.9, squash: 1 + 0.05 * Math.sin(k * 30), scale: 0.88 });
+        if (Math.random() < 0.25) renderer.burst(midX, midY, ['#aaffe6', '#5cf2ff'], { count: 1, speed: 1.0, life: 300 });
+      } else if (k < 0.85) {
+        // Hovering over base, lowering victim into base slot
+        const drop = (k - 0.72) / 0.13;
+        overrides.set('0-0', { x: to.x, y: to.y, lift: 2.2, squash: 1 });
+        overrides.set('1-0', { x: to.x, y: to.y, lift: (1 - drop) * 0.9, squash: drop > 0.8 ? 0.85 : 1, scale: 0.88 + 0.12 * drop });
+        if (k > 0.82 && once('ufo-drop')) {
+          renderer.burst(to.x, to.y, ['#aaffe6', '#5cf2ff', '#ffffff'], { count: 16, speed: 3.5 });
+          renderer.ring(to.x, to.y, '#5cf2ff', 0.9);
+        }
+      } else {
+        // UFO zips back to its landing square
+        const ret = easeInOut((k - 0.85) / 0.15);
+        overrides.set('0-0', { x: to.x + (end.x - to.x) * ret, y: to.y + (end.y - to.y) * ret, lift: (1 - ret) * 2.2, squash: ret > 0.9 ? 0.9 : 1 });
+      }
+    } else {
+      const k = Math.min(1, (e - T.hit) / FLY);
+      if (k < 1) overrides.set('1-0', { ...hop(from, to, k, 2.5), squash: 1 });
+    }
     if (e > T.roll2) {
       dice = rollView(T.roll2, 3, FOE);
       step = 'Their turn';

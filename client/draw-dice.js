@@ -66,13 +66,14 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
     ctx.shadowColor = glow;
     ctx.shadowBlur = 45 * px;
   }
-  roundRect(ctx, -50, -50, 100, 100, 16);
+  const cr = solid ? 6 : 16;
+  roundRect(ctx, -50, -50, 100, 100, cr);
   ctx.fillStyle = fill;
   ctx.fill();
   ctx.shadowBlur = 0;
 
   ctx.save();
-  roundRect(ctx, -50, -50, 100, 100, 16);
+  roundRect(ctx, -50, -50, 100, 100, cr);
   ctx.clip();
   if (st.art) DICE_ART[st.art](ctx, st, t);
   if (pips) {
@@ -106,7 +107,7 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
   }
   ctx.restore();
 
-  roundRect(ctx, -50, -50, 100, 100, 16);
+  roundRect(ctx, -50, -50, 100, 100, cr);
   if (st.outline) {
     ctx.shadowColor = st.outline;
     ctx.shadowBlur = (st.pulse ? 14 + 8 * Math.sin(t / 260) : 20) * px;
@@ -740,7 +741,7 @@ export function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTIT
     ctx.restore();
   };
   if (pop > 0) propAt('back');
-  const k = 0.3; // corner radius, as a share of the half edge (about the faces' own rounding)
+  const k = 0.05; // tight seam backfill that never balloons past the 3D faces
   const corners = [];
   for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) corners.push(apply(R, [x, y, z]).map((c) => c * h * (1 - k)));
   const hull = convexHull(corners);
@@ -750,13 +751,12 @@ export function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTIT
   ctx.closePath();
   ctx.fillStyle = body;
   ctx.strokeStyle = body;
-  ctx.lineWidth = 2 * k * h;
+  ctx.lineWidth = Math.max(1.5, h * 0.08);
   ctx.fill();
   ctx.stroke();
-  // Every face turned towards you is drawn, however slightly (it's convex, so they never overlap
-  // wrongly): farthest-turned first, so the one facing you most goes on top at the seams.
+  // Faces turned towards you: filter out edge-on slivers (< 0.06 nz) that cause detached line artifacts
   const shown = FACES.map((f) => ({ f, n: apply(R, f.n) }))
-    .filter(({ n }) => n[2] > 0.015)
+    .filter(({ n }) => n[2] > 0.06)
     .sort((a, b) => a.n[2] - b.n[2]);
   for (const { f, n } of shown) {
     const u = apply(R, f.u);
@@ -768,8 +768,8 @@ export function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTIT
     // Draw the face in its own flat coordinates, -50..50 on each side.
     ctx.save();
     ctx.transform((u[0] * h) / 50, (u[1] * h) / 50, (v[0] * h) / 50, (v[1] * h) / 50, n[0] * h, n[1] * h);
-    // Faces seen almost edge-on get no pips: squashed pips just look like stripes.
-    paintFace(ctx, st, value ? f.value : null, { light, pips: n[2] > 0.18, glow, px: h / 50, t, solid: true });
+    // Faces seen at steep angles get no pips: avoids cut-off pips spilling past edges
+    paintFace(ctx, st, value ? f.value : null, { light, pips: n[2] > 0.28, glow, px: h / 50, t, solid: true });
     ctx.restore();
   }
   if (pop > 0) propAt('front');

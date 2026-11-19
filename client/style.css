@@ -160,14 +160,25 @@ html, body {
 .menu-name { margin: 0; min-width: 0; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Profile card, top right */
-.profile-card { display: flex; align-items: center; gap: 9px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); min-width: 0; max-width: 220px; }
+.profile-card { display: flex; align-items: center; gap: 9px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); flex: none; max-width: 220px; }
 .profile-card .avatar { width: 30px; height: 30px; }
 .profile-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .profile-text small { font-size: 11px; color: var(--muted); white-space: nowrap; }
 @media (max-width: 879px) {
-  .profile-card { padding: 3px; max-width: none; }
+  .profile-card {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: none;
+  }
   .profile-card .profile-text { display: none; }
-  .profile-card .avatar { width: 34px; height: 34px; }
+  .profile-card .avatar { width: 28px; height: 28px; }
+  .profile-card.has-new::after { inset-inline-start: auto; inset-inline-end: -1px; top: -1px; }
 }
 
 /* Round profile pictures (Discord avatars, or initials for guests) */
@@ -1374,7 +1385,8 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   .wordmark-dots i { width: 7px; height: 7px; }
   .menu-tools { gap: 6px; }
   .menu-tools .icon-btn { width: 36px; height: 36px; }
-  .profile-card .avatar { width: 32px; height: 32px; }
+  .profile-card { width: 36px; height: 36px; }
+  .profile-card .avatar { width: 30px; height: 30px; }
   .menu-tools .shop-btn {
     min-height: 34px;
     height: 34px;

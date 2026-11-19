@@ -61,114 +61,288 @@ export const TOKEN_FX = {
     });
     ctx.globalAlpha = 1;
   },
-  // Rocket: its engine burns, flickering, and puffs of smoke roll away from it
+  // Rocket: its engine burns with supersonic shock diamonds, billowing exhaust clouds, and sparkling embers
   thrust(ctx, r, hex, t, part) {
-    if (part !== 'back') return;
-    for (let i = 0; i < 3; i++) {
-      const p = (t * 0.9 + i / 3) % 1;
-      ctx.globalAlpha = (1 - p) * 0.4;
-      ctx.fillStyle = '#e9e6f0';
-      circle(ctx, (i - 1) * r * 0.5 * p + Math.sin(i * 9) * r * 0.1, r * 0.1 - p * r * 0.15, r * (0.16 + p * 0.3));
+    if (part === 'back') {
+      // 1. Volumetric billowing smoke clouds rolling away from launch
+      for (let i = 0; i < 5; i++) {
+        const p = (t * 0.85 + i * 0.2) % 1;
+        const drift = Math.sin(i * 11 + t * 0.7) * r * 0.45 * p;
+        ctx.globalAlpha = (1 - p) * 0.38;
+        const sg = ctx.createRadialGradient(drift, -r * 0.2 + p * r * 0.2, 0, drift, -r * 0.2 + p * r * 0.2, r * (0.2 + p * 0.42));
+        sg.addColorStop(0, '#f0edf7');
+        sg.addColorStop(0.5, '#d3cce3');
+        sg.addColorStop(1, 'rgba(180, 175, 200, 0)');
+        ctx.fillStyle = sg;
+        circle(ctx, drift, -r * 0.2 + p * r * 0.2, r * (0.2 + p * 0.42));
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // 2. Heavy engine thermal glow stamped beneath the rocket
+      const th = r * (1.1 + 0.15 * Math.sin(t * 19));
+      ctx.drawImage(glowSprite('rocket-nozzle-heat', [[0, 'rgba(255, 140, 30, 0.7)'], [0.4, 'rgba(255, 50, 0, 0.25)'], [1, 'rgba(255, 0, 0, 0)']]), -th, -r * 0.4 - th * 0.4, th * 2, th * 1.6);
+
+      // 3. Blazing supersonic rocket exhaust plume
+      const flLen = r * (0.8 + 0.25 * Math.sin(t * 29) + 0.12 * Math.sin(t * 43));
+      const sway = Math.sin(t * 19) * r * 0.05;
+
+      // Outer plasma flame envelope
+      const fg = ctx.createLinearGradient(0, -r * 0.35, 0, -r * 0.35 + flLen);
+      fg.addColorStop(0, '#ffffff');
+      fg.addColorStop(0.2, '#fff176');
+      fg.addColorStop(0.5, '#ff9100');
+      fg.addColorStop(0.85, '#ff3d00');
+      fg.addColorStop(1, 'rgba(220, 20, 60, 0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.28, -r * 0.35);
+      ctx.quadraticCurveTo(-r * 0.35, -r * 0.35 + flLen * 0.5, sway, -r * 0.35 + flLen);
+      ctx.quadraticCurveTo(r * 0.35, -r * 0.35 + flLen * 0.5, r * 0.28, -r * 0.35);
+      ctx.closePath();
       ctx.fill();
+
+      // Inner white-hot supersonic core
+      const cg = ctx.createLinearGradient(0, -r * 0.35, 0, -r * 0.35 + flLen * 0.65);
+      cg.addColorStop(0, '#ffffff');
+      cg.addColorStop(0.6, '#fff9c4');
+      cg.addColorStop(1, 'rgba(255, 235, 59, 0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.15, -r * 0.35);
+      ctx.quadraticCurveTo(-r * 0.18, -r * 0.35 + flLen * 0.35, sway * 0.5, -r * 0.35 + flLen * 0.65);
+      ctx.quadraticCurveTo(r * 0.18, -r * 0.35 + flLen * 0.35, r * 0.15, -r * 0.35);
+      ctx.closePath();
+      ctx.fill();
+
+      // Supersonic shock diamond nodes
+      for (const [dy, dw, dh] of [[0.28, 0.11, 0.16], [0.55, 0.08, 0.12]]) {
+        const ny = -r * 0.35 + flLen * dy;
+        ctx.beginPath();
+        ctx.moveTo(sway * dy, ny - r * dh * 0.5);
+        ctx.lineTo(sway * dy + r * dw * 0.5, ny);
+        ctx.lineTo(sway * dy, ny + r * dh * 0.5);
+        ctx.lineTo(sway * dy - r * dw * 0.5, ny);
+        ctx.closePath();
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      }
+
+      // 4. High-velocity fiery sparks and launch embers
+      for (let i = 0; i < 6; i++) {
+        const sp = (t * 2.4 + i * 0.28) % 1;
+        const sx = (i - 2.5) * r * 0.14 * (1 + sp * 1.5) + Math.sin(i * 9 + t * 7) * r * 0.06;
+        const sy = -r * 0.32 + sp * flLen * 1.45;
+        const sa = (1 - sp) * 0.95;
+        ctx.globalAlpha = sa;
+        sparkle(ctx, sx, sy, r * 0.11 * (1 - sp * 0.4), i % 2 ? '#fff9c4' : '#ff7043');
+      }
+      ctx.globalAlpha = 1;
+      return;
     }
-    ctx.globalAlpha = 1;
-    const h = r * (0.55 + 0.2 * Math.sin(t * 23) + 0.1 * Math.sin(t * 37));
-    const g = ctx.createLinearGradient(0, -r * 0.4, 0, -r * 0.4 + h);
-    g.addColorStop(0, '#fff7c2');
-    g.addColorStop(0.4, '#ffb02e');
-    g.addColorStop(1, 'rgba(255, 70, 30, 0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.3, -r * 0.4);
-    ctx.quadraticCurveTo(Math.sin(t * 17) * r * 0.08, -r * 0.4 + h * 1.5, r * 0.3, -r * 0.4);
-    ctx.closePath();
+    // part === 'front': Nose probe beacon pulse & cockpit viewport glint
+    const beacon = 0.5 + 0.5 * Math.sin(t * 8);
+    circle(ctx, 0, -r * 2.42, r * (0.05 + 0.03 * beacon));
+    ctx.fillStyle = `rgba(92, 242, 255, ${0.6 + 0.4 * beacon})`;
     ctx.fill();
+    sparkle(ctx, -r * 0.07, -r * 1.32, r * 0.065 * (0.5 + 0.5 * Math.sin(t * 3.5)), '#ffffff');
   },
-  // UFO: a beam of light under it, and lights chasing round its rim
+  // UFO: pulsating cascading tractor beam with descending energy wave rings, ascending particles, and rim beacon lights
   saucer(ctx, r, hex, t, part) {
     r *= 1.25;
     if (part === 'back') {
-      const a = 0.28 + 0.12 * Math.sin(t * 4);
-      const g = ctx.createLinearGradient(0, -r * 0.8, 0, r * 0.25);
-      g.addColorStop(0, `rgba(170, 255, 230, ${a + 0.25})`);
-      g.addColorStop(1, 'rgba(170, 255, 230, 0)');
-      ctx.fillStyle = g;
-      path(ctx, [[-r * 0.3, -r * 0.8], [r * 0.3, -r * 0.8], [r * 0.85, r * 0.25], [-r * 0.85, r * 0.25]]);
+      // 1. Ambient anti-gravity forcefield aura behind craft
+      const auraPulse = 0.5 + 0.5 * Math.sin(t * 3.5);
+      const aurR = r * (1.3 + 0.15 * auraPulse);
+      ctx.drawImage(glowSprite('ufo-field', [[0, 'rgba(92, 242, 255, 0.45)'], [0.45, 'rgba(126, 217, 87, 0.18)'], [1, 'rgba(0, 0, 0, 0)']]), -aurR, -r * 1.15 - aurR * 0.45, aurR * 2, aurR * 1.35);
+
+      // 2. Conical tractor beam extending to the ground
+      const a = 0.32 + 0.14 * Math.sin(t * 4);
+      const bg = ctx.createLinearGradient(0, -r * 0.8, 0, r * 0.3);
+      bg.addColorStop(0, `rgba(160, 255, 235, ${a + 0.35})`);
+      bg.addColorStop(0.4, `rgba(92, 242, 255, ${a * 0.8})`);
+      bg.addColorStop(0.85, `rgba(126, 217, 87, ${a * 0.45})`);
+      bg.addColorStop(1, 'rgba(126, 217, 87, 0)');
+      ctx.fillStyle = bg;
+      path(ctx, [[-r * 0.34, -r * 0.8], [r * 0.34, -r * 0.8], [r * 0.95, r * 0.3], [-r * 0.95, r * 0.3]]);
       ctx.fill();
+
+      // 3. Descending energy wave rings cascading down the beam
+      for (let i = 0; i < 3; i++) {
+        const ringP = (t * 0.75 + i / 3) % 1;
+        const ry = -r * 0.8 + ringP * r * 1.1;
+        const rw = r * (0.34 + ringP * 0.61);
+        const rh = rw * 0.28;
+        ctx.beginPath();
+        ctx.ellipse(0, ry, rw, rh, 0, 0, TAU);
+        ctx.lineWidth = Math.max(1, r * 0.05 * (1 - ringP * 0.3));
+        ctx.strokeStyle = `rgba(200, 255, 245, ${(1 - ringP) * 0.75})`;
+        ctx.stroke();
+      }
+
+      // 4. Ground impact energy contact ring
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.28, r * 0.92, r * 0.26, 0, 0, TAU);
+      ctx.fillStyle = `rgba(92, 242, 255, ${0.18 + 0.12 * Math.sin(t * 5)})`;
+      ctx.fill();
+      ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.strokeStyle = `rgba(160, 255, 240, ${0.4 + 0.3 * Math.sin(t * 5)})`;
+      ctx.stroke();
+
+      // 5. Floating anti-gravity particles rising into the saucer
+      for (let i = 0; i < 4; i++) {
+        const p = (t * 0.9 + i * 0.25) % 1;
+        const px = Math.sin(i * 13 + t * 2) * r * 0.35 * (1 - p * 0.4);
+        const py = r * 0.28 - p * r * 1.08;
+        ctx.globalAlpha = Math.sin(p * Math.PI) * 0.85;
+        circle(ctx, px, py, r * (0.035 + 0.02 * (1 - p)));
+        ctx.fillStyle = i % 2 ? '#5cf2ff' : '#a8ff78';
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
       return;
     }
-    const on = Math.floor(t * 6) % 5;
-    for (let i = 0; i < 5; i++) {
-      const x = (i - 2) * r * 0.36;
-      circle(ctx, x, -r * 0.83 + Math.abs(i - 2) * -r * 0.04, r * 0.085);
-      ctx.fillStyle = i === on ? '#fff7a8' : 'rgba(255, 255, 255, 0.35)';
-      ctx.fill();
-      if (i === on) {
-        ctx.globalAlpha = 0.5;
-        circle(ctx, x, -r * 0.83, r * 0.2);
+
+    // part === 'front': Rotating perimeter hyper-drive beacon lights & cockpit glass sheen
+    const numLights = 7;
+    const sweep = (t * 3.8) % numLights;
+    for (let i = 0; i < numLights; i++) {
+      const angle = Math.PI * (0.08 + 0.84 * (i / (numLights - 1)));
+      const lx = -Math.cos(angle) * r * 0.95;
+      const ly = -r * 0.86 + Math.sin(angle) * r * 0.26;
+
+      // Distance from the sweeping light wave
+      let dist = Math.abs(i - sweep);
+      if (dist > numLights / 2) dist = numLights - dist;
+      const intensity = Math.max(0, 1 - dist / 1.5) ** 2;
+
+      // Outer glow bloom
+      if (intensity > 0.1) {
+        ctx.globalAlpha = intensity * 0.65;
+        circle(ctx, lx, ly, r * (0.12 + 0.08 * intensity));
+        ctx.fillStyle = i % 2 ? '#5cf2ff' : '#fff7a8';
         ctx.fill();
-        ctx.globalAlpha = 1;
       }
+
+      // Core light bulb
+      ctx.globalAlpha = 0.4 + 0.6 * intensity;
+      circle(ctx, lx, ly, r * (0.065 + 0.02 * intensity));
+      ctx.fillStyle = intensity > 0.5 ? '#ffffff' : (i % 2 ? '#5cf2ff' : '#ffe082');
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
+
+    // Cockpit dome glass glint sweep
+    const glintX = Math.sin(t * 1.6) * r * 0.25;
+    ctx.beginPath();
+    ctx.ellipse(glintX, -r * 1.35, r * 0.15, r * 0.07, -0.4, 0, TAU);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fill();
   },
-  // Dragon: wings that beat behind it, and now and then a puff of flame
+  // Dragon: warm draconic magma aura, floating embers, glowing reptilian eye glints, and smoldering jaw whisps
   wings(ctx, r, hex, t, part) {
     if (part === 'back') {
-      const beat = Math.sin(t * 6) * 0.3;
-      for (const side of [-1, 1]) {
-        ctx.save();
-        ctx.translate(side * r * 0.35, -r * 1.05);
-        ctx.scale(side, 1);
-        ctx.rotate(-0.35 + beat);
-        ctx.beginPath();
-        ctx.moveTo(0, r * 0.1);
-        ctx.lineTo(r * 0.4, -r * 0.75);
-        ctx.lineTo(r * 1.2, -r * 0.95);
-        ctx.quadraticCurveTo(r * 1.0, -r * 0.5, r * 1.12, -r * 0.15);
-        ctx.quadraticCurveTo(r * 0.85, -r * 0.25, r * 0.75, r * 0.1);
-        ctx.quadraticCurveTo(r * 0.5, -r * 0.1, r * 0.3, r * 0.3);
-        ctx.closePath();
-        ctx.fillStyle = mix(hex, '#000000', 0.28);
-        ctx.fill();
-        ctx.lineWidth = Math.max(1, r * 0.06);
-        ctx.strokeStyle = mix(hex, '#000000', 0.55);
-        ctx.stroke();
-        ctx.restore();
+      // 1. Warm draconic magma aura breathing behind the beast
+      const auraP = 0.5 + 0.5 * Math.sin(t * 3);
+      const aurR = r * (1.6 + 0.2 * auraP);
+      ctx.drawImage(glowSprite('dragon-aura', [[0, 'rgba(255, 90, 20, 0.45)'], [0.45, 'rgba(255, 160, 30, 0.18)'], [1, 'rgba(0,0,0,0)']]), -aurR, -r * 1.3 - aurR * 0.5, aurR * 2, aurR * 1.5);
+
+      // 2. Floating fiery embers rising around the dragon
+      for (let i = 0; i < 5; i++) {
+        const p = (t * 0.8 + i * 0.2) % 1;
+        const px = Math.sin(i * 17 + t * 2) * r * 0.9;
+        const py = -r * 0.2 - p * r * 2.3;
+        ctx.globalAlpha = Math.sin(p * Math.PI) * 0.85;
+        sparkle(ctx, px, py, r * (0.08 + 0.04 * (1 - p)), i % 2 ? '#ffb300' : '#ff5722');
       }
+      ctx.globalAlpha = 1;
       return;
     }
-    const p = (t * 0.45) % 1; // one breath every couple of seconds
-    if (p < 0.3) {
-      const k = p / 0.3;
-      for (let i = 0; i < 4; i++) {
-        const d = k * (0.5 + i * 0.22);
-        ctx.globalAlpha = (1 - k) * 0.9;
-        ctx.fillStyle = i % 2 ? '#ffb02e' : '#ff5a1a';
-        circle(ctx, -r * (0.75 + d), -r * (1.35 - d * 0.15 + Math.sin(i * 5) * 0.08), r * (0.1 + d * 0.16));
-        ctx.fill();
-      }
+
+    // part === 'front': Eye glint and rising draconic smoke & spark whisps
+    const eyeX = r * 0.22;
+    const eyeY = -r * 1.95;
+    const glint = Math.max(0, Math.sin(t * 4)) ** 4;
+    if (glint > 0.1) {
+      ctx.globalAlpha = glint * 0.9;
+      circle(ctx, eyeX, eyeY, r * 0.045);
+      ctx.fillStyle = '#fff9c4';
+      ctx.fill();
+      sparkle(ctx, eyeX, eyeY, r * 0.09, '#ffd54f');
       ctx.globalAlpha = 1;
     }
-  },
-  // Constellation: three stars circle the animal (behind it, then in front), and its plinth glows
-  orbit(ctx, r, hex, t, part) {
-    if (part === 'back') {
-      const p = 0.5 + 0.5 * Math.sin(t * 1.4);
-      const gr = r * (1.25 + 0.2 * p);
-      ctx.globalAlpha = 0.45 + 0.3 * p;
-      ctx.drawImage(glowSprite(`plinth-${hex}`, [[0, hexA(hex, 0.7)], [0.5, hexA(hex, 0.22)], [1, hexA(hex, 0)]]), -gr, -r * 0.2 - gr * 0.5, gr * 2, gr);
-      ctx.globalAlpha = 1;
-    }
-    for (let i = 0; i < 3; i++) {
-      const a = t * 1.3 + (i * TAU) / 3;
-      const depth = Math.sin(a); // > 0: in front
-      if (depth > 0 !== (part === 'front')) continue;
-      const sx = Math.cos(a) * r * 1.05;
-      const sy = -r * (1.15 + 0.35 * Math.sin(a * 0.5 + i)) + depth * r * 0.3;
-      ctx.globalAlpha = 0.65 + 0.35 * depth;
-      sparkle(ctx, sx, sy, r * (0.2 + 0.07 * depth), i === 1 ? mix(hex, '#ffffff', 0.6) : '#fff1c2');
+
+    // Gentle smoke and ember whisps from jaws
+    const mouthX = r * 0.32;
+    const mouthY = -r * 1.78;
+    for (let i = 0; i < 2; i++) {
+      const sp = (t * 1.2 + i * 0.5) % 1;
+      ctx.globalAlpha = (1 - sp) * 0.6;
+      circle(ctx, mouthX + sp * r * 0.25, mouthY - sp * r * 0.35 + Math.sin(i * 5 + t * 4) * r * 0.04, r * 0.03 * (1 + sp));
+      ctx.fillStyle = i % 2 ? '#ff9800' : '#d1c4e9';
+      ctx.fill();
     }
     ctx.globalAlpha = 1;
+  },
+  // Constellation: multi-spectral 4-star celestial orbit with stardust particle trails and a cosmic nebula aura
+  orbit(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      // 1. Swirling cosmic nebula aura behind star-beast
+      const p = 0.5 + 0.5 * Math.sin(t * 1.3);
+      const gr = r * (1.6 + 0.25 * p);
+      ctx.globalAlpha = 0.55 + 0.3 * p;
+      ctx.drawImage(glowSprite(`nebula-${hex}`, [[0, hexA(hex, 0.6)], [0.45, 'rgba(120, 75, 235, 0.28)'], [1, 'rgba(10, 15, 50, 0)']]), -gr, -r * 0.85 - gr * 0.55, gr * 2, gr * 1.25);
+      ctx.globalAlpha = 1;
+
+      // 2. Pulsing golden astrological rune ring on plinth base
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.24, r * (0.85 + 0.06 * p), r * (0.31 + 0.02 * p), 0, 0, TAU);
+      ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.strokeStyle = `rgba(246, 207, 87, ${0.35 + 0.3 * p})`;
+      ctx.stroke();
+    }
+
+    // 3. Four celestial stars orbiting in inclined 3D orbits with stardust trails
+    const starConfigs = [
+      { speed: 1.25, phase: 0, col: '#ffd23f', inc: 0.28, radX: 1.15, radY: 0.38, baseH: 1.1 },
+      { speed: 1.45, phase: (TAU * 1) / 4, col: '#ffffff', inc: -0.42, radX: 1.05, radY: 0.44, baseH: 1.3 },
+      { speed: 1.25, phase: (TAU * 2) / 4, col: '#5cf2ff', inc: 0.28, radX: 1.15, radY: 0.38, baseH: 1.1 },
+      { speed: 1.45, phase: (TAU * 3) / 4, col: '#ff70a6', inc: -0.42, radX: 1.05, radY: 0.44, baseH: 1.3 },
+    ];
+
+    starConfigs.forEach((cfg, idx) => {
+      const a = t * cfg.speed + cfg.phase;
+      const depth = Math.sin(a); // > 0 is in front
+      if ((depth > 0) !== (part === 'front')) return;
+
+      const sx = Math.cos(a) * r * cfg.radX;
+      const sy = -r * (cfg.baseH + cfg.radY * Math.sin(a * 0.5 + idx)) + depth * r * cfg.inc;
+      const starScale = 0.75 + 0.35 * depth;
+      const alpha = 0.55 + 0.45 * depth;
+
+      // Stardust particle comet tail (3 fading trail particles)
+      for (let j = 1; j <= 3; j++) {
+        const taj = a - j * 0.18;
+        const tx = Math.cos(taj) * r * cfg.radX;
+        const ty = -r * (cfg.baseH + cfg.radY * Math.sin(taj * 0.5 + idx)) + Math.sin(taj) * r * cfg.inc;
+        ctx.globalAlpha = alpha * (1 - j * 0.28);
+        sparkle(ctx, tx, ty, r * (0.09 - j * 0.02) * starScale, cfg.col);
+      }
+
+      // Star core & diffraction cross flares
+      ctx.globalAlpha = alpha;
+      if (depth > 0.3) {
+        // Glowing star bloom
+        circle(ctx, sx, sy, r * 0.22 * starScale);
+        ctx.fillStyle = hexA(cfg.col, 0.4);
+        ctx.fill();
+      }
+      sparkle(ctx, sx, sy, r * 0.22 * starScale, cfg.col);
+      circle(ctx, sx, sy, r * 0.06 * starScale);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
   },
 };
 
@@ -417,6 +591,54 @@ function dinoPicture(name) {
   }
   return img.complete && img.naturalWidth ? img : null;
 }
+
+// The Legendary Dragon tokens: majestic 3D miniature figurines of elder dragons perched on obsidian pedestals
+const dragonArt = {};
+function dragonPicture(name) {
+  const file = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(name) ? name : 'red';
+  let img = dragonArt[file];
+  if (!img) {
+    if (typeof Image === 'undefined') return null;
+    img = dragonArt[file] = new Image();
+    img.onload = () => pawnSprites.clear();
+    img.src = `/tokens/dragon-${file}.webp`;
+  }
+  return img.complete && img.naturalWidth ? img : null;
+}
+
+// Astronomical constellation star coordinates and asterism connector lines for each zodiac sign
+export const ZODIAC_STARS = {
+  red: {
+    // Aries: Hamal (alpha), Sheratan (beta), Mesarthim (gamma)
+    stars: [[84, 22, 1.4], [74, 27, 1.1], [68, 33, 0.9], [52, 38, 0.8], [38, 44, 0.8], [22, 52, 0.9], [16, 64, 0.7], [32, 88, 0.8], [78, 88, 0.8]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [4, 7], [3, 8]],
+  },
+  green: {
+    // Taurus: Aldebaran (alpha), Elnath (beta), Tianguan (zeta), Pleiades
+    stars: [[82, 38, 1.5], [94, 21, 1.2], [98, 32, 1.0], [72, 30, 0.9], [60, 38, 0.8], [50, 32, 1.1], [34, 42, 0.8], [18, 52, 0.8], [62, 88, 0.8], [78, 88, 0.8]],
+    lines: [[1, 3], [2, 0], [0, 3], [3, 4], [4, 5], [5, 6], [6, 7], [4, 8], [3, 9]],
+  },
+  yellow: {
+    // Leo: Regulus (alpha), Algieba (gamma), Adhafera, Denebola (beta)
+    stars: [[64, 46, 1.5], [78, 36, 1.1], [84, 24, 1.0], [92, 30, 0.9], [96, 40, 0.8], [84, 54, 0.9], [44, 46, 1.1], [30, 48, 0.9], [12, 42, 1.2], [34, 88, 0.8], [78, 88, 0.8]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 1], [0, 6], [6, 8], [8, 7], [7, 6], [0, 10], [7, 9]],
+  },
+  blue: {
+    // Cancer: Praesepe / Beehive Cluster (M44), Asellus Bor/Aus, Acubens, Altarf
+    stars: [[50, 58, 1.5], [42, 46, 1.0], [58, 46, 1.0], [24, 24, 1.1], [16, 12, 1.2], [76, 24, 1.1], [84, 12, 1.2], [26, 72, 0.9], [74, 72, 0.9], [12, 86, 0.8], [88, 86, 0.8]],
+    lines: [[1, 2], [1, 0], [2, 0], [1, 3], [3, 4], [2, 5], [5, 6], [0, 7], [0, 8], [7, 9], [8, 10]],
+  },
+  purple: {
+    // Scorpius: Antares (alpha), Shaula (lambda), Graffias
+    stars: [[36, 64, 1.5], [28, 56, 1.0], [18, 44, 1.1], [14, 36, 1.0], [48, 68, 0.9], [62, 66, 1.0], [74, 58, 1.0], [82, 46, 1.1], [76, 34, 1.0], [64, 30, 1.2]],
+    lines: [[3, 2], [2, 1], [1, 0], [0, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9]],
+  },
+  orange: {
+    // Sagittarius: Teapot & Bow
+    stars: [[91, 18, 1.4], [76, 12, 1.1], [58, 38, 1.0], [42, 58, 1.0], [22, 88, 1.1], [30, 76, 0.9], [50, 68, 0.9], [70, 52, 0.9]],
+    lines: [[1, 2], [2, 3], [3, 4], [0, 2], [0, 7], [7, 6], [6, 5], [5, 3]],
+  },
+};
 
 export const TOKEN_SHAPES = {
   dino(ctx, r, hex, sign) {
@@ -703,117 +925,481 @@ export const TOKEN_SHAPES = {
     ctx.fill();
     ctx.stroke();
   },
-  // A flying saucer in the player's colour, a little green alien under the glass
+  // A sleek alien mothership with dual-beveled saucer hull, glowing neon energy conduit, crystal canopy and charismatic alien pilot.
   ufo(ctx, r, hex) {
     r *= 1.25;
     outline(ctx, r, hex);
     const cy = -r * 0.95;
+
+    // 1. Underside anti-gravity propulsion dish
     ctx.beginPath();
-    ctx.ellipse(0, cy - r * 0.3, r * 0.52, r * 0.56, 0, Math.PI, TAU);
+    ctx.ellipse(0, cy + r * 0.22, r * 0.46, r * 0.16, 0, 0, TAU);
+    const dishGrad = ctx.createLinearGradient(0, cy + r * 0.1, 0, cy + r * 0.35);
+    dishGrad.addColorStop(0, '#2d3748');
+    dishGrad.addColorStop(0.6, '#1a202c');
+    dishGrad.addColorStop(1, '#0d1117');
+    ctx.fillStyle = dishGrad;
+    ctx.fill();
+    ctx.strokeStyle = '#10141d';
+    ctx.stroke();
+
+    // Central pulsing anti-grav emitter aperture
+    ctx.beginPath();
+    ctx.ellipse(0, cy + r * 0.24, r * 0.28, r * 0.09, 0, 0, TAU);
+    const apGrad = ctx.createRadialGradient(0, cy + r * 0.24, 0, 0, cy + r * 0.24, r * 0.28);
+    apGrad.addColorStop(0, '#ffffff');
+    apGrad.addColorStop(0.35, '#5cf2ff');
+    apGrad.addColorStop(0.85, '#0099b8');
+    apGrad.addColorStop(1, '#1a202c');
+    ctx.fillStyle = apGrad;
+    ctx.fill();
+
+    // 2. Cockpit bubble canopy with multi-layer aerospace glass and alien commander
+    ctx.beginPath();
+    ctx.ellipse(0, cy - r * 0.32, r * 0.54, r * 0.58, 0, Math.PI, TAU);
     ctx.closePath();
     const glass = ctx.createLinearGradient(-r * 0.5, cy - r * 0.9, r * 0.5, cy);
-    glass.addColorStop(0, 'rgba(235, 252, 255, 0.95)');
-    glass.addColorStop(1, 'rgba(150, 215, 245, 0.75)');
+    glass.addColorStop(0, 'rgba(240, 253, 255, 0.96)');
+    glass.addColorStop(0.4, 'rgba(180, 235, 255, 0.85)');
+    glass.addColorStop(1, 'rgba(92, 210, 245, 0.65)');
     ctx.fillStyle = glass;
     ctx.fill();
+
+    // Clipped cockpit interior (alien pilot and holographic dashboard)
     ctx.save();
     ctx.clip();
+
+    // Alien Pilot Body
     ctx.beginPath();
-    ctx.ellipse(0, cy - r * 0.42, r * 0.25, r * 0.28, 0, 0, TAU);
-    ctx.fillStyle = '#7ed957';
+    ctx.ellipse(0, cy - r * 0.2, r * 0.28, r * 0.24, 0, 0, TAU);
+    ctx.fillStyle = '#223042';
     ctx.fill();
+
+    // Alien Pilot Head (pear-shaped with cranial antenna)
+    ctx.beginPath();
+    ctx.ellipse(0, cy - r * 0.45, r * 0.26, r * 0.3, 0, 0, TAU);
+    const alienSkin = ctx.createRadialGradient(-r * 0.08, cy - r * 0.5, 0, 0, cy - r * 0.45, r * 0.28);
+    alienSkin.addColorStop(0, '#a8ff78');
+    alienSkin.addColorStop(0.65, '#62d645');
+    alienSkin.addColorStop(1, '#3ca822');
+    ctx.fillStyle = alienSkin;
+    ctx.fill();
+
+    // Cute alien antenna with glowing cyan bead
+    ctx.beginPath();
+    ctx.moveTo(0, cy - r * 0.72);
+    ctx.lineTo(0, cy - r * 0.84);
+    ctx.lineWidth = Math.max(1, r * 0.035);
+    ctx.strokeStyle = '#62d645';
+    ctx.stroke();
+    circle(ctx, 0, cy - r * 0.84, r * 0.045);
+    ctx.fillStyle = '#5cf2ff';
+    ctx.fill();
+
+    // Mesmerizing bioluminescent almond eyes with starfield iris
     for (const sx of [-1, 1]) {
       ctx.beginPath();
-      ctx.ellipse(sx * r * 0.1, cy - r * 0.46, r * 0.07, r * 0.1, sx * 0.4, 0, TAU);
-      ctx.fillStyle = '#15151c';
+      ctx.ellipse(sx * r * 0.11, cy - r * 0.46, r * 0.085, r * 0.12, sx * 0.35, 0, TAU);
+      const eyeGrad = ctx.createRadialGradient(sx * r * 0.09, cy - r * 0.48, 0, sx * r * 0.11, cy - r * 0.46, r * 0.12);
+      eyeGrad.addColorStop(0, '#5cf2ff');
+      eyeGrad.addColorStop(0.4, '#1b0a36');
+      eyeGrad.addColorStop(1, '#070512');
+      ctx.fillStyle = eyeGrad;
+      ctx.fill();
+
+      // Sharp white starlight glint
+      circle(ctx, sx * r * 0.1 - sx * r * 0.02, cy - r * 0.5, r * 0.028);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+
+    // Holographic instrument dashboard in front of alien
+    ctx.beginPath();
+    ctx.ellipse(0, cy - r * 0.22, r * 0.38, r * 0.12, 0, 0, TAU);
+    ctx.fillStyle = '#141b26';
+    ctx.fill();
+    ctx.lineWidth = Math.max(0.8, r * 0.025);
+    ctx.strokeStyle = 'rgba(92, 242, 255, 0.75)';
+    ctx.stroke();
+
+    // Glowing telemetry blips on console
+    for (const [bx, col] of [[-0.2, '#5cf2ff'], [-0.08, '#a8ff78'], [0.08, '#ffcc00'], [0.2, '#5cf2ff']]) {
+      circle(ctx, bx * r, cy - r * 0.23, r * 0.022);
+      ctx.fillStyle = col;
       ctx.fill();
     }
     ctx.restore();
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+
+    // Canopy glass outer rim & specular gloss highlights
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = Math.max(1, r * 0.04);
     ctx.stroke();
+
+    // Dual-specular gloss highlight arcs on glass
     ctx.beginPath();
-    ctx.ellipse(0, cy, r * 1.02, r * 0.36, 0, 0, TAU);
-    const g = ctx.createLinearGradient(0, cy - r * 0.36, 0, cy + r * 0.36);
-    g.addColorStop(0, mix(hex, '#ffffff', 0.45));
-    g.addColorStop(0.5, hex);
-    g.addColorStop(1, mix(hex, '#000000', 0.4));
-    ctx.fillStyle = g;
+    ctx.ellipse(-r * 0.22, cy - r * 0.55, r * 0.24, r * 0.12, -Math.PI / 4, 0, TAU);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.fill();
-    ctx.strokeStyle = mix(hex, '#000000', 0.45);
+
+    // 3. Double-beveled saucer chassis disc
+    // Lower shadowed rim
+    ctx.beginPath();
+    ctx.ellipse(0, cy + r * 0.08, r * 1.05, r * 0.35, 0, 0, TAU);
+    ctx.fillStyle = mix(hex, '#000000', 0.55);
+    ctx.fill();
+
+    // Main saucer disc
+    ctx.beginPath();
+    ctx.ellipse(0, cy, r * 1.06, r * 0.38, 0, 0, TAU);
+    const sg = ctx.createLinearGradient(0, cy - r * 0.38, 0, cy + r * 0.38);
+    sg.addColorStop(0, mix(hex, '#ffffff', 0.55));
+    sg.addColorStop(0.25, mix(hex, '#ffffff', 0.2));
+    sg.addColorStop(0.65, hex);
+    sg.addColorStop(1, mix(hex, '#000000', 0.45));
+    ctx.fillStyle = sg;
+    ctx.fill();
+    ctx.strokeStyle = mix(hex, '#000000', 0.5);
+    ctx.lineWidth = Math.max(1, r * 0.045);
     ctx.stroke();
+
+    // Inlaid glowing neon energy conduit trench along rim
     ctx.beginPath();
-    ctx.ellipse(0, cy + r * 0.2, r * 0.42, r * 0.13, 0, 0, TAU);
-    ctx.fillStyle = '#3a4252';
+    ctx.ellipse(0, cy - r * 0.04, r * 0.96, r * 0.31, 0, 0, TAU);
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    ctx.strokeStyle = 'rgba(92, 242, 255, 0.85)';
+    ctx.stroke();
+
+    // Chrome base ring around cockpit canopy
+    ctx.beginPath();
+    ctx.ellipse(0, cy - r * 0.25, r * 0.58, r * 0.18, 0, 0, TAU);
+    ctx.fillStyle = '#7a889b';
     ctx.fill();
+    ctx.lineWidth = Math.max(0.8, r * 0.035);
+    ctx.strokeStyle = '#3a4454';
+    ctx.stroke();
   },
-  // A small dragon sitting up: horns, a pale belly, spines down its back (its wings beat: TOKEN_FX)
-  dragon(ctx, r, hex) {
+  dragon(ctx, r, hex, sign) {
+    const img = dragonPicture(sign);
+    if (!img) return TOKEN_SHAPES.dragonDrawn(ctx, r, hex);
+    const h = r * 2.85;
+    const w = (h * img.naturalWidth) / img.naturalHeight;
+    ctx.drawImage(img, -w / 2, -h + r * 0.28, w, h);
+  },
+  // Fallback procedural dragon: an elder dragon perched majestically upon an obsidian & gold pedestal
+  dragonDrawn(ctx, r, hex) {
     outline(ctx, r, hex);
-    const dark = mix(hex, '#000000', 0.35);
-    // tail
+    const dark = mix(hex, '#000000', 0.48);
+    const gold = '#ffd23f';
+    const goldDark = '#8e6200';
+
+    // 1. Multi-tiered volcanic obsidian & gold plinth
+    // Lower gold rim
     ctx.beginPath();
-    ctx.moveTo(r * 0.4, -r * 0.25);
-    ctx.quadraticCurveTo(r * 1.15, -r * 0.1, r * 0.95, -r * 0.7);
+    ctx.ellipse(0, -r * 0.04, r * 0.94, r * 0.33, 0, 0, Math.PI);
+    ctx.lineTo(-r * 0.94, -r * 0.14);
+    ctx.ellipse(0, -r * 0.14, r * 0.94, r * 0.33, 0, Math.PI, TAU);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.94, gold);
+    ctx.fill();
+    ctx.strokeStyle = goldDark;
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    ctx.stroke();
+
+    // Obsidian drum body
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.14, r * 0.9, r * 0.31, 0, 0, Math.PI);
+    ctx.lineTo(-r * 0.9, -r * 0.28);
+    ctx.ellipse(0, -r * 0.28, r * 0.9, r * 0.31, 0, Math.PI, TAU);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.9, '#1a141a');
+    ctx.fill();
+    ctx.strokeStyle = '#382218';
+    ctx.lineWidth = Math.max(0.8, r * 0.035);
+    ctx.stroke();
+
+    // Gold dragon runes around drum
+    for (const rx of [-0.62, -0.31, 0, 0.31, 0.62]) {
+      sparkle(ctx, rx * r, -r * 0.21 + Math.abs(rx) * r * 0.05, r * 0.045, gold);
+    }
+
+    // Polished obsidian pedestal top with golden perimeter inlay
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.28, r * 0.9, r * 0.31, 0, 0, TAU);
+    const topG = ctx.createRadialGradient(-r * 0.15, -r * 0.32, 0, 0, -r * 0.28, r * 0.9);
+    topG.addColorStop(0, '#2e1c22');
+    topG.addColorStop(0.6, '#180e14');
+    topG.addColorStop(1, '#0c070a');
+    ctx.fillStyle = topG;
+    ctx.fill();
+    ctx.strokeStyle = gold;
+    ctx.lineWidth = Math.max(1, r * 0.045);
+    ctx.stroke();
+
+    // 2. Thick muscular dragon tail coiling around the pedestal
+    ctx.beginPath();
+    ctx.moveTo(r * 0.15, -r * 0.4);
+    ctx.bezierCurveTo(r * 0.75, -r * 0.35, r * 1.05, -r * 0.12, r * 0.78, -r * 0.04);
+    ctx.bezierCurveTo(r * 0.6, 0, r * 0.7, -r * 0.32, r * 0.88, -r * 0.65);
     ctx.lineWidth = r * 0.26;
     ctx.lineCap = 'round';
     ctx.strokeStyle = dark;
     ctx.stroke();
-    ctx.lineWidth = r * 0.16;
+    ctx.lineWidth = r * 0.17;
     ctx.strokeStyle = hex;
     ctx.stroke();
-    outline(ctx, r, hex);
-    path(ctx, [[r * 0.8, -r * 0.78], [r * 1.08, -r * 0.95], [r * 1.05, -r * 0.6]]);
-    ctx.fillStyle = '#f3e3c0';
-    ctx.fill();
-    // body
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.62, -r * 0.05);
-    ctx.bezierCurveTo(-r * 0.85, -r * 0.7, -r * 0.45, -r * 1.2, 0, -r * 1.2);
-    ctx.bezierCurveTo(r * 0.45, -r * 1.2, r * 0.85, -r * 0.7, r * 0.62, -r * 0.05);
-    ctx.closePath();
-    ctx.fillStyle = cylinder(ctx, r * 0.7, hex);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(0, -r * 0.5, r * 0.36, r * 0.46, 0, 0, TAU);
-    ctx.fillStyle = '#f6e7b8';
-    ctx.fill();
-    ctx.lineWidth = Math.max(1, r * 0.04);
-    ctx.strokeStyle = '#c9a85a';
-    ctx.beginPath();
-    for (const y of [-0.7, -0.5, -0.3]) {
-      ctx.moveTo(-r * 0.3, y * r);
-      ctx.lineTo(r * 0.3, y * r);
-    }
-    ctx.stroke();
-    outline(ctx, r, hex);
-    // horns, then the head with its snout to the left
-    for (const sx of [-1, 1]) {
-      path(ctx, [[sx * r * 0.2, -r * 1.85], [sx * r * 0.52, -r * 2.32], [sx * r * 0.44, -r * 1.75]]);
-      ctx.fillStyle = '#f3e3c0';
+
+    // Gold spinal spines on tail
+    for (const [tx, ty, rot] of [[0.62, -0.26, 0.3], [0.88, -0.15, -0.2], [0.76, -0.45, -0.5]]) {
+      ctx.save();
+      ctx.translate(tx * r, ty * r);
+      ctx.rotate(rot);
+      path(ctx, [[0, -r * 0.09], [r * 0.08, 0], [-r * 0.04, r * 0.07]]);
+      ctx.fillStyle = gold;
       ctx.fill();
+      ctx.restore();
+    }
+
+    // Barbed golden dragon spade blade at tail tip
+    ctx.save();
+    ctx.translate(r * 0.88, -r * 0.72);
+    ctx.rotate(0.2);
+    path(ctx, [[0, -r * 0.26], [r * 0.13, -r * 0.04], [r * 0.11, r * 0.12], [0, r * 0.05], [-r * 0.11, r * 0.12], [-r * 0.13, -r * 0.04]]);
+    const spadeGrad = ctx.createLinearGradient(0, -r * 0.26, 0, r * 0.12);
+    spadeGrad.addColorStop(0, '#fff4b8');
+    spadeGrad.addColorStop(0.5, gold);
+    spadeGrad.addColorStop(1, goldDark);
+    ctx.fillStyle = spadeGrad;
+    ctx.fill();
+    ctx.strokeStyle = '#5a3d00';
+    ctx.lineWidth = Math.max(0.8, r * 0.035);
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Heavy draconic talons gripping the pedestal rim
+    for (const side of [-1, 1]) {
+      const footX = side * r * 0.38;
+      const footY = -r * 0.26;
+      // Golden scale knuckle
+      circle(ctx, footX, footY, r * 0.12);
+      ctx.fillStyle = cylinder(ctx, r * 0.12, mix(hex, gold, 0.35));
+      ctx.fill();
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = Math.max(0.7, r * 0.03);
+      ctx.stroke();
+
+      // Three razor-sharp ivory claws grasping over the rim
+      for (const cx of [-0.075, 0, 0.075]) {
+        path(ctx, [
+          [footX + cx * r, footY + r * 0.02],
+          [footX + (cx + side * 0.04) * r, footY + r * 0.16],
+          [footX + (cx - side * 0.03) * r, footY + r * 0.06],
+        ]);
+        ctx.fillStyle = '#fffde8';
+        ctx.fill();
+        ctx.strokeStyle = '#3a2d18';
+        ctx.lineWidth = Math.max(0.6, r * 0.025);
+        ctx.stroke();
+      }
+    }
+
+    // 4. Symmetrical, muscular dragon body
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.44, -r * 0.28);
+    // Haunches to cinched waist
+    ctx.bezierCurveTo(-r * 0.52, -r * 0.48, -r * 0.32, -r * 0.72, -r * 0.34, -r * 0.95);
+    // Waist to broad shoulders
+    ctx.bezierCurveTo(-r * 0.46, -r * 1.05, -r * 0.48, -r * 1.15, -r * 0.32, -r * 1.25);
+    // Neck to chin
+    ctx.bezierCurveTo(-r * 0.24, -r * 1.35, -r * 0.18, -r * 1.45, 0, -r * 1.45);
+    // Right side (symmetrical)
+    ctx.bezierCurveTo(r * 0.18, -r * 1.45, r * 0.24, -r * 1.35, r * 0.32, -r * 1.25);
+    ctx.bezierCurveTo(r * 0.48, -r * 1.15, r * 0.46, -r * 1.05, r * 0.34, -r * 0.95);
+    ctx.bezierCurveTo(r * 0.32, -r * 0.72, r * 0.52, -r * 0.48, r * 0.44, -r * 0.28);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.48, hex);
+    ctx.fill();
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = Math.max(1, r * 0.045);
+    ctx.stroke();
+
+    // Golden shoulder crest pauldrons
+    for (const sx of [-1, 1]) {
+      path(ctx, [
+        [sx * r * 0.32, -r * 1.25],
+        [sx * r * 0.52, -r * 1.15],
+        [sx * r * 0.48, -r * 1.02],
+        [sx * r * 0.28, -r * 1.08],
+      ]);
+      ctx.fillStyle = gold;
+      ctx.fill();
+      ctx.strokeStyle = goldDark;
+      ctx.lineWidth = Math.max(0.7, r * 0.03);
       ctx.stroke();
     }
+
+    // 5. Armored ventral chest plates (5 overlapping golden chevron scales)
+    for (let i = 0; i < 5; i++) {
+      const py = -r * (1.18 - i * 0.18);
+      const pw = r * (0.13 + (i < 3 ? i * 0.05 : (4 - i) * 0.04 + 0.08));
+      const ph = r * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(-pw, py);
+      ctx.quadraticCurveTo(0, py + ph * 0.85, pw, py);
+      ctx.lineTo(pw * 0.8, py + ph * 0.45);
+      ctx.quadraticCurveTo(0, py + ph * 1.25, -pw * 0.8, py + ph * 0.45);
+      ctx.closePath();
+      const bg = ctx.createLinearGradient(0, py, 0, py + ph);
+      bg.addColorStop(0, '#fff8d6');
+      bg.addColorStop(0.55, gold);
+      bg.addColorStop(1, goldDark);
+      ctx.fillStyle = bg;
+      ctx.fill();
+      ctx.strokeStyle = '#624300';
+      ctx.lineWidth = Math.max(0.8, r * 0.032);
+      ctx.stroke();
+    }
+
+    // 6. Dorsal spine crest along back and neck
+    for (let i = 0; i < 3; i++) {
+      const sy = -r * (1.32 + i * 0.16);
+      path(ctx, [[0, sy - r * 0.12], [r * 0.07, sy], [-r * 0.07, sy]]);
+      ctx.fillStyle = gold;
+      ctx.fill();
+      ctx.strokeStyle = goldDark;
+      ctx.stroke();
+    }
+
+    // 7. Grand Elder Dragon Horns (swept back, recurved, gold-banded)
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(sx * r * 0.12, -r * 1.76);
+      ctx.bezierCurveTo(sx * r * 0.32, -r * 2.08, sx * r * 0.65, -r * 2.38, sx * r * 0.74, -r * 2.48);
+      ctx.bezierCurveTo(sx * r * 0.58, -r * 2.22, sx * r * 0.38, -r * 1.96, sx * r * 0.28, -r * 1.74);
+      ctx.closePath();
+      const hg = ctx.createLinearGradient(sx * r * 0.12, -r * 1.74, sx * r * 0.74, -r * 2.48);
+      hg.addColorStop(0, goldDark);
+      hg.addColorStop(0.4, gold);
+      hg.addColorStop(0.75, '#fff6c8');
+      hg.addColorStop(1, '#ffffff');
+      ctx.fillStyle = hg;
+      ctx.fill();
+      ctx.strokeStyle = '#5a3d00';
+      ctx.lineWidth = Math.max(0.8, r * 0.035);
+      ctx.stroke();
+
+      // Golden horn ridges / rings
+      for (const t of [0.32, 0.62]) {
+        ctx.beginPath();
+        ctx.ellipse(sx * r * (0.16 + t * 0.42), -r * (1.78 + t * 0.52), r * 0.05, r * 0.025, sx * 0.55, 0, TAU);
+        ctx.fillStyle = '#fff8d6';
+        ctx.fill();
+      }
+
+      // Secondary brow hornlet
+      path(ctx, [[sx * r * 0.14, -r * 1.84], [sx * r * 0.32, -r * 2.02], [sx * r * 0.25, -r * 1.78]]);
+      ctx.fillStyle = gold;
+      ctx.fill();
+      ctx.strokeStyle = goldDark;
+      ctx.stroke();
+
+      // Cheek crest horn
+      path(ctx, [[sx * r * 0.28, -r * 1.48], [sx * r * 0.48, -r * 1.54], [sx * r * 0.34, -r * 1.38]]);
+      ctx.fillStyle = gold;
+      ctx.fill();
+      ctx.strokeStyle = goldDark;
+      ctx.stroke();
+    }
+
+    // 8. Sculpted ferocious dragon head (frontal, predatory, majestic)
+    // Head cranium
     ctx.beginPath();
-    ctx.ellipse(0, -r * 1.55, r * 0.56, r * 0.46, 0, 0, TAU);
-    ctx.fillStyle = cylinder(ctx, r * 0.56, hex);
+    ctx.ellipse(0, -r * 1.66, r * 0.36, r * 0.3, 0, 0, TAU);
+    ctx.fillStyle = cylinder(ctx, r * 0.36, hex);
     ctx.fill();
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = Math.max(1, r * 0.04);
     ctx.stroke();
+
+    // Sculpted muzzle / snout tapering forward
     ctx.beginPath();
-    ctx.ellipse(-r * 0.42, -r * 1.42, r * 0.34, r * 0.24, 0.1, 0, TAU);
-    ctx.fillStyle = mix(hex, '#ffffff', 0.18);
+    ctx.moveTo(-r * 0.24, -r * 1.6);
+    ctx.lineTo(-r * 0.18, -r * 1.4);
+    ctx.quadraticCurveTo(0, -r * 1.34, r * 0.18, -r * 1.4);
+    ctx.lineTo(r * 0.24, -r * 1.6);
+    ctx.closePath();
+    ctx.fillStyle = mix(hex, '#ffffff', 0.15);
     ctx.fill();
+    ctx.strokeStyle = dark;
+    ctx.lineWidth = Math.max(0.9, r * 0.038);
     ctx.stroke();
-    circle(ctx, -r * 0.62, -r * 1.48, r * 0.04);
-    ctx.fillStyle = dark;
+
+    // Sharp ivory fangs protruding from upper jaw!
+    for (const [fx, fy] of [[-0.14, -1.38], [-0.07, -1.36], [0.07, -1.36], [0.14, -1.38]]) {
+      path(ctx, [[fx * r - r * 0.02, fy * r], [fx * r, (fy + 0.1) * r], [fx * r + r * 0.02, fy * r]]);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#3a2d18';
+      ctx.lineWidth = Math.max(0.6, r * 0.025);
+      ctx.stroke();
+    }
+
+    // Flared nostrils with glowing ember cores
+    for (const nx of [-0.075, 0.075]) {
+      circle(ctx, nx * r, -r * 1.44, r * 0.032);
+      ctx.fillStyle = '#ff5722';
+      ctx.fill();
+      circle(ctx, nx * r, -r * 1.44, r * 0.016);
+      ctx.fillStyle = '#fff59d';
+      ctx.fill();
+    }
+
+    // Golden forehead crest plate & ruby gem
+    path(ctx, [[0, -r * 1.94], [r * 0.1, -r * 1.8], [0, -r * 1.68], [-r * 0.1, -r * 1.8]]);
+    ctx.fillStyle = gold;
     ctx.fill();
-    circle(ctx, -r * 0.05, -r * 1.66, r * 0.13);
-    ctx.fillStyle = '#fff7a8';
+    ctx.strokeStyle = goldDark;
+    ctx.lineWidth = Math.max(0.8, r * 0.035);
+    ctx.stroke();
+    circle(ctx, 0, -r * 1.8, r * 0.038);
+    ctx.fillStyle = '#e53935';
     ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.06, -r * 1.66, r * 0.04, r * 0.1, 0, 0, TAU);
-    ctx.fillStyle = '#15151c';
-    ctx.fill();
+
+    // 9. Dual fierce glowing reptilian dragon eyes with vertical slit pupils
+    for (const sx of [-1, 1]) {
+      const eyeX = sx * r * 0.16;
+      const eyeY = -r * 1.66;
+
+      // Dark armored eye socket / heavy brow ridge
+      ctx.beginPath();
+      ctx.ellipse(eyeX, eyeY, r * 0.12, r * 0.09, sx * 0.2, 0, TAU);
+      ctx.fillStyle = '#100c14';
+      ctx.fill();
+      ctx.strokeStyle = dark;
+      ctx.lineWidth = Math.max(0.8, r * 0.03);
+      ctx.stroke();
+
+      // Blazing amber/gold iris gradient
+      ctx.beginPath();
+      ctx.ellipse(eyeX, eyeY, r * 0.095, r * 0.075, sx * 0.2, 0, TAU);
+      const eyeGrad = ctx.createRadialGradient(eyeX - sx * r * 0.02, eyeY - r * 0.02, 0, eyeX, eyeY, r * 0.095);
+      eyeGrad.addColorStop(0, '#ffffff');
+      eyeGrad.addColorStop(0.3, '#ffea00');
+      eyeGrad.addColorStop(0.7, '#ff5722');
+      eyeGrad.addColorStop(1, '#7a0000');
+      ctx.fillStyle = eyeGrad;
+      ctx.fill();
+
+      // Sharp black vertical slit pupil
+      ctx.beginPath();
+      ctx.ellipse(eyeX, eyeY, r * 0.025, r * 0.065, sx * 0.15, 0, TAU);
+      ctx.fillStyle = '#06060a';
+      ctx.fill();
+
+      // Catchlight spark
+      circle(ctx, eyeX - sx * r * 0.025, eyeY - r * 0.025, r * 0.02);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
   },
   // The Royal token: a king in a robe of the player's colour: gold-banded base, an ermine collar,
   // and a jewelled crown with a velvet cap.
@@ -922,33 +1508,66 @@ export const TOKEN_SHAPES = {
       ctx.fill();
     });
   },
-  // The player's zodiac animal in their colour, edged in gold, on a starry navy plinth
+
+  // A cosmic constellation star-beast standing on a celestial obsidian plinth with golden astrolabe runes and embedded starlight.
   zodiac(ctx, r, hex, sign) {
-    // the plinth
+    // 1. Multi-tiered celestial obsidian & gold plinth
+    // Gold base rim
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.05, r * 0.92, r * 0.34, 0, 0, Math.PI);
-    ctx.lineTo(-r * 0.92, -r * 0.24);
-    ctx.ellipse(0, -r * 0.24, r * 0.92, r * 0.34, 0, Math.PI, TAU);
+    ctx.ellipse(0, -r * 0.03, r * 0.96, r * 0.35, 0, 0, Math.PI);
+    ctx.lineTo(-r * 0.96, -r * 0.12);
+    ctx.ellipse(0, -r * 0.12, r * 0.96, r * 0.35, 0, Math.PI, TAU);
     ctx.closePath();
-    ctx.fillStyle = cylinder(ctx, r * 0.92, '#1a2260');
+    ctx.fillStyle = cylinder(ctx, r * 0.96, GOLD);
     ctx.fill();
-    ctx.lineWidth = Math.max(1, r * 0.06);
-    ctx.strokeStyle = '#d9b25a';
+    ctx.strokeStyle = GOLD_DARK;
+    ctx.lineWidth = Math.max(1, r * 0.04);
     ctx.stroke();
+
+    // Obsidian plinth drum
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.24, r * 0.92, r * 0.34, 0, 0, TAU);
-    const top = ctx.createRadialGradient(-r * 0.2, -r * 0.3, 0, 0, -r * 0.24, r);
+    ctx.ellipse(0, -r * 0.12, r * 0.92, r * 0.34, 0, 0, Math.PI);
+    ctx.lineTo(-r * 0.92, -r * 0.28);
+    ctx.ellipse(0, -r * 0.28, r * 0.92, r * 0.34, 0, Math.PI, TAU);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.92, '#0c1236');
+    ctx.fill();
+    ctx.strokeStyle = '#d9b25a';
+    ctx.lineWidth = Math.max(1, r * 0.055);
+    ctx.stroke();
+
+    // Engraved celestial zodiac star runes around the drum
+    for (const rx of [-0.65, -0.35, 0, 0.35, 0.65]) {
+      sparkle(ctx, rx * r, -r * 0.2 + Math.abs(rx) * r * 0.06, r * 0.045, '#ffd23f');
+    }
+
+    // Polished cosmic mirror plinth top with deep nebula gradient
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.28, r * 0.92, r * 0.34, 0, 0, TAU);
+    const top = ctx.createRadialGradient(-r * 0.15, -r * 0.32, 0, 0, -r * 0.28, r);
     top.addColorStop(0, '#3a4aa8');
-    top.addColorStop(1, '#0d1240');
+    top.addColorStop(0.55, '#182056');
+    top.addColorStop(1, '#080c24');
     ctx.fillStyle = top;
     ctx.fill();
+    ctx.strokeStyle = '#ffd23f';
+    ctx.lineWidth = Math.max(1, r * 0.05);
     ctx.stroke();
-    ctx.fillStyle = '#fff3c4';
-    for (const [sx, sy] of [[-0.5, -0.26], [0.45, -0.18], [0.1, -0.4]]) {
-      circle(ctx, sx * r, sy * r, r * 0.035);
+
+    // Inlaid golden astrological ring & miniature starfield on plinth top
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.28, r * 0.74, r * 0.27, 0, 0, TAU);
+    ctx.lineWidth = Math.max(0.8, r * 0.03);
+    ctx.strokeStyle = 'rgba(255, 230, 130, 0.55)';
+    ctx.stroke();
+
+    for (const [sx, sy] of [[-0.52, -0.28], [0.48, -0.22], [0.12, -0.42], [-0.22, -0.38], [0.32, -0.35]]) {
+      circle(ctx, sx * r, sy * r, r * 0.03);
+      ctx.fillStyle = '#fff4c4';
       ctx.fill();
     }
-    // the animal, standing on it
+
+    // 2. The living celestial star-beast standing on the plinth
     const z = zodiacPath(sign);
     const sc = (r * 2.1) / 100;
     ctx.save();
@@ -956,24 +1575,72 @@ export const TOKEN_SHAPES = {
     ctx.scale(sc, sc);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    const g = ctx.createLinearGradient(0, 10, 0, 92);
-    g.addColorStop(0, mix(hex, '#ffffff', 0.35));
-    g.addColorStop(1, mix(hex, '#000000', 0.25));
-    // horns, claws and tails first, thick in the player's colour so they read as part of the body
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = mix(hex, '#000000', 0.35);
-    ctx.stroke(z.lines);
-    ctx.lineWidth = 4.5;
-    ctx.strokeStyle = mix(hex, '#ffffff', 0.15);
-    ctx.stroke(z.lines);
-    ctx.fillStyle = g;
+
+    // Faint celestial coordinate meridian ring
+    ctx.beginPath();
+    ctx.ellipse(50, 52, 46, 38, 0, 0, TAU);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 230, 140, 0.22)';
+    ctx.stroke();
+
+    // Semi-translucent cosmic nebula body fill (ethereal celestial atlas texture)
+    const bg = ctx.createLinearGradient(0, 10, 0, 92);
+    bg.addColorStop(0, hexA(mix(hex, '#ffffff', 0.65), 0.75));
+    bg.addColorStop(0.45, hexA(hex, 0.6));
+    bg.addColorStop(0.85, hexA(mix(hex, '#080c24', 0.65), 0.75));
+    bg.addColorStop(1, 'rgba(8, 12, 36, 0.85)');
+    ctx.fillStyle = bg;
     ctx.fill(z.body);
-    ctx.lineWidth = 3;
+
+    // Dark contrast outer stroke
+    ctx.lineWidth = 4.5;
+    ctx.strokeStyle = '#060919';
+    ctx.stroke(z.lines);
+
+    // Polished gold celestial rim
+    ctx.lineWidth = 2.4;
     ctx.strokeStyle = '#e9c46a';
     ctx.stroke(z.body);
+
+    // Anatomical star line details
     ctx.lineWidth = 1.4;
-    ctx.strokeStyle = '#fff1c2';
+    ctx.strokeStyle = '#fff4c4';
     ctx.stroke(z.lines);
+
+    // Real astronomical constellation asterism lines connecting the star nodes
+    const cData = ZODIAC_STARS[sign] || ZODIAC_STARS.red;
+    ctx.beginPath();
+    for (const [i1, i2] of cData.lines) {
+      const s1 = cData.stars[i1];
+      const s2 = cData.stars[i2];
+      if (s1 && s2) {
+        ctx.moveTo(s1[0], s1[1]);
+        ctx.lineTo(s2[0], s2[1]);
+      }
+    }
+    ctx.lineWidth = 2.8;
+    ctx.strokeStyle = 'rgba(255, 240, 160, 0.38)';
+    ctx.stroke();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = '#fff8d6';
+    ctx.stroke();
+
+    // Real constellation stars plotted at authentic coordinates with magnitude scaling
+    for (const [sx, sy, mag] of cData.stars) {
+      const starR = mag * 3.0;
+      // Diamond star sparkle
+      sparkle(ctx, sx, sy, starR, '#ffd23f');
+      // Bright white stellar core
+      circle(ctx, sx, sy, starR * 0.35);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      // Prominent alpha star glow bloom
+      if (mag >= 1.4) {
+        circle(ctx, sx, sy, starR * 1.5);
+        ctx.fillStyle = 'rgba(255, 235, 130, 0.28)';
+        ctx.fill();
+      }
+    }
     ctx.restore();
   },
   // Two stacked game checkers with a ridged top.
@@ -1070,36 +1737,179 @@ export const TOKEN_SHAPES = {
     ctx.lineCap = 'butt';
   },
 
-  // A little rocket with fins, a porthole and a flame.
+  // An aerospace rocket with metallic cylindrical fuselage, heat-shield fins, titanium nozzle and illuminated command cockpit.
   rocket(ctx, r, hex) {
     outline(ctx, r, hex);
+
+    // 1. Swept aerodynamic delta fins (with heat-shield bevel & navigation beacon lights)
     for (const sx of [-1, 1]) {
-      path(ctx, [[sx * r * 0.36, -r * 1.05], [sx * r * 0.86, -r * 0.36], [sx * r * 0.8, -r * 0.14], [sx * r * 0.34, -r * 0.46]]);
-      ctx.fillStyle = mix(hex, '#000000', 0.25);
+      // Fin base
+      path(ctx, [
+        [sx * r * 0.36, -r * 1.05],
+        [sx * r * 0.94, -r * 0.32],
+        [sx * r * 0.88, -r * 0.12],
+        [sx * r * 0.34, -r * 0.44],
+      ]);
+      const finGrad = ctx.createLinearGradient(sx * r * 0.36, -r * 1.05, sx * r * 0.94, -r * 0.12);
+      finGrad.addColorStop(0, mix(hex, '#ffffff', 0.25));
+      finGrad.addColorStop(0.5, mix(hex, '#000000', 0.2));
+      finGrad.addColorStop(1, mix(hex, '#000000', 0.65));
+      ctx.fillStyle = finGrad;
       ctx.fill();
+      ctx.strokeStyle = mix(hex, '#000000', 0.55);
       ctx.stroke();
+
+      // Fin leading edge highlight
+      ctx.beginPath();
+      ctx.moveTo(sx * r * 0.36, -r * 1.05);
+      ctx.lineTo(sx * r * 0.94, -r * 0.32);
+      ctx.lineWidth = Math.max(1, r * 0.04);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.stroke();
+
+      // Wingtip navigation beacon lights (red on left/port, cyan/green on right/starboard)
+      circle(ctx, sx * r * 0.91, -r * 0.28, r * 0.05);
+      ctx.fillStyle = sx < 0 ? '#ff3b30' : '#34c759';
+      ctx.fill();
     }
+    outline(ctx, r, hex);
+
+    // 2. Heavy-duty titanium engine bell (exhaust nozzle)
     ctx.beginPath();
-    ctx.moveTo(-r * 0.42, -r * 0.4);
-    ctx.bezierCurveTo(-r * 0.52, -r * 1.3, -r * 0.3, -r * 1.9, 0, -r * 2.3);
-    ctx.bezierCurveTo(r * 0.3, -r * 1.9, r * 0.52, -r * 1.3, r * 0.42, -r * 0.4);
+    ctx.moveTo(-r * 0.24, -r * 0.42);
+    ctx.lineTo(-r * 0.36, -r * 0.2);
+    ctx.quadraticCurveTo(0, -r * 0.14, r * 0.36, -r * 0.2);
+    ctx.lineTo(r * 0.24, -r * 0.42);
     ctx.closePath();
-    ctx.fillStyle = cylinder(ctx, r * 0.46, hex);
+    const bellGrad = ctx.createLinearGradient(-r * 0.36, 0, r * 0.36, 0);
+    bellGrad.addColorStop(0, '#2c3240');
+    bellGrad.addColorStop(0.3, '#737f96');
+    bellGrad.addColorStop(0.7, '#3d4454');
+    bellGrad.addColorStop(1, '#1b1f28');
+    ctx.fillStyle = bellGrad;
+    ctx.fill();
+    ctx.strokeStyle = '#15171e';
+    ctx.stroke();
+
+    // Ribbed cooling rings on nozzle
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.28, r * 0.3, r * 0.07, 0, 0, TAU);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = Math.max(0.8, r * 0.035);
+    ctx.stroke();
+
+    // Superheated glowing nozzle throat interior
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.2, r * 0.34, r * 0.09, 0, 0, TAU);
+    const throatGrad = ctx.createRadialGradient(0, -r * 0.2, 0, 0, -r * 0.2, r * 0.34);
+    throatGrad.addColorStop(0, '#fff9c4');
+    throatGrad.addColorStop(0.4, '#ff9100');
+    throatGrad.addColorStop(0.85, '#d50000');
+    throatGrad.addColorStop(1, '#2c1010');
+    ctx.fillStyle = throatGrad;
+    ctx.fill();
+
+    // 3. Sleek aerodynamic rocket fuselage
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.44, -r * 0.4);
+    ctx.bezierCurveTo(-r * 0.54, -r * 1.3, -r * 0.32, -r * 1.95, 0, -r * 2.36);
+    ctx.bezierCurveTo(r * 0.32, -r * 1.95, r * 0.54, -r * 1.3, r * 0.44, -r * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = cylinder(ctx, r * 0.48, hex);
     ctx.fill();
     ctx.save();
     ctx.clip();
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect(-r, -r * 2.4, r * 2, r * 0.56);
+
+    // Multi-panel structural seams and crisp racing stripes
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+    ctx.fillRect(-r * 0.07, -r * 2.4, r * 0.14, r * 2.1);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fillRect(-r * 0.16, -r * 2.4, r * 0.05, r * 2.1);
+    ctx.fillRect(r * 0.11, -r * 2.4, r * 0.05, r * 2.1);
+
+    // Nosecone heat cap
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 2.05, r * 0.3, r * 0.1, 0, 0, TAU);
+    ctx.fillRect(-r * 0.3, -r * 2.4, r * 0.6, r * 0.35);
+
+    // Micro-rivets along horizontal panel seam
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    for (const rx of [-0.35, -0.22, 0.22, 0.35]) {
+      circle(ctx, rx * r, -r * 0.72, r * 0.022);
+      ctx.fill();
+    }
     ctx.restore();
+    outline(ctx, r, hex);
     ctx.stroke();
-    circle(ctx, 0, -r * 1.25, r * 0.2);
-    ctx.fillStyle = '#bfe8ff';
+
+    // Horizontal fuselage panel seam lines
+    ctx.lineWidth = Math.max(0.8, r * 0.03);
+    ctx.strokeStyle = mix(hex, '#000000', 0.45);
+    for (const py of [-0.72, -1.68]) {
+      ctx.beginPath();
+      ctx.ellipse(0, py * r, r * 0.42 * (py === -0.72 ? 1 : 0.7), r * 0.08, 0, 0, TAU);
+      ctx.stroke();
+    }
+
+    // 4. Reinforced command cockpit porthole (double titanium rim with 6 micro-rivets)
+    const portY = -r * 1.25;
+    const portR = r * 0.24;
+
+    // Outer titanium bezel
+    circle(ctx, 0, portY, portR);
+    const bezelGrad = ctx.createLinearGradient(-portR, portY - portR, portR, portY + portR);
+    bezelGrad.addColorStop(0, '#f0f4f8');
+    bezelGrad.addColorStop(0.5, '#9aa6b8');
+    bezelGrad.addColorStop(1, '#535c6e');
+    ctx.fillStyle = bezelGrad;
     ctx.fill();
-    ctx.lineWidth = Math.max(1, r * 0.08);
-    ctx.strokeStyle = '#e9eef5';
+    ctx.lineWidth = Math.max(0.8, r * 0.035);
+    ctx.strokeStyle = '#2d3340';
     ctx.stroke();
-    circle(ctx, -r * 0.06, -r * 1.31, r * 0.06);
-    ctx.fillStyle = '#ffffff';
+
+    // Micro-rivets around bezel
+    for (let i = 0; i < 6; i++) {
+      const ba = (i * TAU) / 6;
+      circle(ctx, Math.cos(ba) * portR * 0.85, portY + Math.sin(ba) * portR * 0.85, r * 0.022);
+      ctx.fillStyle = '#2d3340';
+      ctx.fill();
+    }
+
+    // Deep-space glass viewport with glowing cockpit HUD telemetry
+    circle(ctx, 0, portY, portR * 0.68);
+    const glassGrad = ctx.createRadialGradient(-portR * 0.2, portY - portR * 0.2, 0, 0, portY, portR * 0.68);
+    glassGrad.addColorStop(0, '#102a54');
+    glassGrad.addColorStop(0.65, '#071226');
+    glassGrad.addColorStop(1, '#020610');
+    ctx.fillStyle = glassGrad;
+    ctx.fill();
+
+    // Illuminated cockpit HUD (miniature cyan radar arc & amber telemetry blip)
+    ctx.beginPath();
+    ctx.arc(0, portY, portR * 0.45, -0.6 * Math.PI, 0.2 * Math.PI);
+    ctx.lineWidth = Math.max(0.6, r * 0.025);
+    ctx.strokeStyle = 'rgba(92, 242, 255, 0.85)';
+    ctx.stroke();
+    circle(ctx, portR * 0.22, portY + portR * 0.15, r * 0.025);
+    ctx.fillStyle = '#ffb300';
+    ctx.fill();
+
+    // High-gloss spherical glass catchlight arc
+    ctx.beginPath();
+    ctx.ellipse(-portR * 0.25, portY - portR * 0.25, portR * 0.28, portR * 0.14, -Math.PI / 4, 0, TAU);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.fill();
+
+    // 5. Nosecone sensor probe needle
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 2.36);
+    ctx.lineTo(0, -r * 2.48);
+    ctx.lineWidth = Math.max(1, r * 0.045);
+    ctx.strokeStyle = '#e0e6ed';
+    ctx.stroke();
+    circle(ctx, 0, -r * 2.48, r * 0.038);
+    ctx.fillStyle = '#5cf2ff';
     ctx.fill();
   },
 
