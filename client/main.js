@@ -1393,8 +1393,16 @@ function closePlayer() {
 
 function openPlayer(btn) {
   const r = btn.getBoundingClientRect();
+  const popWidth = Math.min(280, window.innerWidth - 16);
+  let right = window.innerWidth - r.right;
+  // If aligning to button right pushes popover off left edge (left < 8px), clamp right:
+  if (window.innerWidth - right - popWidth < 8) {
+    right = window.innerWidth - popWidth - 8;
+  }
+  right = Math.max(8, right);
   els.playerPop.style.top = `${r.bottom + 6}px`;
-  els.playerPop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  els.playerPop.style.right = `${Math.round(right)}px`;
+  els.playerPop.style.left = 'auto';
   els.playerPop.style.maxHeight = `${window.innerHeight - r.bottom - 14}px`; // scrolls rather than running off-screen
   els.playerPop.classList.remove('hidden');
   btn.setAttribute('aria-expanded', 'true');

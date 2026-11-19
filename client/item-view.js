@@ -373,19 +373,11 @@ function drawOneDice(c, w, h, style, now) {
     c.globalAlpha = 0.35 * (1 - Math.min(0.6, hop / (size * 1.2)));
     c.fillStyle = '#000';
     c.beginPath();
-    c.ellipse(x, h / 2 + size * 0.62, size * 0.44 * (1 - hop / (size * 2)), size * 0.09, 0, 0, Math.PI * 2);
+    c.ellipse(x, h / 2 + size * 0.52, size * 0.44 * (1 - hop / (size * 2)), size * 0.09, 0, 0, Math.PI * 2);
     c.fill();
     c.restore();
-    // The last few frames fade the resting dice in over the 3D cube (which stays solid
-    // underneath), so the landing doesn't snap from one drawing to the other.
-    const settle = tumbling ? Math.max(0, (p - 0.86) / 0.14) : 1;
-    if (settle < 1) drawTumblingDice(c, x, h / 2 - hop, size * grow, face, style, left, roll.axes[i], { t: now });
-    if (settle > 0) {
-      c.save();
-      c.globalAlpha *= settle;
-      drawDice(c, x, h / 2 - hop, size, face, style, { t: now });
-      c.restore();
-    }
+
+    drawTumblingDice(c, x, h / 2 - hop, size * grow, face, style, tumbling ? left : 0, roll ? roll.axes[i] : [0, 0], { t: now });
   }
 }
 

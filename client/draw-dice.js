@@ -61,10 +61,6 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
     fill = ctx.createLinearGradient(-50, -50, 50, 50);
     fill.addColorStop(0, st.shine);
     fill.addColorStop(1, st.face);
-  } else {
-    fill = ctx.createLinearGradient(-50, -50, 50, 50);
-    fill.addColorStop(0, mix(st.face, '#ffffff', 0.09));
-    fill.addColorStop(1, mix(st.face, '#000000', 0.07));
   }
   if (glow) {
     ctx.shadowColor = glow;
@@ -564,16 +560,8 @@ export const PIP_STYLES = {
     ctx.shadowBlur = 0;
   },
   round(ctx, x, y, r, st, i) {
-    const col = st.pipColors ? st.pipColors[i % st.pipColors.length] : st.pip;
-    const g = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.08, x, y, r);
-    g.addColorStop(0, mix(col, '#ffffff', 0.28));
-    g.addColorStop(0.6, col);
-    g.addColorStop(1, mix(col, '#000000', 0.38));
+    ctx.fillStyle = st.pipColors ? st.pipColors[i % st.pipColors.length] : st.pip;
     circle(ctx, x, y, r);
-    ctx.fillStyle = g;
-    ctx.fill();
-    circle(ctx, x - r * 0.28, y - r * 0.28, r * 0.22);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
     ctx.fill();
   },
   // Lit from inside (neon, galaxy, midnight)
@@ -687,14 +675,6 @@ export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = 
   ctx.save();
   ctx.globalAlpha *= alpha;
   ctx.translate(cx, cy);
-  const shadowG = ctx.createRadialGradient(0, 12 * k, 20 * k, 0, 14 * k, 68 * k);
-  shadowG.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
-  shadowG.addColorStop(0.55, 'rgba(0, 0, 0, 0.16)');
-  shadowG.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = shadowG;
-  ctx.beginPath();
-  ctx.ellipse(0, 14 * k, 58 * k, 46 * k, 0, 0, TAU);
-  ctx.fill();
   ctx.scale(k, k);
   ctx.lineJoin = 'round';
   const prop = fx && DICE_PROPS[st.prop];
