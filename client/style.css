@@ -1650,8 +1650,8 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   #game[data-phase='lobby'] .panel-head { grid-area: head; }
   #game[data-phase='lobby'] #room-info { grid-area: info; font-size: 15px; }
   #game[data-phase='lobby'] .lobby-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
-  #game[data-phase='lobby'] .lobby-main { grid-area: main; overflow-y: auto; }
-  #game[data-phase='lobby'] .lobby-side { grid-area: side; }
+  #game[data-phase='lobby'] .lobby-main { grid-area: main; overflow-y: auto; scrollbar-width: thin; }
+  #game[data-phase='lobby'] .lobby-side { grid-area: side; overflow-y: auto; scrollbar-width: thin; }
   #game[data-phase='lobby'] .lobby-col > * { flex-shrink: 0; }
   #game[data-phase='lobby'] #drawer { padding: 14px; gap: 12px; }
   #game[data-phase='lobby'] .panel .chat { flex: 1 1 auto; min-height: 200px; }
@@ -1660,6 +1660,20 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   #game[data-phase='lobby'] .seats .seat { padding: 14px; }
   #game[data-phase='lobby'] .mode-picker .btn { padding: 10px 4px; font-size: 14px; }
   #game[data-phase='lobby'] #start-btn { padding: 14px; font-size: 16px; }
+}
+
+/* Short / compact PC screens (e.g. laptop 768p, Discord activities, short windows):
+   tighter padding and gaps so chat and seats fit on screen without being unnecessarily cut off */
+@media (min-aspect-ratio: 1/1) and (min-width: 900px) and (max-height: 620px) {
+  #game[data-phase='lobby'] { padding: 10px 16px; }
+  #game[data-phase='lobby'] .panel {
+    padding: 12px 18px;
+    gap: 10px 18px;
+  }
+  #game[data-phase='lobby'] .lobby-col { gap: 10px; }
+  #game[data-phase='lobby'] #drawer { padding: 10px 12px; gap: 8px; }
+  #game[data-phase='lobby'] .panel .chat { min-height: 150px; }
+  #game[data-phase='lobby'] .seats .seat { padding: 10px 12px; }
 }
 
 /* Buttons at the end of a settings row keep their size: the text beside them wraps instead */
@@ -2057,7 +2071,7 @@ button, .btn { touch-action: manipulation; }
 /* ---------- scroll areas ----------
    Reaching the end of a list doesn't drag the whole game along (on phones the activity would
    bounce or scroll behind the list). */
-:is(#menu, .room-list, .player-pop, .support-card, .shop-grid, .howto-body, .panel, .chat-log, .lb-body, .modal-card, .friend-list, .set-body, .item-stickers, .item-card, #game[data-phase='lobby'] .lobby-main, .coin-card, #drawer, .people-list) {
+:is(#menu, .room-list, .player-pop, .support-card, .shop-grid, .howto-body, .panel, .chat-log, .lb-body, .modal-card, .friend-list, .set-body, .item-stickers, .item-card, #game[data-phase='lobby'] .lobby-main, #game[data-phase='lobby'] .lobby-side, .coin-card, #drawer, .people-list) {
   overscroll-behavior: contain;
 }
 /* Coin counts and prices: every digit the same width, so a changing number doesn't jitter */
