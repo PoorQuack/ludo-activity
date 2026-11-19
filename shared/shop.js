@@ -113,6 +113,7 @@ export const SHOP_ITEMS = [
   { id: 'emote-blepcat', type: 'emote', name: 'Blep cat', rarity: 'common', img: '/emotes/cats/blepcat.png', slug: 'blepcat', price: 150 },
   { id: 'emote-cathello', type: 'emote', name: 'Hello cat', rarity: 'common', img: '/emotes/cats/cathello.webp', slug: 'cathello', price: 150 },
   { id: 'emote-cozykitten', type: 'emote', name: 'Cozy kitten', rarity: 'common', img: '/emotes/cats/cozykitten.png', slug: 'cozykitten', price: 150 },
+  { id: 'emote-buffcat', type: 'emote', name: 'Buff cat', rarity: 'common', img: '/emotes/cats/buffcat.png', slug: 'buffcat', price: 150 },
   { id: 'emote-dontjoke', type: 'emote', name: "Don't even joke lad", rarity: 'common', img: '/emotes/meme/dontjoke.webp', slug: 'dontjoke', price: 150 },
   { id: 'emote-wadafak', type: 'emote', name: 'Wadafak', rarity: 'common', img: '/emotes/meme/wadafak.png', slug: 'wadafak', price: 150 },
   { id: 'emote-eatingchips', type: 'emote', name: 'Eating chips', rarity: 'common', img: '/emotes/meme/eating-chips.gif', slug: 'eatingchips', price: 150 },
@@ -385,4 +386,4 @@ export const PAID_ITEMS = Object.fromEntries([...COIN_PACKS.map((p) => [p.id, { 
 // Shop items new in the latest update: tagged "New" in the shop until the player has looked at
 // them (on each device). Change this list with each update that adds items; items added later
 // than a player's first visit are tagged automatically anyway.
-export const NEW_ITEMS = new Set(['emote-eatingchips', 'emote-cozykitten', 'emote-wadafak', 'emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
+export const NEW_ITEMS = new Set(['emote-buffcat', 'emote-eatingchips', 'emote-cozykitten', 'emote-wadafak', 'emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
