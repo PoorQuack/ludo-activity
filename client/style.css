@@ -125,28 +125,53 @@ html, body {
 }
 .coins.small .coin { width: 13px; height: 13px; }
 
-/* ---------- main menu ---------- */
-/* Flat felt, a top bar, the player's own board on the left (wide screens only) and one
-   panel of actions on the right. No cards-in-cards: sections are split by thin rules. */
+/* ---------- main menu: the hub ---------- */
+/* A top bar (you and your level, Gold Coins and VIP Gems, inbox and settings), the two ways to play
+   as big bevelled cards, three tiles under them, then the rooms. A dock of five tabs: along the
+   bottom on phones (thumb reach), down the left on wide screens, where the tab's panel also sits in
+   a column on the right. Walnut and parchment, the Ludo red; nothing glows. */
 #menu {
-  display: flex;
-  flex-direction: column;
-  padding: 24px;
+  display: block;
+  padding: 0;
   overflow-y: auto;
   animation: menu-in 0.2s ease-out; /* a plain fade: no rise, no stagger */
 }
 @keyframes menu-in { from { opacity: 0; } }
-.menu-shell { width: min(440px, 100%); margin: auto; display: flex; flex-direction: column; gap: 18px; }
-
-.menu-bar {
+.hub {
+  --dock-h: 66px;
+  min-height: 100%;
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 14px calc(var(--dock-h) + 18px + env(safe-area-inset-bottom, 0px));
+  width: min(560px, 100%);
+  margin: 0 auto;
+}
+
+/* ---- top bar ---- */
+.hub-top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 14px;
+  gap: 10px;
+  padding-bottom: 12px;
   border-bottom: 2px solid transparent;
   border-image: var(--ludo-stripe) 1;
 }
+.hub-me { justify-self: start; }
+.hub-avatar { position: relative; display: inline-flex; flex: none; }
+.level-badge {
+  position: absolute; right: -6px; bottom: -4px;
+  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px;
+  display: grid; place-items: center;
+  font-size: 10.5px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
+  color: #2b1d05; background: var(--gold); box-shadow: 0 0 0 2px var(--bg);
+}
+.hub-wallet { justify-self: center; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hub-wallet .coins, .hub-wallet .gems { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hub-wallet .coins { border: 0; color: inherit; font-family: inherit; cursor: pointer; padding: 5px 10px 5px 6px; }
+.hub-wallet .coin-plus { width: 22px; height: 22px; font-size: 17px; margin-left: 4px; }
+.hub-icons { justify-self: end; display: flex; align-items: center; gap: 6px; }
 .wordmark { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .wordmark h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1; letter-spacing: -0.01em; }
 /* The four bases, in their places on the Classic board */
@@ -159,41 +184,19 @@ html, body {
 .menu-tools { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .menu-name { margin: 0; min-width: 0; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Profile card, top right */
-.profile-card { display: flex; align-items: center; gap: 9px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); flex: none; max-width: 220px; }
-.profile-card .avatar { width: 30px; height: 30px; }
+/* You: picture, level, name */
+.profile-card { display: flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); min-width: 0; max-width: 220px; cursor: pointer; }
+.profile-card .avatar { width: 32px; height: 32px; }
 .profile-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
-.profile-text small { font-size: 11px; color: var(--muted); white-space: nowrap; }
-@media (max-width: 879px) {
-  .profile-card {
-    flex: none;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    max-width: none;
-  }
-  .profile-card .profile-text { display: none; }
-  .profile-card .avatar { width: 28px; height: 28px; }
-  .profile-card.has-new::after { inset-inline-start: auto; inset-inline-end: -1px; top: -1px; }
-}
+.profile-text small { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Round profile pictures (Discord avatars, or initials for guests) */
 .avatar { width: 28px; height: 28px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; background: var(--panel-2); color: var(--text); font-weight: 800; font-size: 12px; position: relative; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .menu-tools .icon-btn {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--muted);
+  width: 36px; height: 36px; padding: 0; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line);
 }
 @media (hover: hover) and (pointer: fine) { .menu-tools .icon-btn:hover { color: var(--text); background: var(--panel); } }
@@ -202,45 +205,152 @@ html, body {
 /* Line icons (inline SVG, 1.5px stroke in the text colour) */
 .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
-.menu-main { display: flex; flex-direction: column; gap: 16px; }
-.menu-hero { display: none; margin: 0; }
-.menu-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-/* Two columns on big screens (play | friends and rewards); one column, in this order, below that */
-.menu-col { display: contents; }
-#my-room { order: 0; } #online-strip { order: 1; } .menu-panel { order: 2; } #today-card { order: 3; } #deal-card { order: 4; }
-#lb-card { order: 5; } #friends-card { order: 6; } #invite-card { order: 7; }
+/* ---- centre stage ---- */
+.hub-stage { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.hero-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* Bevelled, like a thick printed card: a light top edge, a darker lip underneath, pressed in on tap */
+.hero-card {
+  --c1: #ea5a45; --c2: #b8342a; --lip: #7d2019; --ink: var(--on-accent);
+  position: relative; overflow: hidden;
+  min-height: 156px; padding: 14px; border: 0; border-radius: 18px;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 4px;
+  color: var(--ink); font: inherit; text-align: start; cursor: pointer;
+  background: linear-gradient(165deg, var(--c1), var(--c2));
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 6px 0 var(--lip), 0 12px 22px rgba(0, 0, 0, 0.35);
+  margin-bottom: 6px;
+  transition: transform 0.12s var(--ease-out), box-shadow 0.12s var(--ease-out);
+}
+.hero-card:active { transform: translateY(4px); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.28), inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 2px 0 var(--lip), 0 5px 10px rgba(0, 0, 0, 0.3); }
+@media (hover: hover) and (pointer: fine) { .hero-card:hover { filter: brightness(1.06); } }
+.hero-card:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.hero-power { --c1: #f6c94e; --c2: #d99a1c; --lip: #8a5d0c; --ink: #2b1d05; }
+.hero-text { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; }
+.hero-text b { font-family: var(--display); font-size: clamp(19px, 6vw, 25px); font-weight: 700; letter-spacing: 0.06em; line-height: 1; }
+.hero-text small { font-size: 12.5px; font-weight: 600; opacity: 0.85; line-height: 1.25; }
+.hero-go { position: absolute; top: 12px; right: 12px; z-index: 1; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.92); }
+.hero-go svg { width: 15px; height: 15px; fill: var(--c2); stroke: var(--c2); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.hero-classic .hero-go svg { stroke: none; margin-left: 2px; }
+.hero-power .hero-go svg { fill: none; }
+/* the cards' little pictures, drawn in CSS */
+.hero-art { position: absolute; inset: 0; pointer-events: none; }
+.ha-board { position: absolute; top: 18px; left: 16px; width: 64px; height: 64px; border-radius: 10px; transform: rotate(-10deg);
+  background: conic-gradient(var(--ludo-green) 0 25%, var(--ludo-yellow) 0 50%, var(--ludo-blue) 0 75%, var(--ludo-red) 0); box-shadow: 0 0 0 4px #f6eee2, 0 6px 10px rgba(0, 0, 0, 0.25); opacity: 0.95; }
+.ha-pawn { position: absolute; width: 16px; height: 22px; background: #f6eee2; clip-path: path('M8 0a5 5 0 0 1 3.4 8.7L14 18h2v4H0v-4h2l2.6-9.3A5 5 0 0 1 8 0z'); }
+.ha-pawn.p1 { top: 30px; left: 92px; transform: rotate(8deg); }
+.ha-pawn.p2 { top: 52px; left: 110px; opacity: 0.8; }
+.ha-die { position: absolute; top: 74px; left: 78px; width: 22px; height: 22px; border-radius: 6px; background: #f6eee2 radial-gradient(circle, #2b1d05 2.2px, transparent 2.6px) center / 100% 100% no-repeat; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25); transform: rotate(14deg); }
+.ha-bolt { position: absolute; top: 14px; left: 18px; width: 42px; height: 62px; background: #fff7e0; clip-path: polygon(55% 0, 10% 58%, 45% 58%, 30% 100%, 92% 36%, 55% 36%, 75% 0); filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.2)); }
+.ha-card { position: absolute; width: 38px; height: 52px; border-radius: 7px; background: #2b1d05; box-shadow: inset 0 0 0 2px rgba(255, 247, 224, 0.75); }
+.ha-card::after { content: '✦'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--gold); font-size: 18px; }
+.ha-card.c1 { top: 22px; left: 72px; transform: rotate(-8deg); }
+.ha-card.c2 { top: 30px; left: 100px; transform: rotate(10deg); opacity: 0.9; }
 
-/* Wide screens: the board on the left, the actions on the right */
-@media (min-width: 880px) {
-  #menu { padding: 20px 24px; }
-  .menu-shell { width: min(880px, 100%); gap: 24px; }
-  .menu-main {
+/* three tiles under the cards */
+.tile-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.hub-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 92px; padding: 10px 6px; border: 0; border-radius: 14px;
+  color: var(--text); font: inherit; text-align: center; cursor: pointer;
+  background: var(--panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px var(--line), 0 4px 0 #0e0b08;
+  transition: transform 0.12s var(--ease-out), box-shadow 0.12s var(--ease-out);
+}
+.hub-tile:active { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px var(--line), 0 1px 0 #0e0b08; }
+@media (hover: hover) and (pointer: fine) { .hub-tile:hover { background: var(--panel-2); } }
+.hub-tile .ico { width: 26px; height: 26px; stroke-width: 1.6; margin-bottom: 2px; }
+.hub-tile b { font-size: 13.5px; font-weight: 800; line-height: 1.15; }
+.hub-tile small { font-size: 11.5px; color: var(--muted); }
+.tile-stakes .ico { color: var(--gold); }
+.tile-friends .ico { color: var(--ludo-green); }
+.tile-bots .ico { color: var(--ludo-blue); }
+
+/* ---- the dock ---- */
+.hub-dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  height: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px));
+  padding: 0 6px env(safe-area-inset-bottom, 0px);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.35);
+}
+.hub-logo { display: none; }
+.dock-tab {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border: 0; background: none; color: var(--muted); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
+  border-radius: 12px; margin: 6px 2px;
+  transition: color 0.15s var(--ease-out), background 0.15s var(--ease-out);
+}
+.dock-tab .ico { width: 23px; height: 23px; stroke-width: 1.6; }
+.dock-tab.active { color: var(--text); background: var(--panel-2); }
+.dock-tab.active .ico { color: var(--accent); }
+.dock-vip .ico { color: var(--gem); }
+.dock-shop .ico { color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .dock-tab:hover { color: var(--text); } }
+.dock-dot, .dock-shop.has-new::after { position: absolute; top: 6px; right: calc(50% - 18px); width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--panel); }
+.dock-shop.has-new::after { content: ''; }
+.dock-dot.hidden { display: none; }
+
+/* ---- the dock's panels ---- */
+/* Phones: the hub, or one panel in its place (with a Back button) */
+.hub-side { display: none; flex-direction: column; gap: 14px; min-width: 0; }
+.hub-panel { display: none; flex-direction: column; gap: 14px; }
+.panel-back { display: flex; align-items: center; gap: 12px; }
+.panel-back .btn { width: auto; flex: none; }
+.panel-title { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 600; }
+#menu:not([data-panel='']) .hub-stage { display: none; }
+#menu:not([data-panel='']) .hub-side { display: flex; }
+#menu[data-panel='quests'] [data-panel-for='quests'],
+#menu[data-panel='friends'] [data-panel-for='friends'],
+#menu[data-panel='ranking'] [data-panel-for='ranking'] { display: flex; }
+.menu-hero { display: none; margin: 0; }
+
+/* ---- wide screens: the dock down the left, the panel in a column on the right ---- */
+@media (min-width: 900px) {
+  .hub {
+    width: min(1480px, 100%);
     display: grid;
-    grid-template-columns: minmax(0, 420px) minmax(340px, 400px);
-    justify-content: space-between;
+    grid-template-columns: 92px minmax(0, 1fr) minmax(320px, 400px);
+    grid-template-rows: auto 1fr;
+    grid-template-areas: 'dock top top' 'dock stage side';
     align-items: start;
-    gap: 40px;
+    gap: 18px 26px;
+    padding: 18px 28px 28px 0;
   }
+  .hub-top { grid-area: top; }
+  .hub-stage { grid-area: stage; }
+  .hub-side { grid-area: side; display: flex; }
+  .hub-dock {
+    grid-area: dock; position: sticky; top: 0; align-self: stretch;
+    height: 100vh; max-height: 100%;
+    display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+    padding: 18px 10px; margin: -18px 0 -28px;
+    border-top: 0; border-right: 1px solid var(--line); box-shadow: none;
+    background: var(--panel);
+  }
+  .hub-logo { display: flex; flex-direction: column; gap: 6px; align-items: center; margin-bottom: 14px; }
+  .hub-logo h1 { font-size: 20px; }
+  .dock-tab { flex: none; height: 68px; margin: 0; font-size: 11.5px; }
+  .dock-dot, .dock-shop.has-new::after { top: 9px; }
+  /* the hub stays; the side column shows the chosen panel (Quests to start with) */
+  #menu:not([data-panel='']) .hub-stage { display: flex; }
+  .hub-panel[data-panel-for='quests'] { display: flex; }
+  #menu[data-panel='friends'] [data-panel-for='quests'], #menu[data-panel='ranking'] [data-panel-for='quests'] { display: none; }
+  .panel-back .btn { display: none; }
+  .panel-title { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .hero-card { min-height: 190px; padding: 18px; }
+  .hero-text b { font-size: 32px; }
+  .hero-text small { font-size: 14px; }
+  .ha-board { width: 84px; height: 84px; top: 22px; left: 22px; }
+  .ha-pawn.p1 { top: 36px; left: 124px; } .ha-pawn.p2 { top: 64px; left: 146px; } .ha-die { top: 98px; left: 104px; width: 26px; height: 26px; }
+  .ha-bolt { width: 52px; height: 78px; } .ha-card.c1 { left: 90px; } .ha-card.c2 { left: 124px; }
+  .hub-tile { min-height: 104px; flex-direction: row; gap: 12px; justify-content: flex-start; padding: 14px 16px; text-align: start; }
+  .hub-tile .ico { margin: 0; width: 30px; height: 30px; }
+  .hub-tile b, .hub-tile small { display: block; }
+  .tile-text { display: flex; flex-direction: column; }
   .menu-hero { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 }
-/* Widescreen PCs: three columns across the whole window (board | play | friends and rewards) */
-@media (min-width: 1200px) {
-  #menu { padding: 22px 32px; }
-  .menu-shell { width: min(1560px, 100%); }
-  .menu-main {
-    grid-template-columns: minmax(360px, 1.2fr) minmax(340px, 1fr) minmax(320px, 0.9fr);
-    justify-content: stretch;
-    gap: 28px;
-  }
-  .menu-side { display: contents; }
-  .menu-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-  .wordmark h1 { font-size: 34px; }
-  .menu-shell .room-info, .menu-shell .quest-top, .invite-text { font-size: 14px; }
-}
-@media (min-width: 1600px) {
-  .menu-main { gap: 40px; }
-  .menu-shell { font-size: 15.5px; }
-}
+@media (min-width: 900px) and (max-width: 1180px) { .hub-tile { flex-direction: column; justify-content: center; text-align: center; gap: 4px; } }
 #menu-board { display: block; max-width: 100%; }
 .menu-hero figcaption { font-size: 12px; color: var(--muted); }
 .menu-hero figcaption b { color: var(--text); font-weight: 600; }
@@ -263,9 +373,9 @@ html, body {
 .sec-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Buttons on the menu change colour on hover instead of brightening */
-@media (hover: hover) and (pointer: fine) { .menu-shell .btn:hover { filter: none; } }
-.menu-shell .btn.primary { border-radius: 10px; }
-@media (hover: hover) and (pointer: fine) { .menu-shell .btn.primary:not(:disabled):hover { background: #f1988a; } }
+@media (hover: hover) and (pointer: fine) { #menu .btn:hover { filter: none; } }
+#menu .btn.primary { border-radius: 10px; }
+@media (hover: hover) and (pointer: fine) { #menu .btn.primary:not(:disabled):hover { background: #f1988a; } }
 .btn.quiet { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
 @media (hover: hover) and (pointer: fine) { .btn.quiet:not(:disabled):hover { background: var(--panel); } }
 
@@ -374,20 +484,8 @@ html, body {
 @media (hover: hover) and (pointer: fine) { #my-room .btn:not(.primary):not(:disabled):hover { background: var(--panel-2); } }
 
 /* Phones: everything you tap is at least 40px tall */
-@media (max-width: 879px) {
-  #menu { padding: 16px; }
-  .menu-shell .btn, .code-form input { min-height: 40px; }
-  .menu-tools .icon-btn { width: 40px; height: 40px; }
-  .menu-tools .shop-btn {
-    min-height: 36px;
-    height: 36px;
-    padding: 0 12px;
-    font-size: 13px;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
+@media (max-width: 899px) {
+  #menu .btn, .code-form input { min-height: 40px; }
   .room-list li { gap: 10px; }
 }
 
@@ -1376,24 +1474,15 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   #game { padding: 20px; gap: 20px; }
 }
 
-/* Small phones: the top bar fits on one line (logo, coins, Shop, music, settings, you) */
+/* Small phones: the hub's top bar on one line (you, coins, gems, music, inbox, settings) */
 @media (max-width: 480px) {
-  .menu-bar { gap: 8px; }
-  .wordmark { gap: 7px; }
-  .wordmark h1 { font-size: 24px; }
-  .wordmark-dots { grid-template-columns: 7px 7px; gap: 2px; }
-  .wordmark-dots i { width: 7px; height: 7px; }
-  .menu-tools { gap: 6px; }
-  .menu-tools .icon-btn { width: 36px; height: 36px; }
-  .profile-card { width: 36px; height: 36px; }
-  .profile-card .avatar { width: 30px; height: 30px; }
-  .menu-tools .shop-btn {
-    min-height: 34px;
-    height: 34px;
-    padding: 0 10px;
-    font-size: 12px;
-    line-height: 1;
-  }
+  .hub-top { gap: 6px; }
+  .hub-me .profile-text { display: none; }
+  .hub-me { padding: 3px; }
+  .menu-tools .icon-btn { width: 34px; height: 34px; }
+  .hub-wallet { gap: 4px; }
+  .hub-wallet .coins, .hub-wallet .gems { font-size: 12.5px; padding: 4px 8px 4px 5px; }
+  .hub-wallet .gems { padding-right: 3px; }
 }
 .daily-text .btn { width: auto; padding-left: 16px; padding-right: 16px; }
 .friend-list li .btn { width: auto; flex: none; min-height: 0; padding: 6px 12px; font-size: 12.5px; }
@@ -1882,15 +1971,10 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 @media (hover: hover) and (pointer: fine) { .link-btn:hover { color: #f4b1a7; } }
 .lb-empty { margin: 4px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 
-/* Phones: the top bar has more in it now */
-@media (max-width: 879px) {
+/* Phones: How to play is in Settings → Help, to leave room in the top bar */
+@media (max-width: 899px) {
+  .hub-icons [data-go='howto'] { display: none; }
   .menu-tools { gap: 6px; }
-  .menu-coins { padding: 4px 8px 4px 4px; font-size: 12.5px; }
-  .menu-coins .coin { width: 14px; height: 14px; }
-}
-@media (max-width: 420px) {
-  .menu-tools [data-go='howto'] { display: none; } /* (still in Settings → Help) */
-  .wordmark h1 { font-size: 24px; }
 }
 
 /* ---------- profile: badges, title, pins ---------- */
@@ -2127,3 +2211,179 @@ button, .btn { touch-action: manipulation; }
 .room-friends-head { display: flex; align-items: center; justify-content: space-between; }
 .room-friends-head h2 { margin: 0; font-size: 16px; }
 .room-friends-card .friend-list { max-height: 50vh; overflow-y: auto; }
+
+/* ---------- VIP Gems ---------- */
+/* Gold Coins are earned; VIP Gems are bought (Discord packs) and pay for frames and Legendary
+   items. A cut jade gem, so it never reads as a coin next to one. */
+:root { --gem: #37c8b0; --gem-deep: #128a78; }
+.gem {
+  width: 16px; height: 16px; flex: none; display: inline-block;
+  background: linear-gradient(160deg, #c9fff3 0%, var(--gem) 38%, var(--gem-deep) 100%);
+  clip-path: polygon(50% 100%, 0 38%, 22% 6%, 78% 6%, 100% 38%);
+  position: relative;
+}
+.gem::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.55) 48%, transparent 66%); clip-path: polygon(50% 100%, 22% 38%, 50% 6%, 78% 38%); opacity: 0.7; }
+.gem.big { width: 30px; height: 30px; }
+.gems {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 7px; border-radius: 99px;
+  background: var(--panel-2); font-size: 14px;
+  box-shadow: inset 0 0 0 1px rgba(55, 200, 176, 0.28);
+}
+.gems.with-plus { padding-right: 4px; }
+.gems .coin-plus { color: #062a24; background: linear-gradient(180deg, #8ff0dd, var(--gem)); box-shadow: 0 2px 0 var(--gem-deep); }
+.gems .coin-plus:active { box-shadow: 0 1px 0 var(--gem-deep); }
+.btn.gem-buy, .item .btn.buy.gem-buy { box-shadow: inset 0 0 0 1px rgba(55, 200, 176, 0.45); }
+.btn.gem-buy .gem { width: 13px; height: 13px; margin-right: 4px; vertical-align: -1px; }
+.item .btn.buy .gem { width: 13px; height: 13px; margin-right: 4px; vertical-align: -1px; }
+.item-price .gem { width: 18px; height: 18px; }
+.vip-banner {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(100deg, rgba(55, 200, 176, 0.14), rgba(55, 200, 176, 0.03) 60%), var(--panel);
+  box-shadow: inset 0 0 0 1px rgba(55, 200, 176, 0.3);
+}
+.vip-banner > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vip-banner small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.vip-banner .btn { width: auto; flex: none; }
+
+/* ---------- profile frames (VIP) ---------- */
+/* On any .avatar (or the shop's .pf preview) with data-frame. Drawn outside the picture with
+   box-shadow and ::before/::after, so the avatar keeps its size and layout everywhere. */
+.pf { --pf: 40px; width: var(--pf); height: var(--pf); border-radius: 50%; position: relative; display: inline-flex; flex: none; }
+.pf .pf-face { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; display: block; object-fit: cover; }
+.pf .pf-blank { background: radial-gradient(circle at 50% 38%, #8c7a66 0 18%, transparent 19%), radial-gradient(ellipse at 50% 92%, #8c7a66 0 34%, transparent 35%), var(--panel-2); }
+.frame-preview { display: grid; place-items: center; height: 100px; }
+.frame-stage { width: 100%; height: 100%; display: grid; place-items: center; }
+.avatar[data-frame], .pf[data-frame] { overflow: visible; }
+.avatar[data-frame] img { border-radius: 50%; }
+.avatar[data-frame]::before, .pf[data-frame]::before, .avatar[data-frame]::after, .pf[data-frame]::after { content: ''; position: absolute; pointer-events: none; }
+/* Walnut: carved wood with a brass rim */
+[data-frame='frame-bronze'] { box-shadow: 0 0 0 2px #c79a4a, 0 0 0 5px #5a3b22, 0 0 0 6px #8a6238; }
+/* Gold: polished, with a shine sweeping round */
+[data-frame='frame-gold'] { box-shadow: 0 0 0 2px #fff0b0, 0 0 0 5px var(--gold), 0 0 0 6px #a5760d; }
+[data-frame='frame-gold']::before { inset: -6px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 70%, rgba(255, 255, 255, 0.85) 78%, transparent 86%); -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 5px), #000 calc(100% - 4px)); mask: radial-gradient(closest-side, transparent calc(100% - 5px), #000 calc(100% - 4px)); animation: pf-spin 3.2s linear infinite; }
+/* Laurel: two gold branches of leaves around the sides and bottom */
+[data-frame='frame-laurel'] { box-shadow: 0 0 0 2px #e9c86a; }
+[data-frame='frame-laurel']::before { inset: -24%; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='%23e2b640' stroke='%23a5760d' stroke-width='.6'><ellipse cx='13' cy='58' rx='3.2' ry='7' transform='rotate(-20 13 58)'/><ellipse cx='17' cy='70' rx='3.2' ry='7' transform='rotate(-38 17 70)'/><ellipse cx='25' cy='80' rx='3.2' ry='7' transform='rotate(-55 25 80)'/><ellipse cx='35' cy='88' rx='3.2' ry='7' transform='rotate(-72 35 88)'/><ellipse cx='10' cy='45' rx='3.2' ry='7' transform='rotate(-5 10 45)'/><ellipse cx='11' cy='32' rx='3.2' ry='7' transform='rotate(10 11 32)'/><ellipse cx='87' cy='58' rx='3.2' ry='7' transform='rotate(20 87 58)'/><ellipse cx='83' cy='70' rx='3.2' ry='7' transform='rotate(38 83 70)'/><ellipse cx='75' cy='80' rx='3.2' ry='7' transform='rotate(55 75 80)'/><ellipse cx='65' cy='88' rx='3.2' ry='7' transform='rotate(72 65 88)'/><ellipse cx='90' cy='45' rx='3.2' ry='7' transform='rotate(5 90 45)'/><ellipse cx='89' cy='32' rx='3.2' ry='7' transform='rotate(-10 89 32)'/></g><path d='M44 94q6 3 12 0' fill='none' stroke='%23a5760d' stroke-width='2'/></svg>") center / 100% 100% no-repeat; }
+/* Flame: a ring of fire that flickers */
+[data-frame='frame-flame'] { box-shadow: 0 0 0 2px #ffd36a, 0 0 0 4px #e0503d; }
+[data-frame='frame-flame']::before { inset: -9px; border-radius: 50%; background: conic-gradient(#ff7a2a, #ffd36a, #e0503d, #ff9b3a, #ffd36a, #e0503d, #ff7a2a); -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 8px), #000 calc(100% - 7px)); mask: radial-gradient(closest-side, transparent calc(100% - 8px), #000 calc(100% - 7px)); filter: blur(1.5px); animation: pf-flicker 1.4s ease-in-out infinite alternate, pf-spin 6s linear infinite; }
+/* Crown: jewelled gold, with a little crown on top that glints */
+[data-frame='frame-crown'] { box-shadow: 0 0 0 2px #fff0b0, 0 0 0 5px var(--gold), 0 0 0 6px #a5760d, 0 0 0 8px rgba(224, 80, 61, 0.85); }
+[data-frame='frame-crown']::after { width: 62%; height: 36%; left: 19%; top: -32%; background: linear-gradient(180deg, #fff3b8, var(--gold) 50%, #b8850f); clip-path: polygon(0 100%, 0 25%, 22% 62%, 50% 0, 78% 62%, 100% 25%, 100% 100%); animation: pf-glint 2.6s ease-in-out infinite; }
+@keyframes pf-spin { to { transform: rotate(360deg); } }
+@keyframes pf-flicker { from { opacity: 0.75; } to { opacity: 1; } }
+@keyframes pf-glint { 0%, 70%, 100% { filter: brightness(1); } 80% { filter: brightness(1.6); } }
+@media (prefers-reduced-motion: reduce) { [data-frame]::before, [data-frame]::after { animation: none !important; } }
+.seat-avatar { width: 22px; height: 22px; font-size: 10px; margin-right: 2px; }
+
+/* gem packs: the same little pile, in gems */
+.coin-pile .gem { position: absolute; bottom: 0; width: 26px; height: 26px; }
+.coin-pile .gem:nth-child(1) { left: 0; } .coin-pile .gem:nth-child(2) { left: 14px; bottom: 6px; } .coin-pile .gem:nth-child(3) { left: 28px; }
+.coin-pile .gem:nth-child(4) { left: 7px; bottom: 20px; } .coin-pile .gem:nth-child(5) { left: 22px; bottom: 24px; } .coin-pile .gem:nth-child(6) { left: 38px; bottom: 12px; }
+.pack-coins .gem { width: 16px; height: 16px; }
+
+/* ---------- stakes rooms ---------- */
+.stake-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, 0.08); background: var(--panel-2); }
+.stake-card.on { border-color: rgba(242, 191, 63, 0.55); background: linear-gradient(100deg, rgba(242, 191, 63, 0.12), transparent 70%), var(--panel-2); }
+.stake-card.hidden { display: none; }
+.stake-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.stake-text small { font-size: 12px; color: var(--muted); }
+.stake-options { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.stake-options button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 4px 10px; border-radius: 99px; border: 0; background: var(--panel); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s var(--ease-out), transform 0.1s var(--ease-out); }
+.stake-options button .coin { width: 12px; height: 12px; }
+.stake-options button.on { background: var(--gold); color: #2b1d05; }
+.stake-options button:disabled { cursor: default; }
+.stake-options button:not(:disabled):active { transform: scale(0.96); }
+@media (max-width: 520px) { .stake-card { flex-direction: column; align-items: stretch; gap: 8px; } .stake-options { justify-content: stretch; } .stake-options button { flex: 1; justify-content: center; } }
+.seat-broke { display: block; font-size: 11.5px; color: #ec9a64; margin: 2px 0 0 18px; }
+.seat.broke { box-shadow: inset 0 0 0 1.5px rgba(236, 154, 100, 0.55); }
+.room-stake { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: rgba(242, 191, 63, 0.16); color: var(--gold); font-size: 11.5px; font-weight: 800; vertical-align: 1px; }
+.room-stake .coin { width: 10px; height: 10px; }
+.reward.pot { color: var(--gold); }
+
+/* ---------- hub sheets: POWER and Stakes Rooms ---------- */
+.tile-text { display: flex; flex-direction: column; align-items: inherit; gap: 1px; }
+.sheet-wrap { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(15, 12, 9, 0.72); animation: fade-in 0.15s ease-out; }
+.sheet-wrap.hidden { display: none; }
+.sheet {
+  width: min(560px, 100%); max-height: 88vh; overflow: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel); border-radius: 20px 20px 0 0; border: 1px solid var(--line); border-bottom: 0;
+  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.5);
+  animation: sheet-up 0.22s var(--ease-out);
+}
+.sheet::before { content: ''; align-self: center; width: 40px; height: 4px; border-radius: 99px; background: var(--line); margin: -6px 0 2px; }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
+@media (min-width: 900px) {
+  .sheet-wrap { align-items: center; padding: 20px; }
+  .sheet { border-radius: 18px; border-bottom: 1px solid var(--line); padding: 20px; }
+  .sheet::before { display: none; }
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sheet-head h2 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 600; }
+.sheet-x { width: 36px; height: 36px; border: 0; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--text); cursor: pointer; }
+.sheet-x .ico { width: 18px; height: 18px; }
+.sheet-sub { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.sheet-h3 { margin: 6px 0 0; font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mode-list { display: flex; flex-direction: column; gap: 8px; }
+.mode-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px 14px;
+  border: 0; border-radius: 14px; background: var(--panel-2); color: var(--text); font: inherit; text-align: start; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 3px 0 #0e0b08;
+  transition: transform 0.12s var(--ease-out), background 0.15s var(--ease-out);
+}
+.mode-opt:active { transform: translateY(2px); }
+@media (hover: hover) and (pointer: fine) { .mode-opt:hover { background: #382d23; } }
+.mode-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--panel); }
+.mode-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mode-text b { font-size: 15px; }
+.mode-text small { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+/* Coming soon: Power Cards & Special Dice */
+.soon-card { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; border: 1.5px dashed rgba(242, 191, 63, 0.45); background: linear-gradient(110deg, rgba(242, 191, 63, 0.1), transparent 70%); }
+.soon-art { position: relative; flex: none; width: 92px; height: 70px; }
+.soon-art .pc { position: absolute; top: 6px; width: 38px; height: 54px; border-radius: 7px; display: grid; place-items: center; font-style: normal; font-size: 17px; color: var(--gold); background: #2b1d05; box-shadow: inset 0 0 0 2px rgba(242, 191, 63, 0.7), 0 4px 8px rgba(0, 0, 0, 0.35); }
+.soon-art .pc1 { left: 0; transform: rotate(-12deg); }
+.soon-art .pc2 { left: 24px; top: 2px; z-index: 1; }
+.soon-art .pc3 { left: 48px; transform: rotate(12deg); }
+.soon-art .sd { position: absolute; right: -4px; bottom: -2px; z-index: 2; width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; font-style: normal; font-size: 15px; color: #2b1d05; background: linear-gradient(160deg, #fff3b8, var(--gold)); box-shadow: 0 3px 0 #8a5d0c; animation: soon-wobble 2.4s ease-in-out infinite; }
+@keyframes soon-wobble { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(10deg) translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .soon-art .sd { animation: none; } }
+.soon-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.soon-text b { font-size: 15px; }
+.soon-text small { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.soon-tag { align-self: flex-start; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #2b1d05; background: var(--gold); }
+/* Stakes sheet */
+.stake-create { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stake-opt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 6px; border: 0; border-radius: 14px; background: var(--panel-2); color: var(--text); font: inherit; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(242, 191, 63, 0.35), 0 3px 0 #0e0b08; transition: transform 0.12s var(--ease-out); }
+.stake-opt:active { transform: translateY(2px); }
+.stake-opt .coin { width: 22px; height: 22px; }
+.stake-opt b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.stake-opt small { font-size: 11px; color: var(--muted); }
+.stake-opt.cant { opacity: 0.5; }
+.stake-rooms li .btn { width: auto; flex: none; }
+
+/* Shop header: coins and gems side by side, never wrapping */
+.head-wallet { display: inline-flex; align-items: center; gap: 6px; justify-self: end; }
+@media (max-width: 480px) {
+  .head-wallet { gap: 4px; }
+  .head-wallet .coins, .head-wallet .gems { font-size: 12.5px; padding: 4px 8px 4px 5px; }
+  .head-wallet .gems { padding-right: 3px; }
+  .head-wallet .coin-plus { width: 22px; height: 22px; font-size: 16px; margin-left: 3px; }
+  #shop .screen-head h2 { font-size: 18px; }
+}
+/* Image frames (Cyber Neon, the leaderboard's rank frames): a picture drawn around the avatar.
+   --s: the picture's size against the avatar's, --dy: nudged up or down to centre its ring */
+[data-frame='frame-neon'], [data-frame^='frame-rank-'] { box-shadow: none; }
+[data-frame='frame-neon']::before, [data-frame^='frame-rank-']::before { inset: calc(-50% * (var(--s) - 1)); background: var(--img) center / 100% 100% no-repeat; transform: translateY(var(--dy, 0%)); }
+[data-frame='frame-neon'] { --img: url('/frames/frame-cyber-neon.webp'); --s: 1.62; }
+[data-frame='frame-neon']::before { animation: pf-pulse 2.4s ease-in-out infinite; }
+[data-frame='frame-rank-1'] { --img: url('/frames/frame-rank-1.webp'); --s: 2.55; --dy: -4%; }
+[data-frame='frame-rank-2'] { --img: url('/frames/frame-rank-2.webp'); --s: 2.3; --dy: -6%; }
+[data-frame='frame-rank-3'] { --img: url('/frames/frame-rank-3.webp'); --s: 2; --dy: 2%; }
+@keyframes pf-pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25) saturate(1.2); } }
+/* on the small seat pictures the big rank frames would cover the name: a little more room */
+.seat-avatar[data-frame^='frame-rank-'] { margin: 0 8px; }
+.item .btn.won { background: var(--panel-2); color: var(--muted); font-size: 11.5px; }

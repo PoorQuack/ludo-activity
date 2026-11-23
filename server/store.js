@@ -1,10 +1,10 @@
-// Player profiles (coins and shop items), kept in memory and saved to a JSON file.
+// Player profiles (Gold Coins, VIP Gems and shop items), kept in memory and saved to a JSON file.
 // Guests (plain-browser testing) are never written to disk.
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomInt } from 'node:crypto';
 import { BADGES, BADGES_BY_ID, BADGE_STATS, LEVELS, MAX_PINS, badgeValue, levelFor } from '../shared/badges.js';
-import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem, SETS_BY_ID, setPrice, priceOf } from '../shared/shop.js';
+import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem, SETS_BY_ID, setPrice, priceOf, currencyOf } from '../shared/shop.js';
 
 const SAVE_DELAY_MS = 1000;
 // The daily chest: a d20, 5 coins a pip
@@ -15,13 +15,21 @@ export const STREAK_DAYS = 7; // roll 7 days in a row: day 7 pays double
 // Referrals: invite someone new and you get this many coins once they've finished their first game
 export const REFERRAL_COINS = 50;
 
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 
 // Ordered list: MIGRATIONS[v - 1] upgrades a whole parsed save document from
 // version v to version v + 1. To change the format, bump CURRENT_VERSION and
 // append one function — old files then upgrade in order.
 // v1 -> v2: the save file gained its { version, profiles } wrapper; the data didn't change.
-const MIGRATIONS = [(v1) => ({ version: 2, profiles: v1 })];
+// v2 -> v3: two currencies. Every profile gains `gems` (VIP Gems, bought with real money), starting
+//   at 0; `coins` (Gold Coins) are unchanged.
+const MIGRATIONS = [
+  (v1) => ({ version: 2, profiles: v1 }),
+  (v2) => ({
+    version: 3,
+    profiles: Object.fromEntries(Object.entries(v2.profiles || {}).map(([id, p]) => [id, { ...p, gems: Number.isFinite(p?.gems) ? p.gems : 0 }])),
+  }),
+];
 
 export class ProfileStore {
   constructor(file, { onChange, onBadge, freeShop = false, now = Date.now } = {}) {
@@ -183,15 +191,28 @@ export class ProfileStore {
     return { to: p.ref.by, coins: REFERRAL_COINS };
   }
 
-  // A real-money purchase (a Discord entitlement): pays its coins once. The entitlement id is
-  // kept so the same purchase can never pay twice. Returns whether it paid now.
-  grantPurchase(id, entitlementId, coins) {
+  // A real-money purchase (a Discord entitlement): pays its gems once. Real money only ever buys
+  // VIP Gems, never Gold Coins. The entitlement id is kept so the same purchase can never pay
+  // twice. Returns whether it paid now.
+  grantPurchase(id, entitlementId, gems) {
     const p = this.get(id);
     if (p.bought.includes(entitlementId)) return false;
     p.bought.push(entitlementId);
-    p.coins += coins;
+    p.gems += gems;
     this.changed(id);
     this.flush(); // money: write it now, not in a second
+    return true;
+  }
+
+  // An item won (the leaderboard's rank frames): owned from now on, put on if nothing else is
+  grantItem(id, itemId) {
+    const item = ITEMS[itemId];
+    if (!item || id.startsWith('guest-')) return false;
+    const p = this.get(id);
+    if (p.owned.includes(itemId)) return false;
+    p.owned.push(itemId);
+    if (item.type === 'frame' && (!p.equipped.frame || p.equipped.frame === 'frame-none')) p.equipped.frame = itemId;
+    this.changed(id);
     return true;
   }
 
@@ -220,6 +241,48 @@ export class ProfileStore {
     return p.coins;
   }
 
+  // Admin: the same for gems. Never below 0. Returns the new balance.
+  adminGems(id, amount) {
+    const p = this.get(id);
+    p.gems = Math.max(0, p.gems + amount);
+    this.changed(id);
+    return p.gems;
+  }
+
+  // ---------- stakes rooms (server/room.js) ----------
+  // Entry fees are Gold Coins only (never gems), and they skip the daily earning cap both ways:
+  // it's the players' own coins going into the pot and coming back out of it.
+
+  // Can this player put `coins` into a pot?
+  canStake(id, coins) {
+    return (this.peek(id)?.coins ?? STARTING_COINS) >= coins;
+  }
+
+  // Takes a stake (the caller checked it can be paid). Returns what was taken.
+  takeStake(id, coins) {
+    const p = this.get(id);
+    if (p.coins < coins) throw new Error('Not enough coins for the stake');
+    p.coins -= coins;
+    this.changed(id);
+    return coins;
+  }
+
+  // Pays winnings (or a refund) out of a pot
+  payStake(id, coins) {
+    if (!(coins > 0)) return 0;
+    const p = this.get(id);
+    p.coins += coins;
+    this.changed(id);
+    return coins;
+  }
+
+  // Takes `price` of `currency` from a profile, or says which one is short
+  charge(p, currency, price) {
+    if (this.freeShop) return; // testing: everything (coins and gems) is free
+    if (p[currency] < price) throw new Error(currency === 'gems' ? 'Not enough gems' : 'Not enough coins');
+    p[currency] -= price;
+  }
+
   dayKey() {
     return new Date(this.now()).toISOString().slice(0, 10); // the UTC day, 'YYYY-MM-DD'
   }
@@ -229,9 +292,8 @@ export class ProfileStore {
     if (!item) throw new Error('Unknown item');
     const p = this.get(id);
     if (ownsItem(p, itemId)) throw new Error('You already own that');
-    const price = this.freeShop ? 0 : priceOf(item, this.dayKey()); // (today's deal is 30% off)
-    if (p.coins < price) throw new Error('Not enough coins');
-    p.coins -= price;
+    if (item.award) throw new Error("That can't be bought: it's won on the leaderboard");
+    this.charge(p, currencyOf(item), priceOf(item, this.dayKey())); // (today's deal is 30% off)
     p.owned.push(itemId);
     if (!['emote', 'emote-pack'].includes(item.type)) p.equipped[item.type] = itemId;
     this.changed(id);
@@ -242,14 +304,12 @@ export class ProfileStore {
   // Free items and things they already own can't be given.
   gift(id, toId, itemId) {
     const item = ITEMS[itemId];
-    if (!item || !item.price) throw new Error('Unknown item');
+    if (!item || !item.price || item.award) throw new Error('Unknown item');
     if (!toId || toId === id) throw new Error("You can't gift that to yourself");
     const to = this.get(toId);
     if (ownsItem(to, itemId)) throw new Error('They already own that');
     const p = this.get(id);
-    const price = this.freeShop ? 0 : priceOf(item, this.dayKey());
-    if (p.coins < price) throw new Error('Not enough coins');
-    p.coins -= price;
+    this.charge(p, currencyOf(item), priceOf(item, this.dayKey()));
     to.owned.push(itemId);
     p.stats.gift = (p.stats.gift || 0) + 1;
     this.changed(id);
@@ -263,11 +323,9 @@ export class ProfileStore {
     const set = SETS_BY_ID[setId];
     if (!set) throw new Error('Unknown item');
     const p = this.get(id);
-    const { price, missing } = setPrice(set, p);
+    const { price, missing, currency } = setPrice(set, p);
     if (!missing.length) throw new Error('You already own that');
-    const cost = this.freeShop ? 0 : price;
-    if (p.coins < cost) throw new Error('Not enough coins');
-    p.coins -= cost;
+    this.charge(p, currency, price);
     p.owned.push(...missing);
     for (const itemId of set.items) p.equipped[ITEMS[itemId].type] = itemId;
     this.changed(id);
@@ -416,7 +474,9 @@ function normalize(p) {
   for (const b of BADGES) if (Number.isInteger(p.badges?.[b.id]) && p.badges[b.id] > 0) badges[b.id] = Math.min(LEVELS.length, p.badges[b.id]);
   const title = BADGES_BY_ID[p.title] && badges[p.title] === LEVELS.length ? p.title : '';
   const pins = Array.isArray(p.pins) ? [...new Set(p.pins)].filter((b) => badges[b]).slice(0, MAX_PINS) : [];
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, badges, title, pins };
+  // VIP Gems: bought with real money only (see grantPurchase)
+  const gems = Number.isFinite(p.gems) && p.gems >= 0 ? Math.floor(p.gems) : 0;
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, badges, title, pins };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }

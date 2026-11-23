@@ -38,7 +38,7 @@ export class Purchases {
   }
 
   // Pay out everything this player has bought and not been paid for yet.
-  // Returns [{ id, kind, coins }] for what was granted now.
+  // Returns [{ id, kind, gems }] for what was granted now (packs pay VIP Gems; tips pay nothing).
   claim(userId) {
     if (!this.enabled || !/^\d{5,25}$/.test(userId)) return Promise.resolve([]);
     const prev = this.busy.get(userId) || Promise.resolve();
@@ -57,10 +57,10 @@ export class Purchases {
     for (const e of Array.isArray(list) ? list : []) {
       const item = this.bySku.get(String(e.sku_id));
       if (!item || e.consumed || String(e.user_id) !== userId) continue;
-      const coins = item.kind === 'coins' ? item.coins : 0;
-      if (this.store.grantPurchase(userId, String(e.id), coins)) {
-        granted.push({ id: item.id, kind: item.kind, coins });
-        this.log.log?.(`💳 ${userId} bought ${item.id}${coins ? ` (+${coins} coins)` : ''}`);
+      const gems = item.kind === 'gems' ? item.gems : 0;
+      if (this.store.grantPurchase(userId, String(e.id), gems)) {
+        granted.push({ id: item.id, kind: item.kind, gems });
+        this.log.log?.(`💳 ${userId} bought ${item.id}${gems ? ` (+${gems} gems)` : ''}`);
       }
       // Paid out (now or before): consume it so it stops showing up. Failing is fine, the id
       // in the profile stops a second payout, and it's retried on the next claim.

@@ -146,7 +146,7 @@ app.get('/healthz', (_req, res) => res.send('ok'));
 // cf-connecting-ip, and the game is only reachable from outside through the tunnel.
 const fromVm = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress) && !req.headers['cf-connecting-ip'];
 
-// Admin: give a player coins (scripts/give-coins.sh). VM only. Takes effect at once, and the
+// Admin: give a player coins, or gems with { currency: 'gems' } (scripts/give-coins.sh). VM only. Takes effect at once, and the
 // player's coin count updates live if they're online.
 app.post('/api/admin/coins', (req, res) => {
   if (!fromVm(req)) return res.status(404).end();
@@ -154,10 +154,13 @@ app.post('/api/admin/coins', (req, res) => {
   const amount = Number(req.body?.amount);
   if (!/^(\d{5,25}|guest-[a-z0-9-]{8,48})$/i.test(userId)) return res.status(400).json({ error: 'userId should be a Discord user id (digits)' });
   if (!Number.isInteger(amount) || Math.abs(amount) > 1e9) return res.status(400).json({ error: 'amount should be a whole number (up to 1,000,000,000)' });
-  const coins = store.adminCoins(userId, amount);
+  // { currency: 'gems' } gives VIP Gems instead (testing, or making up for a failed purchase)
+  const gems = req.body?.currency === 'gems';
+  const now = gems ? store.adminGems(userId, amount) : store.adminCoins(userId, amount);
   store.flush();
-  console.log(`Admin: ${amount >= 0 ? 'gave' : 'took'} ${Math.abs(amount)} coins ${amount >= 0 ? 'to' : 'from'} ${userId} (now ${coins})`);
-  res.json({ userId, coins });
+  const unit = gems ? 'gems' : 'coins';
+  console.log(`Admin: ${amount >= 0 ? 'gave' : 'took'} ${Math.abs(amount)} ${unit} ${amount >= 0 ? 'to' : 'from'} ${userId} (now ${now})`);
+  res.json({ userId, [unit]: now });
 });
 
 // Announcements (scripts/announce.sh), VM only: everyone gets it in their inbox, live if they're
@@ -525,6 +528,8 @@ function handleLobby(ws, msg) {
     const room = directory.create(user, {
       visibility: msg.visibility,
       mode: msg.mode,
+      stake: Number(msg.stake) || 0,
+      quick: msg.quick === true,
       instanceId,
       extra: { onKick: (userId) => kickFromRoom(room, userId) },
     });

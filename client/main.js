@@ -1,15 +1,16 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
 import { MODES, boardFor } from '../shared/board.js';
-import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, dailyDeal, rarityOf, DEAL_DISCOUNT, dayKeyOf } from '../shared/shop.js';
+import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, dailyDeal, rarityOf, DEAL_DISCOUNT, dayKeyOf, currencyOf } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop, itemPreview, commitShopSeen } from './shop-ui.js';
 import { TAUNT_FX } from './taunts.js';
 import { setSceneLighting, setSceneMode, sceneSwitch } from './scene.js';
 import { renderProfile, lookHtml, medalHtml } from './profile.js';
-import { BADGES, BADGES_BY_ID, levelFor } from '../shared/badges.js';
+import { playerLevel, BADGES, BADGES_BY_ID, levelFor } from '../shared/badges.js';
 import { openItemView, refreshItemView, closeItemView } from './item-view.js';
 import { D20 } from './d20.js';
 import { openCoinStore } from './coin-store.js';
+import { setFrame } from './frames.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour } from './tour.js';
 import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, TOKEN_SIGNATURES } from './skins.js';
@@ -71,6 +72,7 @@ const els = {
   shopTabs: $('shop-tabs'),
   shopGrid: $('shop-grid'),
   coins: [...document.querySelectorAll('.coins')],
+  gems: [...document.querySelectorAll('.gems')],
   canvas: $('board'),
   banner: $('banner'),
   turnPop: $('turn-pop'),
@@ -264,6 +266,7 @@ function connect() {
     }
     else if (msg.type === 'rooms') {
       roomList = msg.rooms;
+      if (!$('stakes-sheet').classList.contains('hidden')) renderStakesSheet();
       renderOnline(msg);
       renderUI();
     } else if (msg.type === 'leaderboard') {
@@ -302,7 +305,7 @@ function connect() {
       toast(t('📣 {title}', { title: msg.item.title }), 'notice', 5000);
     } else if (msg.type === 'purchased') {
       sfx('buy');
-      if (msg.kind === 'coins') toast(t('💰 +{coins} coins! Thank you for your support', { coins: msg.coins }), 'ok', 5000);
+      if (msg.kind === 'gems') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
       else toast(t('☕ Thank you so much for the coffee!'), 'ok', 5000);
     } else if (msg.type === 'referral') {
       sfx('buy');
@@ -357,6 +360,7 @@ function send(action, extra = {}) {
 }
 
 // Creating, joining and leaving rooms.
+let afterCreate = null; // 'bots': the room being made is for a game against bots (fill it and start)
 function sendLobby(op, extra = {}) {
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'lobby', op, ...extra }));
 }
@@ -444,7 +448,7 @@ function newBadges() {
 }
 function renderNewDots() {
   $('profile-card').classList.toggle('has-new', !!profile && newBadges().length > 0);
-  for (const b of document.querySelectorAll('.shop-btn')) b.classList.toggle('has-new', store_.get(GIFT_KEY) === '1');
+  for (const b of document.querySelectorAll('.shop-btn, .dock-shop')) b.classList.toggle('has-new', store_.get(GIFT_KEY) === '1');
 }
 
 // ---------------- profile: badges, title, pins ----------------
@@ -500,6 +504,12 @@ function onState(next) {
     for (const el of els.canvas.parentElement.querySelectorAll('.board-sticker')) el.remove();
     closeChooser();
     showScreen('game');
+    // "Vs. Bots" from the hub: a private room that fills itself with bots and starts
+    if (afterCreate === 'bots' && next.phase === 'lobby' && next.hostId === me?.id) {
+      send('fillBots');
+      send('start');
+    }
+    afterCreate = null;
   }
 
   // A game starting: remember your badge stats, to show what it moved on the finish card
@@ -1711,6 +1721,14 @@ function fillAvatar(el, person) {
 function renderProfileCard() {
   if (!me) return;
   fillAvatar(document.querySelector('#profile-card [data-avatar]'), me);
+  for (const av of document.querySelectorAll('[data-my-avatar], #profile-card [data-avatar]')) {
+    fillAvatar(av, me);
+    setFrame(av, profile?.equipped?.frame);
+  }
+  const level = playerLevel(profile);
+  $('level-badge').textContent = level;
+  $('level-badge').title = t('Level {n}: one level for every badge medal you earn', { n: level });
+  renderHubDots();
   $('profile-card').title = t('Signed in as {name}', { name: me.name });
   $('profile-sub').textContent = me.id.startsWith('guest-') ? t('Guest') : profile?.title && BADGES_BY_ID[profile.title] ? t(BADGES_BY_ID[profile.title].title) : t('Ludo player');
   renderDaily();
@@ -2381,21 +2399,32 @@ function showScreen(name) {
   renderUI();
 }
 
+
+// Not enough coins (or gems) for something? Says so (gems: offers the gem store) and returns true.
+function short(currency, price) {
+  if (freeShop) return false;
+  const have = profile?.[currency] ?? 0;
+  if (have >= price) return false;
+  if (currency === 'gems') {
+    toast(t('You need {n} more gems', { n: price - have }));
+    openGemStore();
+  } else toast(t('You need {n} more coins', { n: price - have }));
+  return true;
+}
+
 function shopContext() {
   return {
     profile,
     freeShop,
     onBuy: (item) => {
-      if (!freeShop && (profile?.coins ?? 0) < priceOf(item)) {
-        return toast(t('You need {n} more coins', { n: priceOf(item) - profile.coins }));
-      }
+      if (short(currencyOf(item), priceOf(item))) return;
       sendShop('buy', item.id);
       sfx('buy');
       toast(t('Bought {item}!', { item: t(item.name) }), 'ok');
     },
     onBuySet: (set) => {
-      const { price } = setPrice(set, profile);
-      if (!freeShop && (profile?.coins ?? 0) < price) return toast(t('You need {n} more coins', { n: price - profile.coins }));
+      const { price, currency } = setPrice(set, profile);
+      if (short(currency, price)) return;
       sendShop('buySet', set.id);
       sfx('buy');
       toast(t('Bought {item}!', { item: t(set.name) }), 'ok');
@@ -2406,8 +2435,10 @@ function shopContext() {
     },
     // The other people in your room, to give things to (none outside a room)
     friends: (state?.seats || []).filter((x) => x && !x.bot && x.userId && x.userId !== me?.id).map((x) => ({ id: x.userId, name: x.name })),
+    onGetGems: () => openGemStore(),
+    avatar: me?.avatar || null,
     onGift: (item, friend) => {
-      if (!freeShop && (profile?.coins ?? 0) < priceOf(item)) return toast(t('You need {n} more coins', { n: priceOf(item) - profile.coins }));
+      if (short(currencyOf(item), priceOf(item))) return;
       sendShop('gift', item.id, friend.id); // (the server says 'gifted' back once it has gone through)
     },
   };
@@ -2432,6 +2463,7 @@ function drawShop() {
 
 function renderUI() {
   for (const el of els.coins) el.querySelector('b').textContent = profile ? coinText(profile.coins, el.classList.contains('menu-coins')) : '…';
+  for (const el of els.gems) el.querySelector('b').textContent = profile ? coinText(profile.gems ?? 0, el.classList.contains('menu-gems')) : '…';
   renderMenu();
   if (!state) return;
   // Draw the panel from the state the board has reached, not the newest one.
@@ -2502,6 +2534,15 @@ function renderMenu() {
     meta.className = 'room-meta';
     const status = r.phase === 'lobby' ? (r.players < r.seats ? t('Waiting') : t('Full')) : r.phase === 'playing' ? t('Playing') : t('Game over');
     meta.textContent = `${t(r.label)} · ${status}`;
+    if (r.stake) {
+      // a stakes room: what it costs to sit in
+      const st = document.createElement('span');
+      st.className = 'room-stake';
+      st.innerHTML = `<span class="coin"></span>${r.stake.toLocaleString(currentLang())}`;
+      st.title = t('Stake {n} coins', { n: r.stake });
+      name.appendChild(st);
+      li.classList.add('stakes');
+    }
     if (r.sameCall) {
       const call = document.createElement('span');
       call.className = 'room-call';
@@ -2753,7 +2794,31 @@ function renderMyRoom() {
 // "🔒 Private · code K7QX" — the code is what friends type to join.
 function roomInfoText() {
   const kind = state.visibility === 'private' ? `🔒 ${t('Private')}` : `🌐 ${t('Public')}`;
-  return `${kind} · ${t('code {code}', { code: state.code })}`;
+  const stake = state.pot ? ` · ${t('Pot {n} coins', { n: state.pot.total.toLocaleString(currentLang()) })}` : state.stake ? ` · ${t('Stake {n} coins', { n: state.stake.toLocaleString(currentLang()) })}` : '';
+  return `${kind} · ${t('code {code}', { code: state.code })}${stake}`;
+}
+
+// Stakes: Off / 100 / 500 / 2,500 Gold Coins (the host picks; everyone else sees it)
+function renderStakes() {
+  const box = $('stake-picker');
+  box.classList.toggle('hidden', state.phase !== 'lobby');
+  box.classList.toggle('on', !!state.stake);
+  const opts = $('stake-options');
+  const key = `${state.stake}|${isHost()}|${currentLang()}`;
+  if (opts.dataset.key === key) return;
+  opts.dataset.key = key;
+  opts.innerHTML = '';
+  for (const amount of state.stakes || [0]) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(amount === state.stake));
+    b.className = amount === state.stake ? 'on' : '';
+    b.innerHTML = amount ? `<span class="coin"></span>${amount.toLocaleString(currentLang())}` : escapeHtml(t('Off'));
+    b.disabled = !isHost();
+    b.addEventListener('click', () => send('setStake', { stake: amount }));
+    opts.appendChild(b);
+  }
 }
 
 // ☰ → room settings: only the host can change them.
@@ -2851,6 +2916,7 @@ function renderPanel() {
       ? `${t('Lobby')} · ${t(MODES[state.mode].label)}`
       : (phase === 'playing' ? (state.decider ? t('Decider') : t('In game')) : t('Game over')) + score;
   els.roomInfo.textContent = roomInfoText();
+  renderStakes();
   renderRoomSettings();
   renderPeople();
 
@@ -2895,6 +2961,21 @@ function renderPanel() {
       top.innerHTML = `<span class="seat-dot"></span><span class="seat-name"></span>`;
       top.querySelector('.seat-name').textContent = s ? s.name : capitalize(colorName);
       top.querySelector('.seat-name').dataset.you = ` (${t('you')})`;
+      if (s && !s.bot) {
+        // their picture, in their profile frame (VIP) if they wear one
+        const av = document.createElement('span');
+        av.className = 'avatar seat-avatar';
+        fillAvatar(av, { id: s.userId, name: s.name, avatar: !String(s.userId).startsWith('guest-') });
+        setFrame(av, s.skins?.frame);
+        top.insertBefore(av, top.querySelector('.seat-name'));
+      }
+      if (s && !s.bot && state.stake && s.canPay === false && phase === 'lobby') {
+        const warn = document.createElement('small');
+        warn.className = 'seat-broke';
+        warn.textContent = t('Not enough coins for the stake');
+        card.classList.add('broke');
+        top.after(warn);
+      }
       const team = teamOfSeat(i);
       if (team >= 0) {
         // Team games: which side this seat is on (teammates sit opposite each other)
@@ -3087,7 +3168,13 @@ function rewardNote(s) {
   const capped = state.rewardCapped?.includes(s);
   const partial = state.rewardPartial?.includes(s);
   const note = [capped ? t('daily limit reached') : '', partial ? t('ended early') : ''].filter(Boolean).join(', ');
-  return coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '';
+  return (coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '') + potNote(s);
+}
+
+// Stakes games: what this seat won from the pot
+function potNote(s) {
+  const won = state.potWon?.[s];
+  return won ? ` <span class="reward pot">💰 ${escapeHtml(t('+{n} from the pot', { n: won.toLocaleString(currentLang()) }))}</span>` : '';
 }
 
 // One player's numbers for the game, under their name on the finish card: tokens captured,
@@ -3135,7 +3222,7 @@ function showFinish() {
     const capped = state.rewardCapped?.includes(s);
     const partial = state.rewardPartial?.includes(s);
     const note = [capped ? t('daily limit reached') : '', partial ? t('ended early') : ''].filter(Boolean).join(', ');
-    const reward = coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '';
+    const reward = (coins || capped ? ` <span class="reward">+${coins || 0} 🪙${note ? ` (${note})` : ''}</span>` : '') + potNote(s);
     const title = state.seats[s]?.look?.title && BADGES_BY_ID[state.seats[s].look.title] ? ` <span class="seat-title">${escapeHtml(t(BADGES_BY_ID[state.seats[s].look.title].title))}</span>` : '';
     return `${MEDALS[i] || `${i + 1}.`} ${escapeHtml(state.seats[s]?.name)}${title}${reward}${finishStats(s)}`;
   });
@@ -4044,14 +4131,148 @@ $('referral-btn').addEventListener('click', async () => {
 });
 window.addEventListener('ludo-lang', renderReferral);
 
-// ---------- buying coins ----------
+// ---------- buying gems ----------
+// Real money buys VIP Gems only (Gold Coins are earned). The "+" beside the gems (in the shop and
+// the menu's top bar) opens the gem store.
 const claimPurchases = () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'claimPurchases' }));
-$('get-coins').addEventListener('click', () =>
-  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases }),
-);
+function openGemStore() {
+  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases });
+}
+for (const b of document.querySelectorAll('#get-coins, [data-get-gems]')) b.addEventListener('click', openGemStore);
 
 for (const b of $('quest-tabs').children)
   b.addEventListener('click', () => {
     questTab = b.dataset.qtab;
     renderQuests();
   });
+
+// ---------- the hub: dock tabs, their panels, and the sheets ----------
+// Friends / Ranking / Quests open a panel: on phones in place of the modes (tap the tab again, or
+// Back, for the modes), on wide screens in the column on the right (Quests to start with).
+// VIP opens the Shop on its VIP tab; Shop opens the Shop.
+const wide = window.matchMedia('(min-width: 900px)');
+function setPanel(name) {
+  $('menu').dataset.panel = name || '';
+  const shown = name || (wide.matches ? 'quests' : '');
+  for (const b of document.querySelectorAll('[data-hub-tab]')) {
+    const on = b.dataset.hubTab === shown;
+    b.classList.toggle('active', on);
+    if (['friends', 'ranking', 'quests'].includes(b.dataset.hubTab)) b.setAttribute('aria-pressed', String(on));
+  }
+  if (name === 'ranking') fetchLeaderboard();
+  $('menu').scrollTop = 0;
+}
+for (const b of document.querySelectorAll('[data-hub-tab]')) {
+  b.addEventListener('click', () => {
+    const tab = b.dataset.hubTab;
+    if (tab === 'shop') return; // (data-go="shop" opens it)
+    if (tab === 'vip') {
+      shopTab = 'vip';
+      return showScreen('shop');
+    }
+    const open = $('menu').dataset.panel;
+    setPanel(open === tab && !wide.matches ? '' : tab);
+  });
+}
+for (const b of document.querySelectorAll('[data-hub-home]')) b.addEventListener('click', () => setPanel(''));
+wide.addEventListener('change', () => setPanel($('menu').dataset.panel));
+setPanel('');
+
+// Little dots on the dock: the daily roll is ready (Quests), a friend request is waiting (Friends)
+function renderHubDots() {
+  const quests = document.querySelector('[data-dot="quests"]');
+  if (quests) quests.classList.toggle('hidden', !profile?.dailyReady);
+  const friends = document.querySelector('[data-dot="friends"]');
+  if (friends) friends.classList.toggle('hidden', $('friends-req-dot').classList.contains('hidden'));
+}
+new MutationObserver(renderHubDots).observe($('friends-req-dot'), { attributes: true, attributeFilter: ['class'] });
+
+// Sheets (POWER, Stakes Rooms): a bottom sheet on phones, a dialog on wide screens
+function openSheet(id) {
+  const el = $(id);
+  el.classList.remove('hidden');
+  el.querySelector('[data-sheet-close]')?.focus();
+}
+function closeSheets() {
+  for (const el of document.querySelectorAll('.sheet-wrap')) el.classList.add('hidden');
+}
+for (const el of document.querySelectorAll('.sheet-wrap')) {
+  el.addEventListener('pointerdown', (e) => e.target === el && closeSheets());
+  for (const x of el.querySelectorAll('[data-sheet-close]')) x.addEventListener('click', closeSheets);
+}
+window.addEventListener('keydown', (e) => e.key === 'Escape' && closeSheets());
+
+// CLASSIC is "Play now" (#play-now, wired above). POWER: teams, quick games, and what's coming.
+$('power-btn').addEventListener('click', () => openSheet('power-sheet'));
+for (const b of document.querySelectorAll('[data-power]')) {
+  b.addEventListener('click', () => {
+    closeSheets();
+    const what = b.dataset.power;
+    if (what === 'quick') sendLobby('create', { visibility: 'public', quick: true });
+    else sendLobby('create', { visibility: 'public', mode: what });
+  });
+}
+
+// Friends tile: a private room to bring your friends into (invite them from the Friends tab)
+$('friends-tile').addEventListener('click', () => {
+  sendLobby('create', { visibility: 'private' });
+  toast(t('Private room made: invite friends from the Friends tab, or share the code'), 'ok', 4500);
+});
+// Vs. Bots: a private room that fills itself with bots and starts (practice: no coins)
+$('bots-tile').addEventListener('click', () => {
+  afterCreate = 'bots';
+  sendLobby('create', { visibility: 'private' });
+});
+
+// Stakes Rooms: make one (100 / 500 / 2,500 Gold Coins) or join an open one
+$('stakes-btn').addEventListener('click', () => {
+  renderStakesSheet();
+  openSheet('stakes-sheet');
+  sendLobby('list');
+});
+function renderStakesSheet() {
+  const create = $('stake-create');
+  create.innerHTML = '';
+  const have = profile?.coins ?? 0;
+  for (const amount of [100, 500, 2500]) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'stake-opt';
+    b.innerHTML = `<span class="coin"></span><b>${amount.toLocaleString(currentLang())}</b><small></small>`;
+    b.querySelector('small').textContent = t('Pot up to {n}', { n: (amount * 4).toLocaleString(currentLang()) });
+    if (have < amount) {
+      b.classList.add('cant');
+      b.title = t('You need {n} more coins', { n: amount - have });
+    }
+    b.addEventListener('click', () => {
+      if (have < amount) return toast(t('You need {n} more coins', { n: amount - have }));
+      closeSheets();
+      sendLobby('create', { visibility: 'public', stake: amount });
+    });
+    create.appendChild(b);
+  }
+  const list = $('stake-rooms');
+  list.innerHTML = '';
+  const open = roomList.filter((r) => r.stake && r.id !== state?.roomId);
+  if (!open.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = t('No stakes rooms open right now: make one!');
+    list.appendChild(li);
+  }
+  for (const r of open) {
+    const li = document.createElement('li');
+    const info = document.createElement('div');
+    info.className = 'room-text';
+    info.innerHTML = `<div class="room-name"><span></span><span class="room-stake"><span class="coin"></span>${r.stake.toLocaleString(currentLang())}</span></div><div class="room-meta"></div>`;
+    info.querySelector('.room-name span').textContent = translateServer(r.name);
+    info.querySelector('.room-meta').textContent = `${t(r.label)} · ${t('{n} of {total} seats taken', { n: r.players, total: r.seats })}`;
+    const canSit = r.phase === 'lobby' && r.players < r.seats;
+    const join = button(canSit ? t('Join') : t('Watch'), () => {
+      closeSheets();
+      sendLobby('join', { id: r.id });
+    });
+    li.append(info, join);
+    list.appendChild(li);
+  }
+}

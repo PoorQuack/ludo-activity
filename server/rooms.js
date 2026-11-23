@@ -3,6 +3,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { MODES } from '../shared/board.js';
 import { Room } from './room.js';
+import { STAKES } from '../shared/shop.js';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I, easy to read out
 const CODE_LENGTH = 4;
@@ -28,7 +29,7 @@ export class RoomDirectory {
   }
 
   // A new room with `user` as host, in the lobby with them seated.
-  create(user, { visibility = 'public', mode = '4p', instanceId = null, extra = {} } = {}) {
+  create(user, { visibility = 'public', mode = '4p', instanceId = null, stake = 0, quick = false, extra = {} } = {}) {
     if (this.rooms.size >= MAX_ROOMS) throw new Error('The server is full right now, try again in a bit');
     const id = randomUUID();
     const code = this.newCode();
@@ -44,6 +45,8 @@ export class RoomDirectory {
     room.connect(user);
     room.host(user);
     if (MODES[mode] && mode !== room.mode) room.setMode(user, mode);
+    if (quick) room.setQuick(user, true); // a quick game (two tokens each)
+    if (stake && STAKES.includes(stake)) room.setStake(user, stake); // a stakes room (the host can still change it in the lobby)
     return room;
   }
 
@@ -88,6 +91,7 @@ export class RoomDirectory {
     let bestRank = -Infinity;
     for (const r of this.rooms.values()) {
       if (r.empty || r.phase !== 'lobby' || !r.hostId || r.banned.has(user.id)) continue;
+      if (r.stake) continue; // "Play now" never puts anyone's coins on the line: stakes rooms are joined on purpose
       const sameCall = !!instanceId && r.instanceId === instanceId;
       if (r.visibility !== 'public' && !sameCall) continue;
       const seats = MODES[r.mode].seats;

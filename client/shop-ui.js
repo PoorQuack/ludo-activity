@@ -1,21 +1,27 @@
 // The shop screen: tabs plus a grid of item cards with drawn previews.
-import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeal, priceOf, DEAL_DISCOUNT, NEW_ITEMS } from '../shared/shop.js';
+import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeal, priceOf, DEAL_DISCOUNT, NEW_ITEMS, currencyOf, setCurrency } from '../shared/shop.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
 import { drawTauntPreview } from './taunts.js';
 import { playerColor } from './skins.js';
 import { t } from './i18n.js';
+import { framedAvatar } from './frames.js';
 
 const IN_BASE = [0, 1, 2, 3].map(() => [-1, -1, -1, -1]);
 
 export const SHOP_TABS = [
+  { type: 'vip', label: 'VIP' },
   { type: 'set', label: 'Sets' },
   { type: 'token', label: 'Tokens' },
   { type: 'dice', label: 'Dice' },
   { type: 'board', label: 'Boards' },
   { type: 'taunt', label: 'Taunts' },
+  { type: 'frame', label: 'Frames' },
   { type: 'emote', label: 'Emotes' },
 ];
+
+// The coin or gem icon for a price
+export const moneyIcon = (currency) => (currency === 'gems' ? '<span class="gem"></span>' : '<span class="coin"></span>');
 
 // ---- "New" tags: items this device hasn't seen in the shop yet ----
 const SEEN_KEY = 'ludo-shop-seen';
@@ -55,7 +61,7 @@ const FILTERS = [
   ['owned', 'Owned'],
 ];
 
-export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onTab, onBuy, onBuySet, onEquip, onView }) {
+export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onTab, onBuy, onBuySet, onEquip, onView, onGetGems }) {
   if (tab !== shownTab) commitShopSeen();
   shownTab = tab;
   tabs.innerHTML = '';
@@ -64,7 +70,8 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     b.className = `tab${st.type === tab ? ' active' : ''}${st.type === 'set' ? ' sets-tab' : ''}`;
     b.textContent = t(st.label);
     // a dot on tabs with something new (not the one you're on)
-    if (st.type !== tab && SHOP_ITEMS.some((i) => (i.type === st.type || (st.type === 'emote' && i.type === 'emote-pack')) && isNew(i.id))) b.classList.add('has-new');
+    const inTab = (i) => i.type === st.type || (st.type === 'emote' && i.type === 'emote-pack') || (st.type === 'vip' && currencyOf(i) === 'gems');
+    if (st.type !== tab && SHOP_ITEMS.some((i) => inTab(i) && isNew(i.id))) b.classList.add('has-new');
     b.addEventListener('click', () => onTab(st.type));
     tabs.appendChild(b);
   }
@@ -104,8 +111,21 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     }
     return emptyNote();
   }
+  // VIP: everything paid in gems (frames, Legendary items, Legendary sets), under a gem banner
+  if (tab === 'vip') {
+    const banner = document.createElement('div');
+    banner.className = 'vip-banner';
+    banner.innerHTML = `<span class="gem big"></span><div><b>${t('VIP Gems')}</b><small>${t('Frames and Legendary items are paid in gems. Gold Coins stay for everything else, and for stakes rooms.')}</small></div>`;
+    const get = document.createElement('button');
+    get.type = 'button';
+    get.className = 'btn small gem-buy';
+    get.innerHTML = `<span class="gem"></span>${t('Get gems')}`;
+    get.addEventListener('click', () => onGetGems?.());
+    banner.appendChild(get);
+    grid.appendChild(banner);
+  }
   // Grouped by rarity, cheapest first (Common up to Legendary), each group under its own heading
-  const items = SHOP_ITEMS.filter((i) => i.type === tab || (tab === 'emote' && i.type === 'emote-pack'));
+  const items = SHOP_ITEMS.filter((i) => (tab === 'vip' ? currencyOf(i) === 'gems' && i.price > 0 : i.type === tab || (tab === 'emote' && i.type === 'emote-pack')));
   // Today's deal, on top of its own tab (until you own it)
   const deal = dailyDeal();
   if (deal.type === tab && !owns(profile, deal.id) && !freeShop && filter !== 'owned') {
@@ -128,6 +148,17 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     if (have === all.length) head.classList.add('complete');
     grid.appendChild(head);
     for (const item of group) grid.appendChild(itemCard(item, { profile, freeShop, onBuy, onEquip, onView }));
+  }
+  if (tab === 'vip') {
+    const gemSets = SETS.filter((set) => setCurrency(set) === 'gems' && keep(!setPrice(set, profile).missing.length));
+    if (gemSets.length) {
+      const head = document.createElement('h3');
+      head.className = 'rarity-head';
+      head.dataset.rarity = 'legendary';
+      head.innerHTML = `<span>✦ ${t('Legendary sets')}</span>`;
+      grid.appendChild(head);
+      for (const set of gemSets) grid.appendChild(setCard(set, { profile, freeShop, onBuySet, onView }));
+    }
   }
   shownIds = items.map((i) => i.id);
   emptyNote();
@@ -173,16 +204,24 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
   } else if (owned) {
     btn.textContent = t('Equip');
     btn.addEventListener('click', () => onEquip(item));
+  } else if (item.award) {
+    // won on the leaderboard, never bought
+    btn.textContent = `🏆 ${t('Win it')}`;
+    btn.classList.add('won');
+    btn.title = t(item.award);
+    btn.disabled = true;
   } else if (freeShop) {
     btn.innerHTML = `${t('Get free')} <s>${item.price}</s>`;
     btn.classList.add('buy');
     btn.addEventListener('click', () => onBuy(item));
   } else {
     const price = priceOf(item);
-    btn.innerHTML = price < item.price ? `<span class="coin"></span>${price} <s>${item.price}</s>` : `<span class="coin"></span>${price}`;
+    const cur = currencyOf(item);
+    btn.innerHTML = price < item.price ? `${moneyIcon(cur)}${price} <s>${item.price}</s>` : `${moneyIcon(cur)}${price}`;
     btn.classList.add('buy');
+    if (cur === 'gems') btn.classList.add('gem-buy');
     if (price < item.price) card.classList.add('on-deal');
-    if ((profile?.coins ?? 0) < price) btn.classList.add('cant');
+    if ((profile?.[cur] ?? 0) < price) btn.classList.add('cant');
     btn.addEventListener('click', () => onBuy(item));
   }
   card.appendChild(btn);
@@ -191,7 +230,7 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
 
 // A set: its pieces side by side, what's in it, and the price 10% off.
 function setCard(set, { profile, freeShop, onBuySet, onView }) {
-  const { full, price, missing } = setPrice(set, profile);
+  const { full, price, missing, currency } = setPrice(set, profile);
   const card = document.createElement('div');
   card.className = 'item set-card';
   card.dataset.rarity = setRarity(set).id;
@@ -218,8 +257,9 @@ function setCard(set, { profile, freeShop, onBuySet, onView }) {
     btn.disabled = true;
   } else {
     btn.classList.add('buy');
-    btn.innerHTML = freeShop ? `${t('Get free')} <s>${price}</s>` : `<span class="coin"></span>${price} <s>${full}</s>`;
-    if (!freeShop && (profile?.coins ?? 0) < price) btn.classList.add('cant');
+    btn.innerHTML = freeShop ? `${t('Get free')} <s>${price}</s>` : `${moneyIcon(currency)}${price} <s>${full}</s>`;
+    if (currency === 'gems') btn.classList.add('gem-buy');
+    if (!freeShop && (profile?.[currency] ?? 0) < price) btn.classList.add('cant');
     btn.addEventListener('click', () => onBuySet(set));
   }
   card.appendChild(btn);
@@ -269,6 +309,12 @@ requestAnimationFrame(animate);
 // Tokens are shown in the colours of your equipped board, so you see how they'll really look.
 export { preview as itemPreview };
 function preview(item, theme) {
+  if (item.type === 'frame') {
+    const d = document.createElement('div');
+    d.className = 'preview frame-preview';
+    d.appendChild(framedAvatar(item.id, null, 58));
+    return d;
+  }
   if (item.type === 'emote' && item.img) {
     const d = document.createElement('div');
     d.className = 'preview emoji';

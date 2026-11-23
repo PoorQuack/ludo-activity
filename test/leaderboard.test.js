@@ -58,6 +58,10 @@ test('when the week ends, the top three are paid once and told once', () => {
   assert.equal(profiles.peek('bob').coins, 150 + PRIZES.week[1]);
   assert.equal(profiles.peek('cat').coins, 150 + PRIZES.week[2]);
   assert.equal(profiles.peek('dan'), null); // 4th: nothing
+  // the top three also win their place's frame, to keep
+  assert.ok(profiles.peek('ann').owned.includes('frame-rank-1'));
+  assert.ok(profiles.peek('bob').owned.includes('frame-rank-2'));
+  assert.ok(profiles.peek('cat').owned.includes('frame-rank-3'));
   assert.deepEqual(told.sort(), ['ann', 'bob', 'cat']);
   assert.deepEqual(lb.takeAwards('ann'), [{ kind: 'week', period: '2026-W45', place: 1, coins: PRIZES.week[0] }]);
   assert.deepEqual(lb.takeAwards('ann'), []); // only once

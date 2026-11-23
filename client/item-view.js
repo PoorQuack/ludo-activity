@@ -3,13 +3,15 @@
 // with how close you are to it. Opened by tapping an item in the shop.
 import { openDemo } from './demo.js';
 import { BOARDS } from '../shared/board.js';
-import { ownsItem, rarityOf, setRarity, ITEMS, setPrice, SET_DISCOUNT, priceOf } from '../shared/shop.js';
+import { ownsItem, rarityOf, setRarity, ITEMS, setPrice, SET_DISCOUNT, priceOf, currencyOf } from '../shared/shop.js';
+import { moneyIcon } from './shop-ui.js';
 export { rarityOf };
 import { BoardRenderer, drawToken, drawDice, drawTumblingDice } from './renderer.js';
 import { drawTauntPreview } from './taunts.js';
 import { playerColor, BOARD_THEMES } from './skins.js';
 import { sceneSwitch, setSceneMode, SCENE_MODES } from './scene.js';
 import { t } from './i18n.js';
+import { framedAvatar } from './frames.js';
 import { sfx } from './audio.js';
 
 const TYPE = {
@@ -19,6 +21,7 @@ const TYPE = {
   taunt: { label: 'Taunt', desc: 'Pops up over the square whenever you capture someone.', note: 'Everyone in the room sees it.' },
   emote: { label: 'Sticker', desc: 'A sticker to send in chat.', note: 'Send it in chat: everyone in the room sees it.' },
   'emote-pack': { label: 'Sticker pack', desc: '{n} stickers to send in chat.', note: 'Send them in chat: everyone in the room sees them.' },
+  frame: { label: 'Profile frame', desc: 'A frame around your picture.', note: 'Everyone sees it: in the menu, on your seat and in the players list.' },
 };
 
 const ICONS = {
@@ -192,16 +195,17 @@ function renderInfo() {
 
   const owned = ownsItem(profile, item.id);
   const equipped = profile?.equipped?.[item.type] === item.id;
-  const coins = profile?.coins ?? 0;
+  const cur = currencyOf(item); // coins, or gems for Legendary and VIP items
+  const coins = profile?.[cur] ?? 0;
   const price = priceOf(item) || 0; // (30% off if it is today's deal)
   const short = !owned && !freeShop && coins < price;
   const priceBox = el.querySelector('.item-price');
-  priceBox.innerHTML = owned ? `<b class="owned-tag">✓ ${t(equipped ? 'Equipped' : 'Owned')}</b>` : `<span class="coin"></span><b>${freeShop ? `<s>${price}</s> 0` : price < item.price ? `<s>${item.price}</s> ${price}` : price}</b>`;
+  priceBox.innerHTML = owned ? `<b class="owned-tag">✓ ${t(equipped ? 'Equipped' : 'Owned')}</b>` : `${moneyIcon(cur)}<b>${freeShop ? `<s>${price}</s> 0` : price < item.price ? `<s>${item.price}</s> ${price}` : price}</b>`;
   const progress = el.querySelector('.item-progress');
   progress.classList.toggle('hidden', !short);
   if (short) {
     progress.querySelector('i').style.width = `${Math.round((100 * coins) / price)}%`;
-    progress.querySelector('small').textContent = t('{n} more coins to go', { n: price - coins });
+    progress.querySelector('small').textContent = cur === 'gems' ? t('{n} more gems to go', { n: price - coins }) : t('{n} more coins to go', { n: price - coins });
   }
   const main = el.querySelector('.item-main');
   main.className = 'item-main';
@@ -214,6 +218,13 @@ function renderInfo() {
     main.textContent = t('Equip');
     main.classList.add('equip');
     main.onclick = () => ctx.onEquip(item);
+  } else if (item.award) {
+    // won on the leaderboard, never bought: say how
+    main.textContent = `🏆 ${t(item.award)}`;
+    main.disabled = true;
+    main.classList.add('done');
+    priceBox.innerHTML = '';
+    progress.classList.add('hidden');
   } else {
     main.innerHTML = `${ico('shop')}<span></span>`;
     main.querySelector('span').textContent = freeShop ? t('Get free') : t('Buy · {price}', { price });
@@ -229,7 +240,7 @@ function renderSetInfo() {
   sceneRow(open.item.items.find((id) => id.startsWith('board-')));
   const { item: set, ctx } = open;
   const { profile, freeShop } = ctx;
-  const { full, price, missing } = setPrice(set, profile);
+  const { full, price, missing, currency } = setPrice(set, profile);
   el.querySelector('.item-card').dataset.rarity = setRarity(set).id;
   el.querySelector('.rarity').textContent = `−${Math.round(SET_DISCOUNT * 100)}%`;
   el.querySelector('.item-type').innerHTML = `${ico('board')}<span></span>`;
@@ -247,15 +258,15 @@ function renderSetInfo() {
   action.onclick = startRoll;
   tryButton({ ...wearing(profile), ...Object.fromEntries(set.items.map((id) => [ITEMS[id].type, id])) });
 
-  const coins = profile?.coins ?? 0;
+  const coins = profile?.[currency] ?? 0;
   const short = missing.length && !freeShop && coins < price;
   const priceBox = el.querySelector('.item-price');
-  priceBox.innerHTML = !missing.length ? `<b class="owned-tag">✓ ${t('Owned')}</b>` : `<span class="coin"></span><b><s>${full}</s> ${freeShop ? 0 : price}</b>`;
+  priceBox.innerHTML = !missing.length ? `<b class="owned-tag">✓ ${t('Owned')}</b>` : `${moneyIcon(currency)}<b><s>${full}</s> ${freeShop ? 0 : price}</b>`;
   const progress = el.querySelector('.item-progress');
   progress.classList.toggle('hidden', !short);
   if (short) {
     progress.querySelector('i').style.width = `${Math.round((100 * coins) / price)}%`;
-    progress.querySelector('small').textContent = t('{n} more coins to go', { n: price - coins });
+    progress.querySelector('small').textContent = currency === 'gems' ? t('{n} more gems to go', { n: price - coins }) : t('{n} more coins to go', { n: price - coins });
   }
   const main = el.querySelector('.item-main');
   main.className = 'item-main';
@@ -306,6 +317,16 @@ function buildStage(item, profile) {
       grid.appendChild(cell);
     }
     stage.appendChild(grid);
+    return;
+  }
+  if (item.type === 'frame') {
+    // your own picture in it, if we have one
+    const avatar = open?.ctx?.avatar;
+    const img = avatar ? Object.assign(document.createElement('img'), { src: avatar, alt: '' }) : null;
+    const wrap = document.createElement('div');
+    wrap.className = 'frame-stage';
+    wrap.appendChild(framedAvatar(item.id, img, 150));
+    stage.appendChild(wrap);
     return;
   }
   const canvas = document.createElement('canvas');

@@ -15,122 +15,132 @@
         <p data-i18n id="loading-text">Connecting…</p>
       </div>
 
-      <!-- Main menu -->
-      <section id="menu" class="screen hidden">
-        <div class="menu-shell">
-          <header class="menu-bar">
-            <div class="wordmark">
+      <!-- Main menu: the hub. A top bar (you, your coins and gems, inbox, settings), the game modes
+           in the middle, and a dock of five tabs: along the bottom on phones, down the side on wide
+           screens. Friends / Ranking / Quests open their panel (beside the modes on wide screens, in
+           place of them on phones); VIP and Shop open the Shop. -->
+      <section id="menu" class="screen hidden" data-panel="">
+        <div class="hub">
+          <nav class="hub-dock" aria-label="Menu" data-i18n-attr="aria-label">
+            <div class="wordmark hub-logo">
               <span class="wordmark-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
               <h1>Ludo</h1>
             </div>
-            <div class="menu-tools">
-              <button type="button" class="coins menu-coins" data-go="shop" title="Your coins: spend them in the Shop" data-i18n-attr="title"><span class="coin"></span><b>…</b></button>
-              <button class="btn small shop-btn" data-go="shop"><span data-i18n>Shop</span></button>
+            <button type="button" class="dock-tab" data-hub-tab="friends"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.3a6.5 6.5 0 0 1 3.5 5.7" /></svg><span data-i18n>Friends</span><i class="dock-dot hidden" data-dot="friends" aria-hidden="true"></i></button>
+            <button type="button" class="dock-tab" data-hub-tab="ranking"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a2.5 2.5 0 0 0 2.6 3.9M17 6h2.5a2.5 2.5 0 0 1-2.6 3.9" /></svg><span data-i18n>Ranking</span></button>
+            <button type="button" class="dock-tab dock-vip" data-hub-tab="vip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12l3.5 5.5L12 20.5 2.5 9z" /><path d="M2.5 9h19M9 3.5 12 20.5l3-17" /></svg><span data-i18n>VIP</span></button>
+            <button type="button" class="dock-tab" data-hub-tab="quests"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h11M8 12h11M8 18h11M4 6l.8.8L6.4 5M4 12l.8.8 1.6-1.8M4 18h2" /></svg><span data-i18n>Quests</span><i class="dock-dot hidden" data-dot="quests" aria-hidden="true"></i></button>
+            <button type="button" class="dock-tab dock-shop" data-hub-tab="shop" data-go="shop"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11.2a1.5 1.5 0 0 1-1.5 1.3H6.7a1.5 1.5 0 0 1-1.5-1.3z" /><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3" /></svg><span data-i18n>Shop</span></button>
+          </nav>
+
+          <header class="hub-top menu-bar">
+            <div id="profile-card" class="profile-card hub-me" title="" role="button" tabindex="0">
+              <span class="hub-avatar"><span class="avatar" data-avatar></span><span id="level-badge" class="level-badge" title="Level">1</span></span>
+              <span class="profile-text"><b id="menu-name" class="menu-name"></b><small id="profile-sub">Ludo player</small></span>
+            </div>
+            <div class="hub-wallet">
+              <button type="button" class="coins menu-coins" data-go="shop" title="Gold Coins: earned by playing, spent in the Shop and on stakes" data-i18n-attr="title"><span class="coin"></span><b>…</b></button>
+              <span class="gems menu-gems with-plus" title="VIP Gems: for frames and Legendary items" data-i18n-attr="title"><span class="gem"></span><b>…</b><button type="button" class="coin-plus" data-get-gems aria-label="Get gems" data-i18n-attr="aria-label,title" title="Get gems">+</button></span>
+            </div>
+            <div class="hub-icons menu-tools">
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn" data-go="howto" aria-label="How to play" title="How to play"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6M12 16.9v.1" /></svg></button>
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn" data-player-btn aria-label="Music" title="Music" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg></button>
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn inbox-btn" data-inbox-btn aria-label="Inbox" title="Inbox: friend requests and news"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" /></svg><span class="inbox-badge hidden" aria-hidden="true"></span></button>
               <button data-i18n-attr="title,aria-label" class="btn small icon-btn" data-settings-btn aria-label="Settings" title="Settings: sound, graphics, colour-blind modes"><svg class="ico gear" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></button>
-              <div id="profile-card" class="profile-card" title="" role="button" tabindex="0">
-                <span class="avatar" data-avatar></span>
-                <span class="profile-text"><b id="menu-name" class="menu-name"></b><small id="profile-sub">Ludo player</small></span>
-              </div>
             </div>
           </header>
 
-          <div class="menu-main">
-            <!-- Wide screens: the player's own board, tokens and dice, playing a slow game by itself. Tap it for the Shop -->
-            <figure id="menu-hero" class="menu-hero" role="button" tabindex="0" aria-label="Change your look in the Shop" data-i18n-attr="aria-label">
-              <canvas id="menu-board"></canvas>
-              <figcaption id="menu-board-caption"></figcaption>
-            </figure>
+          <main class="hub-stage">
+            <!-- Live: how many people are on right now -->
+            <div id="online-strip" class="online-strip hidden">
+              <span id="online-text" aria-live="polite"></span>
+            </div>
+            <!-- "Join our Discord server", until they join or tick "Don't ask again" -->
+            <section id="invite-card" class="invite-card hidden" aria-labelledby="invite-title">
+              <svg class="invite-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 5.3A17 17 0 0 0 15.4 4l-.5 1a15.6 15.6 0 0 0-5.8 0L8.6 4a17 17 0 0 0-4.2 1.3C1.7 9.3 1 13.2 1.3 17a17 17 0 0 0 5.2 2.6l1.1-1.8a11 11 0 0 1-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3a11 11 0 0 1-1.7.8l1.1 1.8a17 17 0 0 0 5.2-2.6c.4-4.4-.7-8.3-3.1-11.7zM8.5 14.7c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z" /></svg>
+              <div class="invite-body">
+                <h2 data-i18n id="invite-title" class="invite-title">Join the Ludo community</h2>
+                <p data-i18n class="invite-text">Find players and see new skins first.</p>
+              </div>
+              <button data-i18n id="invite-join" class="btn small primary">Join</button>
+              <button data-i18n-attr="aria-label,title" id="invite-no" class="invite-x" type="button" aria-label="No thanks" title="No thanks"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg></button>
+              <button data-i18n id="invite-never" class="invite-never" type="button">Don't ask again</button>
+            </section>
+            <!-- The room you're in (when you're in one) -->
+            <section id="my-room" class="game-card hidden">
+              <div class="game-card-head">
+                <h2 id="game-title"></h2>
+                <span id="game-mode" class="tag"></span>
+              </div>
+              <p id="my-room-info" class="room-info"></p>
+              <ul id="game-players" class="game-players"></ul>
+              <button data-i18n id="play-btn" class="btn primary big">Back to room</button>
+              <button data-i18n id="new-game-btn" class="btn big hidden">Start new game</button>
+              <button data-i18n id="leave-btn" class="btn big">Leave room</button>
+            </section>
 
-            <div class="menu-side">
-              <div class="menu-col menu-col-play">
-              <!-- The room you're in (when you're in one) -->
-              <section id="my-room" class="game-card hidden">
-                <div class="game-card-head">
-                  <h2 id="game-title"></h2>
-                  <span id="game-mode" class="tag"></span>
-                </div>
-                <p id="my-room-info" class="room-info"></p>
-                <ul id="game-players" class="game-players"></ul>
-                <button data-i18n id="play-btn" class="btn primary big">Back to room</button>
-                <button data-i18n id="new-game-btn" class="btn big hidden">Start new game</button>
-                <button data-i18n id="leave-btn" class="btn big">Leave room</button>
-              </section>
-              <div class="menu-panel">
-                <!-- Play now: straight into an open game (or a new public one) -->
-                <section id="play-card" class="menu-sec play-sec">
-                  <button id="play-now" class="play-now" type="button">
-                    <span class="play-now-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" /></svg></span>
-                    <span class="play-now-text"><b data-i18n>Play now</b><small data-i18n>Jump into an open game</small></span>
+            <!-- The two ways to play: Classic (straight into an open game) and Power (teams, quick games, what's coming) -->
+            <div id="play-card" class="hero-row">
+              <button id="play-now" class="hero-card hero-classic" type="button">
+                <span class="hero-art" aria-hidden="true"><i class="ha-board"></i><i class="ha-pawn p1"></i><i class="ha-pawn p2"></i><i class="ha-die"></i></span>
+                <span class="hero-text"><b data-i18n>CLASSIC</b><small data-i18n>Jump into an open game</small></span>
+                <span class="hero-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" /></svg></span>
+              </button>
+              <button id="power-btn" class="hero-card hero-power" type="button" aria-haspopup="dialog">
+                <span class="hero-art" aria-hidden="true"><i class="ha-bolt"></i><i class="ha-card c1"></i><i class="ha-card c2"></i></span>
+                <span class="hero-text"><b data-i18n>POWER</b><small data-i18n>Teams, quick games and more</small></span>
+                <span class="hero-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" /></svg></span>
+              </button>
+            </div>
+            <div class="tile-row">
+              <button id="stakes-btn" class="hub-tile tile-stakes" type="button" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="5.5" /><path d="M14.4 9.6A5.5 5.5 0 1 1 9.6 14.4" /><path d="M9 6.5v5M7.3 7.8h2.6a1 1 0 0 1 0 2H8.1a1 1 0 0 0 0 2h2.6" /></svg><span class="tile-text"><b data-i18n>Stakes Rooms</b><small data-i18n>Win the pot</small></span></button>
+              <button id="friends-tile" class="hub-tile tile-friends" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16.5 10.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 19.5a5.5 5.5 0 0 1 11 0M11 19.5a5.5 5.5 0 0 1 11 0" /></svg><span class="tile-text"><b data-i18n>Friends</b><small data-i18n>Private room</small></span></button>
+              <button id="bots-tile" class="hub-tile tile-bots" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="8" width="15" height="11" rx="3" /><path d="M12 4.5V8M9 13h.01M15 13h.01M9.5 16.2h5M2.5 13v2M21.5 13v2" /><circle cx="12" cy="3.6" r="1.1" /></svg><span class="tile-text"><b data-i18n>Vs. Bots</b><small data-i18n>Practice</small></span></button>
+            </div>
+
+            <!-- Rooms: make your own, join with a code, or pick an open one -->
+            <div class="menu-panel">
+              <!-- Make a room -->
+              <section id="create-card" class="menu-sec">
+                <h2 data-i18n class="sec-title">Or make your own room</h2>
+                <div data-i18n-attr="aria-label" id="visibility-picker" class="segmented" role="group" aria-label="Who can find the room">
+                  <button class="btn active" data-visibility="public">
+                    <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" /><path d="M1.75 8h12.5M8 1.75c1.8 1.9 2.6 3.9 2.6 6.25S9.8 12.35 8 14.25C6.2 12.35 5.4 10.35 5.4 8S6.2 3.65 8 1.75z" /></svg>
+                    <span data-i18n>Public</span>
                   </button>
-                </section>
-                <!-- Make a room -->
-                <section id="create-card" class="menu-sec">
-                  <h2 data-i18n class="sec-title">Or make your own room</h2>
-                  <div data-i18n-attr="aria-label" id="visibility-picker" class="segmented" role="group" aria-label="Who can find the room">
-                    <button class="btn active" data-visibility="public">
-                      <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" /><path d="M1.75 8h12.5M8 1.75c1.8 1.9 2.6 3.9 2.6 6.25S9.8 12.35 8 14.25C6.2 12.35 5.4 10.35 5.4 8S6.2 3.65 8 1.75z" /></svg>
-                      <span data-i18n>Public</span>
-                    </button>
-                    <button class="btn" data-visibility="private">
-                      <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.25" y="7" width="9.5" height="7" rx="1.5" /><path d="M5.5 7V5.25a2.5 2.5 0 0 1 5 0V7" /></svg>
-                      <span data-i18n>Private</span>
-                    </button>
-                  </div>
-                  <p id="visibility-hint" class="room-info"></p>
-                  <button data-i18n id="create-btn" class="btn primary big">Create room</button>
-                </section>
+                  <button class="btn" data-visibility="private">
+                    <svg class="ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.25" y="7" width="9.5" height="7" rx="1.5" /><path d="M5.5 7V5.25a2.5 2.5 0 0 1 5 0V7" /></svg>
+                    <span data-i18n>Private</span>
+                  </button>
+                </div>
+                <p id="visibility-hint" class="room-info"></p>
+                <button data-i18n id="create-btn" class="btn primary big">Create room</button>
+              </section>
 
-                <!-- Join by code -->
-                <section class="menu-sec">
-                  <h2 class="sec-title"><label data-i18n for="code-input">Join with a code</label></h2>
-                  <form id="code-form" class="code-form">
-                    <input data-i18n-attr="placeholder" id="code-input" type="text" maxlength="4" placeholder="e.g. K7QX" autocomplete="off" autocapitalize="characters" spellcheck="false" />
-                    <button data-i18n class="btn" type="submit">Join</button>
-                  </form>
-                </section>
+              <!-- Join by code -->
+              <section class="menu-sec">
+                <h2 class="sec-title"><label data-i18n for="code-input">Join with a code</label></h2>
+                <form id="code-form" class="code-form">
+                  <input data-i18n-attr="placeholder" id="code-input" type="text" maxlength="4" placeholder="e.g. K7QX" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+                  <button data-i18n class="btn" type="submit">Join</button>
+                </form>
+              </section>
 
-                <!-- Find a room -->
-                <section class="menu-sec">
-                  <div class="sec-head">
-                    <h2 data-i18n class="sec-title">Open rooms</h2>
-                    <span id="rooms-count" class="sec-count"></span>
-                  </div>
-                  <ul id="room-list" class="room-list"></ul>
-                </section>
-              </div>
-
-              <!-- Leaderboard: this week's / month's top players, right in the menu -->
-              <section id="lb-card" class="lb-card">
+              <!-- Find a room -->
+              <section class="menu-sec">
                 <div class="sec-head">
-                  <h2 class="sec-title" data-i18n>🏆 Leaderboard</h2>
-                  <nav id="lb-tabs" class="mini-tabs" role="tablist">
-                    <button data-i18n class="active" data-lb="week" role="tab">This week</button>
-                    <button data-i18n data-lb="month" role="tab">This month</button>
-                  </nav>
+                  <h2 data-i18n class="sec-title">Open rooms</h2>
+                  <span id="rooms-count" class="sec-count"></span>
                 </div>
-                <div id="lb-body" class="lb-body"></div>
+                <ul id="room-list" class="room-list"></ul>
               </section>
+            </div>
+          </main>
 
-              </div>
-              <div class="menu-col menu-col-social">
-              <!-- Live: how many people are on right now -->
-              <div id="online-strip" class="online-strip hidden">
-                <span id="online-text" aria-live="polite"></span>
-              </div>
-              <!-- "Join our Discord server", until they join or tick "Don't ask again" -->
-              <section id="invite-card" class="invite-card hidden" aria-labelledby="invite-title">
-                <svg class="invite-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 5.3A17 17 0 0 0 15.4 4l-.5 1a15.6 15.6 0 0 0-5.8 0L8.6 4a17 17 0 0 0-4.2 1.3C1.7 9.3 1 13.2 1.3 17a17 17 0 0 0 5.2 2.6l1.1-1.8a11 11 0 0 1-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3a11 11 0 0 1-1.7.8l1.1 1.8a17 17 0 0 0 5.2-2.6c.4-4.4-.7-8.3-3.1-11.7zM8.5 14.7c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z" /></svg>
-                <div class="invite-body">
-                  <h2 data-i18n id="invite-title" class="invite-title">Join the Ludo community</h2>
-                  <p data-i18n class="invite-text">Find players and see new skins first.</p>
-                </div>
-                <button data-i18n id="invite-join" class="btn small primary">Join</button>
-                <button data-i18n-attr="aria-label,title" id="invite-no" class="invite-x" type="button" aria-label="No thanks" title="No thanks"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg></button>
-                <button data-i18n id="invite-never" class="invite-never" type="button">Don't ask again</button>
-              </section>
+          <!-- The dock's panels. Wide screens: always one of them here (Quests to start with). Phones: the open one, in place of the modes -->
+          <aside class="hub-side">
+            <div class="hub-panel" data-panel-for="quests">
+              <div class="panel-back"><button type="button" class="btn small" data-hub-home><span data-i18n>← Back</span></button><h2 class="panel-title" data-i18n>Quests</h2></div>
               <!-- Today: the daily d20 (with a 7-day streak) and the three daily quests -->
               <section id="today-card" class="today-card hidden">
                 <div class="today-head">
@@ -165,7 +175,6 @@
                 </div>
                 <ol data-i18n-attr="aria-label" id="streak" class="streak" aria-label="7-day streak"></ol>
               </section>
-
               <!-- Today's deal: one item a day, 30% off (tap for its close-up in the Shop) -->
               <section id="deal-card" class="deal-card hidden" role="button" tabindex="0">
                 <div id="deal-art" class="deal-art"></div>
@@ -176,7 +185,9 @@
                 </div>
                 <span id="deal-price" class="deal-price"></span>
               </section>
-
+            </div>
+            <div class="hub-panel" data-panel-for="friends">
+              <div class="panel-back"><button type="button" class="btn small" data-hub-home><span data-i18n>← Back</span></button><h2 class="panel-title" data-i18n>Friends</h2></div>
               <!-- Friends: people you've played with, add them, invite them to your room -->
               <section id="friends-card" class="friends-card">
                 <div class="sec-head">
@@ -198,8 +209,55 @@
                   <button data-i18n id="referral-btn" class="btn small primary">Invite</button>
                 </div>
               </section>
-              </div>
             </div>
+            <div class="hub-panel" data-panel-for="ranking">
+              <div class="panel-back"><button type="button" class="btn small" data-hub-home><span data-i18n>← Back</span></button><h2 class="panel-title" data-i18n>Ranking</h2></div>
+              <!-- Leaderboard: this week's / month's top players, right in the menu -->
+              <section id="lb-card" class="lb-card">
+                <div class="sec-head">
+                  <h2 class="sec-title" data-i18n>🏆 Leaderboard</h2>
+                  <nav id="lb-tabs" class="mini-tabs" role="tablist">
+                    <button data-i18n class="active" data-lb="week" role="tab">This week</button>
+                    <button data-i18n data-lb="month" role="tab">This month</button>
+                  </nav>
+                </div>
+                <div id="lb-body" class="lb-body"></div>
+              </section>
+            </div>
+            <!-- Wide screens: your own board, tokens and dice, playing a slow game by itself (tap: the Shop) -->
+            <!-- Wide screens: the player's own board, tokens and dice, playing a slow game by itself. Tap it for the Shop -->
+            <figure id="menu-hero" class="menu-hero" role="button" tabindex="0" aria-label="Change your look in the Shop" data-i18n-attr="aria-label">
+              <canvas id="menu-board"></canvas>
+              <figcaption id="menu-board-caption"></figcaption>
+            </figure>
+          </aside>
+        </div>
+
+        <!-- POWER: the other ways to play, and what's coming -->
+        <div id="power-sheet" class="sheet-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="power-title">
+          <div class="sheet">
+            <div class="sheet-head"><h2 id="power-title" data-i18n>Power modes</h2><button type="button" class="sheet-x" data-sheet-close aria-label="Close" data-i18n-attr="aria-label"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
+            <div class="mode-list">
+              <button type="button" class="mode-opt" data-power="2v2"><span class="mode-ico">🤝</span><span class="mode-text"><b data-i18n>Team 2 vs 2</b><small data-i18n>Teammates sit opposite: their finishes score for you</small></span></button>
+              <button type="button" class="mode-opt" data-power="3v3"><span class="mode-ico">👥</span><span class="mode-text"><b data-i18n>Team 3 vs 3</b><small data-i18n>Six players on the big board, three a side</small></span></button>
+              <button type="button" class="mode-opt" data-power="quick"><span class="mode-ico">⚡</span><span class="mode-text"><b data-i18n>Quick game</b><small data-i18n>Two tokens each: about half as long</small></span></button>
+            </div>
+            <div class="soon-card" aria-label="Coming soon" data-i18n-attr="aria-label">
+              <div class="soon-art" aria-hidden="true"><i class="pc pc1">✦</i><i class="pc pc2">⇄</i><i class="pc pc3">🛡</i><i class="sd">✸</i></div>
+              <div class="soon-text"><span class="soon-tag" data-i18n>Coming soon</span><b data-i18n>Power Cards &amp; Special Dice</b><small data-i18n>Swap places, shield a token, roll a die with its own faces. Being made now.</small></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stakes rooms: open ones to join, or make one -->
+        <div id="stakes-sheet" class="sheet-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="stakes-title">
+          <div class="sheet">
+            <div class="sheet-head"><h2 id="stakes-title" data-i18n>Stakes Rooms</h2><button type="button" class="sheet-x" data-sheet-close aria-label="Close" data-i18n-attr="aria-label"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
+            <p class="sheet-sub" data-i18n>Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.</p>
+            <h3 class="sheet-h3" data-i18n>Make a stakes room</h3>
+            <div id="stake-create" class="stake-create"></div>
+            <h3 class="sheet-h3" data-i18n>Open stakes rooms</h3>
+            <ul id="stake-rooms" class="room-list stake-rooms"></ul>
           </div>
         </div>
       </section>
@@ -209,7 +267,10 @@
         <header class="screen-head">
           <button data-i18n class="btn small" data-go="menu">← Back</button>
           <h2 data-i18n>Shop</h2>
-          <span class="coins with-plus"><span class="coin"></span><b>0</b><button type="button" id="get-coins" class="coin-plus" aria-label="Get coins" data-i18n-attr="aria-label,title" title="Get coins">+</button></span>
+          <span class="head-wallet">
+          <span class="coins" title="Gold Coins: earned by playing" data-i18n-attr="title"><span class="coin"></span><b>0</b></span>
+          <span class="gems with-plus" title="VIP Gems" data-i18n-attr="title"><span class="gem"></span><b>0</b><button type="button" id="get-coins" class="coin-plus" aria-label="Get gems" data-i18n-attr="aria-label,title" title="Get gems">+</button></span>
+          </span>
         </header>
         <nav id="shop-tabs" class="tabs"></nav>
         <div id="shop-grid" class="shop-grid"></div>
@@ -331,6 +392,11 @@
               <span class="quick-pawns" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
               <span class="switch quick-switch" aria-hidden="true"><i></i></span>
             </button>
+            <!-- Stakes: an entry fee in Gold Coins, the winner takes the pot (the host picks it) -->
+            <div id="stake-picker" class="stake-card">
+              <span class="stake-text"><b data-i18n>Stakes</b><small data-i18n>Everyone pays in, the winner takes the pot</small></span>
+              <div id="stake-options" class="stake-options" role="radiogroup" aria-label="Stakes" data-i18n-attr="aria-label"></div>
+            </div>
             <div id="seats" class="seats"></div>
 
             <div id="lobby-controls" class="controls hidden">

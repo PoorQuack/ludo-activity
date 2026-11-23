@@ -7,13 +7,15 @@
 #   bash scripts/give-coins.sh 1297913126418645033 -500        (takes 500 away, never below 0)
 #
 # Several ids can share one amount: give-coins.sh 1000000 id1 id2 also works (amount first).
+# VIP Gems instead of coins: CURRENCY=gems bash scripts/give-coins.sh <id> 500
 set -euo pipefail
+CURRENCY="${CURRENCY:-coins}"
 cd "$(dirname "$0")/.."
 PORT=$(grep -E '^PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '[:space:]' || true)
 PORT="${PORT:-3001}"
 
 if [ $# -lt 2 ]; then
-  sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
   exit 1
 fi
 
@@ -27,5 +29,5 @@ fi
 for id in "${ids[@]}"; do
   curl -fsS -X POST "http://localhost:${PORT}/api/admin/coins" \
     -H 'Content-Type: application/json' \
-    -d "{\"userId\":\"${id}\",\"amount\":${amount}}" && echo
+    -d "{\"userId\":\"${id}\",\"amount\":${amount},\"currency\":\"${CURRENCY}\"}" && echo
 done

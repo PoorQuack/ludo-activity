@@ -1,7 +1,7 @@
 // One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor, teamsOf } from '../shared/board.js';
-import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, ownsItem } from '../shared/shop.js';
+import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, STAKES, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, bestBotScore, progressShare, BOT_LEVELS } from './rules.js';
 import { cleanText } from './filter.js';
 import { isRigged } from './rig.js';
@@ -46,6 +46,7 @@ const SAVED_FIELDS = [
   'lastRoll', 'winners', 'teamOrder', 'forfeited', 'feud', 'streak', 'revenges', 'hits', 'wasLast', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
   'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'decider', 'actor', 'racePoints', 'rigged',
+  'stake', 'pot', 'potWon',
 ];
 
 export class Room {
@@ -57,6 +58,12 @@ export class Room {
     this.code = code; // short code anyone can join with, e.g. "K7QX"
     this.visibility = visibility; // 'public': listed for everyone; 'private': your Discord call or the code
     this.quick = false; // quick game: two tokens each instead of four (the host's choice, in the lobby)
+    // Stakes: an entry fee in Gold Coins (STAKES; 0 = a normal game), the host's choice in the
+    // lobby. Paid by every human when the game starts into `pot` { stake, total, paid: [{ seat,
+    // userId }] }; the winner takes it all, a winning team splits it (`potWon`: seat -> coins).
+    this.stake = 0;
+    this.pot = null;
+    this.potWon = null;
     this.instanceId = instanceId; // the Discord call it was created in
     this.chatOn = true; // (always on: each player turns typed chat off for themselves in ⚙ Settings)
     this.banned = new Set(); // userIds the host kicked: they can't come back
@@ -200,6 +207,7 @@ export class Room {
       phase: this.phase,
       visibility: this.visibility,
       quick: this.quick,
+      stake: this.stake,
       sameCall: !!instanceId && instanceId === this.instanceId,
     };
   }
@@ -239,6 +247,7 @@ export class Room {
       case 'newGame': return this.newGame(user);
       case 'setVisibility': return this.setVisibility(user, msg.visibility);
       case 'setQuick': return this.setQuick(user, msg.quick);
+      case 'setStake': return this.setStake(user, msg.stake);
       case 'setChat': return; // gone: chat is each player's own choice now (old clients may still send it)
       case 'kick': return this.kick(user, msg.userId);
       default: throw new Error('Unknown action');
@@ -361,6 +370,7 @@ export class Room {
     if (active.length < 2) throw new Error('Need at least 2 players (add a bot!)');
     if (this.teams && active.length < MODES[this.mode].seats.length) throw new Error('Team games need every seat filled (add bots!)');
     if (!active.some((i) => !this.seats[i].bot)) throw new Error('At least one human must play');
+    this.collectStakes(active); // (throws, taking nothing, if someone can't pay)
     this.phase = 'playing';
     this.tokens = newTokens(this.board.arms);
     if (this.quick) for (const seat of this.tokens) seat[2] = seat[3] = this.board.finished;
@@ -537,6 +547,73 @@ export class Room {
     this.changed();
   }
 
+  // Stakes: the entry fee every human pays when the game starts (Gold Coins only, never gems).
+  setStake(user, stake) {
+    this.requireHost(user);
+    this.requirePhase('lobby');
+    stake = Number(stake);
+    if (!STAKES.includes(stake)) throw new Error('Unknown stake');
+    this.stake = stake;
+    this.changed();
+  }
+
+  // Can this seat's player pay the stake? (bots never pay in)
+  canPayStake(seat) {
+    const s = this.seats[seat];
+    if (!s || s.bot || !this.stake) return true;
+    return !this.profiles || this.profiles.canStake(s.userId, this.stake);
+  }
+
+  // At the start: everyone pays in, or nobody does.
+  collectStakes(active) {
+    this.pot = null;
+    this.potWon = null;
+    if (!this.stake) return;
+    const humans = active.filter((i) => !this.seats[i].bot);
+    if (humans.length < 2) throw new Error('Stakes games need at least 2 people (bots don\'t pay in)');
+    const broke = humans.filter((i) => !this.canPayStake(i));
+    if (broke.length) {
+      const names = broke.map((i) => this.seats[i].name).join(', ');
+      throw new Error(`${names} ${broke.length > 1 ? "don't" : "doesn't"} have ${this.stake} coins for the stake`);
+    }
+    const paid = humans.map((seat) => ({ seat, userId: this.seats[seat].userId }));
+    for (const p of paid) this.profiles?.takeStake(p.userId, this.stake);
+    this.pot = { stake: this.stake, total: this.stake * paid.length, paid };
+  }
+
+  // Gives every stake back (a game that was abandoned, called off by the host, or rigged).
+  refundPot(why) {
+    if (!this.pot) return;
+    for (const p of this.pot.paid) this.profiles?.payStake(p.userId, this.pot.stake);
+    if (why) this.addLog(why);
+    this.pot = null;
+  }
+
+  // The game is over: the best-placed group with someone who paid in (and didn't surrender) takes
+  // the pot, split evenly between them (any odd coins to the first). Bots ahead of them don't
+  // count: they never paid in.
+  payPot() {
+    const pot = this.pot;
+    this.potWon = null;
+    if (!pot) return;
+    if (this.rigged) return this.refundPot('🎲 Test dice were used: everyone got their stake back.');
+    const groups = this.teamOrder ? this.teamOrder.map((t) => this.teams[t].filter((s) => this.seats[s])) : this.winners.map((s) => [s]);
+    const paidIn = (s) => pot.paid.some((p) => p.seat === s && this.seats[s]?.userId === p.userId) && !this.forfeited.includes(s);
+    const winners = groups.map((g) => g.filter(paidIn)).find((g) => g.length);
+    if (!winners) return this.refundPot('Nobody who paid in finished: everyone got their stake back.');
+    const each = Math.floor(pot.total / winners.length);
+    let odd = pot.total - each * winners.length;
+    this.potWon = {};
+    for (const s of winners) {
+      const coins = each + (odd-- > 0 ? 1 : 0);
+      this.profiles?.payStake(this.seats[s].userId, coins);
+      this.potWon[s] = coins;
+    }
+    const names = winners.map((s) => this.seats[s].name).join(' & ');
+    this.addLog(`💰 ${names} ${winners.length > 1 ? 'split' : 'takes'} the pot: ${pot.total} coins!`);
+    this.pot = null;
+  }
+
   // Removes someone from the room for good: their seat is freed (or, mid-game, they're
   // surrendered) and they can't rejoin. The server closes their connection to the room.
   kick(user, userId) {
@@ -576,6 +653,8 @@ export class Room {
   newGame(user) {
     if (this.phase === 'lobby') return;
     if (this.phase === 'playing') this.requireHost(user);
+    if (this.phase === 'playing') this.refundPot(); // called off by the host: stakes go back
+    this.potWon = null;
     this.clearTimer();
     this.clearPause();
     this.noCoins = null;
@@ -980,6 +1059,7 @@ export class Room {
     this.turnDeadline = null;
     this.clearTimer();
     this.giveRewards();
+    this.payPot();
     this.changed();
   }
 
@@ -1157,6 +1237,7 @@ export class Room {
     this.clearPause();
     this.clearTimer();
     this.addLog('Nobody came back — game over, no coins this time.');
+    this.refundPot('Everyone got their stake back.');
     this.phase = 'finished';
     this.rolled = false;
     this.turnDeadline = null;
@@ -1311,6 +1392,10 @@ export class Room {
       code: this.code,
       visibility: this.visibility,
       quick: this.quick,
+      stake: this.stake,
+      stakes: STAKES,
+      pot: this.pot && { stake: this.pot.stake, total: this.pot.total },
+      potWon: this.potWon,
       chatOn: this.chatOn,
       mode: this.mode,
       seatsAllowed: MODES[this.mode].seats,
@@ -1325,6 +1410,7 @@ export class Room {
             color: this.board.colors[i],
             skins: s.bot ? DEFAULT_EQUIPPED : this.equipped(s.userId),
             look: s.bot ? null : this.profiles?.badgeLook(s.userId) || null, // title and pinned badges
+            canPay: this.phase === 'lobby' ? this.canPayStake(i) : true, // enough coins for the stake?
           },
       ),
       tokens: this.tokens,

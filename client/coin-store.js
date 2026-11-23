@@ -1,4 +1,4 @@
-// "Get coins": the shop's + button. Coin packs and "Buy me a coffee", paid with real money through
+// "Get gems": the + beside the VIP Gems. Gem packs and "Buy me a coffee", paid with real money through
 // Discord's own checkout (consumable SKUs; the server checks each purchase with Discord before
 // paying it out). A Ko-fi / Buy Me a Coffee link takes tips of any amount.
 import { PriceUtils } from '@discord/embedded-app-sdk';
@@ -50,20 +50,20 @@ async function loadPrices() {
   }
 }
 
-// Coins shown as a little pile: more coins, bigger pile
+// Gems shown as a little pile: more gems, bigger pile (real money buys gems, never coins)
 function pile(n) {
-  return `<span class="coin-pile" style="--n:${n}">${'<span class="coin"></span>'.repeat(n)}</span>`;
+  return `<span class="coin-pile gem-pile" style="--n:${n}">${'<span class="gem"></span>'.repeat(n)}</span>`;
 }
 
 function render() {
   const inDiscord = !!ctx.sdk;
   const anySku = !!ctx.paid?.skus.length;
-  const note = !inDiscord ? t('Purchases work in the Discord app.') : !anySku ? t('Coin packs are coming soon.') : '';
+  const note = !inDiscord ? t('Purchases work in the Discord app.') : !anySku ? t('Gem packs are coming soon.') : '';
   el.innerHTML = `
     <div class="modal-card coin-card">
       <button type="button" class="set-close store-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
-      <h2 class="store-title">${t('Get coins')}</h2>
-      <p class="store-sub">${t('Paid securely through Discord. Coins arrive as soon as Discord confirms the payment.')}</p>
+      <h2 class="store-title">${t('Get VIP Gems')}</h2>
+      <p class="store-sub">${t('Paid securely through Discord. Gems arrive as soon as Discord confirms the payment.')}</p>
       ${note ? `<p class="store-note">${note}</p>` : ''}
       <div class="pack-grid">
         ${COIN_PACKS.map(
@@ -71,7 +71,7 @@ function render() {
           <div class="pack" data-tier="${i + 1}">
             ${p.bonus ? `<span class="pack-bonus">${t('+{n}% extra', { n: p.bonus })}</span>` : ''}
             ${pile(i + 2)}
-            <b class="pack-coins"><span class="coin"></span>${p.coins.toLocaleString(getLanguage())}</b>
+            <b class="pack-coins"><span class="gem"></span>${p.gems.toLocaleString(getLanguage())}</b>
             <small>${t(p.name)}</small>
             <button type="button" class="btn primary small" data-buy="${p.id}" ${inDiscord && skuOf(p.id) ? '' : 'disabled'}>${buyLabel(p.id)}</button>
           </div>`,

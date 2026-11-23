@@ -24,32 +24,34 @@ function fakeDiscord(entitlements, { consumeFails = false } = {}) {
 }
 const quiet = { log() {}, warn() {} };
 
-test('a bought coin pack pays once and is consumed', async () => {
+test('a bought gem pack pays VIP Gems (never coins) once and is consumed', async () => {
   const store = new ProfileStore(null);
-  const start = store.get(U).coins;
+  const start = store.get(U).gems;
+  const coins = store.get(U).coins;
   const ents = [{ id: '90000001', sku_id: '50000001', user_id: U, consumed: false }];
   const d = fakeDiscord(ents);
   const p = new Purchases({ appId: '1', token: 't', skus, store, fetchImpl: d.fetchImpl, log: quiet });
-  assert.deepEqual(await p.claim(U), [{ id: 'pack-2', kind: 'coins', coins: 2750 }]);
-  assert.equal(store.get(U).coins, start + 2750);
+  assert.deepEqual(await p.claim(U), [{ id: 'pack-2', kind: 'gems', gems: 275 }]);
+  assert.equal(store.get(U).gems, start + 275);
+  assert.equal(store.get(U).coins, coins, 'real money never buys coins');
   assert.equal(ents[0].consumed, true);
   assert.deepEqual(await p.claim(U), []);
-  assert.equal(store.get(U).coins, start + 2750);
+  assert.equal(store.get(U).gems, start + 275);
 });
 
 test('if consuming fails, the next claim does not pay again', async () => {
   const store = new ProfileStore(null);
-  const start = store.get(U).coins;
+  const start = store.get(U).gems;
   const ents = [{ id: '90000002', sku_id: '50000001', user_id: U, consumed: false }];
   const d = fakeDiscord(ents, { consumeFails: true });
   const p = new Purchases({ appId: '1', token: 't', skus, store, fetchImpl: d.fetchImpl, log: quiet });
   await p.claim(U);
   await p.claim(U);
   await Promise.all([p.claim(U), p.claim(U)]); // at the same time too
-  assert.equal(store.get(U).coins, start + 2750);
+  assert.equal(store.get(U).gems, start + 275);
 });
 
-test('a coffee pays no coins but is reported; unknown SKUs and other users are ignored', async () => {
+test('a coffee pays no gems or coins but is reported; unknown SKUs and other users are ignored', async () => {
   const store = new ProfileStore(null);
   const start = store.get(U).coins;
   const ents = [
@@ -58,8 +60,9 @@ test('a coffee pays no coins but is reported; unknown SKUs and other users are i
   ];
   const d = fakeDiscord(ents);
   const p = new Purchases({ appId: '1', token: 't', skus, store, fetchImpl: d.fetchImpl, log: quiet });
-  assert.deepEqual(await p.claim(U), [{ id: 'coffee-1', kind: 'tip', coins: 0 }]);
+  assert.deepEqual(await p.claim(U), [{ id: 'coffee-1', kind: 'tip', gems: 0 }]);
   assert.equal(store.get(U).coins, start);
+  assert.equal(store.get(U).gems, 0);
   assert.deepEqual(await p.claim('guest-abc'), []);
 });
 

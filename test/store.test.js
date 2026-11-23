@@ -68,7 +68,7 @@ function tempStore(body, { fileContents } = {}) {
   return { dir, file };
 }
 
-test('a legacy v1 flat save loads and is written back as v2', () => {
+test('a legacy v1 flat save loads and is written back as the current version (v3, with gems)', () => {
   const { dir, file } = tempStore({ u: { coins: 555, earned: { day: '2026-01-01', coins: 70 }, owned: ['token-gem'], equipped: {} } });
   const store = new ProfileStore(file, { now: () => DAY1 });
   assert.equal(store.peek('u').coins, 555);
@@ -76,8 +76,24 @@ test('a legacy v1 flat save loads and is written back as v2', () => {
   assert.deepEqual(store.peek('u').owned, ['token-gem']);
   store.flush();
   const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
-  assert.equal(doc.version, 2);
+  assert.equal(doc.version, 3);
   assert.equal(doc.profiles.u.coins, 555);
+  assert.equal(doc.profiles.u.gems, 0);
+  fs.rmSync(dir, { recursive: true });
+});
+
+test('a v2 save migrates to v3: every profile gets 0 gems, coins and items untouched', () => {
+  const { dir, file } = tempStore({ version: 2, profiles: { u: { coins: 900, owned: ['token-gem'], equipped: {} }, w: { coins: 5 } } });
+  const store = new ProfileStore(file, { now: () => DAY1 });
+  assert.equal(store.peek('u').gems, 0);
+  assert.equal(store.peek('u').coins, 900);
+  assert.equal(store.peek('w').gems, 0);
+  store.peek('u').gems = 70;
+  store.flush();
+  const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(doc.version, 3);
+  assert.equal(doc.profiles.u.gems, 70);
+  assert.equal(new ProfileStore(file, { now: () => DAY1 }).peek('u').gems, 70);
   fs.rmSync(dir, { recursive: true });
 });
 

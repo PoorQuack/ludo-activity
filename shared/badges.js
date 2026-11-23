@@ -54,3 +54,9 @@ export const levelFor = (badge, value) => badge.goals.filter((g) => value >= g).
 
 // All coins badges can ever pay (for the record: 12 badges × 600)
 export const ALL_BADGE_COINS = BADGES.length * LEVELS.reduce((n, l) => n + l.coins, 0);
+
+// A player's level, shown on their picture in the menu: 1, plus one for every badge medal earned
+// (bronze, silver and gold each count). It only ever goes up.
+export function playerLevel(profile) {
+  return 1 + Object.values(profile?.badges || {}).reduce((sum, l) => sum + (Number.isInteger(l) ? l : 0), 0);
+}
