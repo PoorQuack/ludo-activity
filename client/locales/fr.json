@@ -949,5 +949,9 @@
  "Unknown tier": "Palier inconnu",
  "Everyone pays in, the pot is shared by place": "Chacun mise, le pot est partagé selon le classement",
  "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Chacun paie la mise en pièces d'or au début de la partie. Le pot est partagé selon le classement final : à 4 joueurs, 60 % / 30 % / 10 %. Le dernier ne gagne rien.",
- "💰 The pot is shared by place: {list}": "💰 Le pot est partagé selon le classement : {list}"
+ "💰 The pot is shared by place: {list}": "💰 Le pot est partagé selon le classement : {list}",
+ "A royal gold crown sits on top of your picture, glinting.": "Une couronne royale en or posée sur ta photo, qui scintille.",
+ "A turned walnut ring with a deep, polished grain.": "Un anneau de noyer tourné, au grain profond et poli.",
+ "Ornate gold scrollwork set with little jewels, catching the light.": "Des volutes d'or ornées de petits joyaux qui accrochent la lumière.",
+ "Real flames curl round your picture, flickering and breathing.": "De vraies flammes s'enroulent autour de ta photo, vacillantes et vivantes."
 }

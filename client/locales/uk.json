@@ -949,5 +949,9 @@
  "Unknown tier": "Невідомий рівень",
  "Everyone pays in, the pot is shared by place": "Усі вносять ставку, банк ділиться за місцями",
  "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Усі платять ставку золотими монетами на початку гри. Банк ділиться за підсумковими місцями: при 4 гравцях 60% / 30% / 10%. Останній не отримує нічого.",
- "💰 The pot is shared by place: {list}": "💰 Банк поділено за місцями: {list}"
+ "💰 The pot is shared by place: {list}": "💰 Банк поділено за місцями: {list}",
+ "A royal gold crown sits on top of your picture, glinting.": "Королівська золота корона над твоїм фото, що виблискує.",
+ "A turned walnut ring with a deep, polished grain.": "Точене кільце з горіха з глибокою полірованою текстурою.",
+ "Ornate gold scrollwork set with little jewels, catching the light.": "Візерунчасті золоті завитки з маленькими каменями, що ловлять світло.",
+ "Real flames curl round your picture, flickering and breathing.": "Справжнє полум'я обвиває твоє фото, мерехтить і дихає."
 }

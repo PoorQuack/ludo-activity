@@ -949,5 +949,9 @@
  "Unknown tier": "Bilinmeyen seviye",
  "Everyone pays in, the pot is shared by place": "Herkes bahis koyar, pot sıraya göre paylaşılır",
  "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Herkes oyun başında bahsi altın parayla öder. Pot bitiş sırasına göre paylaşılır: 4 oyuncuda %60 / %30 / %10. Sonuncu hiçbir şey almaz.",
- "💰 The pot is shared by place: {list}": "💰 Pot sıraya göre paylaşıldı: {list}"
+ "💰 The pot is shared by place: {list}": "💰 Pot sıraya göre paylaşıldı: {list}",
+ "A royal gold crown sits on top of your picture, glinting.": "Resminin üstünde parıldayan altın bir kraliyet tacı.",
+ "A turned walnut ring with a deep, polished grain.": "Derin, cilalı damarlı tornalanmış ceviz bir halka.",
+ "Ornate gold scrollwork set with little jewels, catching the light.": "Işığı yakalayan küçük mücevherli süslü altın kıvrımlar.",
+ "Real flames curl round your picture, flickering and breathing.": "Gerçek alevler resminin etrafında kıvrılıyor, titreyip nefes alıyor."
 }

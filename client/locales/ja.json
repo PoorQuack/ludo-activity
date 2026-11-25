@@ -949,5 +949,9 @@
  "Unknown tier": "不明なティア",
  "Everyone pays in, the pot is shared by place": "全員が賭け、ポットは順位で分配",
  "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "ゲーム開始時に全員がゴールドコインで賭け金を払います。ポットは最終順位で分配：4人なら60% / 30% / 10%。最下位は何ももらえません。",
- "💰 The pot is shared by place: {list}": "💰 ポットを順位で分配：{list}"
+ "💰 The pot is shared by place: {list}": "💰 ポットを順位で分配：{list}",
+ "A royal gold crown sits on top of your picture, glinting.": "あなたの写真の上で輝く王家の金の王冠。",
+ "A turned walnut ring with a deep, polished grain.": "深く磨かれた木目のクルミ材の挽き物リング。",
+ "Ornate gold scrollwork set with little jewels, catching the light.": "光を受けて輝く小さな宝石付きの華麗な金の唐草模様。",
+ "Real flames curl round your picture, flickering and breathing.": "本物の炎があなたの写真を包み、揺らめき息づく。"
 }

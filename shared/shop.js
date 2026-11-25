@@ -318,11 +318,10 @@ export const SHOP_ITEMS = [
     ],
   },
   { id: 'frame-none', type: 'frame', name: 'No frame', rarity: 'common', price: 0 },
-  { id: 'frame-bronze', type: 'frame', name: 'Walnut', rarity: 'rare', price: 250, desc: 'A carved walnut ring with a brass rim.' },
-  { id: 'frame-gold', type: 'frame', name: 'Gold', rarity: 'epic', price: 120, priceCurrency: 'gems', vip: true, desc: 'Polished gold, with a soft shine that sweeps round it.' },
-  { id: 'frame-laurel', type: 'frame', name: 'Laurel', rarity: 'epic', price: 150, priceCurrency: 'gems', vip: true, desc: 'A gold laurel wreath, for champions.' },
-  { id: 'frame-flame', type: 'frame', name: 'Flame', rarity: 'legendary', price: 250, priceCurrency: 'gems', vip: true, perk: 'A ring of fire that flickers around your picture.' },
-  { id: 'frame-crown', type: 'frame', name: 'Crown', rarity: 'legendary', price: 300, priceCurrency: 'gems', vip: true, perk: 'A jewelled gold ring with a little crown on top that glints.' },
+  { id: 'frame-bronze', type: 'frame', name: 'Walnut', rarity: 'rare', price: 250, img: '/frames/frame-walnut.webp', desc: 'A turned walnut ring with a deep, polished grain.' },
+  { id: 'frame-gold', type: 'frame', name: 'Gold', rarity: 'epic', price: 120, priceCurrency: 'gems', img: '/frames/frame-gold.webp', desc: 'Ornate gold scrollwork set with little jewels, catching the light.' },
+  { id: 'frame-flame', type: 'frame', name: 'Flame', rarity: 'legendary', price: 250, priceCurrency: 'gems', img: '/frames/frame-flame.webp', perk: 'Real flames curl round your picture, flickering and breathing.' },
+  { id: 'frame-crown', type: 'frame', name: 'Crown', rarity: 'legendary', price: 300, priceCurrency: 'gems', img: '/frames/frame-crown.webp', perk: 'A royal gold crown sits on top of your picture, glinting.' },
   { id: 'frame-neon', type: 'frame', name: 'Cyber Neon', rarity: 'legendary', price: 280, priceCurrency: 'gems', vip: true, img: '/frames/frame-cyber-neon.webp', perk: 'Neon circuits in cyan and magenta, softly pulsing.' },
   // Won, never bought: the top three of a weekly or monthly leaderboard get these (award: how to win)
   { id: 'frame-rank-1', type: 'frame', name: 'Champion', rarity: 'legendary', price: 0, award: 'Finish 1st on a weekly or monthly leaderboard', img: '/frames/frame-rank-1.webp' },
@@ -454,4 +453,4 @@ export const PAID_ITEMS = Object.fromEntries([
 // Shop items new in the latest update: tagged "New" in the shop until the player has looked at
 // them (on each device). Change this list with each update that adds items; items added later
 // than a player's first visit are tagged automatically anyway.
-export const NEW_ITEMS = new Set(['frame-neon', 'frame-rank-1', 'frame-rank-2', 'frame-rank-3', 'frame-bronze', 'frame-gold', 'frame-laurel', 'frame-flame', 'frame-crown', 'emote-buffcat', 'emote-eatingchips', 'emote-cozykitten', 'emote-wadafak', 'emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
+export const NEW_ITEMS = new Set(['frame-neon', 'frame-rank-1', 'frame-rank-2', 'frame-rank-3', 'frame-bronze', 'frame-gold', 'frame-flame', 'frame-crown', 'emote-buffcat', 'emote-eatingchips', 'emote-cozykitten', 'emote-wadafak', 'emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);

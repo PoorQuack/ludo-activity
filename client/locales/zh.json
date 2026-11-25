@@ -949,5 +949,9 @@
  "Unknown tier": "未知等级",
  "Everyone pays in, the pot is shared by place": "人人下注，奖池按名次分配",
  "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "开局时每人用金币支付押注。奖池按最终名次分配：4人时 60% / 30% / 10%。最后一名一无所得。",
- "💰 The pot is shared by place: {list}": "💰 奖池按名次分配：{list}"
+ "💰 The pot is shared by place: {list}": "💰 奖池按名次分配：{list}",
+ "A royal gold crown sits on top of your picture, glinting.": "一顶皇家金冠戴在你的头像上，闪闪发光。",
+ "A turned walnut ring with a deep, polished grain.": "车削胡桃木圆环，纹理深邃光亮。",
+ "Ornate gold scrollwork set with little jewels, catching the light.": "华丽的金色涡卷纹，镶着捕捉光线的小宝石。",
+ "Real flames curl round your picture, flickering and breathing.": "真实的火焰环绕你的头像，摇曳呼吸。"
 }
