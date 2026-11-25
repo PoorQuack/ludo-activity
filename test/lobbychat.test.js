@@ -146,7 +146,7 @@ test('with a key, the language check tells Riva Translate the pair', async () =>
   const tr = new Translator({ fetch: fakeNvidia(calls, { langs }), nvidiaKey: 'k' });
   assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'es-es-en: hola amigo', from: 'es' });
   assert.equal(calls.find((c) => c.pair).auth, 'Bearer k');
-  assert.equal(calls.find((c) => c.pair).shots, 6); // three worked examples, Spanish -> English
+  assert.equal(calls.find((c) => c.pair).shots, 8); // four worked examples, Spanish -> English
   // the writer's setting picks between neighbours (Spain / Latin America, Danish / Norwegian)
   assert.equal((await tr.translate('ann', 'hola amigo', 'fr', 'es-419')).text, 'en-fr: es-us-en: hola amigo');
   assert.equal((await tr.translate('ann', 'jeg vil spille igen', 'en', 'da')).from, 'da');
@@ -178,7 +178,7 @@ test('chat languages: locales map onto the 37, each with its Ludo examples', asy
   const { matchChatLanguage, CHAT_LANGUAGES } = await import('../shared/chatlangs.js');
   const { LUDO_PHRASES } = await import('../shared/ludo-phrases.js');
   assert.equal(CHAT_LANGUAGES.length, 37);
-  for (const l of CHAT_LANGUAGES) assert.equal(LUDO_PHRASES[l.code]?.length, 3, l.code);
+  for (const l of CHAT_LANGUAGES) assert.equal(LUDO_PHRASES[l.code]?.length, 4, l.code);
   for (const [loc, code] of [['sv-SE', 'sv'], ['pt-PT', 'pt-PT'], ['pt-BR', 'pt'], ['es-ES', 'es'], ['es-419', 'es-419'], ['zh-TW', 'zh-TW'], ['zh-CN', 'zh'], ['nb', 'no'], ['xx', null]])
     assert.equal(matchChatLanguage(loc), code, loc);
 });
