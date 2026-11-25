@@ -72,11 +72,13 @@ export class Purchases {
         }
         continue;
       }
-      const gems = item.kind === 'gems' ? item.gems : 0;
-      if (this.store.grantPurchase(userId, String(e.id), gems)) {
-        granted.push({ id: item.id, kind: item.kind, gems });
-        this.log.log?.(`💳 ${userId} bought ${item.id}${gems ? ` (+${gems} gems)` : ''}`);
+      const given = this.store.grantPaid(userId, String(e.id), item);
+      if (given) {
+        granted.push(given);
+        this.log.log?.(`💳 ${userId} bought ${item.id}${given.gems ? ` (+${given.gems} gems)` : ''}`);
       }
+      // The Starter Pack is a Durable SKU: it can't be consumed (and the id stops a second payout)
+      if (item.kind === 'starter') continue;
       // Paid out (now or before): consume it so it stops showing up. Failing is fine, the id
       // in the profile stops a second payout, and it's retried on the next claim.
       try {

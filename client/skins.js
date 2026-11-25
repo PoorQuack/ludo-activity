@@ -540,6 +540,8 @@ export const DICE_STYLES = {
   'dice-classic': { face: '#fbfaf6', edge: '#d3cdbf', pip: '#26262b' },
   'dice-midnight': { face: '#151a3d', edge: '#3b4580', pip: '#ffe9a8', art: 'night', pips: 'glow', prop: 'moon' },
   'dice-wood': { face: '#c8935a', edge: '#7f5226', pip: '#3d2208', art: 'grain', pips: 'inset', prop: 'sprout' },
+  // The Starter Pack's die: cut jade, the colour of Die Gems
+  'dice-jade': { face: '#1f9e8c', edge: '#0b5c51', pip: '#f4fffb', pipDark: '#b9d8d1', art: 'gem', facets: ['#7af2df', '#2fc4ad', '#138a79', '#0a5a4f'], pips: 'pearl', prop: 'flash' },
   'dice-ruby': { face: '#b3122a', edge: '#6b0614', pip: '#fff4f4', pipDark: '#c9b8bb', art: 'gem', facets: ['#ff6b7f', '#d42a42', '#8c0a1f', '#5e0413'], pips: 'pearl', prop: 'flash' },
   // Glows in the colour of whoever is rolling (green in shop previews), and pulses.
   'dice-neon': { face: '#0b0c14', edge: '#2ef29a', pip: '#2ef29a', outline: '#2ef29a', playerColor: true, pulse: true, art: 'grid', pips: 'glow', prop: 'neon' },
