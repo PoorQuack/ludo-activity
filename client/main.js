@@ -4371,6 +4371,13 @@ function onLobbyChat(msg) {
     if (list.length > 80) list.splice(0, list.length - 80);
     if (msg.channel !== lchat.tab && msg.msg.userId !== me?.id && !muted.has(msg.msg.userId)) lchat.unseen[msg.channel] = true;
     if (msg.msg.userId !== me?.id && !muted.has(msg.msg.userId) && msg.channel === lchat.tab) sfx('chat');
+  } else if (msg.op === 'ping') {
+    if (msg.userId !== me?.id && !muted.has(msg.userId) && $('menu').dataset.panel !== 'chat') {
+      lchat.unseen[msg.channel] = true;
+      lchat.unseenTab = true;
+      document.querySelector('[data-dot="chat"]')?.classList.remove('hidden');
+    }
+    return;
   } else if (msg.op === 'removed') {
     const list = msg.channel === 'lang' ? lchat.local : lchat.global;
     const i = list.findIndex((m) => m.id === msg.id);
@@ -4826,6 +4833,10 @@ function setPanel(name) {
   if (name === 'ranking') fetchLeaderboard();
   if (name === 'pass') renderPass();
   if (name === 'chat' || lchat.open) lobbyChatPanel(name === 'chat');
+  if (name === 'chat') {
+    lchat.unseenTab = false;
+    document.querySelector('[data-dot="chat"]')?.classList.add('hidden');
+  }
   $('menu').scrollTop = 0;
 }
 for (const b of document.querySelectorAll('[data-hub-tab]')) {

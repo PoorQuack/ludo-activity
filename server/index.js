@@ -510,7 +510,15 @@ function handleLobbyChat(ws, msg) {
   if (msg.op === 'say') {
     if (!lobbyListeners.has(ws)) throw new Error('Open the chat first');
     const m = lobbyChat.say(ctx.user, id, msg.text);
-    if (m) reach({ type: 'lobbyChat', op: 'msg', channel, msg: m });
+    if (m) {
+      reach({ type: 'lobbyChat', op: 'msg', channel, msg: m });
+      const ping = JSON.stringify({ type: 'lobbyChat', op: 'ping', channel, userId: m.userId });
+      for (const c of wss.clients) {
+        if (c === ws || lobbyListeners.has(c) || c.readyState !== 1 || !c.ctx?.user) continue;
+        if (channel === 'lang' && (c.ctx.lobbyLang || 'en') !== ctx.lobbyLang) continue;
+        c.send(ping);
+      }
+    }
     return;
   }
   if (msg.op === 'delete') {

@@ -290,6 +290,7 @@ html, body {
 .dock-shop .ico { color: var(--gold); }
 @media (hover: hover) and (pointer: fine) { .dock-tab:hover { color: var(--text); } }
 .dock-dot, .dock-shop.has-new::after { position: absolute; top: 6px; right: calc(50% - 18px); width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--panel); }
+.dock-dot[data-dot='chat'] { background: #ef4444; }
 .dock-shop.has-new::after { content: ''; }
 .dock-dot.hidden { display: none; }
 
