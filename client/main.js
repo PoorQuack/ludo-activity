@@ -4681,6 +4681,7 @@ function appendReplyQuote(parentEl, replyTo, logEl) {
   b.textContent = replyTo.name || 'Player';
   const txt = document.createElement('span');
   txt.textContent = formatReplyPreview(replyTo.text);
+  txt.dir = 'auto';
   q.append(document.createTextNode('↩ '), b, txt);
   q.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -4701,14 +4702,23 @@ function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onRe
   row.className = 'chat-line-row';
   const content = document.createElement('div');
   content.className = 'chat-line-content';
-  renderChatTokens(content, m.text, logEl, stickerOnly);
+  // The words in their own box, which reads right to left for Arabic (dir="auto"): the time and
+  // Translate don't get mixed into the sentence, and an Arabic line sits on the right.
+  const words = document.createElement('span');
+  words.className = 'msg-text';
+  words.dir = 'auto';
+  renderChatTokens(words, m.text, logEl, stickerOnly);
+  content.appendChild(words);
+  if (isRtlText(m.text)) content.dir = 'rtl';
   if (showTime) {
     const when = document.createElement('time');
     when.className = 'when';
+    when.dir = 'auto'; // "04:52 PM", not "PM 04:52", next to an Arabic line
     when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
     content.appendChild(when);
   }
-  if (!stickerOnly && !isMe && scope && scope !== 'dm') addTranslate(content, scope, m.id);
+  // (nothing to translate in emoji and stickers alone)
+  if (!stickerOnly && !isMe && scope && scope !== 'dm' && hasWords(m.text)) addTranslate(content, scope, m.id);
   const acts = document.createElement('div');
   acts.className = 'line-acts';
   for (const ev of ['pointerdown', 'mousedown']) acts.addEventListener(ev, (e) => e.target.closest('button') && e.preventDefault());
@@ -4738,6 +4748,13 @@ function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onRe
   syncLineReacts(line, m.reactions, (emoji) => onReact(m, emoji));
   return line;
 }
+// Right-to-left when the first letter is Arabic, Hebrew, Persian...
+const isRtlText = (text) => {
+  const first = /[\p{L}]/u.exec(String(text).replace(/:[a-z0-9-]+:/g, ''));
+  return !!first && /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufefc]/.test(first[0]);
+};
+const hasWords = (text) => /\p{L}{2}/u.test(String(text).replace(/:[a-z0-9-]+:/g, ''));
+
 function renderChatTokens(target, text, logEl, stickerOnly) {
   for (const part of text.split(/(:[a-z0-9-]+:)/g)) {
     const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
@@ -5157,6 +5174,7 @@ function showTranslation(li, r) {
   li.querySelector('.tr-out')?.remove();
   const out = document.createElement('span');
   out.className = `tr-out${r.error ? ' err' : ''}`;
+  out.dir = 'auto';
   if (r.error) out.textContent = translateServer(r.error);
   else if (r.already) out.textContent = t('Already in {lang}', { lang: langInMine(chatLanguage()) });
   else {
