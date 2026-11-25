@@ -2286,11 +2286,13 @@ button, .btn { touch-action: manipulation; }
 
 /* ---------- stakes rooms ---------- */
 .stake-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border-radius: 12px; border: 1.5px solid rgba(255, 255, 255, 0.08); background: var(--panel-2); }
+.stake-card.host { flex-direction: column; align-items: stretch; gap: 8px; }
 .stake-card.on { border-color: rgba(242, 191, 63, 0.55); background: linear-gradient(100deg, rgba(242, 191, 63, 0.12), transparent 70%), var(--panel-2); }
 .stake-card.hidden { display: none; }
 .stake-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .stake-text small { font-size: 12px; color: var(--muted); }
 .stake-options { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.stake-card.host .stake-options { justify-content: flex-start; max-height: 116px; overflow-y: auto; padding-right: 2px; }
 .stake-options button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 4px 10px; border-radius: 99px; border: 0; background: var(--panel); color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s var(--ease-out), transform 0.1s var(--ease-out); }
 .stake-options button .coin { width: 12px; height: 12px; }
 .stake-options button.on { background: var(--gold); color: #2b1d05; }
@@ -2356,7 +2358,7 @@ button, .btn { touch-action: manipulation; }
 .soon-text small { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
 .soon-tag { align-self: flex-start; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #2b1d05; background: var(--gold); }
 /* Stakes sheet */
-.stake-create { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stake-create { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px; }
 .stake-opt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 6px; border: 0; border-radius: 14px; background: var(--panel-2); color: var(--text); font: inherit; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(242, 191, 63, 0.35), 0 3px 0 #0e0b08; transition: transform 0.12s var(--ease-out); }
 .stake-opt:active { transform: translateY(2px); }
 .stake-opt .coin { width: 22px; height: 22px; }

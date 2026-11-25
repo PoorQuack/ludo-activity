@@ -11,7 +11,7 @@ import { openItemView, refreshItemView, closeItemView } from './item-view.js';
 import { D20 } from './d20.js';
 import { openCoinStore } from './coin-store.js';
 import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, seasonFor } from '../shared/pass.js';
-import { PASS_SKU_ID } from '../shared/shop.js';
+import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
 import { setFrame } from './frames.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour } from './tour.js';
@@ -2867,25 +2867,28 @@ function roomInfoText() {
   return `${kind} · ${t('code {code}', { code: state.code })}${stake}`;
 }
 
-// Stakes: Off / 100 / 500 / 2,500 Gold Coins (the host picks; everyone else sees it)
+// Stakes: Off or 100..10,000 Gold Coins (the host picks; players see the active stake)
 function renderStakes() {
   const box = $('stake-picker');
+  const host = isHost();
   box.classList.toggle('hidden', state.phase !== 'lobby');
   box.classList.toggle('on', !!state.stake);
+  box.classList.toggle('host', host);
   const opts = $('stake-options');
-  const key = `${state.stake}|${isHost()}|${currentLang()}`;
+  const key = `${state.stake}|${host}|${currentLang()}`;
   if (opts.dataset.key === key) return;
   opts.dataset.key = key;
   opts.innerHTML = '';
-  for (const amount of state.stakes || [0]) {
+  const list = host ? (state.stakes || STAKES) : [state.stake || 0];
+  for (const amount of list) {
     const b = document.createElement('button');
     b.type = 'button';
     b.setAttribute('role', 'radio');
     b.setAttribute('aria-checked', String(amount === state.stake));
     b.className = amount === state.stake ? 'on' : '';
     b.innerHTML = amount ? `<span class="coin"></span>${amount.toLocaleString(currentLang())}` : escapeHtml(t('Off'));
-    b.disabled = !isHost();
-    b.addEventListener('click', () => send('setStake', { stake: amount }));
+    b.disabled = !host;
+    if (host) b.addEventListener('click', () => send('setStake', { stake: amount }));
     opts.appendChild(b);
   }
 }
@@ -4617,7 +4620,7 @@ $('bots-tile').addEventListener('click', () => {
   sendLobby('create', { visibility: 'private' });
 });
 
-// Stakes Rooms: make one (100 / 500 / 2,500 Gold Coins) or join an open one
+// Stakes Rooms: make one (100 .. 10,000 Gold Coins) or join an open one
 $('stakes-btn').addEventListener('click', () => {
   renderStakesSheet();
   openSheet('stakes-sheet');
@@ -4627,7 +4630,7 @@ function renderStakesSheet() {
   const create = $('stake-create');
   create.innerHTML = '';
   const have = profile?.coins ?? 0;
-  for (const amount of [100, 500, 2500]) {
+  for (const amount of STAKES.filter((n) => n > 0)) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'stake-opt';

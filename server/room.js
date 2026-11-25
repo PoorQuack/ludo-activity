@@ -593,9 +593,8 @@ export class Room {
     this.pot = null;
   }
 
-  // The game is over: the pot is shared by finishing place (POT_SPLIT), counting only people
-  // who paid in. A team shares its place's cut evenly (any odd coins to the first). Anyone who
-  // surrendered places last and gets nothing; a cut that would have gone to them goes to 1st.
+  // The game is over: winner takes all — 100% of the pot goes to the highest-placed live
+  // human (or live members of the winning team). Anyone who surrendered gets nothing.
   // Bots ahead of people don't count: they never paid in.
   payPot() {
     const pot = this.pot;
@@ -609,31 +608,20 @@ export class Room {
     const placed = new Set(places.flat());
     for (const p of pot.paid) if (!placed.has(p.seat) && this.seats[p.seat]?.userId === p.userId) places.push([p.seat]); // (anyone missing: last)
     const live = (g) => g.some((s) => !this.forfeited.includes(s));
-    if (!places.some(live)) return this.refundPot('Nobody who paid in finished: everyone got their stake back.');
-    const split = POT_SPLIT[Math.min(places.length, 6)] || [100];
-    const cuts = places.map((g, i) => (live(g) ? split[i] || 0 : 0));
-    const first = cuts.findIndex((c, i) => live(places[i]));
-    cuts[first] += 100 - cuts.reduce((a, b) => a + b, 0); // surrendered places' cuts go to 1st
+    const first = places.findIndex(live);
+    if (first < 0) return this.refundPot('Nobody who paid in finished: everyone got their stake back.');
     this.potWon = {};
-    const shares = places.map((g, i) => Math.floor((pot.total * cuts[i]) / 100));
-    shares[first] += pot.total - shares.reduce((a, b) => a + b, 0); // rounding: to 1st
-    const lines = [];
-    places.forEach((g, i) => {
-      if (!shares[i]) return;
-      const members = g.filter((s) => !this.forfeited.includes(s));
-      const each = Math.floor(shares[i] / members.length);
-      let odd = shares[i] - each * members.length;
-      for (const s of members) {
-        const coins = each + (odd-- > 0 ? 1 : 0);
-        this.profiles?.payStake(this.seats[s].userId, coins);
-        this.potWon[s] = coins;
-        lines.push(`${this.seats[s].name} +${coins}`);
-      }
-    });
+    const members = places[first].filter((s) => !this.forfeited.includes(s));
+    const each = Math.floor(pot.total / members.length);
+    let odd = pot.total - each * members.length;
+    for (const s of members) {
+      const coins = each + (odd-- > 0 ? 1 : 0);
+      this.profiles?.payStake(this.seats[s].userId, coins);
+      this.potWon[s] = coins;
+    }
     const winners = Object.keys(this.potWon);
     if (winners.length === 1) this.addLog(`💰 ${this.seats[winners[0]].name} takes the pot: ${pot.total} coins!`);
-    else if (places.filter((g, i) => shares[i]).length === 1) this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${pot.total} coins!`);
-    else this.addLog(`💰 The pot is shared by place: ${lines.join(' · ')}`);
+    else this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${pot.total} coins!`);
     this.pot = null;
   }
 
@@ -1100,23 +1088,27 @@ export class Room {
     const paid = ranked ? pot.paid.filter((p) => this.seats[p.seat]?.userId === p.userId) : [];
     const byUser = new Map(results.map((r) => [r.userId, r]));
     // surrendered players paid in too: they're not in the results (no coins), but they lost the stake
-    for (const p of paid) if (!byUser.has(p.userId)) byUser.set(p.userId, { userId: p.userId, name: this.seats[p.seat].name, won: false });
+    for (const p of paid) if (!byUser.has(p.userId)) byUser.set(p.userId, { userId: p.userId, name: this.seats[p.seat].name, won: false, placePoints: 0 });
     const humans = paid.map((p) => p.userId);
     for (const r of byUser.values()) {
       const p = paid.find((x) => x.userId === r.userId);
       if (!p) {
         r.points = 0;
+        if (pot) r.placePoints = 0;
         continue;
       }
       const won = this.potWon?.[p.seat] || 0;
       r.points = won - pot.stake;
       r.won = won > 0;
+      // Higher stakes give higher leaderboard points in v1 too (only the winner scores in Stakes Rooms).
+      r.placePoints = won > 0 ? (r.placePoints || 0) + Math.max(2, Math.round(pot.stake / 100)) : 0;
       r.opponents = humans.filter((id) => id !== r.userId);
     }
     this.onGameEnd([...byUser.values()]);
   }
 
-  // Coins for every human who didn't surrender: by finishing place, plus a bonus per capture.
+  // Classic rewards for every human who didn't surrender: by finishing place, plus a bonus per
+  // capture. Stakes Rooms are a separate mode (winner takes all from the pot, no Classic coins).
   // Only games against other people pay: playing bots on your own earns nothing.
   giveRewards() {
     this.rewards = {};
@@ -1143,6 +1135,7 @@ export class Room {
     // by teaming up against easy bots).
     const coop = !!this.teamOrder && humanGroups.length === 1;
     if (coop) this.noPoints = 'coop';
+    const isStakes = this.stake > 0;
     this.winners.forEach((s) => {
       const place = placeOf(s);
       const seat = this.seats[s];
@@ -1150,11 +1143,13 @@ export class Room {
       // A game cut short by a surrender pays for how far you got; a game that ran
       // its course pays the full placement even if the last-placed seat didn't finish.
       const share = this.endedEarly ? progressShare(this.tokens, s, this.board) : 1;
-      if (share < 1) this.rewardPartial.push(s);
-      const coins = Math.round(REWARDS.place[place] * share + this.captures[s] * REWARDS.capture + (this.revenges[s] || 0) * REWARDS.revenge);
-      const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
-      this.rewards[s] = granted;
-      if (granted < coins) this.rewardCapped.push(s);
+      if (!isStakes) {
+        if (share < 1) this.rewardPartial.push(s);
+        const coins = Math.round(REWARDS.place[place] * share + this.captures[s] * REWARDS.capture + (this.revenges[s] || 0) * REWARDS.revenge);
+        const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
+        this.rewards[s] = granted;
+        if (granted < coins) this.rewardCapped.push(s);
+      }
       // (leaderboard points come from the pot in v2, or finishing places in v1 until Dec 2026)
       const humanPlace = humanGroups.findIndex((g) => g.includes(s));
       const beaten = humanGroups.slice(humanPlace + 1).reduce((n, g) => n + g.length, 0);
