@@ -47,6 +47,45 @@ export const BOARD_THEMES = {
     baseInner: '#1b1e2c',
     players: { red: '#e2645f', green: '#43bd86', yellow: '#e8bd4c', blue: '#5c8be8', purple: '#a283ea', orange: '#ea8f4f' },
   },
+  'board-dojo': {
+    // Battle Pass Season 1: woven carbon under circuit-lit tiles, the weave drifting slowly beneath
+    art: {
+      base: 'outline', frame: ['#22e3ff', '#b84dff', 0.16], panel: 'window',
+      tex: {
+        surface: { src: '/textures/samurai-surface.jpg', size: 6 },
+        tile: { src: '/textures/samurai-tile.jpg', size: 2, blend: 'screen', alpha: 0.85 },
+      },
+      under: { src: '/textures/samurai-surface.jpg', size: 6, alpha: 0.55, blend: 'screen', speed: 0.25, single: true },
+      tile: 'neon', mark: 'star',
+      pins: 'ring', decor: 'neon', hub: 'rings',
+      shield: 'force',
+    },
+    bg: '#0a0c14',
+    cell: '#1d2233',
+    safe: '#2a2350',
+    star: '#22e3ff',
+    baseInner: '#0e111b',
+    players: { red: '#ff4d5e', green: '#33e39a', yellow: '#ffd84a', blue: '#3fb4ff', purple: '#c060ff', orange: '#ff913a' },
+  },
+  'board-pitch': {
+    // Battle Pass Season 1: a striped pitch with chalk-white squares
+    art: {
+      base: 'solid', frame: ['#ffffff', '#e8f5e0', 0.3],
+      tex: {
+        surface: { src: '/textures/football-surface.jpg', size: 7 },
+        base: { src: '/textures/football-surface.jpg', size: 5, blend: 'multiply', alpha: 0.35 },
+      },
+      tile: 'gloss', mark: 'star',
+      pins: 'recess', hub: 'rings',
+      shield: { kind: 'orbit', motif: 'leaf', colors: ['#ffffff', '#d7f0c8', '#a6dd8c'], glow: 'rgba(255, 255, 255, 0.4)' },
+    },
+    bg: '#2f7d2a',
+    cell: '#f7fbf3',
+    safe: '#c9ecb7',
+    star: '#2f7d2a',
+    baseInner: '#e9f6e1',
+    players: { red: '#d9433b', green: '#1f8f4a', yellow: '#e2b52b', blue: '#2f6fcf', purple: '#7d4fc4', orange: '#e57a2a' },
+  },
   'board-wood': {
     // A walnut board with pale maple squares, inlaid bases
     art: {

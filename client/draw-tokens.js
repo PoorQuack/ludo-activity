@@ -413,6 +413,9 @@ export const PAWN_STYLES = {
   'token-penguin': { shape: 'penguin' },
   'token-sakura': { shape: 'sakura' },
   'token-dino': { shape: 'dino' },
+  // Battle Pass Season 1: painted pictures, one per colour
+  'token-samurai': { shape: 'samurai' },
+  'token-football': { shape: 'football' },
   // Legendary: a figure of their own, with an effect that moves (TOKEN_FX), and a way of their
   // own of going back to base when captured (TOKEN_SIGNATURES in skins.js)
   'token-crown': { shape: 'king', fx: 'glitter' },
@@ -439,6 +442,8 @@ export const TOKEN_MARKS = {
   penguin: { y: 0.6, x: 0, size: 0.7 },
   sakura: { y: 0.5, x: 0, size: 0.62 },
   dino: { y: 0.95, x: 0, size: 0.6 },
+  samurai: { y: 0.35, x: 0, size: 0.6 },
+  football: { y: 0.3, x: 0, size: 0.6 },
   ufo: { y: 0.95, x: 0, size: 0.6 },
   dragon: { y: 0.6, x: 0, size: 0.7 },
 };
@@ -606,6 +611,26 @@ function dragonPicture(name) {
   return img.complete && img.naturalWidth ? img : null;
 }
 
+// Battle Pass tokens: one painted picture per colour (/tokens/<name>-<colour>.webp), loaded once
+const pictureArt = {};
+function tokenPicture(name, sign) {
+  const file = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(sign) ? sign : 'red';
+  const key = `${name}-${file}`;
+  let img = pictureArt[key];
+  if (!img) {
+    if (typeof Image === 'undefined') return null;
+    img = pictureArt[key] = new Image();
+    img.onload = () => pawnSprites.clear();
+    img.src = `/tokens/${key}.webp`;
+  }
+  return img.complete && img.naturalWidth ? img : null;
+}
+function drawPicture(ctx, r, img, height) {
+  const h = r * height;
+  const w = (h * img.naturalWidth) / img.naturalHeight;
+  ctx.drawImage(img, -w / 2, -h + r * 0.28, w, h);
+}
+
 // Astronomical constellation star coordinates and asterism connector lines for each zodiac sign
 export const ZODIAC_STARS = {
   red: {
@@ -641,6 +666,17 @@ export const ZODIAC_STARS = {
 };
 
 export const TOKEN_SHAPES = {
+  // (while a picture loads, the plain pawn stands in)
+  samurai(ctx, r, hex, sign) {
+    const img = tokenPicture('samurai', sign);
+    if (!img) return paintPawn(ctx, r, hex, {}, sign);
+    drawPicture(ctx, r, img, 2.5);
+  },
+  football(ctx, r, hex, sign) {
+    const img = tokenPicture('football', sign);
+    if (!img) return paintPawn(ctx, r, hex, {}, sign);
+    drawPicture(ctx, r, img, 2.7);
+  },
   dino(ctx, r, hex, sign) {
     const img = dinoPicture(sign);
     if (!img) return TOKEN_SHAPES.dinoDrawn(ctx, r, hex);

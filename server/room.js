@@ -33,8 +33,6 @@ const CHAT_COOLDOWN_MS = 700;
 const CHAT_KEEP = 40; // messages kept (and sent) per room
 const CHAT_MAX_LEN = 100;
 const EMOTE_TTL_MS = 3000;
-const LB_PER_BEATEN = 10; // leaderboard points for each human you finish ahead of
-const LB_WIN_BONUS = 10; // …and for finishing ahead of every other human
 const TYPING_MS = 2500; // "is typing…" lasts this long after the last ping (clients ping every second)
 const BOT_NAMES = ['Bot Neko', 'Bot Mila', 'Bot Gigi', 'Bot Lizzy', 'Bot SamSam'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -497,7 +495,9 @@ export class Room {
     const now = Date.now();
     if (now - (this.lastChat.get(user.id) || 0) < CHAT_COOLDOWN_MS) throw new Error('Slow down a little');
     this.lastChat.set(user.id, now);
-    this.chat.push({ id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now });
+    const msg = { id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now };
+    if (this.profiles?.passActive?.(this.profiles.peek(user.id))) msg.vip = true; // Battle Pass: a gold name with a crown
+    this.chat.push(msg);
     this.typingAt.delete(user.id); // they sent it: no longer typing
     if (this.chat.length > CHAT_KEEP) this.chat.shift();
     // A message that's just a sticker also floats over the sender's base, like a board reaction.
@@ -1061,9 +1061,38 @@ export class Room {
     this.rolled = false;
     this.turnDeadline = null;
     this.clearTimer();
-    this.giveRewards();
+    const pot = this.pot; // (payPot settles and clears it)
+    const results = this.giveRewards();
     this.payPot();
+    this.reportResults(results, pot);
     this.changed();
+  }
+
+  // For the leaderboards, which rank stakes like poker chips: in a PUBLIC stakes room, everyone
+  // who paid in scores what they won minus their stake (a 500 stake won in a four-player game is
+  // +1500; losing it is -500). Everything else (games without a stake, private rooms, test dice,
+  // a pot that was handed back) scores 0, and bots never count. Each result carries who else was
+  // in it, so the leaderboard can cap games against the same people.
+  reportResults(results, pot) {
+    if (!results) return;
+    const ranked = !!pot && this.visibility === 'public' && !this.rigged && this.noPoints !== 'coop';
+    const paid = ranked ? pot.paid.filter((p) => this.seats[p.seat]?.userId === p.userId) : [];
+    const byUser = new Map(results.map((r) => [r.userId, r]));
+    // surrendered players paid in too: they're not in the results (no coins), but they lost the stake
+    for (const p of paid) if (!byUser.has(p.userId)) byUser.set(p.userId, { userId: p.userId, name: this.seats[p.seat].name, won: false });
+    const humans = paid.map((p) => p.userId);
+    for (const r of byUser.values()) {
+      const p = paid.find((x) => x.userId === r.userId);
+      if (!p) {
+        r.points = 0;
+        continue;
+      }
+      const won = this.potWon?.[p.seat] || 0;
+      r.points = won - pot.stake;
+      r.won = won > 0;
+      r.opponents = humans.filter((id) => id !== r.userId);
+    }
+    this.onGameEnd([...byUser.values()]);
   }
 
   // Coins for every human who didn't surrender: by finishing place, plus a bonus per capture.
@@ -1105,13 +1134,10 @@ export class Room {
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
-      // Leaderboard points: LB_PER_BEATEN for each human you finished ahead of, plus LB_WIN_BONUS
-      // for beating them all, scaled like the coins when the game was cut short.
+      // (leaderboard points come from the pot: see reportResults)
       const humanPlace = humanGroups.findIndex((g) => g.includes(s));
-      const beaten = humanGroups.slice(humanPlace + 1).reduce((n, g) => n + g.length, 0);
       const won = !coop && humanPlace === 0;
-      const points = coop ? 0 : Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
-      results.push({ userId: seat.userId, name: seat.name, points, won });
+      results.push({ userId: seat.userId, name: seat.name, points: 0, won });
       this.stat(s, 'game');
       if (won) {
         this.stat(s, 'win');
@@ -1121,7 +1147,7 @@ export class Room {
       }
       if (!coop && place <= (this.teamOrder ? 0 : 1)) this.stat(s, 'top2');
     });
-    this.onGameEnd(results);
+    return results;
   }
 
   nextTurn() {

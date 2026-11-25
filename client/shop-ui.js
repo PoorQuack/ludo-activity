@@ -10,7 +10,6 @@ import { framedAvatar } from './frames.js';
 const IN_BASE = [0, 1, 2, 3].map(() => [-1, -1, -1, -1]);
 
 export const SHOP_TABS = [
-  { type: 'vip', label: 'VIP' },
   { type: 'set', label: 'Sets' },
   { type: 'token', label: 'Tokens' },
   { type: 'dice', label: 'Dice' },
@@ -70,7 +69,7 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     b.className = `tab${st.type === tab ? ' active' : ''}${st.type === 'set' ? ' sets-tab' : ''}`;
     b.textContent = t(st.label);
     // a dot on tabs with something new (not the one you're on)
-    const inTab = (i) => i.type === st.type || (st.type === 'emote' && i.type === 'emote-pack') || (st.type === 'vip' && currencyOf(i) === 'gems');
+    const inTab = (i) => i.type === st.type || (st.type === 'emote' && i.type === 'emote-pack');
     if (st.type !== tab && SHOP_ITEMS.some((i) => inTab(i) && isNew(i.id))) b.classList.add('has-new');
     b.addEventListener('click', () => onTab(st.type));
     tabs.appendChild(b);
@@ -111,21 +110,8 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     }
     return emptyNote();
   }
-  // VIP: everything paid in gems (frames, Legendary items, Legendary sets), under a gem banner
-  if (tab === 'vip') {
-    const banner = document.createElement('div');
-    banner.className = 'vip-banner';
-    banner.innerHTML = `<span class="gem big"></span><div><b>${t('VIP Gems')}</b><small>${t('Frames and Legendary items are paid in gems. Gold Coins stay for everything else, and for stakes rooms.')}</small></div>`;
-    const get = document.createElement('button');
-    get.type = 'button';
-    get.className = 'btn small gem-buy';
-    get.innerHTML = `<span class="gem"></span>${t('Get gems')}`;
-    get.addEventListener('click', () => onGetGems?.());
-    banner.appendChild(get);
-    grid.appendChild(banner);
-  }
   // Grouped by rarity, cheapest first (Common up to Legendary), each group under its own heading
-  const items = SHOP_ITEMS.filter((i) => (tab === 'vip' ? currencyOf(i) === 'gems' && i.price > 0 : i.type === tab || (tab === 'emote' && i.type === 'emote-pack')));
+  const items = SHOP_ITEMS.filter((i) => i.type === tab || (tab === 'emote' && i.type === 'emote-pack'));
   // Today's deal, on top of its own tab (until you own it)
   const deal = dailyDeal();
   if (deal.type === tab && !owns(profile, deal.id) && !freeShop && filter !== 'owned') {
@@ -148,17 +134,6 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
     if (have === all.length) head.classList.add('complete');
     grid.appendChild(head);
     for (const item of group) grid.appendChild(itemCard(item, { profile, freeShop, onBuy, onEquip, onView }));
-  }
-  if (tab === 'vip') {
-    const gemSets = SETS.filter((set) => setCurrency(set) === 'gems' && keep(!setPrice(set, profile).missing.length));
-    if (gemSets.length) {
-      const head = document.createElement('h3');
-      head.className = 'rarity-head';
-      head.dataset.rarity = 'legendary';
-      head.innerHTML = `<span>✦ ${t('Legendary sets')}</span>`;
-      grid.appendChild(head);
-      for (const set of gemSets) grid.appendChild(setCard(set, { profile, freeShop, onBuySet, onView }));
-    }
   }
   shownIds = items.map((i) => i.id);
   emptyNote();
@@ -209,6 +184,12 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     btn.textContent = `🏆 ${t('Win it')}`;
     btn.classList.add('won');
     btn.title = t(item.award);
+    btn.disabled = true;
+  } else if (item.pass) {
+    // earned on the Battle Pass, never sold
+    btn.textContent = `🎟️ ${t('Battle Pass')}`;
+    btn.classList.add('won');
+    btn.title = t('Earn it on the Battle Pass');
     btn.disabled = true;
   } else if (freeShop) {
     btn.innerHTML = `${t('Get free')} <s>${item.price}</s>`;

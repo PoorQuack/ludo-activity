@@ -10,6 +10,8 @@ import { playerLevel, BADGES, BADGES_BY_ID, levelFor } from '../shared/badges.js
 import { openItemView, refreshItemView, closeItemView } from './item-view.js';
 import { D20 } from './d20.js';
 import { openCoinStore } from './coin-store.js';
+import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, seasonFor } from '../shared/pass.js';
+import { PASS_SKU_ID } from '../shared/shop.js';
 import { setFrame } from './frames.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour } from './tour.js';
@@ -276,6 +278,17 @@ function connect() {
     } else if (msg.type === 'leaderboard') {
       lbData = msg.boards;
       renderLeaderboard();
+    } else if (msg.type === 'passXp') {
+      const why = msg.login ? t('Daily login') : t('Quest done');
+      toast(msg.tierUp ? t('🎟️ Battle Pass tier {n} reached!', { n: msg.tier }) : t('🎟️ +{xp} Battle Pass XP · {why}', { xp: msg.xp, why }), 'ok', 3500);
+    } else if (msg.type === 'passClaimed') {
+      sfx('buy');
+      const got = msg.given || [];
+      const coins = got.reduce((n, g) => n + (g.coins || 0), 0);
+      const gems = got.reduce((n, g) => n + (g.gems || 0), 0);
+      const items = got.filter((g) => g.item).map((g) => t(ITEMS[g.item]?.name || ''));
+      const parts = [coins && `+${coins} ${t('coins')}`, gems && `+${gems} ${t('gems')}`, ...items].filter(Boolean);
+      if (parts.length) toast(`🎁 ${parts.join(' · ')}`, 'ok', 4500);
     } else if (msg.type === 'lobbyChat') onLobbyChat(msg);
     else if (msg.type === 'translated') onTranslated(msg);
     else if (msg.type === 'awards') showAwards(msg.awards);
@@ -312,6 +325,7 @@ function connect() {
     } else if (msg.type === 'purchased') {
       sfx('buy');
       if (msg.kind === 'gems') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
+      else if (msg.kind === 'pass') toast(t('🎟️ Battle Pass unlocked! Claim your premium rewards.'), 'ok', 6000);
       else toast(t('☕ Thank you so much for the coffee!'), 'ok', 5000);
     } else if (msg.type === 'referral') {
       sfx('buy');
@@ -410,6 +424,8 @@ function onProfile(next) {
   }
   if (screen === 'shop') drawShop();
   if (screen === 'profile') drawProfile();
+  if ($('menu').dataset.panel === 'pass' || wide.matches) renderPass();
+  passDot();
   renderProfileCard(); // (the title under your name)
   renderNewDots();
   renderUI();
@@ -1226,11 +1242,7 @@ function timeLeft(ms) {
 function renderLeaderboard() {
   for (const b of els.lbTabs) b.classList.toggle('active', b.dataset.lb === lbTab);
   const body = els.lbBody;
-  if (!lbData) {
-    body.innerHTML = `<p class="lb-note">${t('Loading…')}</p>`;
-    return;
-  }
-  const b = lbData[lbTab];
+  const b = lbData?.[lbTab];
   if (!b) {
     body.innerHTML = `<p class="lb-note">${t('Loading…')}</p>`;
     return;
@@ -1238,38 +1250,52 @@ function renderLeaderboard() {
   const week = lbTab === 'week';
   const all = lbTab === 'all';
   const coin = '<span class="coin"></span>';
-  const row = (e, mine) => `<li class="lb-row${e.rank <= 3 ? ` top${e.rank}` : ''}${mine ? ' you' : ''}">
-      <span class="lb-rank">${MEDALS[e.rank - 1] || e.rank}</span>
+  const chips = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString(document.documentElement.lang || undefined)}`;
+  const initial = (name) => escapeHtml([...String(name || '?').trim()][0]?.toUpperCase() || '?');
+  // The podium: 2nd, 1st, 3rd (1st in the middle, highest); empty places wait for someone
+  const slot = (place) => {
+    const e = b.top[place - 1];
+    const prize = !all && b.prizes ? `<span class="pod-prize">${coin}${b.prizes[place - 1]}</span>` : '';
+    if (!e) return `<div class="pod pod${place} empty"><div class="pod-pic"><span>?</span></div><b class="pod-name">—</b>${prize}<div class="pod-step"><span>${place}</span></div></div>`;
+    return `<div class="pod pod${place}${e.you ? ' you' : ''}">
+        <div class="pod-pic"><span>${initial(e.name)}</span><img src="/frames/frame-rank-${place}.webp" alt="" class="pod-frame"></div>
+        <b class="pod-name">${escapeHtml(e.name)}${e.you ? ` <small>${t('(you)')}</small>` : ''}</b>
+        <span class="pod-chips${e.points < 0 ? ' neg' : ''}">${coin}${chips(e.points)}</span>
+        ${prize}
+        <div class="pod-step"><span>${place}</span></div>
+      </div>`;
+  };
+  const podium = `<div class="lb-podium">${slot(2)}${slot(1)}${slot(3)}</div>`;
+  const row = (e, mine) => `<li class="lb-row${mine ? ' you' : ''}">
+      <span class="lb-rank">${e.rank}</span>
       <span class="lb-name">${escapeHtml(e.name)}${mine ? ` <small>${t('(you)')}</small>` : ''}</span>
-      <b class="lb-pts">${e.points} <small>${t('pts')}</small></b>
+      <b class="lb-pts${e.points < 0 ? ' neg' : ''}">${coin}${chips(e.points)}</b>
     </li>`;
-  let rows = b.top.map((e) => row(e, e.you)).join('');
+  let rows = b.top.slice(3).map((e) => row(e, e.you)).join('');
   if (b.me && b.me.rank > b.top.length) rows += `<li class="lb-gap">⋯</li>${row({ ...b.me, name: me?.name || t('You') }, true)}`;
-  const list = b.top.length
-    ? `<ol class="lb-list">${rows}</ol>`
-    : `<p class="lb-empty">${t('Nobody yet. Win a game against other people to be first on the board.')}</p>`;
-  const yours = !b.top.length && !b.me ? '' : b.me
-    ? t("You're <b>{place}</b> of {players} with <b>{points}</b> points.", { place: ordinal(b.me.rank), players: b.players, points: b.me.points })
-    : all ? t("You're not on the board yet.") : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.");
-  const last = b.last?.podium?.length
+  const list = rows ? `<ol class="lb-list">${rows}</ol>` : '';
+  const empty = !b.top.length ? `<p class="lb-empty">${t('Nobody yet. Win a public stakes game to be first on the board.')}</p>` : '';
+  const yours = b.me
+    ? t("You're <b>{place}</b> of {players}.", { place: ordinal(b.me.rank), players: b.players })
+    : b.top.length ? (all ? t("You're not on the board yet.") : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.")) : '';
+  const how = t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.');
+  const when = all
+    ? t('Never resets · counting since {date}', { date: escapeHtml(sinceLabel(b.since)) })
+    : week
+      ? t('Top 3 win coins when the week ends · resets in <b>{time}</b>', { time: timeLeft(b.endsAt - (Date.now() + clockOffset)) })
+      : t('Top 3 win coins when the month ends · resets in <b>{time}</b>', { time: timeLeft(b.endsAt - (Date.now() + clockOffset)) });
+  const last = !all && b.last?.podium?.length
     ? `<section class="lb-last"><h3>${week ? t("Last week's winners") : t("Last month's winners")}</h3><ol>${b.last.podium
-        .map((p) => `<li>${MEDALS[p.place - 1]} ${escapeHtml(p.name)} <span>${p.points} ${t('pts')} · +${p.coins} ${coin}</span></li>`)
+        .map((p) => `<li>${MEDALS[p.place - 1]} ${escapeHtml(p.name)} <span>${coin}${chips(p.points)} · ${t('prize')} +${p.coins}</span></li>`)
         .join('')}</ol></section>`
     : '';
-  if (all) {
-    body.innerHTML = `
-    <p class="lb-note lb-all-note">${t('Every point ever scored, never reset · counting since {date}', { date: escapeHtml(sinceLabel(b.since)) })}</p>
-    ${list}
-    ${yours ? `<p class="lb-you">${yours}</p>` : ''}`;
-    return;
-  }
   body.innerHTML = `
-    <section class="lb-prizes">
-      <div class="lb-prize-row">${b.prizes.map((c, i) => `<span class="lb-prize">${MEDALS[i]} ${coin}<b>${c}</b></span>`).join('')}</div>
-      <p class="lb-note">${week ? t('Top 3 win coins when the week ends · resets in <b>{time}</b>', { time: timeLeft(b.endsAt - (Date.now() + clockOffset)) }) : t('Top 3 win coins when the month ends · resets in <b>{time}</b>', { time: timeLeft(b.endsAt - (Date.now() + clockOffset)) })}</p>
-    </section>
+    ${podium}
+    ${empty}
     ${list}
     ${yours ? `<p class="lb-you">${yours}</p>` : ''}
+    <p class="lb-note">${when}</p>
+    <p class="lb-note lb-how">${how}</p>
     ${last}`;
 }
 
@@ -4366,6 +4392,143 @@ function onTranslated(msg) {
   }
 }
 
+// ---------------- the Battle Pass ----------------
+// This month's track of 30 tiers. XP comes from logging in each day and finishing quests; the free
+// lane is everyone's, the premium lane (VIP Gems and the season's exclusive items) is for holders
+// of the Battle Pass subscription. Tap a reward you've reached to claim it.
+const passSku = () => paidConfig.skus.find((s) => s.id === PASS_SKU_ID)?.sku || null;
+let passPrice = null;
+async function loadPassPrice() {
+  if (passPrice !== null || !discordSdk || !passSku()) return;
+  passPrice = '';
+  try {
+    const { skus } = await discordSdk.commands.getSkus();
+    const sku = skus.find((k) => k.id === passSku());
+    if (sku?.price) {
+      const { PriceUtils } = await import('@discord/embedded-app-sdk');
+      passPrice = PriceUtils.formatPrice(sku.price, currentLang());
+      renderPass();
+    }
+  } catch {}
+}
+async function buyPass(btn) {
+  if (!discordSdk || !passSku()) return toast(t('The Battle Pass can be bought in the Discord app.'));
+  btn.disabled = true;
+  try {
+    await discordSdk.commands.startPurchase({ sku_id: passSku() });
+    claimPurchases();
+  } catch {
+    // closed the checkout: nothing happened
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function passReward(r) {
+  const el = document.createElement('div');
+  el.className = 'pr';
+  if (r.coins) el.innerHTML = `<span class="coin"></span><b>${r.coins}</b>`;
+  else if (r.gems) el.innerHTML = `<span class="gem"></span><b>${r.gems}</b>`;
+  else if (r.item && ITEMS[r.item]) {
+    el.classList.add('pr-item');
+    el.appendChild(itemPreview(ITEMS[r.item], ITEMS[r.item].type === 'board' ? r.item : profile?.equipped.board || 'board-classic'));
+    const name = document.createElement('small');
+    name.textContent = t(ITEMS[r.item].name);
+    el.appendChild(name);
+  }
+  return el;
+}
+
+// The dock's dot: something reached and not claimed
+function passDot() {
+  const p = profile?.pass;
+  const dot = document.querySelector('[data-dot="pass"]');
+  if (!dot || !p) return;
+  const open = (lane) => Array.from({ length: p.tier }, (_, i) => i + 1).some((n) => !p[lane].includes(n));
+  dot.classList.toggle('hidden', !(open('free') || (p.active && open('premium'))));
+}
+
+function renderPass() {
+  const box = $('pass-card');
+  if (!box) return;
+  const p = profile?.pass;
+  if (!p) {
+    box.innerHTML = `<p class="lb-note">${t('Loading…')}</p>`;
+    return;
+  }
+  loadPassPrice();
+  const { season, tiers } = passRewards(p.month);
+  const inTier = p.tier >= PASS_TIERS ? XP_PER_TIER : p.xp - p.tier * XP_PER_TIER;
+  const days = Math.max(0, Math.ceil((p.endsAt - (Date.now() + clockOffset)) / 86_400_000));
+  const gemsTotal = tiers.reduce((n, x) => n + (x.premium.gems || 0), 0);
+  const exclusive = tiers.filter((x) => x.premium.item).length;
+  const claimable = tiers.filter((x) => x.tier <= p.tier && (!p.free.includes(x.tier) || (p.active && !p.premium.includes(x.tier)))).length;
+  box.innerHTML = `
+    <div class="pass-head">
+      <div class="pass-season"><b>${escapeHtml(t(season.name))}</b><small>${t('{n} days left', { n: days })}</small></div>
+      <div class="pass-level"><span>${t('Tier')}</span><b>${p.tier}</b><small>/ ${PASS_TIERS}</small></div>
+    </div>
+    <div class="pass-bar"><i style="width:${Math.round((inTier / XP_PER_TIER) * 100)}%"></i><span>${p.tier >= PASS_TIERS ? t('Track complete!') : t('{xp} / {need} XP to tier {n}', { xp: inTier, need: XP_PER_TIER, n: p.tier + 1 })}</span></div>
+    <p class="pass-earn">${t('Earn XP: daily login +{a} · each daily quest +{b} · each weekly quest +{c}', { a: PASS_XP.login, b: PASS_XP.daily, c: PASS_XP.weekly })}</p>
+    ${
+      p.active
+        ? `<div class="pass-status on">👑 <span>${t('Battle Pass active until {date}', { date: escapeHtml(new Date(p.until || p.endsAt).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short' })) })}</span></div>`
+        : `<div class="pass-status buy">
+            <div><b>👑 ${t('Get the Battle Pass')}</b>
+            <ul>
+              <li>${t('{n} VIP Gems over the month', { n: gemsTotal })}</li>
+              <li>${t('{n} exclusive items, never sold in the shop', { n: exclusive })}</li>
+              <li>${t('A gold name with a crown in chat')}</li>
+              <li>${t('Joining late? Every tier you reached unlocks at once')}</li>
+            </ul></div>
+            <button type="button" class="btn primary" id="pass-buy">${passPrice ? t('{price} / month', { price: escapeHtml(passPrice) }) : t('Get it')}</button>
+          </div>`
+    }
+    ${claimable ? `<button type="button" class="btn primary pass-claim-all" id="pass-claim-all">${t('Claim all ({n})', { n: claimable })}</button>` : ''}
+    <div class="pass-lanes-head"><span></span><b>${t('Free')}</b><b class="prem">👑 ${t('Battle Pass')}</b></div>
+    <ol class="pass-track"></ol>`;
+  const track = box.querySelector('.pass-track');
+  for (const x of tiers) {
+    const li = document.createElement('li');
+    const reached = x.tier <= p.tier;
+    li.className = `pass-tier${reached ? ' reached' : ''}${x.tier === p.tier + 1 ? ' next' : ''}`;
+    const num = document.createElement('span');
+    num.className = 'pt-num';
+    num.textContent = x.tier;
+    li.appendChild(num);
+    for (const lane of ['free', 'premium']) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = `pt-cell ${lane}`;
+      const done = p[lane].includes(x.tier);
+      const locked = lane === 'premium' && !p.active;
+      cell.appendChild(passReward(x[lane]));
+      if (done) {
+        cell.classList.add('done');
+        cell.disabled = true;
+      } else if (!reached) cell.disabled = true;
+      else if (locked) {
+        cell.classList.add('locked');
+        cell.disabled = true;
+      } else {
+        cell.classList.add('ready');
+        cell.title = t('Claim');
+        cell.addEventListener('click', () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'pass', op: 'claim', lane, tier: x.tier })));
+      }
+      li.appendChild(cell);
+    }
+    track.appendChild(li);
+  }
+  box.querySelector('#pass-buy')?.addEventListener('click', (e) => buyPass(e.currentTarget));
+  box.querySelector('#pass-claim-all')?.addEventListener('click', () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'pass', op: 'claimAll' })));
+  // the next tier to reach, in view
+  if (!box._scrolled) {
+    box._scrolled = true;
+    requestAnimationFrame(() => track.querySelector('.next')?.scrollIntoView({ block: 'nearest' }));
+  }
+}
+window.addEventListener('ludo-lang', () => profile && renderPass());
+
 // ---------- the hub: dock tabs, their panels, and the sheets ----------
 // Friends / Ranking / Quests open a panel: on phones in place of the modes (tap the tab again, or
 // Back, for the modes), on wide screens in the column on the right (Quests to start with).
@@ -4377,9 +4540,10 @@ function setPanel(name) {
   for (const b of document.querySelectorAll('[data-hub-tab]')) {
     const on = b.dataset.hubTab === shown;
     b.classList.toggle('active', on);
-    if (['friends', 'ranking', 'quests', 'chat'].includes(b.dataset.hubTab)) b.setAttribute('aria-pressed', String(on));
+    if (['friends', 'ranking', 'quests', 'chat', 'pass'].includes(b.dataset.hubTab)) b.setAttribute('aria-pressed', String(on));
   }
   if (name === 'ranking') fetchLeaderboard();
+  if (name === 'pass') renderPass();
   if (name === 'chat' || lchat.open) lobbyChatPanel(name === 'chat');
   $('menu').scrollTop = 0;
 }
@@ -4387,10 +4551,6 @@ for (const b of document.querySelectorAll('[data-hub-tab]')) {
   b.addEventListener('click', () => {
     const tab = b.dataset.hubTab;
     if (tab === 'shop') return; // (data-go="shop" opens it)
-    if (tab === 'vip') {
-      shopTab = 'vip';
-      return showScreen('shop');
-    }
     const open = $('menu').dataset.panel;
     setPanel(open === tab && !wide.matches ? '' : tab);
   });

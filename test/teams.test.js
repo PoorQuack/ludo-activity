@@ -144,7 +144,7 @@ test('a full 3 vs 3 game plays to the end', async () => {
   room.destroy();
 });
 
-test('teammates share their place: coins and leaderboard points', () => {
+test('teammates share their place (coins)', () => {
   const store = new ProfileStore(null);
   const results = [];
   const room = new Room('t', { profiles: store, onGameEnd: (r) => results.push(...r), delays: { bot: 60_000, timeout: 60_000 } });
@@ -171,10 +171,8 @@ test('teammates share their place: coins and leaderboard points', () => {
   assert.equal(room.rewards[3], REWARDS.place[1]); // teammates share the place
   assert.equal(room.rewards[2], undefined); // bots aren't paid
   const pts = Object.fromEntries(results.map((r) => [r.userId, r]));
-  assert.equal(pts.a.points, 2 * 10 + 10); // beat two humans, and won
   assert.equal(pts.a.won, true);
-  assert.equal(pts.b.points, 0);
-  assert.equal(pts.c.points, 0);
+  for (const id of ['a', 'b', 'c']) assert.equal(pts[id].points, 0); // no stake: no leaderboard points
   room.destroy();
 });
 

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomInt } from 'node:crypto';
 import { BADGES, BADGES_BY_ID, BADGE_STATS, LEVELS, MAX_PINS, badgeValue, levelFor } from '../shared/badges.js';
+import { PASS_TIERS, PASS_XP, passRewards, seasonMonth, seasonEnd, tierFor, XP_PER_TIER } from '../shared/pass.js';
 import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem, SETS_BY_ID, setPrice, priceOf, currencyOf } from '../shared/shop.js';
 
 const SAVE_DELAY_MS = 1000;
@@ -99,9 +100,10 @@ export class ProfileStore {
   view(id) {
     const p = this.profiles.get(id);
     if (!p) return null;
-    const { invite, daily, streak, ref, bought, ...rest } = p; // the server-invite answer isn't the client's business
+    const { invite, daily, streak, ref, bought, pass, passUntil, ...rest } = p; // the server-invite answer isn't the client's business
     return {
       ...rest,
+      pass: this.passView(p),
       owned: p.owned.filter((itemId) => ITEMS[itemId]),
       dailyReady: daily !== this.dayKey(),
       streakDay: this.streakDay(p), // today's place in the 7-day strip (1–7)
@@ -285,6 +287,108 @@ export class ProfileStore {
 
   dayKey() {
     return new Date(this.now()).toISOString().slice(0, 10); // the UTC day, 'YYYY-MM-DD'
+  }
+
+  // ---------- the Battle Pass (shared/pass.js) ----------
+
+  // Holding the pass: a Discord subscription running (or FREE_SHOP, for testing)
+  passActive(p) {
+    return this.freeShop || (p?.passUntil || 0) > this.now();
+  }
+
+  // This month's track: a new month starts a new one (XP and claims go back to nothing)
+  passTrack(p) {
+    const month = seasonMonth(this.now());
+    if (p.pass.month !== month) p.pass = { month, xp: 0, free: [], premium: [], login: p.pass.login };
+    return p.pass;
+  }
+
+  /** Adds XP; returns { xp, tier, before } (before: the tier they were on). */
+  addPassXp(id, n) {
+    const p = this.get(id);
+    const track = this.passTrack(p);
+    const before = tierFor(track.xp);
+    track.xp = Math.min(track.xp + n, PASS_TIERS * XP_PER_TIER);
+    this.changed(id);
+    return { xp: track.xp, tier: tierFor(track.xp), before };
+  }
+
+  /** The first visit of each UTC day gives login XP. Returns the addPassXp result, or null. */
+  passLogin(id) {
+    const p = this.get(id);
+    const today = this.dayKey();
+    this.passTrack(p);
+    if (p.pass.login === today) return null;
+    p.pass.login = today;
+    return this.addPassXp(id, PASS_XP.login);
+  }
+
+  // Discord says their subscription runs until `until` (ms)
+  setPassUntil(id, until) {
+    const p = this.get(id);
+    if (p.passUntil === until) return false;
+    p.passUntil = until;
+    this.changed(id);
+    this.flush();
+    return true;
+  }
+
+  /** Claims one tier's reward in one lane ('free' or 'premium'). Returns what was given. */
+  claimPass(id, lane, tier) {
+    if (lane !== 'free' && lane !== 'premium') throw new Error('Unknown lane');
+    const p = this.get(id);
+    const track = this.passTrack(p);
+    if (!Number.isInteger(tier) || tier < 1 || tier > PASS_TIERS) throw new Error('Unknown tier');
+    if (tier > tierFor(track.xp)) throw new Error('Reach that tier first');
+    if (lane === 'premium' && !this.passActive(p)) throw new Error('That reward is for Battle Pass holders');
+    if (track[lane].includes(tier)) throw new Error('Already claimed');
+    const reward = passRewards(track.month).tiers[tier - 1][lane];
+    const given = this.givePassReward(id, p, reward);
+    track[lane].push(tier);
+    this.changed(id);
+    this.flush(); // gems and exclusive items: written now
+    return given;
+  }
+
+  /** Claims everything reached and not claimed yet, in both lanes (premium only for holders). */
+  claimAllPass(id) {
+    const p = this.get(id);
+    const track = this.passTrack(p);
+    const reached = tierFor(track.xp);
+    const out = [];
+    for (const lane of ['free', 'premium']) {
+      if (lane === 'premium' && !this.passActive(p)) continue;
+      for (let t = 1; t <= reached; t++) if (!track[lane].includes(t)) out.push({ lane, tier: t, ...this.claimPass(id, lane, t) });
+    }
+    return out;
+  }
+
+  // Coins (outside the daily earning cap: the pass is played for), gems, or an item. An item they
+  // already have turns into 50 gems instead, so nothing is wasted.
+  givePassReward(id, p, reward) {
+    if (reward.coins) {
+      p.coins += reward.coins;
+      return { coins: reward.coins };
+    }
+    if (reward.gems) {
+      p.gems += reward.gems;
+      return { gems: reward.gems };
+    }
+    if (reward.item) {
+      if (p.owned.includes(reward.item)) {
+        p.gems += 50;
+        return { gems: 50, had: reward.item };
+      }
+      p.owned.push(reward.item);
+      return { item: reward.item };
+    }
+    return {};
+  }
+
+  // What the client shows for the pass
+  passView(p) {
+    const track = p.pass.month === seasonMonth(this.now()) ? p.pass : { month: seasonMonth(this.now()), xp: 0, free: [], premium: [] };
+    return { month: track.month, xp: track.xp, tier: tierFor(track.xp), free: track.free, premium: track.premium, active: this.passActive(p), until: p.passUntil || 0, endsAt: seasonEnd(this.now()) };
   }
 
   buy(id, itemId) {
@@ -476,7 +580,18 @@ function normalize(p) {
   const pins = Array.isArray(p.pins) ? [...new Set(p.pins)].filter((b) => badges[b]).slice(0, MAX_PINS) : [];
   // VIP Gems: bought with real money only (see grantPurchase)
   const gems = Number.isFinite(p.gems) && p.gems >= 0 ? Math.floor(p.gems) : 0;
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, badges, title, pins };
+  // Battle Pass: this month's track (XP, the tiers claimed in each lane, the last day the login
+  // XP was given), and until when their subscription runs (0: not a holder)
+  const tiers = (a) => (Array.isArray(a) ? [...new Set(a.filter((n) => Number.isInteger(n) && n >= 1 && n <= PASS_TIERS))] : []);
+  const pass = {
+    month: /^\d{4}-\d{2}$/.test(p.pass?.month || '') ? p.pass.month : '',
+    xp: Number.isInteger(p.pass?.xp) && p.pass.xp >= 0 ? p.pass.xp : 0,
+    free: tiers(p.pass?.free),
+    premium: tiers(p.pass?.premium),
+    login: /^\d{4}-\d{2}-\d{2}$/.test(p.pass?.login || '') ? p.pass.login : '',
+  };
+  const passUntil = Number.isFinite(p.passUntil) && p.passUntil > 0 ? p.passUntil : 0;
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, badges, title, pins, pass, passUntil };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }

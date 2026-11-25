@@ -65,6 +65,7 @@ export class LobbyChat {
     if (this.last.size > 10_000) this.last.clear();
     const ch = this.channel(id);
     const msg = { id: ++ch.seq, userId: user.id, name: String(user.name || 'Player').slice(0, 32), text: clean, at: t };
+    if (this.profiles?.passActive?.(this.profiles.peek(user.id))) msg.vip = true; // Battle Pass: a gold name with a crown
     ch.msgs.push(msg);
     if (ch.msgs.length > KEEP) ch.msgs.splice(0, ch.msgs.length - KEEP);
     this.save();

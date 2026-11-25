@@ -1,9 +1,11 @@
-// Weekly and monthly leaderboards. Every game against at least one other person scores each
-// player 10 points for each human they finished ahead of, plus 10 for beating them all (bots
-// don't count; see Room.giveRewards). Games against bots only, and games everyone abandoned,
-// score nothing; daily quests add their points too. When a week (Monday 00:00 UTC) or a
-// month ends, its top three win coin prizes, paid straight into their balance. The all-time
-// board adds up the same points forever: no prizes, never resets.
+// Weekly, monthly and all-time leaderboards, ranked like poker chip counts: only PUBLIC stakes
+// games score, and each player scores what they won minus their stake (+1500 for taking a
+// four-player 500 pot, -500 for losing one). Bots, private rooms, games without a stake and
+// anything bought in the shop never count (gems never turn into coins). To stop two accounts
+// feeding each other, a player's game only counts while they've played fewer than
+// MAX_VS_SAME games that UTC day against at least one of the people in it.
+// When a week (Monday 00:00 UTC) or a month ends, its top three win coin prizes, paid straight
+// into their balance. The all-time board never resets and has no prizes.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -12,6 +14,7 @@ export const KINDS = ['week', 'month'];
 const SAVE_DELAY_MS = 2000;
 const TOP = 10;
 const KEEP_AWARDS = 300;
+export const MAX_VS_SAME = 3; // counted games a day against the same person
 
 // The period `t` falls in: '2026-W45' (ISO week, UTC) or '2026-11'.
 export function periodId(kind, t) {
@@ -38,19 +41,20 @@ export class Leaderboard {
    *  profiles: the ProfileStore prizes are paid into
    *  onAward(userId): a prize was just paid to them (to tell them if they're online)
    */
-  constructor(file, { profiles = null, now = Date.now, onAward = () => {} } = {}) {
+  constructor(file, { profiles = null, now = Date.now, onAward = () => {}, rankGuests = false } = {}) {
+    this.rankGuests = rankGuests; // a local test copy (browser guests only): guests are ranked too
     this.file = file;
     this.profiles = profiles;
     this.now = now;
     this.onAward = onAward;
     this.boards = { week: this.fresh('week'), month: this.fresh('month') };
     this.allTime = null; // { since, scores }: set by load(), or started below
+    this.vs = { day: '', counts: {} }; // today's counted games per pair of players ('a|b' -> n)
     this.last = { week: null, month: null }; // the last finished period's podium
     this.awards = []; // { userId, kind, period, place, coins, paid, seen }
     this.saveTimer = null;
     if (file) this.load();
-    // Started for the first time: seeded from this month's board, the longest history there is
-    this.allTime ||= { since: this.boards.month.id, scores: structuredClone(this.boards.month.scores) };
+    this.allTime ||= { since: this.boards.month.id, scores: {} };
     this.payOwed();
     this.rollover();
   }
@@ -59,12 +63,30 @@ export class Leaderboard {
     return { id: periodId(kind, this.now()), scores: {} };
   }
 
-  // One finished game: [{ userId, name, points, won }]. Guests aren't ranked.
+  // How many counted games `a` and `b` have played against each other today
+  pairKey(a, b) {
+    return a < b ? `${a}|${b}` : `${b}|${a}`;
+  }
+
+  // One finished game: [{ userId, name, points, won, opponents }] (points can be negative: a
+  // lost stake). Guests aren't ranked; a game that scored nothing isn't counted.
   record(results) {
     this.rollover();
     const t = this.now();
-    for (const r of results) {
-      if (!r.userId || r.userId.startsWith('guest-') || !(r.points > 0)) continue;
+    const day = new Date(t).toISOString().slice(0, 10);
+    if (this.vs.day !== day) this.vs = { day, counts: {} };
+    const counted = results.filter((r) => {
+      const guest = (id) => !this.rankGuests && id.startsWith('guest-');
+      if (!r.userId || guest(r.userId) || !Number.isFinite(r.points) || r.points === 0) return false;
+      const opp = (r.opponents || []).filter((o) => !guest(o));
+      if (!opp.length) return false;
+      return opp.some((o) => (this.vs.counts[this.pairKey(r.userId, o)] || 0) < MAX_VS_SAME);
+    });
+    // the pairs that played: one more counted game each
+    const pairs = new Set();
+    for (const r of counted) for (const o of r.opponents) pairs.add(this.pairKey(r.userId, o));
+    for (const k of pairs) this.vs.counts[k] = (this.vs.counts[k] || 0) + 1;
+    for (const r of counted) {
       for (const kind of KINDS) {
         const s = (this.boards[kind].scores[r.userId] ||= { name: r.name, points: 0, wins: 0, games: 0, at: t });
         s.name = r.name;
@@ -74,6 +96,7 @@ export class Leaderboard {
         s.at = t; // ties go to whoever got there first
       }
       const a = (this.allTime.scores[r.userId] ||= { name: r.name, points: 0, wins: 0, games: 0, at: t });
+      // (a board only shows players who've scored: see ranked())
       a.name = r.name;
       a.points += Math.round(r.points);
       a.wins += r.won ? 1 : 0;
@@ -90,7 +113,7 @@ export class Leaderboard {
     for (const kind of KINDS) {
       if (this.boards[kind].id === periodId(kind, this.now())) continue;
       const board = this.boards[kind];
-      const podium = this.ranked(board).filter((e) => e.points > 0).slice(0, 3);
+      const podium = this.ranked(board).filter((e) => e.points > 0).slice(0, 3); // (nobody in the red wins a prize)
       podium.forEach((e, i) => {
         this.awards.push({ userId: e.userId, kind, period: board.id, place: i + 1, coins: PRIZES[kind][i], paid: false, seen: false });
       });
@@ -169,12 +192,16 @@ export class Leaderboard {
       if (!fs.existsSync(f)) continue;
       try {
         const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
+        // Version 1 scored every game by places; version 2 scores stakes. The old points can't be
+        // turned into chips, so the boards start again (past winners and prizes are kept).
+        const fresh = (doc.version || 1) < 2;
         for (const kind of KINDS) {
-          if (doc.boards?.[kind]?.id && doc.boards[kind].scores) this.boards[kind] = doc.boards[kind];
+          if (!fresh && doc.boards?.[kind]?.id && doc.boards[kind].scores) this.boards[kind] = doc.boards[kind];
           if (doc.last?.[kind]) this.last[kind] = doc.last[kind];
         }
         if (Array.isArray(doc.awards)) this.awards = doc.awards;
-        if (doc.allTime?.scores) this.allTime = doc.allTime;
+        if (!fresh && doc.allTime?.scores) this.allTime = doc.allTime;
+        if (doc.vs?.counts) this.vs = doc.vs;
         return;
       } catch (err) {
         console.error(`Leaderboard file ${f} is unreadable (${err.message})`);
@@ -193,7 +220,7 @@ export class Leaderboard {
     if (!this.file) return;
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     const tmp = `${this.file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ version: 1, boards: this.boards, last: this.last, awards: this.awards, allTime: this.allTime }));
+    fs.writeFileSync(tmp, JSON.stringify({ version: 2, boards: this.boards, last: this.last, awards: this.awards, allTime: this.allTime, vs: this.vs }));
     if (fs.existsSync(this.file)) fs.copyFileSync(this.file, `${this.file}.bak`);
     fs.renameSync(tmp, this.file);
   }

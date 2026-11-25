@@ -33,12 +33,12 @@ test('owning part of a set: pay for the rest, still 10% off', () => {
   const store = new ProfileStore(null);
   const p = store.get('1');
   p.coins = 10_000;
-  store.buy('1', 'board-neon');
+  store.buy('1', 'board-candy');
   const before = p.coins;
-  const { price, missing } = setPrice(SETS_BY_ID['set-neon'], p);
-  assert.deepEqual(missing, ['token-neon', 'dice-neon']);
-  assert.equal(price, Math.round((ITEMS['token-neon'].price + ITEMS['dice-neon'].price) * 0.9));
-  store.buySet('1', 'set-neon');
+  const { price, missing } = setPrice(SETS_BY_ID['set-candy'], p);
+  assert.deepEqual(missing, ['token-candy', 'dice-candy']);
+  assert.equal(price, Math.round((ITEMS['token-candy'].price + ITEMS['dice-candy'].price) * 0.9));
+  store.buySet('1', 'set-candy');
   assert.equal(p.coins, before - price);
 });
 
@@ -46,18 +46,16 @@ test('not enough coins (or gems) for a set: nothing changes', () => {
   const store = new ProfileStore(null);
   const p = store.get('1');
   p.coins = 10;
-  assert.throws(() => store.buySet('1', 'set-neon'), /Not enough coins/);
+  assert.throws(() => store.buySet('1', 'set-candy'), /Not enough coins/);
   assert.throws(() => store.buySet('1', 'set-royal'), /Not enough gems/);
   assert.equal(p.coins, 10);
-  assert.ok(!p.owned.includes('board-royal') && !p.owned.includes('board-neon'));
+  assert.ok(!p.owned.includes('board-royal') && !p.owned.includes('board-candy'));
 });
 
-test('two currencies: Legendary and VIP items (frames) cost gems, the rest coins; a set uses one', () => {
+test('two currencies: Common and Rare cost coins, Epic and Legendary cost gems; a set uses one', () => {
   for (const item of SHOP_ITEMS) {
-    if (item.award) continue;
-    if (item.rarity === 'legendary' || item.vip || item.type === 'frame') {
-      if (item.price > 0) assert.equal(currencyOf(item), 'gems', item.id);
-    } else assert.equal(currencyOf(item), 'coins', item.id);
+    if (item.award || item.pass || !(item.price > 0)) continue;
+    assert.equal(currencyOf(item), ['epic', 'legendary'].includes(item.rarity) ? 'gems' : 'coins', item.id);
   }
   for (const set of SETS) assert.equal(new Set(set.items.map((id) => currencyOf(ITEMS[id]))).size, 1, set.id);
   assert.equal(currencyOf(dailyDeal('2026-11-23')), 'coins', 'the daily deal is never a gem item');
@@ -91,12 +89,12 @@ test('every item has a rarity, and a price inside that rarity\'s band', () => {
   for (const item of SHOP_ITEMS) {
     assert.ok(ids.includes(item.rarity), `${item.id} has no rarity`);
     const r = rarityOf(item);
-    if (item.award) continue; // (won on the leaderboard, never bought)
+    if (item.award || item.pass) continue; // (won on the leaderboard or earned on the Battle Pass, never bought)
     const [min, max] = currencyOf(item) === 'gems' ? [r.gemMin, r.gemMax] : [r.min, r.max];
     assert.ok(item.price >= min && item.price <= max, `${item.id}: ${item.price} is outside ${r.id} (${min}-${max} ${currencyOf(item)})`);
   }
   // only the default look of each kind is free
-  for (const item of SHOP_ITEMS) assert.equal(item.price === 0, /-classic$|^taunt-none$|^frame-none$/.test(item.id) || !!item.award, item.id);
+  for (const item of SHOP_ITEMS) assert.equal(item.price === 0, /-classic$|^taunt-none$|^frame-none$/.test(item.id) || !!item.award || !!item.pass, item.id);
 });
 
 test('everything in a set has the same rarity (a Legendary set is Legendary all through)', () => {

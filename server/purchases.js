@@ -57,6 +57,16 @@ export class Purchases {
     for (const e of Array.isArray(list) ? list : []) {
       const item = this.bySku.get(String(e.sku_id));
       if (!item || e.consumed || String(e.user_id) !== userId) continue;
+      // The Battle Pass subscription: never consumed; its period end opens the premium lane until
+      // then (a test purchase has no end: a month from now). Cancelling keeps it until the end.
+      if (item.kind === 'pass') {
+        const until = e.ends_at ? Date.parse(e.ends_at) : Date.now() + 31 * 86_400_000;
+        if (Number.isFinite(until) && this.store.setPassUntil(userId, until)) {
+          granted.push({ id: item.id, kind: 'pass', until });
+          this.log.log?.(`🎟️ ${userId} has the Battle Pass until ${new Date(until).toISOString()}`);
+        }
+        continue;
+      }
       const gems = item.kind === 'gems' ? item.gems : 0;
       if (this.store.grantPurchase(userId, String(e.id), gems)) {
         granted.push({ id: item.id, kind: item.kind, gems });

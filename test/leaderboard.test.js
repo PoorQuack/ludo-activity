@@ -13,7 +13,8 @@ const clock = (iso) => {
   const c = { t: at(iso), now: () => c.t };
   return c;
 };
-const game = (...rows) => rows.map(([userId, points, won = false]) => ({ userId, name: userId.toUpperCase(), points, won }));
+// A finished stakes game: everyone in it played everyone else
+const game = (...rows) => rows.map(([userId, points, won = false]) => ({ userId, name: userId.toUpperCase(), points, won, opponents: rows.map((r) => r[0]).filter((id) => id !== userId) }));
 
 test('weeks run Monday to Monday (ISO weeks, UTC); months by the calendar', () => {
   assert.equal(periodId('week', at('2026-11-05T12:00Z')), '2026-W45'); // a Thursday
@@ -78,7 +79,7 @@ test('prizes ignore the daily earning cap', () => {
   const profiles = new ProfileStore(null, { now: c.now });
   profiles.addCoins('ann', 1000); // hits today's cap
   const lb = new Leaderboard(null, { profiles, now: c.now });
-  lb.record(game(['ann', 25, true]));
+  lb.record(game(['ann', 25, true], ['bob', -25]));
   c.t = at('2026-12-01T00:01Z'); // a new month (and a new week? no: Tuesday is mid-week)
   lb.rollover();
   assert.equal(profiles.peek('ann').coins, 150 + 120 + PRIZES.month[0]);
@@ -89,7 +90,7 @@ test('saved to disk and read back; an owed prize is paid on start', () => {
   const file = path.join(dir, 'leaderboard.json');
   const c = clock('2026-11-05T10:00Z');
   const lb = new Leaderboard(file, { now: c.now });
-  lb.record(game(['ann', 40, true]));
+  lb.record(game(['ann', 40, true], ['bob', -40]));
   lb.awards.push({ userId: 'bob', kind: 'week', period: '2026-W44', place: 1, coins: 300, paid: false, seen: false }); // as if a crash hit mid-payout
   lb.flush();
   const profiles = new ProfileStore(null, { now: c.now });
@@ -100,100 +101,6 @@ test('saved to disk and read back; an owed prize is paid on start', () => {
   assert.equal(profiles.peek('bob').coins, 150 + 300); // not paid twice
   assert.ok(third);
   fs.rmSync(dir, { recursive: true, force: true });
-});
-
-test('a finished game against people reports its results; bots-only games do not', () => {
-  const ended = [];
-  const room = new Room('t', { onGameEnd: (r) => ended.push(r) });
-  const a = { id: 'a', name: 'A' };
-  const b = { id: 'b', name: 'B' };
-  room.connect(a);
-  room.host(a);
-  room.connect(b);
-  room.join(b);
-  room.start(a);
-  room.tokens[room.seatOf('b')] = [10, 20, -1, -1];
-  room.surrender(a); // B wins
-  assert.equal(ended.length, 1);
-  assert.deepEqual(ended[0].map((r) => [r.userId, r.won]), [['b', true]]);
-  assert.ok(ended[0][0].points > 0);
-  room.destroy();
-
-  const solo = new Room('s', { onGameEnd: (r) => ended.push(r) });
-  solo.connect(a);
-  solo.host(a);
-  solo.addBot(a, 2);
-  solo.start(a);
-  solo.surrender(a);
-  assert.equal(ended.length, 1); // nothing new
-  solo.destroy();
-});
-
-// A finished game's leaderboard points. `seats`: who sits where ('a', 'b'… are people, 'bot'
-// a bot), in a 4-seat game; `order`: seat numbers in finishing order, first place first.
-function pointsFor(seats, order, { early = false } = {}) {
-  const ended = [];
-  const room = new Room('t', { onGameEnd: (r) => ended.push(...r) });
-  const users = {};
-  seats.forEach((who, i) => {
-    if (!who || who === 'bot') return; // null: an empty seat
-    const u = (users[who] = { id: who, name: who.toUpperCase() });
-    room.connect(u);
-    if (!room.hostId) room.host(u);
-    room.sit(u, i);
-  });
-  const host = users[seats.find((w) => w !== 'bot')];
-  seats.forEach((who, i) => who === 'bot' && room.addBot(host, i));
-  room.start(host);
-  room.winners = order;
-  room.endedEarly = early;
-  room.giveRewards();
-  room.destroy();
-  return Object.fromEntries(ended.map((r) => [r.userId, [r.points, r.won]]));
-}
-
-test('leaderboard points: 10 per human you beat, +10 for beating them all', () => {
-  // four people: 40 / 20 / 10 / 0
-  assert.deepEqual(pointsFor(['a', 'b', 'c', 'd'], [0, 1, 2, 3]), { a: [40, true], b: [20, false], c: [10, false], d: [0, false] });
-  // three people: 30 / 10 / 0
-  assert.deepEqual(pointsFor(['a', 'b', 'c', null], [2, 0, 1]), { c: [30, true], a: [10, false], b: [0, false] });
-});
-
-test('bots neither add points nor take the win', () => {
-  // two people and two bots, a bot first: A (2nd overall) beat B, so A wins with 20
-  assert.deepEqual(pointsFor(['a', 'bot', 'b', 'bot'], [1, 0, 3, 2]), { a: [20, true], b: [0, false] });
-});
-
-test('a game cut short scales the points by how far you got', () => {
-  const r = pointsFor(['a', null, 'b', null], [2, 0], { early: true });
-  assert.equal(r.b[1], true);
-  assert.ok(r.b[0] < 20); // tokens all still in base: a surrender this early is worth (almost) nothing
-});
-
-test('a surrender after someone has finished is a real result: full pay, no "ended early"', () => {
-  const ended = [];
-  const room = new Room('t', { onGameEnd: (r) => ended.push(r) });
-  const [a, b, c] = ['a', 'b', 'c'].map((id) => ({ id, name: id.toUpperCase() }));
-  room.connect(a);
-  room.host(a);
-  for (const u of [b, c]) {
-    room.connect(u);
-    room.join(u);
-  }
-  room.start(a);
-  const [sa, sb, sc] = [a, b, c].map((u) => room.seatOf(u.id));
-  // A got all four home and finished 1st; C is barely out of base
-  room.tokens[sa] = Array(4).fill(room.board.finished);
-  room.winners.push(sa);
-  room.tokens[sc] = [2, -1, -1, -1];
-  room.surrender(b); // B gives up: C is the last one racing, so the game ends
-  assert.equal(room.phase, 'finished');
-  assert.equal(room.endedEarly, false);
-  assert.deepEqual(room.rewardPartial, []);
-  const pts = Object.fromEntries(ended[0].map((r) => [r.userId, r.points]));
-  assert.equal(pts.a, 30); // beat two people, +10 for beating them all
-  assert.equal(pts.c, 10); // finished ahead of B, at full value
-  room.destroy();
 });
 
 test('a surrender before anyone finishes still pays by progress', () => {
@@ -234,25 +141,6 @@ test('friends on one team against bots: coins for the place, but no leaderboard 
   }
 });
 
-test('friends on opposite teams, each with a bot: the winning side scores as usual', () => {
-  const ended = [];
-  const room = new Room('t', { onGameEnd: (r) => ended.push(...r) });
-  const [a, b] = ['a', 'b'].map((id) => ({ id, name: id.toUpperCase() }));
-  room.connect(a);
-  room.host(a);
-  room.connect(b);
-  room.setMode(a, '2v2');
-  room.sit(a, 0);
-  room.sit(b, 1);
-  room.addBot(a, 2);
-  room.addBot(a, 3);
-  room.start(a);
-  room.winners = [1, 3];
-  room.endIfOver();
-  assert.equal(room.noPoints, null);
-  assert.deepEqual(Object.fromEntries(ended.map((r) => [r.userId, [r.points, r.won]])), { b: [20, true], a: [0, false] });
-});
-
 test('the all-time board keeps every point through week and month ends, and is saved', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-all-'));
   const file = path.join(dir, 'leaderboard.json');
@@ -271,14 +159,43 @@ test('the all-time board keeps every point through week and month ends, and is s
   assert.equal(again.view('bob').all.top[0].points, 40);
 });
 
-test('an existing save without an all-time board starts one from this month', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-seed-'));
+
+test('an old save (places, not stakes) starts the boards again, keeping past winners', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-v1-'));
   const file = path.join(dir, 'leaderboard.json');
   const c = clock('2026-11-20T10:00Z');
-  const old = new Leaderboard(file, { now: c.now });
-  old.record(game(['ann', 30, true]));
-  old.allTime = undefined; // as written by the version before the all-time board
-  fs.writeFileSync(file, JSON.stringify({ version: 1, boards: old.boards, last: old.last, awards: old.awards }));
+  const last = { period: '2026-W46', podium: [{ name: 'ANN', points: 40, place: 1, coins: 300 }] };
+  fs.writeFileSync(file, JSON.stringify({ version: 1, boards: { week: { id: '2026-W47', scores: { ann: { name: 'ANN', points: 99, wins: 3, games: 5, at: 1 } } }, month: { id: '2026-11', scores: {} } }, last: { week: last, month: null }, awards: [] }));
   const lb = new Leaderboard(file, { now: c.now });
-  assert.equal(lb.view('ann').all.top[0].points, 30);
+  const v = lb.view('ann');
+  assert.equal(v.week.players, 0);
+  assert.equal(v.all.players, 0);
+  assert.equal(v.week.last.podium[0].name, 'ANN');
+});
+
+test('chips: a lost stake counts against you, and nobody in the red wins a prize', () => {
+  const c = clock('2026-11-05T10:00Z');
+  const profiles = new ProfileStore(null, { now: c.now });
+  const lb = new Leaderboard(null, { profiles, now: c.now });
+  lb.record(game(['ann', 1000, true], ['bob', -500], ['cat', -500]));
+  c.t += 60_000;
+  lb.record(game(['bob', 100, true], ['cat', -100]));
+  const v = lb.view('cat');
+  assert.deepEqual(v.week.top.map((e) => [e.name, e.points]), [['ANN', 1000], ['BOB', -400], ['CAT', -600]]);
+  c.t = at('2026-11-09T00:00:30Z');
+  lb.rollover();
+  assert.equal(profiles.peek('ann').coins, 150 + PRIZES.week[0]);
+  assert.equal(profiles.peek('bob'), null); // second, but in the red: no prize
+});
+
+test('the same people only count 3 times a day: farming a friend stops paying', () => {
+  const c = clock('2026-11-05T10:00Z');
+  const lb = new Leaderboard(null, { now: c.now });
+  for (let i = 0; i < 5; i++) lb.record(game(['ann', 100, true], ['bob', -100]));
+  assert.equal(lb.view('ann').week.top[0].points, 300);
+  lb.record(game(['ann', 200, true], ['bob', -100], ['cat', -100])); // a new face: it counts
+  assert.equal(lb.view('ann').week.top[0].points, 500);
+  c.t = at('2026-11-06T10:00Z'); // the next day: counts again
+  lb.record(game(['ann', 100, true], ['bob', -100]));
+  assert.equal(lb.view('ann').week.top[0].points, 600);
 });

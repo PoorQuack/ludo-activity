@@ -1369,6 +1369,7 @@ export class BoardRenderer {
   drawParty(now) {
     const p = this.party;
     if (!p) return;
+    if (!(this.cell > 0)) return; // the board has no size yet (hidden, or just left): nothing to draw on
     const MS = 4600;
     const e = now - p.start;
     if (e > MS || !this.board.colors[p.seat]) {
@@ -1407,6 +1408,10 @@ export class BoardRenderer {
       }
     }
     const r = this.cell * 0.4 * size * Math.max(0.01, grow);
+    if (!Number.isFinite(r) || !Number.isFinite(lift)) {
+      this.party = null; // (a celebration with no start time: drop it rather than draw garbage)
+      return;
+    }
     const ctx = this.ctx;
     ctx.save();
     drawToken(ctx, this.px(x), this.px(y), r, hex, p.skin, { lift: lift * this.cell, squash: lift < 0.12 && !lapMs ? 0.86 : 1, sign: this.board.colors[p.seat], t: now });

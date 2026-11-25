@@ -36,7 +36,7 @@ test('the Nervous cat comes free with the Hamster pack, and the pack has no cat 
 });
 
 test('every sticker pack is our own art: its files exist and live in our own folders', () => {
-  const ours = ['hamster', 'fox', 'kitty', 'pixel', 'brainrot', 'dicerot'];
+  const ours = ['hamster', 'fox', 'kitty', 'pixel', 'brainrot', 'dicerot', 'mascot'];
   const slugs = new Set();
   for (const pack of SHOP_ITEMS.filter((i) => i.type === 'emote-pack')) {
     for (const e of pack.emotes) {

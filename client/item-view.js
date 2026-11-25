@@ -225,6 +225,13 @@ function renderInfo() {
     main.classList.add('done');
     priceBox.innerHTML = '';
     progress.classList.add('hidden');
+  } else if (item.pass) {
+    // a Battle Pass exclusive: earned on the track, never sold
+    main.textContent = `🎟️ ${t('Earn it on the Battle Pass')}`;
+    main.disabled = true;
+    main.classList.add('done');
+    priceBox.innerHTML = '';
+    progress.classList.add('hidden');
   } else {
     main.innerHTML = `${ico('shop')}<span></span>`;
     main.querySelector('span').textContent = freeShop ? t('Get free') : t('Buy · {price}', { price });

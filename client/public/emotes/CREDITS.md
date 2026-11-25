@@ -33,3 +33,5 @@ issue and it will be removed.
 | `meme/dumb.png` | [dumb](https://emoji.gg/emoji/399151-dumb) (background removed) | Dumb sticker (free with the Laugh pack) |
 | `meme/dontjoke.webp` | the "don't even joke lad" chick meme, supplied by the owner (framed, background kept) | Don't even joke lad sticker |
 | `meme/wadafak.png` | a frog drawing supplied by the owner (background removed, "wadafak" written under it) | Wadafak sticker |
+
+| `mascot/` | the game's own dice and pawn mascots, supplied by the owner | Dice & Pawn pack (Battle Pass Season 1) |

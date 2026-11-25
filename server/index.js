@@ -19,6 +19,7 @@ import { SocialBook, sendDm } from './social.js';
 import { Inbox } from './inbox.js';
 import { LobbyChat, channelId } from './lobbychat.js';
 import { Translator, LANGS } from './translate.js';
+import { PASS_XP } from '../shared/pass.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -294,7 +295,8 @@ function claimPurchases(userId) {
     })
     .catch((err) => console.error(`Purchases for ${userId}: ${err.message}`));
 }
-const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards });
+// (a local test copy, with no Discord app set up, ranks its browser guests so the boards can be tried)
+const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards, rankGuests: ALLOW_GUESTS && !CLIENT_ID });
 
 // The menu's chat (Global, and one channel per language) and chat translation
 const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
@@ -500,6 +502,16 @@ function questProgress(userId, name, stat, n) {
   if (day.changed || week.changed) sendQuests(userId);
   const completed = [...day.completed, ...week.completed];
   if (completed.length) sendTo(userId, { type: 'questsDone', completed });
+  // Battle Pass XP for each quest finished (not the all-done bonus)
+  const xp = day.completed.filter((q) => !q.bonus).length * PASS_XP.daily + week.completed.filter((q) => !q.bonus).length * PASS_XP.weekly;
+  if (xp) passXp(userId, store.addPassXp(userId, xp), xp);
+}
+
+// Tell them about XP gained, and a new tier reached
+function passXp(userId, r, xp) {
+  if (!r) return;
+  sendTo(userId, { type: 'passXp', xp, tier: r.tier, tierUp: r.tier > r.before });
+  sendProfile(userId);
 }
 
 function sendQuests(userId) {
@@ -709,6 +721,7 @@ wss.on('connection', (ws, req) => {
         userSockets.get(user.id).add(ws);
         const isNew = !store.peek(user.id);
         store.get(user.id);
+        const loginXp = store.passLogin(user.id); // the day's first visit: Battle Pass XP
         // A first visit through someone's invite: Discord's share link says who shared it; a DM
         // invite sent while they were away counts too.
         if (isNew) store.setReferrer(user.id, msg.referrerId || dmInvites.get(user.id)?.from);
@@ -716,6 +729,7 @@ wss.on('connection', (ws, req) => {
         social.seen(user.id, user.name, user.id.startsWith('guest-') ? undefined : user.avatar);
         send({ type: 'welcome', you: { id: user.id, name: user.name, avatar: !user.id.startsWith('guest-') } });
         sendProfile(user.id);
+        if (loginXp) send({ type: 'passXp', xp: PASS_XP.login, tier: loginXp.tier, tierUp: loginXp.tier > loginXp.before, login: true });
         sendList(ws);
         listsChanged(); // everyone's "players online" count
         sendAwards(user.id); // any leaderboard prizes won while they were away
@@ -791,6 +805,11 @@ wss.on('connection', (ws, req) => {
       }
       if (msg.type === 'friendInvite') return inviteFriend(ws, String(msg.to || ''));
       if (msg.type === 'lobbyChat') return handleLobbyChat(ws, msg);
+      if (msg.type === 'pass') {
+        const given = msg.op === 'claimAll' ? store.claimAllPass(ctx.user.id) : [{ lane: msg.lane, tier: Number(msg.tier), ...store.claimPass(ctx.user.id, String(msg.lane), Number(msg.tier)) }];
+        sendProfile(ctx.user.id);
+        return send({ type: 'passClaimed', given });
+      }
       if (msg.type === 'translate') return handleTranslate(ws, msg);
       if (msg.type === 'support') {
         // ⚙ Settings → Contact the developer. The room and device help with bug reports.

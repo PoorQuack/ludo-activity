@@ -1,8 +1,9 @@
 // Everything in the shop. Two currencies:
 //   coins (Gold Coins)  earned by playing: games, quests, the daily d20, badges, stakes rooms
 //   gems  (VIP Gems)    bought with real money (the packs below, through Discord), never earned
-// An item's price is in coins unless it says priceCurrency: 'gems' (Legendary items, VIP items and
-// profile frames). Use currencyOf(item) rather than reading the field.
+// Common and Rare items are paid in coins; Epic and Legendary items in gems (they say
+// priceCurrency: 'gems'; test/sets.test.js checks every item follows the rule). Gems never turn
+// into coins anywhere, so stakes and the leaderboard can't be bought. Use currencyOf(item).
 
 export const STARTING_COINS = 150;
 
@@ -33,21 +34,21 @@ export const SHOP_ITEMS = [
   { id: 'token-classic', type: 'token', name: 'Classic', rarity: 'common', price: 0 },
   { id: 'token-star', type: 'token', name: 'Star', rarity: 'rare', price: 200 },
   { id: 'token-gem', type: 'token', name: 'Gem', rarity: 'rare', price: 250 },
-  { id: 'token-neon', type: 'token', name: 'Neon', rarity: 'epic', price: 400 },
+  { id: 'token-neon', type: 'token', name: 'Neon', rarity: 'epic', price: 130, priceCurrency: 'gems' },
   { id: 'token-candy', type: 'token', name: 'Candy', rarity: 'rare', price: 350 },
   { id: 'token-crown', type: 'token', name: 'Royal', rarity: 'legendary', price: 250, priceCurrency: 'gems', perk: 'When captured, it bursts into gold and re-forms on its base.' },
-  { id: 'token-checker', type: 'token', name: 'Checker', rarity: 'epic', price: 400 },
-  { id: 'token-ghost', type: 'token', name: 'Ghost', rarity: 'epic', price: 400 },
-  { id: 'token-slime', type: 'token', name: 'Slime', rarity: 'epic', price: 450 },
+  { id: 'token-checker', type: 'token', name: 'Checker', rarity: 'epic', price: 130, priceCurrency: 'gems' },
+  { id: 'token-ghost', type: 'token', name: 'Ghost', rarity: 'epic', price: 130, priceCurrency: 'gems' },
+  { id: 'token-slime', type: 'token', name: 'Slime', rarity: 'epic', price: 150, priceCurrency: 'gems' },
   { id: 'token-rocket', type: 'token', name: 'Rocket', rarity: 'legendary', price: 200, priceCurrency: 'gems', perk: 'When captured, it blasts off and lands back on its base.' },
-  { id: 'token-duck', type: 'token', name: 'Rubber Duck', rarity: 'epic', price: 550 },
-  { id: 'token-cat', type: 'token', name: 'Cat', rarity: 'epic', price: 450 },
+  { id: 'token-duck', type: 'token', name: 'Rubber Duck', rarity: 'epic', price: 180, priceCurrency: 'gems' },
+  { id: 'token-cat', type: 'token', name: 'Cat', rarity: 'epic', price: 150, priceCurrency: 'gems' },
   // Your zodiac sign by colour: ram (red), bull (green), crab (blue), lion (yellow), scorpion (purple), archer (orange)
   { id: 'token-constellation', type: 'token', name: 'Constellation', rarity: 'legendary', price: 200, priceCurrency: 'gems', perk: 'When captured, it folds into starlight and reappears on its base.' },
-  { id: 'token-robot', type: 'token', name: 'Robot', rarity: 'epic', price: 450 },
-  { id: 'token-penguin', type: 'token', name: 'Penguin', rarity: 'epic', price: 450 },
-  { id: 'token-sakura', type: 'token', name: 'Sakura', rarity: 'epic', price: 450 },
-  { id: 'token-dino', type: 'token', name: 'Dino', rarity: 'epic', price: 450 },
+  { id: 'token-robot', type: 'token', name: 'Robot', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'token-penguin', type: 'token', name: 'Penguin', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'token-sakura', type: 'token', name: 'Sakura', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'token-dino', type: 'token', name: 'Dino', rarity: 'epic', price: 150, priceCurrency: 'gems' },
   { id: 'token-ufo', type: 'token', name: 'UFO', rarity: 'legendary', price: 250, priceCurrency: 'gems', perk: 'When captured, a beam of light carries it back to its base.' },
   { id: 'token-dragon', type: 'token', name: 'Dragon', rarity: 'legendary', price: 250, priceCurrency: 'gems', perk: 'When captured, it flies home on its own wings.' },
 
@@ -55,22 +56,22 @@ export const SHOP_ITEMS = [
   { id: 'dice-midnight', type: 'dice', name: 'Midnight', rarity: 'rare', price: 200 },
   { id: 'dice-wood', type: 'dice', name: 'Wood', rarity: 'rare', price: 200 },
   { id: 'dice-ruby', type: 'dice', name: 'Ruby', rarity: 'rare', price: 250 },
-  { id: 'dice-neon', type: 'dice', name: 'Neon', rarity: 'epic', price: 400 },
+  { id: 'dice-neon', type: 'dice', name: 'Neon', rarity: 'epic', price: 130, priceCurrency: 'gems' },
   { id: 'dice-gold', type: 'dice', name: 'Gold', rarity: 'legendary', price: 200, priceCurrency: 'gems', perk: 'Crowned and jewelled, with rays of light turning behind it.' },
   { id: 'dice-ice', type: 'dice', name: 'Ice', rarity: 'rare', price: 250 },
   { id: 'dice-candy', type: 'dice', name: 'Candy', rarity: 'rare', price: 250 },
   { id: 'dice-emerald', type: 'dice', name: 'Emerald', rarity: 'rare', price: 300 },
-  { id: 'dice-ludo', type: 'dice', name: 'Ludo', rarity: 'epic', price: 400 },
-  { id: 'dice-lava', type: 'dice', name: 'Lava', rarity: 'epic', price: 450 },
-  { id: 'dice-galaxy', type: 'dice', name: 'Galaxy', rarity: 'epic', price: 500 },
-  { id: 'dice-cat', type: 'dice', name: 'Cat', rarity: 'epic', price: 400 },
+  { id: 'dice-ludo', type: 'dice', name: 'Ludo', rarity: 'epic', price: 130, priceCurrency: 'gems' },
+  { id: 'dice-lava', type: 'dice', name: 'Lava', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'dice-galaxy', type: 'dice', name: 'Galaxy', rarity: 'epic', price: 170, priceCurrency: 'gems' },
+  { id: 'dice-cat', type: 'dice', name: 'Cat', rarity: 'epic', price: 130, priceCurrency: 'gems' },
   { id: 'dice-bubble', type: 'dice', name: 'Bubble', rarity: 'rare', price: 300 },
-  { id: 'dice-slime', type: 'dice', name: 'Slime', rarity: 'epic', price: 450 },
-  { id: 'dice-robot', type: 'dice', name: 'Robot', rarity: 'epic', price: 500 },
-  { id: 'dice-ghost', type: 'dice', name: 'Ghost', rarity: 'epic', price: 400 },
-  { id: 'dice-duck', type: 'dice', name: 'Rubber Duck', rarity: 'epic', price: 450 },
-  { id: 'dice-snowball', type: 'dice', name: 'Snowball', rarity: 'epic', price: 400 },
-  { id: 'dice-sakura', type: 'dice', name: 'Sakura', rarity: 'epic', price: 450 },
+  { id: 'dice-slime', type: 'dice', name: 'Slime', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'dice-robot', type: 'dice', name: 'Robot', rarity: 'epic', price: 170, priceCurrency: 'gems' },
+  { id: 'dice-ghost', type: 'dice', name: 'Ghost', rarity: 'epic', price: 130, priceCurrency: 'gems' },
+  { id: 'dice-duck', type: 'dice', name: 'Rubber Duck', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'dice-snowball', type: 'dice', name: 'Snowball', rarity: 'epic', price: 130, priceCurrency: 'gems' },
+  { id: 'dice-sakura', type: 'dice', name: 'Sakura', rarity: 'epic', price: 150, priceCurrency: 'gems' },
   { id: 'dice-comet', type: 'dice', name: 'Comet', rarity: 'legendary', price: 200, priceCurrency: 'gems', perk: 'A lump of burning rock, a tail of fire streaming behind it.' },
   { id: 'dice-alien', type: 'dice', name: 'Alien', rarity: 'legendary', price: 200, priceCurrency: 'gems', perk: 'Eyes on stalks that look about and blink, rings of light beneath it.' },
   { id: 'dice-dragon', type: 'dice', name: 'Dragon', rarity: 'legendary', price: 250, priceCurrency: 'gems', perk: 'Horns, beating wings, and sparks on every roll.' },
@@ -82,32 +83,32 @@ export const SHOP_ITEMS = [
   { id: 'taunt-bye', type: 'taunt', name: 'Bye!', rarity: 'rare', price: 250, desc: 'A glove waves their token all the way back to its base, to a slide whistle.' },
   { id: 'taunt-chicken', type: 'taunt', name: 'Rubber chicken', rarity: 'rare', price: 300, desc: 'A rubber chicken flops onto the square and lets out the longest squeak.' },
   { id: 'taunt-violin', type: 'taunt', name: 'Sad violin', rarity: 'rare', price: 300, desc: 'A tiny violin plays the saddest tune over their base. A rain cloud stays there until their next turn.' },
-  { id: 'taunt-clown', type: 'taunt', name: 'Clown', rarity: 'epic', price: 450, desc: 'HONK. They wear a clown nose until their next turn.' },
-  { id: 'taunt-l', type: 'taunt', name: 'L', rarity: 'epic', price: 450, desc: 'A giant L lands on their base, to a wah-wah trombone. It stays until their next turn.' },
-  { id: 'taunt-ggez', type: 'taunt', name: 'GG EZ', rarity: 'epic', price: 500, desc: 'Sunglasses drop onto your token. GG EZ.' },
-  { id: 'taunt-skill', type: 'taunt', name: 'Skill issue', rarity: 'epic', price: 500, desc: 'A rubber stamp slams SKILL ISSUE across their base, and the ink stays until their next turn.' },
-  { id: 'taunt-cackle', type: 'taunt', name: 'Cackle', rarity: 'epic', price: 550, desc: 'A laughing skull bounces to their base and keeps giggling there until their next turn.' },
+  { id: 'taunt-clown', type: 'taunt', name: 'Clown', rarity: 'epic', price: 150, priceCurrency: 'gems', desc: 'HONK. They wear a clown nose until their next turn.' },
+  { id: 'taunt-l', type: 'taunt', name: 'L', rarity: 'epic', price: 150, priceCurrency: 'gems', desc: 'A giant L lands on their base, to a wah-wah trombone. It stays until their next turn.' },
+  { id: 'taunt-ggez', type: 'taunt', name: 'GG EZ', rarity: 'epic', price: 170, priceCurrency: 'gems', desc: 'Sunglasses drop onto your token. GG EZ.' },
+  { id: 'taunt-skill', type: 'taunt', name: 'Skill issue', rarity: 'epic', price: 170, priceCurrency: 'gems', desc: 'A rubber stamp slams SKILL ISSUE across their base, and the ink stays until their next turn.' },
+  { id: 'taunt-cackle', type: 'taunt', name: 'Cackle', rarity: 'epic', price: 180, priceCurrency: 'gems', desc: 'A laughing skull bounces to their base and keeps giggling there until their next turn.' },
   { id: 'taunt-fireworks', type: 'taunt', name: 'Fireworks', rarity: 'legendary', price: 200, priceCurrency: 'gems', perk: 'Fireworks over the whole board, three airhorn blasts, and their name up in lights.' },
   { id: 'board-classic', type: 'board', name: 'Classic', rarity: 'common', price: 0 },
   { id: 'board-midnight', type: 'board', name: 'Midnight', rarity: 'rare', price: 300 },
   { id: 'board-wood', type: 'board', name: 'Wood', rarity: 'rare', price: 350 },
   { id: 'board-candy', type: 'board', name: 'Candy', rarity: 'rare', price: 350 },
-  { id: 'board-neon', type: 'board', name: 'Neon', rarity: 'epic', price: 500 },
-  { id: 'board-ocean', type: 'board', name: 'Ocean', rarity: 'epic', price: 400 },
-  { id: 'board-forest', type: 'board', name: 'Forest', rarity: 'epic', price: 400 },
+  { id: 'board-neon', type: 'board', name: 'Neon', rarity: 'epic', price: 170, priceCurrency: 'gems' },
+  { id: 'board-ocean', type: 'board', name: 'Ocean', rarity: 'epic', price: 130, priceCurrency: 'gems' },
+  { id: 'board-forest', type: 'board', name: 'Forest', rarity: 'epic', price: 130, priceCurrency: 'gems' },
   { id: 'board-ice', type: 'board', name: 'Ice', rarity: 'rare', price: 350 },
-  { id: 'board-lava', type: 'board', name: 'Lava', rarity: 'epic', price: 550 },
+  { id: 'board-lava', type: 'board', name: 'Lava', rarity: 'epic', price: 180, priceCurrency: 'gems' },
   { id: 'board-desert', type: 'board', name: 'Desert', rarity: 'rare', price: 350 },
-  { id: 'board-sakura', type: 'board', name: 'Sakura', rarity: 'epic', price: 450 },
-  { id: 'board-crystal', type: 'board', name: 'Crystal', rarity: 'epic', price: 450 },
-  { id: 'board-arcade', type: 'board', name: 'Arcade', rarity: 'epic', price: 500 },
-  { id: 'board-haunted', type: 'board', name: 'Haunted', rarity: 'epic', price: 500 },
-  { id: 'board-swamp', type: 'board', name: 'Swamp', rarity: 'epic', price: 450 },
-  { id: 'board-factory', type: 'board', name: 'Factory', rarity: 'epic', price: 500 },
+  { id: 'board-sakura', type: 'board', name: 'Sakura', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'board-crystal', type: 'board', name: 'Crystal', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'board-arcade', type: 'board', name: 'Arcade', rarity: 'epic', price: 170, priceCurrency: 'gems' },
+  { id: 'board-haunted', type: 'board', name: 'Haunted', rarity: 'epic', price: 170, priceCurrency: 'gems' },
+  { id: 'board-swamp', type: 'board', name: 'Swamp', rarity: 'epic', price: 150, priceCurrency: 'gems' },
+  { id: 'board-factory', type: 'board', name: 'Factory', rarity: 'epic', price: 170, priceCurrency: 'gems' },
   { id: 'board-space', type: 'board', name: 'Space', rarity: 'legendary', price: 250, priceCurrency: 'gems' },
   { id: 'board-lair', type: 'board', name: "Dragon's lair", rarity: 'legendary', price: 250, priceCurrency: 'gems' },
   { id: 'board-royal', type: 'board', name: 'Royal', rarity: 'legendary', price: 250, priceCurrency: 'gems' },
-  { id: 'board-cat', type: 'board', name: 'Cat', rarity: 'epic', price: 500 },
+  { id: 'board-cat', type: 'board', name: 'Cat', rarity: 'epic', price: 170, priceCurrency: 'gems' },
   { id: 'board-constellation', type: 'board', name: 'Constellation', rarity: 'legendary', price: 250, priceCurrency: 'gems' },
 
   // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
@@ -139,7 +140,7 @@ export const SHOP_ITEMS = [
     name: 'Hamster pack',
     rarity: 'epic',
     emoji: '🐹',
-    price: 600,
+    price: 200, priceCurrency: 'gems',
     emotes: [
       { img: '/emotes/hamster/thumbsup.png', slug: 'thumbsup', name: 'Thumbs up' },
       { img: '/emotes/hamster/bonk.png', slug: 'bonk', name: 'Bonk' },
@@ -164,7 +165,7 @@ export const SHOP_ITEMS = [
     name: 'Laugh pack',
     rarity: 'epic',
     emoji: '😂',
-    price: 500,
+    price: 170, priceCurrency: 'gems',
     emotes: [
       { img: '/emotes/fox/rofl.webp', slug: 'rofl', name: 'ROFL' },
       { img: '/emotes/fox/lol.png', slug: 'lol', name: 'Crying laughing' },
@@ -183,7 +184,7 @@ export const SHOP_ITEMS = [
     name: 'Fox pack',
     rarity: 'epic',
     emoji: '🦊',
-    price: 600,
+    price: 200, priceCurrency: 'gems',
     emotes: [
       { img: '/emotes/fox/happy.png', slug: 'fox-happy', name: 'Happy' },
       { img: '/emotes/fox/grin.png', slug: 'fox-grin', name: 'Grin' },
@@ -213,7 +214,7 @@ export const SHOP_ITEMS = [
     name: 'Kitty pack',
     rarity: 'epic',
     emoji: '🐱',
-    price: 550,
+    price: 180, priceCurrency: 'gems',
     emotes: [
       { img: '/emotes/kitty/happy.png', slug: 'kitty-happy', name: 'Happy' },
       { img: '/emotes/kitty/smile.png', slug: 'kitty-smile', name: 'Smile' },
@@ -254,7 +255,7 @@ export const SHOP_ITEMS = [
     name: 'Brainrot pack',
     rarity: 'epic',
     emoji: '🧠',
-    price: 600,
+    price: 200, priceCurrency: 'gems',
     emotes: [
       { img: '/emotes/brainrot/aura-plus.webp', slug: 'aura-plus', name: '+1000 aura' },
       { img: '/emotes/brainrot/aura-minus.png', slug: 'aura-minus', name: '-1000 aura' },
@@ -272,7 +273,7 @@ export const SHOP_ITEMS = [
     name: 'Dice brainrot pack',
     rarity: 'epic',
     emoji: '🎲',
-    price: 600,
+    price: 200, priceCurrency: 'gems',
     emotes: [
       { img: '/emotes/dicerot/rigged.webp', slug: 'rigged', name: 'Rigged' },
       { img: '/emotes/dicerot/six-seven.webp', slug: 'six-seven', name: '6 7' },
@@ -286,8 +287,34 @@ export const SHOP_ITEMS = [
   },
   // Profile frames (VIP): a ring around your avatar wherever people see it (the menu, the
   // seats, the players' list). Gems only.
+  // Battle Pass exclusives (`pass`: the season they come from, shared/pass.js). Never sold: earned
+  // on the pass's track only, so `price` is 0 and only whoever earned one owns it.
+  { id: 'token-samurai', type: 'token', name: 'Samurai', rarity: 'legendary', price: 0, pass: 1, perk: 'An armoured samurai helmet in your colour, on a steel pedestal. Battle Pass Season 1 only.' },
+  { id: 'token-football', type: 'token', name: 'Football', rarity: 'epic', price: 0, pass: 1, desc: 'Gloves, boots, a whistle, the flag and the cup: each colour its own piece of the match. Battle Pass Season 1 only.' },
+  { id: 'board-dojo', type: 'board', name: 'Cyber Dojo', rarity: 'legendary', price: 0, pass: 1, perk: 'Woven carbon and glowing circuit tiles. Battle Pass Season 1 only.' },
+  { id: 'board-pitch', type: 'board', name: 'Pitch', rarity: 'epic', price: 0, pass: 1, desc: 'A striped football pitch with chalk lines. Battle Pass Season 1 only.' },
+  {
+    id: 'emote-pack-mascot',
+    type: 'emote-pack',
+    name: 'Dice & Pawn pack',
+    rarity: 'epic',
+    emoji: '🎲',
+    price: 0,
+    pass: 1,
+    emotes: [
+      { img: '/emotes/mascot/dice-king.webp', slug: 'diceking', name: 'Dice king' },
+      { img: '/emotes/mascot/dice-rage.webp', slug: 'dicerage', name: 'Dice rage' },
+      { img: '/emotes/mascot/dice-rofl.webp', slug: 'dicerofl', name: 'Dice ROFL' },
+      { img: '/emotes/mascot/dice-thumbsup.webp', slug: 'dicethumbs', name: 'Dice thumbs up' },
+      { img: '/emotes/mascot/pawn-cool.webp', slug: 'pawncool', name: 'Cool pawn' },
+      { img: '/emotes/mascot/pawn-dizzy.webp', slug: 'pawndizzy', name: 'Dizzy pawn' },
+      { img: '/emotes/mascot/pawn-facepalm.webp', slug: 'pawnfacepalm', name: 'Facepalm pawn' },
+      { img: '/emotes/mascot/pawn-panic.webp', slug: 'pawnpanic', name: 'Panicking pawn' },
+      { img: '/emotes/mascot/pawn-party.webp', slug: 'pawnparty', name: 'Party pawn' },
+    ],
+  },
   { id: 'frame-none', type: 'frame', name: 'No frame', rarity: 'common', price: 0 },
-  { id: 'frame-bronze', type: 'frame', name: 'Walnut', rarity: 'rare', price: 60, priceCurrency: 'gems', vip: true, desc: 'A carved walnut ring with a brass rim.' },
+  { id: 'frame-bronze', type: 'frame', name: 'Walnut', rarity: 'rare', price: 250, desc: 'A carved walnut ring with a brass rim.' },
   { id: 'frame-gold', type: 'frame', name: 'Gold', rarity: 'epic', price: 120, priceCurrency: 'gems', vip: true, desc: 'Polished gold, with a soft shine that sweeps round it.' },
   { id: 'frame-laurel', type: 'frame', name: 'Laurel', rarity: 'epic', price: 150, priceCurrency: 'gems', vip: true, desc: 'A gold laurel wreath, for champions.' },
   { id: 'frame-flame', type: 'frame', name: 'Flame', rarity: 'legendary', price: 250, priceCurrency: 'gems', vip: true, perk: 'A ring of fire that flickers around your picture.' },
@@ -388,7 +415,7 @@ export const DEFAULT_EQUIPPED = { token: 'token-classic', dice: 'dice-classic', 
 export function ownsItem(profile, id) {
   const item = ITEMS[id];
   if (!item) return false;
-  if (item.award) return !!profile?.owned.includes(id); // won, not free: only who won it has it
+  if (item.award || item.pass) return !!profile?.owned.includes(id); // won or earned on the Battle Pass, not free
   if (item.price === 0 || !!profile?.owned.includes(id)) return true;
   // some items come free with another one you own (see `freeWith`)
   return !!item.freeWith && !!profile?.owned.includes(item.freeWith);
@@ -401,7 +428,7 @@ export function ownsItem(profile, id) {
 // (suggested prices £0.99 / £2.49 / £4.99 / £9.99). The ids stay pack-1..4 so the SKUs carry over.
 export const COIN_PACKS = [
   { id: 'pack-1', gems: 100, name: 'Pouch of gems' },
-  { id: 'pack-2', gems: 275, name: 'Bag of gems', bonus: 10 },
+  { id: 'pack-2', gems: 220, name: 'Bag of gems', bonus: 10 },
   { id: 'pack-3', gems: 600, name: 'Chest of gems', bonus: 20 },
   { id: 'pack-4', gems: 1300, name: 'Vault of gems', bonus: 30 },
 ];
@@ -409,10 +436,16 @@ export const GEM_PACKS = COIN_PACKS;
 // "Buy me a coffee": fixed tips through Discord (any amount goes through TIP_URL instead).
 export const TIPS = [
   { id: 'coffee-1', name: 'Small coffee', icon: '☕' },
-  { id: 'coffee-2', name: 'Large coffee', icon: '☕☕' },
-  { id: 'coffee-3', name: 'Coffee and cake', icon: '☕🍰' },
 ];
-export const PAID_ITEMS = Object.fromEntries([...COIN_PACKS.map((p) => [p.id, { ...p, kind: 'gems' }]), ...TIPS.map((t) => [t.id, { ...t, kind: 'tip' }])]);
+// (coffee-2 and coffee-3, a large coffee and coffee and cake, were planned; their ids stay free)
+// The Battle Pass: a monthly subscription SKU (shared/pass.js). Never consumed: the server reads
+// when the current period ends, and the premium lane is open until then.
+export const PASS_SKU_ID = 'pass';
+export const PAID_ITEMS = Object.fromEntries([
+  ...COIN_PACKS.map((p) => [p.id, { ...p, kind: 'gems' }]),
+  ...TIPS.map((t) => [t.id, { ...t, kind: 'tip' }]),
+  [PASS_SKU_ID, { id: PASS_SKU_ID, name: 'Battle Pass', kind: 'pass' }],
+]);
 
 // Shop items new in the latest update: tagged "New" in the shop until the player has looked at
 // them (on each device). Change this list with each update that adds items; items added later
