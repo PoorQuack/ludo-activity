@@ -223,3 +223,20 @@ test('Stripe refund and dispute claw back Die Gems, remove bought gem items, and
   });
   assert.equal(store.passActive(store.peek('33333333333333333')), false);
 });
+
+test('the Starter Pack can only be bought once on the web', async () => {
+  const store = new ProfileStore(tempFile());
+  const uid = '22222222222222222';
+  store.get(uid);
+  const s = new StripeStore({
+    secretKey: 'sk_test_1',
+    signingSecret: 's',
+    publicUrl: 'https://ludo.commontern.com',
+    prices: parseStripePrices('starter:price_starter'),
+    store,
+    fetchImpl: async () => new Response(JSON.stringify({ id: 'cs_s', url: 'https://checkout.stripe.com/c/pay/cs_s' }), { status: 200 }),
+  });
+  assert.ok((await s.createCheckoutSession({ userId: uid, itemId: 'starter' })).url);
+  store.grantPaid(uid, 'stripe:cs_s', { id: 'starter', kind: 'starter', gems: 300, coins: 500, item: 'dice-jade' });
+  await assert.rejects(s.createCheckoutSession({ userId: uid, itemId: 'starter' }), /already have the Starter Pack/);
+});

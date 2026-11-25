@@ -2728,3 +2728,78 @@ button, .btn { touch-action: manipulation; }
 #lobby-chat .dm-row-meta small, #lobby-chat .dm-empty, #lobby-chat .chat-log .empty { color: #6b5d50; }
 #lobby-chat .dm-row .avatar.online::after { box-shadow: 0 0 0 2px #fff; }
 #lobby-chat .dm-bar { background: #e6d8c4; color: #1b1714; border-bottom-color: #dccdb8; }
+
+/* ---------- the shop's front page (Featured) ---------- */
+.front-head { margin-top: 14px !important; }
+.front-head:first-child { margin-top: 0 !important; }
+.front-head.limited-head { --rar: 236, 120, 90; }
+.front-head.limited-head span { color: #ff9a7a; }
+.front-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #ffd76a; }
+.front-hero {
+  grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: center;
+  padding: 14px; border-radius: 16px; cursor: pointer;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(255, 196, 58, 0.18), transparent 55%), linear-gradient(135deg, #2f2419, #1f1812);
+  border: 1px solid rgba(255, 196, 58, 0.45); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.front-hero:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.front-hero-art .preview { width: 100%; height: auto; aspect-ratio: 3 / 2; border-radius: 12px; background: rgba(0, 0, 0, 0.25); }
+.front-hero-art .preview.frame-preview, .front-hero-art .preview.emoji { display: flex; align-items: center; justify-content: center; }
+.front-hero-info { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+.front-hero-name { font-family: var(--display); font-size: 26px; line-height: 1.05; }
+.front-hero-meta { font-size: 12px; color: var(--muted); }
+.front-hero-desc { margin: 2px 0 4px; font-size: 13px; color: var(--text); opacity: 0.85; line-height: 1.4; }
+.front-hero-btn { min-width: 150px; padding: 9px 16px !important; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.front-hero-btn.buy { background: var(--accent); color: var(--on-accent); }
+.front-hero-btn.buy .gem { width: 15px; height: 15px; margin-right: 4px; }
+@media (max-width: 560px) {
+  .front-hero { grid-template-columns: 1fr; padding: 12px; gap: 10px; }
+  .front-hero-name { font-size: 22px; }
+  .front-hero-btn { width: 100%; }
+}
+.front-starter {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(135deg, rgba(31, 158, 140, 0.28), rgba(31, 158, 140, 0.08)); border: 1px solid rgba(78, 226, 212, 0.45);
+}
+.front-starter-art { flex: none; width: 96px; }
+.front-starter-art .preview { width: 100%; height: auto; aspect-ratio: 3 / 2; border-radius: 10px; background: rgba(0, 0, 0, 0.2); }
+.front-starter-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.front-starter-info .front-kicker { color: #7df0e3; }
+.front-starter-info b { font-size: 16px; }
+.front-starter-what { font-size: 13px; color: var(--text); display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.front-starter-what .gem, .front-starter-what .coin { width: 14px; height: 14px; }
+.front-starter-what i { font-style: normal; }
+.front-starter-btn { flex: none; background: #1f9e8c !important; color: #fff !important; }
+@media (max-width: 520px) { .front-starter { flex-wrap: wrap; } .front-starter-btn { width: 100%; } .front-starter-art { width: 76px; } }
+.front-more { grid-column: 1 / -1; justify-self: center; padding: 8px 18px; }
+
+/* cards: what it is in money under gem prices; owned ones quieter; limited marked */
+.item-money { margin-top: -4px; text-align: center; font-size: 11px; color: var(--muted); }
+.front-hero-info .item-money { margin: 0; text-align: start; }
+.item.owned .preview { opacity: 0.9; }
+.item.limited::after { content: '⏳'; position: absolute; top: 6px; inset-inline-end: 8px; font-size: 13px; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.item .btn.starter-btn { background: rgba(31, 158, 140, 0.22); color: #9ff3e9; }
+
+/* the gem store: the Starter Pack, "covers it", first purchase */
+.store-need { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: rgba(255, 196, 58, 0.12); border: 1px solid rgba(255, 196, 58, 0.4); color: #ffe39a; }
+.store-first { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; background: rgba(47, 212, 160, 0.12); border: 1px solid rgba(47, 212, 160, 0.4); color: #a8f5da; }
+.pack.suggest { border-color: #ffd76a; box-shadow: 0 0 0 2px #ffd76a, 0 0 18px rgba(255, 215, 106, 0.3); }
+.pack-suggest { position: absolute; top: -9px; right: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #2a1b00; background: #ffd76a; }
+.pack-coins s { opacity: 0.55; font-weight: 600; margin-right: 2px; }
+.starter-card { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: linear-gradient(135deg, rgba(31, 158, 140, 0.3), rgba(31, 158, 140, 0.08)); border: 1px solid rgba(78, 226, 212, 0.5); }
+.starter-ribbon { position: absolute; top: -9px; left: 12px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #062b27; background: #7df0e3; }
+.starter-art { flex: none; width: 96px; }
+.starter-art .preview { width: 100%; height: auto; aspect-ratio: 3 / 2; border-radius: 10px; background: rgba(0, 0, 0, 0.2); }
+.starter-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.starter-text b { font-size: 16px; }
+.starter-text span { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 13px; }
+.starter-text .gem, .starter-text .coin { width: 14px; height: 14px; }
+.starter-text small { font-size: 12px; color: var(--muted); }
+.starter-buy { flex: none; background: #1f9e8c !important; }
+@media (max-width: 520px) { .starter-card { flex-wrap: wrap; } .starter-buy { width: 100%; } .starter-art { width: 76px; } }
+.starter-card .starter-buy { width: auto !important; min-width: 110px; flex: none; }
+.starter-card .starter-text { flex: 1 1 auto; }
+@media (max-width: 520px) { .starter-card .starter-buy { width: 100% !important; } }
+/* the featured picture: drawn small, so not blown up past what stays sharp */
+.front-hero-art { width: 100%; max-width: 300px; justify-self: center; }
+/* room for the glow around today's deals at the grid's edges */
+.shop-grid { padding: 4px 4px 8px; }

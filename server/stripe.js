@@ -2,7 +2,7 @@
 // Works alongside Discord SKUs: both fulfill into the exact same ProfileStore (`grantPurchase` /
 // `setPassUntil`) with `stripe:<id>` idempotency keys so a payment can never pay out twice.
 import crypto from 'node:crypto';
-import { COIN_PACKS, PAID_ITEMS, TIPS } from '../shared/shop.js';
+import { COIN_PACKS, PAID_ITEMS, TIPS, STARTER, FIRST_PACK_BONUS, ITEMS } from '../shared/shop.js';
 import { passRewards, seasonMonth } from '../shared/pass.js';
 const PASS_GEMS = passRewards(seasonMonth(Date.now())).tiers.reduce((n, x) => n + (x.premium.gems || 0), 0);
 
@@ -161,6 +161,8 @@ export class StripeStore {
     if (!/^\d{5,25}$/.test(String(userId || ''))) throw new Error('Sign in with Discord first');
     const entry = this.prices.get(itemId);
     if (!entry) throw new Error('That item is not available in the Web Store');
+    // the Starter Pack is once per player
+    if (entry.item.kind === 'starter' && this.store?.peek?.(userId)?.starter) throw new Error('You already have the Starter Pack');
     const isPass = entry.item.kind === 'pass';
     const body = new URLSearchParams();
     body.set('mode', isPass ? 'subscription' : 'payment');
@@ -435,9 +437,20 @@ export function renderStorePage({ user, profile, prices, enabled, notice = '', a
     }
   </div>
 
+  ${
+    !profile?.starter && prices[STARTER.id]
+      ? `<div class="card starter">
+    <h2 style="margin:0 0 6px;font-size:18px">🎁 ${esc(STARTER.name)} <span class="bonus">Once only</span></h2>
+    <p class="sub" style="margin-bottom:12px">${STARTER.gems} Die Gems, ${STARTER.coins} coins and the ${esc(ITEMS[STARTER.item]?.name || '')} dice: only in this pack.</p>
+    ${user && enabled ? `<a class="btn gold" href="/pay?item=${esc(STARTER.id)}">${esc(prices[STARTER.id])}</a>` : `<span class="btn gold disabled">${enabled ? 'Sign in above to buy' : 'Coming soon'}</span>`}
+  </div>`
+      : ''
+  }
+
   <div class="card">
     <h2 style="margin:0 0 6px;font-size:18px">💎 Die Gems</h2>
     <p class="sub" style="margin-bottom:12px">Secure Stripe Checkout — Apple Pay &amp; cards work right in Safari.</p>
+    ${user && profile && !profile.packs ? `<div class="notice">✨ First purchase: your first gem pack gives ×${FIRST_PACK_BONUS} the gems.</div>` : ''}
     <div class="grid">
       ${COIN_PACKS.map(
         (p) => `

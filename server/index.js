@@ -1012,6 +1012,7 @@ wss.on('connection', (ws, req) => {
         if (ctx.user.id.startsWith('guest-')) return send({ type: 'checkoutUrl', reqId, error: 'Sign in with Discord first' });
         if (!purchaseLimiter.hit(`tok:${ctx.user.id}`)) return send({ type: 'checkoutUrl', reqId, error: 'Too many requests — wait a moment' });
         const itemId = typeof msg.itemId === 'string' && stripe.hasPrice(msg.itemId) ? msg.itemId : '';
+        if (itemId === 'starter' && store.peek(ctx.user.id)?.starter) return send({ type: 'checkoutUrl', reqId, error: 'You already have the Starter Pack' });
         const token = stripe.signToken({ userId: ctx.user.id, name: ctx.user.name, itemId }, 30 * 60_000);
         const url = itemId ? `${PUBLIC_URL}/pay?t=${encodeURIComponent(token)}` : `${PUBLIC_URL}/store?t=${encodeURIComponent(token)}`;
         return send({ type: 'checkoutUrl', reqId, itemId, url });
