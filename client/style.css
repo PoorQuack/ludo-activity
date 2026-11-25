@@ -116,10 +116,9 @@ html, body {
   30% { transform: scale(1.25); box-shadow: 0 0 0 4px rgba(255, 213, 74, 0.4); }
 }
 .coin {
+  /* a gold coin stamped with a pawn */
   width: 16px; height: 16px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff6c4, var(--gold) 45%, #d39a12);
-  box-shadow: inset 0 0 0 2px rgba(196, 136, 0, 0.55), 0 0 6px rgba(255, 213, 74, 0.35);
+  background: url('/icons/coin.webp') center / contain no-repeat;
   flex-shrink: 0;
   display: inline-block;
 }
@@ -2215,16 +2214,14 @@ button, .btn { touch-action: manipulation; }
 .room-friends-card .friend-list { max-height: 50vh; overflow-y: auto; }
 
 /* ---------- VIP Gems ---------- */
-/* Gold Coins are earned; VIP Gems are bought (Discord packs) and pay for frames and Legendary
-   items. A cut jade gem, so it never reads as a coin next to one. */
+/* Gold Coins are earned; VIP Gems are bought (Discord packs) and pay for Epic and Legendary
+   items. The gem is a jade crystal die, so it never reads as a coin next to one. */
 :root { --gem: #37c8b0; --gem-deep: #128a78; }
 .gem {
-  width: 16px; height: 16px; flex: none; display: inline-block;
-  background: linear-gradient(160deg, #c9fff3 0%, var(--gem) 38%, var(--gem-deep) 100%);
-  clip-path: polygon(50% 100%, 0 38%, 22% 6%, 78% 6%, 100% 38%);
+  width: 17px; height: 17px; flex: none; display: inline-block;
+  background: url('/icons/gem.webp') center / contain no-repeat;
   position: relative;
 }
-.gem::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.55) 48%, transparent 66%); clip-path: polygon(50% 100%, 22% 38%, 50% 6%, 78% 38%); opacity: 0.7; }
 .gem.big { width: 30px; height: 30px; }
 .gems {
   display: inline-flex; align-items: center; gap: 6px;
