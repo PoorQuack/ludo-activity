@@ -438,6 +438,7 @@ function onProfile(next) {
   if (screen === 'profile') drawProfile();
   if ($('menu').dataset.panel === 'pass' || wide.matches) renderPass();
   passDot();
+  renderEmojiPops();
   renderProfileCard(); // (the title under your name)
   renderNewDots();
   renderUI();
@@ -938,14 +939,16 @@ function renderEmojiPops() {
   const key = JSON.stringify([current?.id, groups.map((g) => [g.id, g.entries.map((e) => e.insert)])]);
   if (key === pickerShown) return;
   pickerShown = key;
-  for (const box of els.chats) renderEmojiPop(box, groups, current);
+  for (const box of els.chats) renderEmojiPop(box, groups, current, (text) => send('chat', { text }));
+  const lobbyBox = $('lobby-chat-box');
+  if (lobbyBox) renderEmojiPop(lobbyBox, groups, current, (text) => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text })));
 }
 
 function pickedGroup(groups) {
   return groups.find((g) => g.id === pickerPack) || groups.find((g) => g.id !== 'recent') || groups[0];
 }
 
-function renderEmojiPop(box, groups, current) {
+function renderEmojiPop(box, groups, current, onPick) {
   const pop = box.querySelector('.emoji-pop');
   pop.innerHTML = '';
   if (!groups.length) {
@@ -1002,9 +1005,8 @@ function renderEmojiPop(box, groups, current) {
     img.loading = 'lazy';
     b.appendChild(img);
     b.addEventListener('click', () => {
-      // Tap = send: the sticker goes straight to chat and floats over your base like a
-      // board reaction — no typing box needed.
-      send('chat', { text: e.insert });
+      // Tap = send: the sticker goes straight to chat (and floats over your base in a room).
+      onPick(e.insert);
       pop.classList.add('hidden');
       rememberSticker(e.insert);
       renderEmojiPops(); // so Recent is up to date next time
@@ -1050,11 +1052,11 @@ function stopTyping() {
   send('typing', { on: false });
 }
 
-for (const box of els.chats) {
-  const form = box.querySelector('form');
-  const input = box.querySelector('input');
+function wireEmojiToggle(box) {
+  if (!box) return;
   const pop = box.querySelector('.emoji-pop');
   const emojiBtn = box.querySelector('[data-emoji-btn]');
+  if (!pop || !emojiBtn) return;
   emojiBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     pop.classList.toggle('hidden');
@@ -1069,6 +1071,12 @@ for (const box of els.chats) {
       });
     }
   }
+}
+
+for (const box of els.chats) {
+  const form = box.querySelector('form');
+  const input = box.querySelector('input');
+  wireEmojiToggle(box);
   // "0/100" beside the box: yellow when nearly full, red at the limit
   const count = document.createElement('span');
   count.className = 'chat-count';
@@ -4565,6 +4573,7 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   input.value = '';
   $('lobby-chat-log')._pinned = true;
 });
+wireEmojiToggle($('lobby-chat-box'));
 
 // Translate: one small button after someone else's message. The answer is kept, so the message
 // shows it again whenever the chat is redrawn.

@@ -227,7 +227,11 @@
                 </div>
                 <ul id="lobby-chat-log" class="chat-log lobby-log" aria-live="polite"></ul>
                 <p id="lobby-chat-off" class="lobby-chat-off hidden" data-i18n>Chat is turned off in ⚙ Settings.</p>
+                <div class="emoji-pop hidden"></div>
                 <form id="lobby-chat-form" class="chat-form">
+                  <button data-i18n-attr="aria-label" type="button" class="emoji-btn" data-emoji-btn aria-label="Emoji">
+                    <svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" /><circle cx="5.8" cy="6.4" r="1" fill="currentColor" stroke="none" /><circle cx="10.2" cy="6.4" r="1" fill="currentColor" stroke="none" /><path d="M5.3 9.7a3.6 3.6 0 0 0 5.4 0" /></svg>
+                  </button>
                   <input id="lobby-chat-input" type="text" maxlength="200" autocomplete="off" enterkeyhint="send" placeholder="Say something to everyone…" data-i18n-attr="placeholder" />
                   <button data-i18n type="submit" class="btn small primary">Send</button>
                 </form>
