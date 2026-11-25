@@ -1,6 +1,10 @@
 node_modules/
 dist/
 .env
+# backups of .env (they hold the same secrets): never commit them
+.env.*
+!.env.example
+*.bak
 data/
 *.log
 .DS_Store
