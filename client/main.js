@@ -1164,27 +1164,34 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
   // it shudder.
   let fitQueued = false;
   let shown = '';
+  const applyKbVars = (allowClose = true) => {
+    const h = Math.round(vv ? vv.height : window.innerHeight);
+    const top = Math.round(vv ? vv.offsetTop : 0);
+    // The keyboard went away but the box kept its focus (iPhones do this when you swipe it
+    // down, or leave the app and come back): leave typing mode, or the game stays squeezed
+    // into the top of the screen with the board gone.
+    if (allowClose && h > fullH - 24) {
+      if (kbSeen || performance.now() - openedAt > 1500) return closeKeyboardMode();
+    } else if (h <= fullH - 100) kbSeen = true;
+    // When the browser already resizes the layout viewport (Android interactive-widget=resizes-content),
+    // CSS height: 100% tracks the keyboard animation smoothly without JS chasing every frame.
+    const resizedByBrowser = Math.abs(h - window.innerHeight) <= 4 && top === 0;
+    const key = resizedByBrowser ? '100%|0' : `${h}|${top}`;
+    if (key === shown) return;
+    shown = key;
+    root.style.setProperty('--kb-h', resizedByBrowser ? '100%' : `${h}px`);
+    root.style.setProperty('--kb-top', `${top}px`);
+    if (screen === 'menu') $('menu').scrollTop = 0;
+    const chatLog = $(screen === 'menu' ? 'lobby-chat-log' : 'chat-log');
+    if (chatLog && chatLog._pinned !== false) requestAnimationFrame(() => { chatLog.scrollTop = chatLog.scrollHeight; });
+  };
   const fit = () => {
     if (fitQueued) return;
     fitQueued = true;
     requestAnimationFrame(() => {
       fitQueued = false;
       if (!root.classList.contains('kb-open')) return;
-      const h = Math.round(vv ? vv.height : window.innerHeight);
-      const top = Math.round(vv ? vv.offsetTop : 0);
-      // The keyboard went away but the box kept its focus (iPhones do this when you swipe it
-      // down, or leave the app and come back): leave typing mode, or the game stays squeezed
-      // into the top of the screen with the board gone.
-      if (h > fullH - 100) {
-        if (kbSeen || performance.now() - openedAt > 1500) return closeKeyboardMode();
-      } else kbSeen = true;
-      if (`${h}|${top}` === shown) return;
-      shown = `${h}|${top}`;
-      root.style.setProperty('--kb-h', `${h}px`);
-      root.style.setProperty('--kb-top', `${top}px`);
-      if (screen === 'menu') $('menu').scrollTop = 0;
-      const chatLog = $(screen === 'menu' ? 'lobby-chat-log' : 'chat-log');
-      if (chatLog && chatLog._pinned !== false) requestAnimationFrame(() => { chatLog.scrollTop = chatLog.scrollHeight; });
+      applyKbVars(true);
     });
   };
   let fullH = 0; // the visible height before the keyboard came up
@@ -1194,6 +1201,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
     if (!root.classList.contains('kb-open')) return;
     root.classList.remove('kb-open');
     shown = '';
+    root.style.removeProperty('--kb-pad-top');
     if (isChat(document.activeElement)) document.activeElement.blur();
     window.scrollTo(0, 0); // iPhones leave the page scrolled after the keyboard goes
   };
@@ -1203,10 +1211,12 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
       fullH = Math.round(vv ? vv.height : window.innerHeight);
       kbSeen = false;
       openedAt = performance.now();
+      const activeScreen = $(screen);
+      if (activeScreen) root.style.setProperty('--kb-pad-top', getComputedStyle(activeScreen).paddingTop);
     }
     shown = '';
+    applyKbVars(false);
     root.classList.add('kb-open');
-    fit();
     setTimeout(fit, 1600); // no keyboard showed up at all (e.g. a keyboard plugged in): back to normal
   });
   // Leaving the app (or the tab) always ends typing mode
@@ -4818,6 +4828,8 @@ $('lobby-chat-log').addEventListener('scroll', (e) => {
   const l = e.currentTarget;
   if (l.clientHeight) l._pinned = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
 });
+const lobbySendBtn = $('lobby-chat-form').querySelector('button[type="submit"]');
+for (const ev of ['pointerdown', 'mousedown']) lobbySendBtn.addEventListener(ev, (e) => e.preventDefault());
 $('lobby-chat-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = $('lobby-chat-input');
@@ -4825,7 +4837,10 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   if (!text || ws?.readyState !== WebSocket.OPEN) return;
   sendActiveLobbyOrDm(text);
   input.value = '';
-  $('lobby-chat-log')._pinned = true;
+  const log = $('lobby-chat-log');
+  log._pinned = true;
+  keepAtBottom(log);
+  if (document.documentElement.classList.contains('kb-open')) input.focus({ preventScroll: true });
 });
 wireEmojiToggle($('lobby-chat'));
 
