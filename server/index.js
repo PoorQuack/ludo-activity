@@ -987,6 +987,39 @@ wss.on('connection', (ws, req) => {
         if (msg.op === 'read') inbox.markRead(ctx.user.id);
         return sendInbox(ctx.user.id);
       }
+      if (msg.type === 'inspect') {
+        const targetId = String(msg.userId || '');
+        if (!/^(\d{5,25}|guest-[a-z0-9-]{8,48})$/i.test(targetId)) return;
+        const p = store.peek(targetId);
+        const meSocial = social.user(ctx.user.id);
+        let friendState = 'none';
+        if (targetId === ctx.user.id) friendState = 'self';
+        else if (targetId.startsWith('guest-') || ctx.user.id.startsWith('guest-')) friendState = 'guest';
+        else if (meSocial.friends.includes(targetId)) friendState = 'friends';
+        else if (meSocial.out.some((r) => r.id === targetId)) friendState = 'sent';
+        else if (meSocial.in.some((r) => r.id === targetId)) friendState = 'incoming';
+        const badges = p?.badges || {};
+        const level = Object.values(badges).reduce((s, n) => s + (Number(n) || 0), 0);
+        return send({
+          type: 'playerProfile',
+          user: {
+            id: targetId,
+            name: social.names.get(targetId) || 'Player',
+            avatar: !targetId.startsWith('guest-') && social.avatars.has(targetId),
+            vip: !!(p && store.passActive(p)),
+            frame: p?.equipped?.frame || 'frame-none',
+            title: p?.title || '',
+            pins: Array.isArray(p?.pins) ? p.pins : [],
+            level,
+            stats: {
+              games: p?.stats?.games || 0,
+              wins: p?.stats?.wins || 0,
+              captures: p?.stats?.captures || 0,
+            },
+            friendState,
+          },
+        });
+      }
       if (msg.type === 'announce') {
         if (!ADMIN_IDS.has(ctx.user.id)) throw new Error('Only the game\'s owner can post announcements');
         if (msg.op === 'delete') {

@@ -39,7 +39,13 @@ export class LobbyChat {
   }
 
   history(id) {
-    return this.channel(id).msgs;
+    return this.channel(id).msgs.map((m) => {
+      const p = this.profiles?.peek?.(m.userId);
+      if (!p) return m;
+      const vip = !!this.profiles?.passActive?.(p);
+      const frame = p.equipped?.frame && p.equipped.frame !== 'frame-none' ? p.equipped.frame : '';
+      return { ...m, ...(vip ? { vip: true } : {}), ...(frame ? { frame } : {}) };
+    });
   }
 
   find(id, msgId) {
@@ -64,8 +70,10 @@ export class LobbyChat {
     this.last.set(user.id, t);
     if (this.last.size > 10_000) this.last.clear();
     const ch = this.channel(id);
+    const prof = this.profiles?.peek?.(user.id);
     const msg = { id: ++ch.seq, userId: user.id, name: String(user.name || 'Player').slice(0, 32), text: clean, at: t };
-    if (this.profiles?.passActive?.(this.profiles.peek(user.id))) msg.vip = true; // Battle Pass: a gold name with a crown
+    if (this.profiles?.passActive?.(prof)) msg.vip = true; // Battle Pass: a gold name with a crown
+    if (prof?.equipped?.frame && prof.equipped.frame !== 'frame-none') msg.frame = prof.equipped.frame;
     ch.msgs.push(msg);
     if (ch.msgs.length > KEEP) ch.msgs.splice(0, ch.msgs.length - KEEP);
     this.save();

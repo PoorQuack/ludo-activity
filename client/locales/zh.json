@@ -309,6 +309,7 @@
   "Game over": "游戏结束",
   "Game over!": "游戏结束！",
   "Gameplay": "玩法",
+  "Games": "场次",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "只和机器人对战（你是唯一的真人）不会获得金币。如果所有玩家都离开游戏，游戏会等一分钟看是否有人回来，然后无金币结束。每天最多获得 <b>120</b> 金币（上限在 UTC 午夜重置）。",
   "Gem": "宝石",
   "General": "通用",

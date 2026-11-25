@@ -1081,6 +1081,9 @@ html, body {
   min-height: 0;
 }
 .chat-log {
+  --chat-bg: transparent;
+  --bubble-bg: rgba(255, 255, 255, 0.06);
+  --bubble-me: rgba(var(--accent-rgb), 0.18);
   list-style: none;
   margin: 0;
   padding: 8px 10px;
@@ -1088,15 +1091,44 @@ html, body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 13px;
   line-height: 1.35;
   user-select: text;
+  background: var(--chat-bg);
 }
 .chat-log li { overflow-wrap: anywhere; }
 /* Messages sit at the bottom next to the input (auto margin soaks up spare room above) */
 .chat-log > li:first-child { margin-top: auto; }
 .chat-log .who { font-weight: 700; margin-right: 6px; }
+.chat-log .who-btn { border: 0; padding: 0; background: transparent; font: inherit; font-weight: 800; cursor: pointer; text-align: start; }
+.chat-log .who.vip { color: var(--gold); }
+.chat-log .chat-msg { align-self: flex-start; max-width: 90%; padding: 6px 10px; border-radius: 14px 14px 14px 4px; background: var(--bubble-bg); border-left: 3px solid var(--seat-col, rgba(255, 255, 255, 0.16)); display: flex; flex-direction: column; gap: 2px; }
+.chat-log .chat-msg.me { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: var(--bubble-me); border-left: 0; border-right: 3px solid var(--seat-col, var(--accent)); }
+.chat-log .chat-msg.vip { box-shadow: inset 0 0 0 1px rgba(242, 191, 63, 0.35); }
+.chat-log .chat-msg.sticker-only { background: transparent; border: 0; box-shadow: none; padding: 2px 4px; }
+.chat-log .lchat-msg { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 7px 10px; border-radius: 12px; background: var(--bubble-bg); }
+.chat-log .lchat-msg.me { background: var(--bubble-me); }
+.chat-log .lchat-msg.vip { box-shadow: inset 0 0 0 1px rgba(242, 191, 63, 0.35); }
+.chat-log .lchat-msg.sticker-only { background: transparent; box-shadow: none; padding: 2px 4px; }
+.lchat-who-btn { display: inline-flex; align-items: center; gap: 7px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.lchat-av { width: 24px; height: 24px; font-size: 11px; flex: none; }
+.lchat-body { display: block; padding-left: 31px; }
+.pcard-box { width: min(360px, 100%); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.pcard-box.vip { box-shadow: inset 0 0 0 1px rgba(242, 191, 63, 0.45), 0 18px 40px rgba(0, 0, 0, 0.55); }
+.pcard-head { display: flex; align-items: center; gap: 14px; }
+.pcard-av { width: 64px; height: 64px; font-size: 24px; flex: none; }
+.pcard-meta { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pcard-name { font-size: 18px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard-name.vip { color: var(--gold); }
+.pcard-title { color: var(--muted); font-size: 13px; }
+.pcard-pins { display: flex; gap: 6px; font-size: 16px; margin-top: 2px; }
+.pcard-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pcard-stats > div { background: var(--panel-2); border-radius: 10px; padding: 8px 6px; text-align: center; display: flex; flex-direction: column; }
+.pcard-stats b { font-size: 16px; }
+.pcard-stats small { font-size: 11px; color: var(--muted); }
+.pcard-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.pcard-tag { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px; background: rgba(76, 195, 138, 0.15); color: var(--good, #4cc38a); font-size: 13px; font-weight: 700; }
 .chat-log .empty { color: var(--muted); }
 .chat-log .system { color: var(--muted); font-style: italic; font-size: 0.92em; }
 .chat-form { display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); }

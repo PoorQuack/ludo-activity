@@ -309,6 +309,7 @@
   "Game over": "Partida terminada",
   "Game over!": "¡Fin de la partida!",
   "Gameplay": "Jugabilidad",
+  "Games": "Partidas",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "Las partidas solo contra bots (eres el único humano) no dan monedas. Si todos los jugadores abandonan una partida, se espera un minuto a que alguien vuelva y luego termina sin monedas. Las ganancias se detienen en <b>120</b> monedas al día (el límite se reinicia a medianoche UTC).",
   "Gem": "Gema",
   "General": "General",

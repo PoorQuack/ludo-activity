@@ -309,6 +309,7 @@
   "Game over": "Partie terminée",
   "Game over!": "Partie terminée !",
   "Gameplay": "Jouabilité",
+  "Games": "Parties",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "Les parties contre des bots uniquement (tu es le seul humain) ne rapportent pas de pièces. Si tous les joueurs quittent une partie, elle attend une minute que quelqu'un revienne, puis se termine sans pièces. Les gains s'arrêtent à <b>120</b> pièces par jour (la limite se réinitialise à minuit UTC).",
   "Gem": "Gemme",
   "General": "Général",

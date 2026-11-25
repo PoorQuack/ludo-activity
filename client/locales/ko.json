@@ -309,6 +309,7 @@
   "Game over": "게임 끝",
   "Game over!": "게임 끝!",
   "Gameplay": "게임플레이",
+  "Games": "게임",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "봇하고만 하는 게임(사람이 나 혼자)은 코인을 주지 않아요. 모든 플레이어가 게임을 나가면 누군가 돌아오길 1분 기다린 뒤 코인 없이 끝나요. 하루 <b>120</b>코인까지만 벌 수 있어요(한도는 UTC 자정에 초기화).",
   "Gem": "보석",
   "General": "일반",

@@ -309,6 +309,7 @@
   "Game over": "انتهت اللعبة",
   "Game over!": "انتهت اللعبة!",
   "Gameplay": "أسلوب اللعب",
+  "Games": "المباريات",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "المباريات ضد البوتات فقط (أنت الإنسان الوحيد) لا تمنح عملات. إن غادر كل اللاعبين مباراة، تنتظر دقيقة حتى يعود أحد، ثم تنتهي بلا عملات. تتوقف الأرباح عند <b>120</b> عملة في اليوم (يُعاد تعيين الحد عند منتصف الليل بتوقيت UTC).",
   "Gem": "جوهرة",
   "General": "عام",

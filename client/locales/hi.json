@@ -309,6 +309,7 @@
   "Game over": "खेल ख़त्म",
   "Game over!": "खेल ख़त्म!",
   "Gameplay": "गेमप्ले",
+  "Games": "खेल",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "सिर्फ़ बॉट के ख़िलाफ़ खेल (आप अकेले इंसान हों) में सिक्के नहीं मिलते। अगर सभी खिलाड़ी खेल छोड़ दें, तो खेल किसी के लौटने का एक मिनट इंतज़ार करता है, फिर बिना सिक्कों के ख़त्म हो जाता है। कमाई रोज़ <b>120</b> सिक्कों पर रुक जाती है (सीमा UTC आधी रात को रीसेट होती है)।",
   "Gem": "रत्न",
   "General": "सामान्य",

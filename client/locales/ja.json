@@ -309,6 +309,7 @@
   "Game over": "ゲームオーバー",
   "Game over!": "ゲームオーバー！",
   "Gameplay": "ゲームプレイ",
+  "Games": "試合",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "ボットだけが相手のゲーム（人間があなた1人）ではコインはもらえません。全プレイヤーがゲームから抜けると、誰かが戻るのを1分待ち、その後コインなしで終了します。獲得は1日<b>120</b>コインまで（上限はUTCの午前0時にリセット）。",
   "Gem": "宝石",
   "General": "一般",

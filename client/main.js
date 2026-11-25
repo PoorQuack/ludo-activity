@@ -308,6 +308,9 @@ function connect() {
       renderFriends();
       if (!$('room-friends-modal').classList.contains('hidden')) renderRoomFriends();
       renderPrefs();
+      refreshInspectedPlayer();
+    } else if (msg.type === 'playerProfile') {
+      renderPlayerCardModal(msg.user);
     } else if (msg.type === 'inbox') {
       inboxData = msg;
       renderInbox();
@@ -801,30 +804,24 @@ function renderChat() {
         list.appendChild(li);
         continue;
       }
-      const who = document.createElement('span');
-      who.className = 'who';
-      // Players' names in their colour (and shape); watchers in the normal text colour
       const seat = state.seats.findIndex((s) => s && !s.bot && s.userId === m.userId);
-      who.textContent = (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
+      const stickerOnly = isStickerOnly(m.text);
+      const isMe = m.userId === me?.id;
+      li.className = `chat-msg chat-bubble${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
+      if (seat >= 0) li.style.setProperty('--seat-col', col(board.colors[seat]));
+      const who = document.createElement('button');
+      who.type = 'button';
+      who.className = 'who who-btn';
+      who.textContent = (m.vip ? '👑 ' : '') + (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
       if (seat >= 0) who.style.color = col(board.colors[seat]);
+      else who.style.color = m.vip ? 'var(--gold)' : chatNameColor(m.userId);
+      who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
       li.appendChild(who);
-      // :slug: codes come back as stickers (the server already checked ownership).
-      // A message of nothing but codes shows them sticker-big; inside text they're small.
-      const stickerOnly = m.text.trim().split(/\s+/).every((t) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(t)?.[1]]);
-      for (const part of m.text.split(/(:[a-z0-9-]+:)/g)) {
-        const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
-        const hit = slug && EMOTE_SLUGS[slug];
-        if (hit) {
-          const img = document.createElement('img');
-          img.className = stickerOnly ? 'chat-sticker' : 'chat-emote';
-          img.src = hit.img;
-          img.alt = `:${slug}:`;
-          img.title = hit.name;
-          img.addEventListener('load', () => keepAtBottom(list)); // a sticker can arrive after the scroll
-          li.appendChild(img);
-        } else if (part) li.appendChild(document.createTextNode(part));
-      }
-      if (!stickerOnly && m.userId !== me?.id) addTranslate(li, 'room', m.id);
+      const body = document.createElement('span');
+      body.className = 'chat-body';
+      renderChatTokens(body, m.text, list, stickerOnly);
+      li.appendChild(body);
+      if (!stickerOnly && !isMe) addTranslate(li, 'room', m.id);
       list.appendChild(li);
     }
     if (list._pinned === false) list.scrollTop = readingAt;
@@ -4359,6 +4356,116 @@ function onLobbyChat(msg) {
   renderLobbyChat();
 }
 
+const isStickerOnly = (text) => text.trim().split(/\s+/).every((w) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(w)?.[1]]);
+function chatNameColor(userId) {
+  const hue = [...String(userId || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
+  return `hsl(${hue} 74% 72%)`;
+}
+function renderChatTokens(target, text, logEl, stickerOnly) {
+  for (const part of text.split(/(:[a-z0-9-]+:)/g)) {
+    const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
+    const hit = slug && EMOTE_SLUGS[slug];
+    if (hit) {
+      const img = document.createElement('img');
+      img.className = stickerOnly ? 'chat-sticker' : 'chat-emote';
+      img.src = hit.img;
+      img.alt = `:${slug}:`;
+      img.title = hit.name;
+      img.addEventListener('load', () => keepAtBottom(logEl));
+      target.appendChild(img);
+    } else if (part) target.appendChild(document.createTextNode(part));
+  }
+}
+
+let pcardEl = null;
+let pcardUser = null;
+function ensurePlayerCardModal() {
+  if (pcardEl) return pcardEl;
+  pcardEl = document.createElement('div');
+  pcardEl.className = 'modal-wrap pcard-modal hidden';
+  pcardEl.setAttribute('role', 'dialog');
+  pcardEl.setAttribute('aria-modal', 'true');
+  document.body.appendChild(pcardEl);
+  let downOnBackdrop = false;
+  pcardEl.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === pcardEl; });
+  pcardEl.addEventListener('click', (e) => {
+    if (downOnBackdrop && e.target === pcardEl) closePlayerCardModal();
+    downOnBackdrop = false;
+  });
+  window.addEventListener('keydown', (e) => e.key === 'Escape' && !pcardEl.classList.contains('hidden') && closePlayerCardModal());
+  return pcardEl;
+}
+function closePlayerCardModal() {
+  pcardEl?.classList.add('hidden');
+  pcardUser = null;
+}
+function inspectPlayer(userId, fallbackName = '') {
+  if (!userId || userId === 'system' || String(userId).startsWith('bot-')) return;
+  const modal = ensurePlayerCardModal();
+  pcardUser = { id: userId, name: fallbackName || 'Player' };
+  modal.innerHTML = `<div class="modal-card pcard-box"><button type="button" class="set-close pcard-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button><p class="lb-note">${t('Loading…')}</p></div>`;
+  modal.querySelector('.pcard-close').addEventListener('click', closePlayerCardModal);
+  modal.classList.remove('hidden');
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'inspect', userId }));
+}
+function refreshInspectedPlayer() {
+  if (!pcardUser || !pcardEl || pcardEl.classList.contains('hidden')) return;
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'inspect', userId: pcardUser.id }));
+}
+function renderPlayerCardModal(u) {
+  if (!u || !pcardEl || pcardEl.classList.contains('hidden')) return;
+  pcardUser = u;
+  const titleText = u.title && BADGES_BY_ID[u.title] ? t(BADGES_BY_ID[u.title].title) : t('Ludo player');
+  pcardEl.innerHTML = `
+    <div class="modal-card pcard-box${u.vip ? ' vip' : ''}">
+      <button type="button" class="set-close pcard-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <div class="pcard-head">
+        <span class="avatar pcard-av"><span class="level-badge">${u.level || 0}</span></span>
+        <div class="pcard-meta">
+          <b class="pcard-name${u.vip ? ' vip' : ''}">${u.vip ? '👑 ' : ''}${escapeHtml(u.name)}</b>
+          <small class="pcard-title">${escapeHtml(titleText)}</small>
+          ${u.pins?.length ? `<div class="pcard-pins">${u.pins.filter((id) => BADGES_BY_ID[id]).map((id) => `<span title="${escapeHtml(t(BADGES_BY_ID[id].title))}">${BADGES_BY_ID[id].icon}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>
+      <div class="pcard-stats">
+        <div><b>${u.stats?.wins ?? 0}</b><small>${t('Wins')}</small></div>
+        <div><b>${u.stats?.games ?? 0}</b><small>${t('Games')}</small></div>
+        <div><b>${u.stats?.captures ?? 0}</b><small>${t('Captures')}</small></div>
+      </div>
+      <div class="pcard-actions"></div>
+    </div>`;
+  pcardEl.querySelector('.pcard-close').addEventListener('click', closePlayerCardModal);
+  const av = pcardEl.querySelector('.pcard-av');
+  fillAvatar(av, { id: u.id, name: u.name, avatar: u.avatar });
+  setFrame(av, u.frame);
+  const acts = pcardEl.querySelector('.pcard-actions');
+  if (u.friendState === 'friends') {
+    acts.innerHTML = `<span class="pcard-tag">✓ ${t('Friends')}</span>`;
+  } else if (u.friendState === 'sent') {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn small';
+    b.textContent = t('Requested');
+    b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'cancel', id: u.id })));
+    acts.appendChild(b);
+  } else if (u.friendState === 'incoming') {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn primary small';
+    b.textContent = t('Accept');
+    b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'accept', id: u.id })));
+    acts.appendChild(b);
+  } else if (u.friendState === 'none') {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn primary small';
+    b.textContent = t('+ Add');
+    b.title = t('Send a friend request');
+    b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'add', id: u.id })));
+    acts.appendChild(b);
+  }
+}
+
 function renderLobbyChat() {
   for (const b of document.querySelectorAll('[data-lchat]')) {
     b.classList.toggle('active', b.dataset.lchat === lchat.tab);
@@ -4378,30 +4485,33 @@ function renderLobbyChat() {
   const scope = lchat.tab;
   for (const m of msgs) {
     const li = document.createElement('li');
-    if (m.userId === me?.id) li.className = 'me';
+    const stickerOnly = isStickerOnly(m.text);
+    const isMe = m.userId === me?.id;
+    li.className = `lchat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
+    const author = document.createElement('button');
+    author.type = 'button';
+    author.className = 'lchat-who-btn';
+    author.addEventListener('click', () => inspectPlayer(m.userId, m.name));
+    const av = document.createElement('span');
+    av.className = 'avatar lchat-av';
+    fillAvatar(av, { id: m.userId, name: m.name, avatar: !String(m.userId).startsWith('guest-') });
+    setFrame(av, m.frame);
+    author.appendChild(av);
     const who = document.createElement('span');
-    who.className = 'who';
-    who.textContent = m.name;
-    li.appendChild(who);
-    const stickerOnly = m.text.trim().split(/\s+/).every((w) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(w)?.[1]]);
-    for (const part of m.text.split(/(:[a-z0-9-]+:)/g)) {
-      const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
-      const hit = slug && EMOTE_SLUGS[slug];
-      if (hit) {
-        const img = document.createElement('img');
-        img.className = stickerOnly ? 'chat-sticker' : 'chat-emote';
-        img.src = hit.img;
-        img.alt = `:${slug}:`;
-        img.title = hit.name;
-        img.addEventListener('load', () => keepAtBottom(log));
-        li.appendChild(img);
-      } else if (part) li.appendChild(document.createTextNode(part));
-    }
+    who.className = `who${m.vip ? ' vip' : ''}`;
+    who.textContent = (m.vip ? '👑 ' : '') + m.name;
+    if (!m.vip) who.style.color = chatNameColor(m.userId);
+    author.appendChild(who);
+    li.appendChild(author);
+    const body = document.createElement('span');
+    body.className = 'lchat-body';
+    renderChatTokens(body, m.text, log, stickerOnly);
     const when = document.createElement('time');
     when.className = 'when';
     when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
-    li.appendChild(when);
-    if (!stickerOnly && m.userId !== me?.id) addTranslate(li, scope, m.id);
+    body.appendChild(when);
+    if (!stickerOnly && !isMe) addTranslate(body, scope, m.id);
+    li.appendChild(body);
     log.appendChild(li);
   }
   log._pinned = pinned;

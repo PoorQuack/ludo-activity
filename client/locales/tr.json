@@ -309,6 +309,7 @@
   "Game over": "Oyun bitti",
   "Game over!": "Oyun bitti!",
   "Gameplay": "Oynanış",
+  "Games": "Oyunlar",
   "Games against bots only (you're the only human) don't pay coins. If every player leaves a game, it waits a minute for someone to come back, then ends with no coins. Earnings stop at <b>120</b> coins a day (the limit resets at midnight UTC).": "Yalnızca botlara karşı oyunlar (tek insan sensin) jeton kazandırmaz. Bütün oyuncular bir oyundan ayrılırsa, oyun birinin dönmesi için bir dakika bekler, sonra jetonsuz biter. Kazançlar günde <b>120</b> jetonda durur (sınır gece yarısı UTC'de sıfırlanır).",
   "Gem": "Mücevher",
   "General": "Genel",
