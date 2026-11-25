@@ -238,6 +238,9 @@
     "💰 {names} split the pot: {n} coins!",
     "Everyone got their stake back.",
     "🎲 Test dice were used: everyone got their stake back.",
-    "Nobody who paid in finished: everyone got their stake back."
+    "Nobody who paid in finished: everyone got their stake back.",
+    "That message is gone",
+    "Unknown language",
+    "Unknown chat channel"
   ]
 }

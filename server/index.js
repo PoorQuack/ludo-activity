@@ -17,6 +17,8 @@ import { SupportDesk, SUPPORT_MAX_FILE } from './support.js';
 import { ServerInvite, SNOOZE_MS } from './invite.js';
 import { SocialBook, sendDm } from './social.js';
 import { Inbox } from './inbox.js';
+import { LobbyChat, channelId } from './lobbychat.js';
+import { Translator, LANGS } from './translate.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -26,6 +28,7 @@ const DATA_FILE = process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'p
 const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 'rooms.json');
 // Weekly and monthly leaderboards (scores, last winners, prizes paid), next to the profiles.
 const LEADERBOARD_FILE = process.env.LEADERBOARD_FILE || path.join(path.dirname(DATA_FILE), 'leaderboard.json');
+const LOBBY_CHAT_FILE = process.env.LOBBY_CHAT_FILE || path.join(path.dirname(DATA_FILE), 'lobby-chat.json');
 // Today's daily quest progress (reset at midnight UTC).
 const QUESTS_FILE = process.env.QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests.json');
 const WEEKLY_QUESTS_FILE = process.env.WEEKLY_QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests-weekly.json');
@@ -292,6 +295,61 @@ function claimPurchases(userId) {
     .catch((err) => console.error(`Purchases for ${userId}: ${err.message}`));
 }
 const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward: sendAwards });
+
+// The menu's chat (Global, and one channel per language) and chat translation
+const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
+const translator = new Translator();
+const lobbyListeners = new Set(); // sockets with the menu chat open; ws.ctx.lobbyLang says which language
+
+function handleLobbyChat(ws, msg) {
+  const { ctx } = ws;
+  const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
+  if (msg.op === 'join') {
+    ctx.lobbyLang = LANGS.has(msg.lang) ? msg.lang : 'en';
+    lobbyListeners.add(ws);
+    return send({ type: 'lobbyChat', op: 'history', lang: ctx.lobbyLang, global: lobbyChat.history('global'), local: lobbyChat.history(`lang:${ctx.lobbyLang}`) });
+  }
+  if (msg.op === 'leave') {
+    lobbyListeners.delete(ws);
+    return;
+  }
+  const channel = msg.channel === 'lang' ? 'lang' : 'global';
+  const id = channelId(channel, ctx.lobbyLang || 'en');
+  const reach = (obj) => {
+    for (const c of lobbyListeners) {
+      if (channel === 'lang' && c.ctx.lobbyLang !== ctx.lobbyLang) continue;
+      if (c.readyState === 1) c.send(JSON.stringify(obj));
+    }
+  };
+  if (msg.op === 'say') {
+    if (!lobbyListeners.has(ws)) throw new Error('Open the chat first');
+    const m = lobbyChat.say(ctx.user, id, msg.text);
+    if (m) reach({ type: 'lobbyChat', op: 'msg', channel, msg: m });
+    return;
+  }
+  if (msg.op === 'delete') {
+    if (!ADMIN_IDS.has(ctx.user.id)) throw new Error("Only the game's owner can remove messages");
+    if (lobbyChat.remove(id, Number(msg.id))) reach({ type: 'lobbyChat', op: 'removed', channel, id: Number(msg.id) });
+  }
+}
+
+// "Translate" under a chat message: the message is looked up here (so this can't be used to
+// translate any text at all), then put into the player's language.
+function handleTranslate(ws, msg) {
+  const { ctx } = ws;
+  const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
+  const scope = String(msg.scope);
+  const msgId = Number(msg.id);
+  let found = null;
+  if (scope === 'room') found = ctx.room?.chat.find((m) => m.id === msgId && !m.system);
+  else if (scope === 'global' || scope === 'lang') found = lobbyChat.find(channelId(scope, ctx.lobbyLang || 'en'), msgId);
+  const reply = { type: 'translated', scope, id: msgId };
+  if (!found) return send({ ...reply, error: 'That message is gone' });
+  translator
+    .translate(ctx.user.id, found.text, String(msg.to))
+    .then((r) => send({ ...reply, text: r.text, from: r.from }))
+    .catch((err) => send({ ...reply, error: err.message }));
+}
 setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon as a week or month ends
 // Finished daily quests add their points to the leaderboards.
 // Bug reports and feedback from players, forwarded to the owner's Discord DMs (see support.js)
@@ -732,6 +790,8 @@ wss.on('connection', (ws, req) => {
         return announceToAll(item);
       }
       if (msg.type === 'friendInvite') return inviteFriend(ws, String(msg.to || ''));
+      if (msg.type === 'lobbyChat') return handleLobbyChat(ws, msg);
+      if (msg.type === 'translate') return handleTranslate(ws, msg);
       if (msg.type === 'support') {
         // ⚙ Settings → Contact the developer. The room and device help with bug reports.
         const room = ctx.room;
@@ -779,6 +839,7 @@ wss.on('connection', (ws, req) => {
 
   ws.on('close', () => {
     clearTimeout(helloTimer);
+    lobbyListeners.delete(ws);
     const n = (socketsByIp.get(ip) || 1) - 1;
     if (n > 0) socketsByIp.set(ip, n);
     else socketsByIp.delete(ip);
@@ -829,6 +890,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     saveRooms();
     store.flush();
     leaderboard.flush();
+    lobbyChat.flush();
     quests.flush();
     weekly.flush();
     support.save();

@@ -2,7 +2,8 @@
 // player 10 points for each human they finished ahead of, plus 10 for beating them all (bots
 // don't count; see Room.giveRewards). Games against bots only, and games everyone abandoned,
 // score nothing; daily quests add their points too. When a week (Monday 00:00 UTC) or a
-// month ends, its top three win coin prizes, paid straight into their balance.
+// month ends, its top three win coin prizes, paid straight into their balance. The all-time
+// board adds up the same points forever: no prizes, never resets.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -43,10 +44,13 @@ export class Leaderboard {
     this.now = now;
     this.onAward = onAward;
     this.boards = { week: this.fresh('week'), month: this.fresh('month') };
+    this.allTime = null; // { since, scores }: set by load(), or started below
     this.last = { week: null, month: null }; // the last finished period's podium
     this.awards = []; // { userId, kind, period, place, coins, paid, seen }
     this.saveTimer = null;
     if (file) this.load();
+    // Started for the first time: seeded from this month's board, the longest history there is
+    this.allTime ||= { since: this.boards.month.id, scores: structuredClone(this.boards.month.scores) };
     this.payOwed();
     this.rollover();
   }
@@ -69,6 +73,12 @@ export class Leaderboard {
         s.games += 1;
         s.at = t; // ties go to whoever got there first
       }
+      const a = (this.allTime.scores[r.userId] ||= { name: r.name, points: 0, wins: 0, games: 0, at: t });
+      a.name = r.name;
+      a.points += Math.round(r.points);
+      a.wins += r.won ? 1 : 0;
+      a.games += 1;
+      a.at = t;
     }
     this.save();
   }
@@ -134,6 +144,14 @@ export class Leaderboard {
         last: this.last[kind],
       };
     }
+    const ranked = this.ranked(this.allTime);
+    const mine = ranked.findIndex((e) => e.userId === userId);
+    out.all = {
+      since: this.allTime.since,
+      top: ranked.slice(0, TOP).map((e, i) => ({ rank: i + 1, name: e.name, points: e.points, wins: e.wins, games: e.games, you: e.userId === userId })),
+      me: mine >= 0 ? { rank: mine + 1, points: ranked[mine].points, wins: ranked[mine].wins, games: ranked[mine].games } : null,
+      players: ranked.length,
+    };
     return out;
   }
 
@@ -156,6 +174,7 @@ export class Leaderboard {
           if (doc.last?.[kind]) this.last[kind] = doc.last[kind];
         }
         if (Array.isArray(doc.awards)) this.awards = doc.awards;
+        if (doc.allTime?.scores) this.allTime = doc.allTime;
         return;
       } catch (err) {
         console.error(`Leaderboard file ${f} is unreadable (${err.message})`);
@@ -174,7 +193,7 @@ export class Leaderboard {
     if (!this.file) return;
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     const tmp = `${this.file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ version: 1, boards: this.boards, last: this.last, awards: this.awards }));
+    fs.writeFileSync(tmp, JSON.stringify({ version: 1, boards: this.boards, last: this.last, awards: this.awards, allTime: this.allTime }));
     if (fs.existsSync(this.file)) fs.copyFileSync(this.file, `${this.file}.bak`);
     fs.renameSync(tmp, this.file);
   }

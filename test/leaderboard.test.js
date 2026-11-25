@@ -252,3 +252,33 @@ test('friends on opposite teams, each with a bot: the winning side scores as usu
   assert.equal(room.noPoints, null);
   assert.deepEqual(Object.fromEntries(ended.map((r) => [r.userId, [r.points, r.won]])), { b: [20, true], a: [0, false] });
 });
+
+test('the all-time board keeps every point through week and month ends, and is saved', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-all-'));
+  const file = path.join(dir, 'leaderboard.json');
+  const c = clock('2026-11-05T10:00Z');
+  const lb = new Leaderboard(file, { now: c.now });
+  lb.record(game(['ann', 20, true], ['bob', 10]));
+  c.t = at('2026-12-02T10:00Z'); // a new week and a new month
+  lb.record(game(['bob', 30, true], ['ann', 5]));
+  const v = lb.view('ann');
+  assert.equal(v.month.top.find((e) => e.name === 'ANN').points, 5); // the month started over
+  assert.deepEqual(v.all.top.map((e) => [e.name, e.points, e.wins, e.games]), [['BOB', 40, 1, 2], ['ANN', 25, 1, 2]]);
+  assert.deepEqual(v.all.me, { rank: 2, points: 25, wins: 1, games: 2 });
+  assert.equal(v.all.since, '2026-11');
+  lb.flush();
+  const again = new Leaderboard(file, { now: c.now });
+  assert.equal(again.view('bob').all.top[0].points, 40);
+});
+
+test('an existing save without an all-time board starts one from this month', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-seed-'));
+  const file = path.join(dir, 'leaderboard.json');
+  const c = clock('2026-11-20T10:00Z');
+  const old = new Leaderboard(file, { now: c.now });
+  old.record(game(['ann', 30, true]));
+  old.allTime = undefined; // as written by the version before the all-time board
+  fs.writeFileSync(file, JSON.stringify({ version: 1, boards: old.boards, last: old.last, awards: old.awards }));
+  const lb = new Leaderboard(file, { now: c.now });
+  assert.equal(lb.view('ann').all.top[0].points, 30);
+});

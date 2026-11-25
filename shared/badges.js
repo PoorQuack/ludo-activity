@@ -30,15 +30,15 @@ export function completedTiers(owned) {
 }
 
 export const BADGES = [
-  { id: 'menace', name: 'Menace', title: 'Menace', icon: '⚔️', stat: 'capture', goals: [25, 100, 500], desc: 'Capture {n} tokens' },
-  { id: 'champion', name: 'Champion', title: 'Champion', icon: '🏆', stat: 'win', goals: [5, 25, 100], desc: 'Win {n} games' },
-  { id: 'lucky', name: 'Lucky', title: 'Lucky Roller', icon: '🎲', stat: 'six', goals: [50, 250, 1000], desc: 'Roll {n} sixes' },
+  { id: 'menace', img: '/badges/menace.webp', name: 'Menace', title: 'Menace', icon: '⚔️', stat: 'capture', goals: [25, 100, 500], desc: 'Capture {n} tokens' },
+  { id: 'champion', img: '/badges/champion.webp', name: 'Champion', title: 'Champion', icon: '🏆', stat: 'win', goals: [5, 25, 100], desc: 'Win {n} games' },
+  { id: 'lucky', img: '/badges/lucky.webp', name: 'Lucky', title: 'Lucky Roller', icon: '🎲', stat: 'six', goals: [50, 250, 1000], desc: 'Roll {n} sixes' },
   { id: 'homebody', name: 'Homebody', title: 'Homebody', icon: '🏠', stat: 'home', goals: [25, 150, 600], desc: 'Bring {n} tokens home' },
   { id: 'avenger', name: 'Avenger', title: 'Avenger', icon: '🗡️', stat: 'revenge', goals: [5, 25, 100], desc: 'Revenges: {n}' },
-  { id: 'rampage', name: 'Rampage', title: 'Unstoppable', icon: '🔥', stat: 'rampage', goals: [1, 10, 40], desc: 'Rampages (3 captures in a row): {n}' },
-  { id: 'untouchable', name: 'Untouchable', title: 'Untouchable', icon: '🛡️', stat: 'clean', goals: [1, 5, 20], desc: 'Wins without being captured: {n}' },
+  { id: 'rampage', img: '/badges/rampage.webp', name: 'Rampage', title: 'Unstoppable', icon: '🔥', stat: 'rampage', goals: [1, 10, 40], desc: 'Rampages (3 captures in a row): {n}' },
+  { id: 'untouchable', img: '/badges/untouchable.webp', name: 'Untouchable', title: 'Untouchable', icon: '🛡️', stat: 'clean', goals: [1, 5, 20], desc: 'Wins without being captured: {n}' },
   { id: 'comeback', name: 'Comeback', title: 'Comeback Kid', icon: '📈', stat: 'comeback', goals: [1, 5, 15], desc: 'Wins after being last: {n}' },
-  { id: 'collector', name: 'Collector', title: 'Collector', icon: '💎', value: (p) => completedTiers(p.owned || []), goals: [1, 3, 6], desc: 'Shop rarity tiers completed: {n}' },
+  { id: 'collector', img: '/badges/collector.webp', name: 'Collector', title: 'Collector', icon: '💎', value: (p) => completedTiers(p.owned || []), goals: [1, 3, 6], desc: 'Shop rarity tiers completed: {n}' },
   { id: 'generous', name: 'Generous', title: 'Big Spender', icon: '🎁', stat: 'gift', goals: [1, 10, 30], desc: 'Gifts given: {n}' },
   { id: 'regular', name: 'Regular', title: 'Regular', icon: '📅', stat: 'week', goals: [1, 4, 12], desc: '7-day daily-roll streaks: {n}' },
   { id: 'speedster', name: 'Speedster', title: 'Speedster', icon: '⚡', stat: 'quickwin', goals: [3, 15, 50], desc: 'Quick games won: {n}' },

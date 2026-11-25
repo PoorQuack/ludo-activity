@@ -267,7 +267,7 @@ html, body {
 /* ---- the dock ---- */
 .hub-dock {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   height: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px));
   padding: 0 6px env(safe-area-inset-bottom, 0px);
   background: var(--panel);
@@ -302,7 +302,8 @@ html, body {
 #menu:not([data-panel='']) .hub-side { display: flex; }
 #menu[data-panel='quests'] [data-panel-for='quests'],
 #menu[data-panel='friends'] [data-panel-for='friends'],
-#menu[data-panel='ranking'] [data-panel-for='ranking'] { display: flex; }
+#menu[data-panel='ranking'] [data-panel-for='ranking'],
+#menu[data-panel='chat'] [data-panel-for='chat'] { display: flex; }
 .menu-hero { display: none; margin: 0; }
 
 /* ---- wide screens: the dock down the left, the panel in a column on the right ---- */
@@ -335,7 +336,7 @@ html, body {
   /* the hub stays; the side column shows the chosen panel (Quests to start with) */
   #menu:not([data-panel='']) .hub-stage { display: flex; }
   .hub-panel[data-panel-for='quests'] { display: flex; }
-  #menu[data-panel='friends'] [data-panel-for='quests'], #menu[data-panel='ranking'] [data-panel-for='quests'] { display: none; }
+  #menu[data-panel='friends'] [data-panel-for='quests'], #menu[data-panel='ranking'] [data-panel-for='quests'], #menu[data-panel='chat'] [data-panel-for='quests'] { display: none; }
   .panel-back .btn { display: none; }
   .panel-title { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   .hero-card { min-height: 190px; padding: 18px; }
@@ -2387,3 +2388,35 @@ button, .btn { touch-action: manipulation; }
 /* on the small seat pictures the big rank frames would cover the name: a little more room */
 .seat-avatar[data-frame^='frame-rank-'] { margin: 0 8px; }
 .item .btn.won { background: var(--panel-2); color: var(--muted); font-size: 11.5px; }
+
+/* ---------- the menu's chat (Global / your language) and Translate ---------- */
+.lobby-chat { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.lobby-chat .sec-head { padding: 10px 10px 0; }
+.lobby-chat .mini-tabs { width: 100%; }
+.lobby-chat .mini-tabs button { flex: 1; }
+.lobby-log { height: max(260px, calc(100dvh - 330px)); padding: 10px 12px; font-size: 14px; gap: 7px; }
+@media (min-width: 900px) { .lobby-log { height: clamp(380px, calc(100vh - 300px), 640px); } }
+.lobby-log .when { color: var(--muted); font-size: 11px; margin-inline-start: 6px; font-variant-numeric: tabular-nums; }
+.lobby-log .me .who { color: var(--accent); }
+.lobby-chat-off { margin: 0; padding: 18px 14px; color: var(--muted); text-align: center; }
+.lobby-chat.off .lobby-log, .lobby-chat.off .chat-form { display: none; }
+.lobby-chat .chat-form .btn { width: auto; flex: none; }
+.tr-btn {
+  display: inline-flex; align-items: center; gap: 3px; margin-inline-start: 6px; padding: 1px 6px;
+  border: 0; border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: 11px; font-weight: 700;
+  cursor: pointer; vertical-align: 1px; opacity: 0.75;
+}
+.tr-btn:hover, .tr-btn:focus-visible { opacity: 1; background: var(--panel-2); color: var(--text); }
+.tr-btn[disabled] { cursor: default; opacity: 0.5; }
+.tr-out { display: block; margin-top: 2px; padding-inline-start: 8px; border-inline-start: 2px solid var(--line); color: var(--text); opacity: 0.92; font-size: 0.95em; }
+.tr-out small { display: block; color: var(--muted); font-size: 10.5px; }
+.tr-out.err { color: var(--muted); font-style: italic; }
+.mini-tabs button.has-new::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-inline-start: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
+/* Badges with their own art: the picture is the medal; its level is the thin ring around it */
+.medal.art { background: none; padding: 0; overflow: visible; box-shadow: 0 0 0 2px var(--rim); }
+.medal.art.lv3 { box-shadow: 0 0 0 2px var(--rim), 0 0 14px rgba(255, 200, 58, 0.5); }
+.medal.art.lv0 { box-shadow: none; }
+.medal.art img { width: 112%; height: 112%; margin: -6%; object-fit: contain; display: block; }
+.medal.art.lv0 img { filter: grayscale(1) opacity(0.45); }
+.medal.art.tiny, .medal.art.small { box-shadow: 0 0 0 1.5px var(--rim); }
+.medal.art.lv0.tiny, .medal.art.lv0.small { box-shadow: none; }

@@ -28,6 +28,7 @@
             </div>
             <button type="button" class="dock-tab" data-hub-tab="friends"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.3a6.5 6.5 0 0 1 3.5 5.7" /></svg><span data-i18n>Friends</span><i class="dock-dot hidden" data-dot="friends" aria-hidden="true"></i></button>
             <button type="button" class="dock-tab" data-hub-tab="ranking"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a2.5 2.5 0 0 0 2.6 3.9M17 6h2.5a2.5 2.5 0 0 1-2.6 3.9" /></svg><span data-i18n>Ranking</span></button>
+            <button type="button" class="dock-tab" data-hub-tab="chat"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5z" /><path d="M7 10h10M7 13.5h6" /></svg><span data-i18n>Chat</span><i class="dock-dot hidden" data-dot="chat" aria-hidden="true"></i></button>
             <button type="button" class="dock-tab dock-vip" data-hub-tab="vip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12l3.5 5.5L12 20.5 2.5 9z" /><path d="M2.5 9h19M9 3.5 12 20.5l3-17" /></svg><span data-i18n>VIP</span></button>
             <button type="button" class="dock-tab" data-hub-tab="quests"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h11M8 12h11M8 18h11M4 6l.8.8L6.4 5M4 12l.8.8 1.6-1.8M4 18h2" /></svg><span data-i18n>Quests</span><i class="dock-dot hidden" data-dot="quests" aria-hidden="true"></i></button>
             <button type="button" class="dock-tab dock-shop" data-hub-tab="shop" data-go="shop"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11.2a1.5 1.5 0 0 1-1.5 1.3H6.7a1.5 1.5 0 0 1-1.5-1.3z" /><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3" /></svg><span data-i18n>Shop</span></button>
@@ -210,6 +211,24 @@
                 </div>
               </section>
             </div>
+            <div class="hub-panel" data-panel-for="chat">
+              <div class="panel-back"><button type="button" class="btn small" data-hub-home><span data-i18n>← Back</span></button><h2 class="panel-title" data-i18n>Chat</h2></div>
+              <!-- The menu's chat: everyone (Global), or everyone playing in your language -->
+              <section id="lobby-chat" class="lobby-chat">
+                <div class="sec-head">
+                  <nav id="lobby-chat-tabs" class="mini-tabs" role="tablist">
+                    <button data-i18n class="active" data-lchat="global" role="tab">🌍 Global</button>
+                    <button data-lchat="lang" role="tab"><span id="lobby-chat-lang">English</span></button>
+                  </nav>
+                </div>
+                <ul id="lobby-chat-log" class="chat-log lobby-log" aria-live="polite"></ul>
+                <p id="lobby-chat-off" class="lobby-chat-off hidden" data-i18n>Chat is turned off in ⚙ Settings.</p>
+                <form id="lobby-chat-form" class="chat-form">
+                  <input id="lobby-chat-input" type="text" maxlength="200" autocomplete="off" enterkeyhint="send" placeholder="Say something to everyone…" data-i18n-attr="placeholder" />
+                  <button data-i18n type="submit" class="btn small primary">Send</button>
+                </form>
+              </section>
+            </div>
             <div class="hub-panel" data-panel-for="ranking">
               <div class="panel-back"><button type="button" class="btn small" data-hub-home><span data-i18n>← Back</span></button><h2 class="panel-title" data-i18n>Ranking</h2></div>
               <!-- Leaderboard: this week's / month's top players, right in the menu -->
@@ -219,6 +238,7 @@
                   <nav id="lb-tabs" class="mini-tabs" role="tablist">
                     <button data-i18n class="active" data-lb="week" role="tab">This week</button>
                     <button data-i18n data-lb="month" role="tab">This month</button>
+                    <button data-i18n data-lb="all" role="tab">All time</button>
                   </nav>
                 </div>
                 <div id="lb-body" class="lb-body"></div>

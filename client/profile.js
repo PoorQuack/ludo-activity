@@ -6,7 +6,11 @@ const LEVEL_NAMES = ['Bronze', 'Silver', 'Gold'];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // A badge's round medal: grey until bronze, then bronze / silver / gold
-export const medalHtml = (badge, level, size = '') => `<span class="medal lv${level} ${size}" aria-hidden="true"><span>${badge.icon}</span></span>`;
+// Badges with their own art show it (greyed out until the first level); the rest show their emoji
+export const medalHtml = (badge, level, size = '') =>
+  badge.img
+    ? `<span class="medal art lv${level} ${size}" aria-hidden="true"><img src="${badge.img}" alt="" loading="lazy" decoding="async"></span>`
+    : `<span class="medal lv${level} ${size}" aria-hidden="true"><span>${badge.icon}</span></span>`;
 
 // `ctx`: { profile, name, onTitle(badgeId), onPins(ids) }
 export function renderProfile(el, ctx) {

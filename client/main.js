@@ -17,6 +17,9 @@ import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, 
 import { t, translateServer, setLanguage, languagePref, setAutoLocale, LANGUAGES, applyI18n, currentLanguage as currentLang } from './i18n.js';
 import { unlockAudio, playedJustNow, sfx, setMusic, setSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
 
+// The menu's chat: which channel is shown, what's in each (see "the menu's chat" below)
+const lchat = { open: false, tab: 'global', lang: null, global: [], local: [], unseen: { global: false, lang: false } };
+
 if (typeof window !== 'undefined') window.sfx = sfx;
 
 const params = new URLSearchParams(location.search);
@@ -235,6 +238,7 @@ function connect() {
       if (screen === 'loading') showScreen('menu');
       lbAsked = 0;
       fetchLeaderboard();
+      if (lchat.open) lobbyChatJoin(); // back after a reconnect with the chat open
     } else if (msg.type === 'profile') onProfile(msg.profile);
     else if (msg.type === 'gift') {
       store_.set(GIFT_KEY, '1');
@@ -272,7 +276,9 @@ function connect() {
     } else if (msg.type === 'leaderboard') {
       lbData = msg.boards;
       renderLeaderboard();
-    } else if (msg.type === 'awards') showAwards(msg.awards);
+    } else if (msg.type === 'lobbyChat') onLobbyChat(msg);
+    else if (msg.type === 'translated') onTranslated(msg);
+    else if (msg.type === 'awards') showAwards(msg.awards);
     else if (msg.type === 'quests') {
       questData = msg.quests;
       weeklyData = msg.weekly || null;
@@ -793,6 +799,7 @@ function renderChat() {
           li.appendChild(img);
         } else if (part) li.appendChild(document.createTextNode(part));
       }
+      if (!stickerOnly && m.userId !== me?.id) addTranslate(li, 'room', m.id);
       list.appendChild(li);
     }
     if (list._pinned === false) list.scrollTop = readingAt;
@@ -1195,6 +1202,17 @@ for (const b of els.lbTabs) {
   });
 }
 
+// '2026-11' → "November 2026", in the player's language
+function sinceLabel(id) {
+  const [y, m] = String(id || '').split('-').map(Number);
+  if (!y || !m) return String(id || '');
+  try {
+    return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(document.documentElement.lang || undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  } catch {
+    return id;
+  }
+}
+
 // "3d 14h" / "5h 20m" / "12m"
 function timeLeft(ms) {
   const m = Math.max(0, Math.floor(ms / 60_000));
@@ -1213,7 +1231,12 @@ function renderLeaderboard() {
     return;
   }
   const b = lbData[lbTab];
+  if (!b) {
+    body.innerHTML = `<p class="lb-note">${t('Loading…')}</p>`;
+    return;
+  }
   const week = lbTab === 'week';
+  const all = lbTab === 'all';
   const coin = '<span class="coin"></span>';
   const row = (e, mine) => `<li class="lb-row${e.rank <= 3 ? ` top${e.rank}` : ''}${mine ? ' you' : ''}">
       <span class="lb-rank">${MEDALS[e.rank - 1] || e.rank}</span>
@@ -1227,12 +1250,19 @@ function renderLeaderboard() {
     : `<p class="lb-empty">${t('Nobody yet. Win a game against other people to be first on the board.')}</p>`;
   const yours = !b.top.length && !b.me ? '' : b.me
     ? t("You're <b>{place}</b> of {players} with <b>{points}</b> points.", { place: ordinal(b.me.rank), players: b.players, points: b.me.points })
-    : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.");
+    : all ? t("You're not on the board yet.") : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.");
   const last = b.last?.podium?.length
     ? `<section class="lb-last"><h3>${week ? t("Last week's winners") : t("Last month's winners")}</h3><ol>${b.last.podium
         .map((p) => `<li>${MEDALS[p.place - 1]} ${escapeHtml(p.name)} <span>${p.points} ${t('pts')} · +${p.coins} ${coin}</span></li>`)
         .join('')}</ol></section>`
     : '';
+  if (all) {
+    body.innerHTML = `
+    <p class="lb-note lb-all-note">${t('Every point ever scored, never reset · counting since {date}', { date: escapeHtml(sinceLabel(b.since)) })}</p>
+    ${list}
+    ${yours ? `<p class="lb-you">${yours}</p>` : ''}`;
+    return;
+  }
   body.innerHTML = `
     <section class="lb-prizes">
       <div class="lb-prize-row">${b.prizes.map((c, i) => `<span class="lb-prize">${MEDALS[i]} ${coin}<b>${c}</b></span>`).join('')}</div>
@@ -1569,6 +1599,7 @@ $('pref-chat').addEventListener('click', () => {
   savePrefs();
   applyPrefs();
   renderPrefs();
+  if (lchat.open) lobbyChatPanel(true);
 });
 $('pref-taunts').addEventListener('click', () => {
   prefs.taunts = !prefs.taunts;
@@ -2388,6 +2419,9 @@ function showScreen(name) {
   }
   screen = name;
   if (name === 'menu') requestAnimationFrame(() => d20.start());
+  // The menu's chat is only listened to while it's on screen
+  const chatShown = name === 'menu' && $('menu').dataset.panel === 'chat';
+  if (chatShown || lchat.open) lobbyChatPanel(chatShown);
   for (const [id, el] of Object.entries(els.screens)) el.classList.toggle('hidden', id !== name);
   if (name === 'shop') {
     store_.set(GIFT_KEY, '');
@@ -4147,6 +4181,191 @@ for (const b of $('quest-tabs').children)
     renderQuests();
   });
 
+// ---------------- the menu's chat, and Translate ----------------
+// Global (everyone) and your language's channel (everyone whose game is set to the same language).
+// Only listened to while the Chat panel is open. Anyone's message can be translated into your
+// game's language: the server looks the message up and asks the translator.
+
+const langName = (code) => LANGUAGES.find((l) => l.code === code)?.native || code;
+// A language's name in the player's own language ("inglés" for a Spanish player), for "Translated from …"
+function langInMine(code) {
+  try {
+    const n = new Intl.DisplayNames([currentLang()], { type: 'language' }).of(code);
+    if (n && n !== code) return n;
+  } catch {}
+  return langName(code);
+}
+
+function lobbyChatJoin() {
+  if (ws?.readyState !== WebSocket.OPEN || !prefs.chat) return;
+  lchat.lang = currentLang();
+  ws.send(JSON.stringify({ type: 'lobbyChat', op: 'join', lang: lchat.lang }));
+}
+
+function lobbyChatPanel(open) {
+  const box = $('lobby-chat');
+  box.classList.toggle('off', !prefs.chat);
+  $('lobby-chat-off').classList.toggle('hidden', prefs.chat);
+  $('lobby-chat-lang').textContent = langName(currentLang());
+  if (open && prefs.chat && (!lchat.open || lchat.lang !== currentLang())) {
+    lchat.open = true;
+    lobbyChatJoin();
+  } else if ((!open || !prefs.chat) && lchat.open) {
+    lchat.open = false;
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'lobbyChat', op: 'leave' }));
+  }
+  renderLobbyChat();
+}
+
+function onLobbyChat(msg) {
+  if (msg.op === 'history') {
+    lchat.lang = msg.lang;
+    lchat.global = msg.global || [];
+    lchat.local = msg.local || [];
+  } else if (msg.op === 'msg') {
+    const list = msg.channel === 'lang' ? lchat.local : lchat.global;
+    list.push(msg.msg);
+    if (list.length > 80) list.splice(0, list.length - 80);
+    if (msg.channel !== lchat.tab && msg.msg.userId !== me?.id && !muted.has(msg.msg.userId)) lchat.unseen[msg.channel] = true;
+    if (msg.msg.userId !== me?.id && !muted.has(msg.msg.userId) && msg.channel === lchat.tab) sfx('chat');
+  } else if (msg.op === 'removed') {
+    const list = msg.channel === 'lang' ? lchat.local : lchat.global;
+    const i = list.findIndex((m) => m.id === msg.id);
+    if (i >= 0) list.splice(i, 1);
+  }
+  renderLobbyChat();
+}
+
+function renderLobbyChat() {
+  for (const b of document.querySelectorAll('[data-lchat]')) {
+    b.classList.toggle('active', b.dataset.lchat === lchat.tab);
+    b.classList.toggle('has-new', !!lchat.unseen[b.dataset.lchat] && b.dataset.lchat !== lchat.tab);
+  }
+  $('lobby-chat-input').placeholder = lchat.tab === 'global' ? t('Say something to everyone…') : t('Say something in {lang}…', { lang: langName(lchat.lang || currentLang()) });
+  const log = $('lobby-chat-log');
+  const msgs = (lchat.tab === 'lang' ? lchat.local : lchat.global).filter((m) => !muted.has(m.userId));
+  const pinned = log._pinned !== false;
+  log.innerHTML = '';
+  if (!msgs.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = lchat.tab === 'global' ? t('No messages yet. Say hi to everyone!') : t('No messages yet. Say hi in {lang}!', { lang: langName(lchat.lang || currentLang()) });
+    log.appendChild(li);
+  }
+  const scope = lchat.tab;
+  for (const m of msgs) {
+    const li = document.createElement('li');
+    if (m.userId === me?.id) li.className = 'me';
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = m.name;
+    li.appendChild(who);
+    const stickerOnly = m.text.trim().split(/\s+/).every((w) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(w)?.[1]]);
+    for (const part of m.text.split(/(:[a-z0-9-]+:)/g)) {
+      const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
+      const hit = slug && EMOTE_SLUGS[slug];
+      if (hit) {
+        const img = document.createElement('img');
+        img.className = stickerOnly ? 'chat-sticker' : 'chat-emote';
+        img.src = hit.img;
+        img.alt = `:${slug}:`;
+        img.title = hit.name;
+        img.addEventListener('load', () => keepAtBottom(log));
+        li.appendChild(img);
+      } else if (part) li.appendChild(document.createTextNode(part));
+    }
+    const when = document.createElement('time');
+    when.className = 'when';
+    when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
+    li.appendChild(when);
+    if (!stickerOnly && m.userId !== me?.id) addTranslate(li, scope, m.id);
+    log.appendChild(li);
+  }
+  log._pinned = pinned;
+  keepAtBottom(log);
+}
+
+for (const b of document.querySelectorAll('[data-lchat]')) {
+  b.addEventListener('click', () => {
+    lchat.tab = b.dataset.lchat;
+    lchat.unseen[lchat.tab] = false;
+    $('lobby-chat-log')._pinned = true;
+    renderLobbyChat();
+  });
+}
+$('lobby-chat-log').addEventListener('scroll', (e) => {
+  const l = e.currentTarget;
+  if (l.clientHeight) l._pinned = l.scrollHeight - l.scrollTop - l.clientHeight < 40;
+});
+$('lobby-chat-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const input = $('lobby-chat-input');
+  const text = input.value.trim();
+  if (!text || ws?.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text }));
+  input.value = '';
+  $('lobby-chat-log')._pinned = true;
+});
+
+// Translate: one small button after someone else's message. The answer is kept, so the message
+// shows it again whenever the chat is redrawn.
+const translations = new Map(); // `${scope}:${id}` -> { text, from } | { error } | 'pending'
+function addTranslate(li, scope, id) {
+  const key = `${scope}:${id}`;
+  li.dataset.tr = key;
+  const done = translations.get(key);
+  if (done && done !== 'pending') return showTranslation(li, done);
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tr-btn';
+  b.textContent = t('Translate');
+  b.title = t('Translate into {lang}', { lang: langInMine(currentLang()) });
+  if (done === 'pending') b.disabled = true;
+  b.addEventListener('click', () => {
+    if (ws?.readyState !== WebSocket.OPEN) return;
+    translations.set(key, 'pending');
+    for (const el of document.querySelectorAll(`[data-tr="${key}"] .tr-btn`)) {
+      el.disabled = true;
+      el.textContent = t('Translating…');
+    }
+    ws.send(JSON.stringify({ type: 'translate', scope, id, to: currentLang() }));
+  });
+  li.appendChild(b);
+}
+function showTranslation(li, r) {
+  li.querySelector('.tr-btn')?.remove();
+  li.querySelector('.tr-out')?.remove();
+  const out = document.createElement('span');
+  out.className = `tr-out${r.error ? ' err' : ''}`;
+  if (r.error) out.textContent = translateServer(r.error);
+  else if (r.from === currentLang()) out.textContent = t('Already in {lang}', { lang: langInMine(currentLang()) });
+  else {
+    out.textContent = r.text;
+    const note = document.createElement('small');
+    note.textContent = r.from && LANGUAGES.some((l) => l.code === r.from) ? t('Translated from {lang}', { lang: langInMine(r.from) }) : t('Translated');
+    out.appendChild(note);
+  }
+  li.appendChild(out);
+  const list = li.closest('.chat-log');
+  if (list) keepAtBottom(list);
+}
+function onTranslated(msg) {
+  const key = `${msg.scope}:${msg.id}`;
+  const r = msg.error ? { error: msg.error } : { text: msg.text, from: msg.from };
+  if (msg.error) translations.delete(key); // they can try again
+  else translations.set(key, r);
+  for (const li of document.querySelectorAll(`[data-tr="${key}"]`)) {
+    if (msg.error) {
+      showTranslation(li, r);
+      setTimeout(() => {
+        li.querySelector('.tr-out')?.remove();
+        const [scope, id] = key.split(':');
+        if (!li.querySelector('.tr-btn')) addTranslate(li, scope, Number(id));
+      }, 4000);
+    } else showTranslation(li, r);
+  }
+}
+
 // ---------- the hub: dock tabs, their panels, and the sheets ----------
 // Friends / Ranking / Quests open a panel: on phones in place of the modes (tap the tab again, or
 // Back, for the modes), on wide screens in the column on the right (Quests to start with).
@@ -4158,9 +4377,10 @@ function setPanel(name) {
   for (const b of document.querySelectorAll('[data-hub-tab]')) {
     const on = b.dataset.hubTab === shown;
     b.classList.toggle('active', on);
-    if (['friends', 'ranking', 'quests'].includes(b.dataset.hubTab)) b.setAttribute('aria-pressed', String(on));
+    if (['friends', 'ranking', 'quests', 'chat'].includes(b.dataset.hubTab)) b.setAttribute('aria-pressed', String(on));
   }
   if (name === 'ranking') fetchLeaderboard();
+  if (name === 'chat' || lchat.open) lobbyChatPanel(name === 'chat');
   $('menu').scrollTop = 0;
 }
 for (const b of document.querySelectorAll('[data-hub-tab]')) {
