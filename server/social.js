@@ -111,7 +111,7 @@ export class SocialBook {
       return 'accepted';
     }
     if (u.out.some((r) => r.id === other)) return 'pending';
-    if (!u.met.some((m) => m.id === other)) throw new Error('You can add people you have played with');
+    if (!u.met.some((m) => m.id === other) && (isGuest(other) || !this.names.has(other))) throw new Error('You can add people you have played with');
     if (u.friends.length >= MAX_FRIENDS) throw new Error(`You can have up to ${MAX_FRIENDS} friends`);
     if (u.out.length >= MAX_REQUESTS) throw new Error('You have a lot of requests waiting: give people time to answer');
     const v = this.user(other);

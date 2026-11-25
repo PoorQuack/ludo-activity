@@ -2452,7 +2452,21 @@ button, .btn { touch-action: manipulation; }
 .lobby-log .when { color: var(--muted); font-size: 11px; margin-inline-start: 6px; font-variant-numeric: tabular-nums; }
 .lobby-log .me .who { color: var(--accent); }
 .lobby-chat-off { margin: 0; padding: 18px 14px; color: var(--muted); text-align: center; }
-.lobby-chat.off .lobby-log, .lobby-chat.off .chat-form { display: none; }
+.lobby-chat.off .lobby-log, .lobby-chat.off .chat-form, .lobby-chat.off .dm-bar, .lobby-chat.off .dm-list { display: none; }
+.dm-bar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+.dm-bar.hidden, .dm-list.hidden { display: none; }
+.dm-bar .dm-who { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; min-width: 0; }
+.dm-bar .dm-who span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-list { display: flex; flex-direction: column; gap: 6px; padding: 10px; height: max(260px, calc(100dvh - 330px)); overflow-y: auto; }
+@media (min-width: 900px) { .dm-list { height: clamp(380px, calc(100vh - 300px), 640px); } }
+.dm-row { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 12px; padding: 9px 10px; background: var(--panel-2); color: inherit; font: inherit; text-align: start; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .dm-row:hover { filter: brightness(1.08); } }
+.dm-row-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dm-row-meta b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-row-meta b.vip { color: var(--gold); }
+.dm-row-meta small { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-unread { flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.dm-empty { margin: 18px 8px; color: var(--muted); text-align: center; font-size: 13.5px; }
 .lobby-chat .chat-form .btn { width: auto; flex: none; }
 .tr-btn {
   display: inline-flex; align-items: center; gap: 3px; margin-inline-start: 6px; padding: 1px 6px;

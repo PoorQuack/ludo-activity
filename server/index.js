@@ -19,6 +19,7 @@ import { ServerInvite, SNOOZE_MS } from './invite.js';
 import { SocialBook, sendDm } from './social.js';
 import { Inbox } from './inbox.js';
 import { LobbyChat, channelId } from './lobbychat.js';
+import { DirectMessages } from './dms.js';
 import { Translator, LANGS } from './translate.js';
 import { PASS_XP } from '../shared/pass.js';
 
@@ -31,6 +32,7 @@ const ROOMS_FILE = process.env.ROOMS_FILE || path.join(path.dirname(DATA_FILE), 
 // Weekly and monthly leaderboards (scores, last winners, prizes paid), next to the profiles.
 const LEADERBOARD_FILE = process.env.LEADERBOARD_FILE || path.join(path.dirname(DATA_FILE), 'leaderboard.json');
 const LOBBY_CHAT_FILE = process.env.LOBBY_CHAT_FILE || path.join(path.dirname(DATA_FILE), 'lobby-chat.json');
+const DMS_FILE = process.env.DMS_FILE || path.join(path.dirname(DATA_FILE), 'dms.json');
 // Today's daily quest progress (reset at midnight UTC).
 const QUESTS_FILE = process.env.QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests.json');
 const WEEKLY_QUESTS_FILE = process.env.WEEKLY_QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests-weekly.json');
@@ -484,6 +486,7 @@ const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward
 
 // The menu's chat (Global, and one channel per language) and chat translation
 const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
+const dms = new DirectMessages(DMS_FILE, { profiles: store, social });
 const translator = new Translator();
 const lobbyListeners = new Set(); // sockets with the menu chat open; ws.ctx.lobbyLang says which language
 
@@ -524,6 +527,30 @@ function handleLobbyChat(ws, msg) {
   if (msg.op === 'delete') {
     if (!ADMIN_IDS.has(ctx.user.id)) throw new Error("Only the game's owner can remove messages");
     if (lobbyChat.remove(id, Number(msg.id))) reach({ type: 'lobbyChat', op: 'removed', channel, id: Number(msg.id) });
+  }
+}
+
+function sendDmSummary(userId) {
+  if (!userId || String(userId).startsWith('guest-')) return;
+  sendTo(userId, { type: 'dmSummary', threads: dms.threadsFor(userId), unread: dms.unreadCount(userId) });
+}
+
+function handleDm(ws, msg) {
+  const { ctx } = ws;
+  const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
+  if (msg.op === 'list') return sendDmSummary(ctx.user.id);
+  if (msg.op === 'open') {
+    const friendId = String(msg.friendId || '');
+    if (!/^\d{5,25}$/.test(friendId)) throw new Error('Pick a friend to message');
+    const h = dms.history(ctx.user.id, friendId);
+    return send({ type: 'dmHistory', friendId, friend: h.friend, msgs: h.msgs, unread: dms.unreadCount(ctx.user.id), threads: dms.threadsFor(ctx.user.id) });
+  }
+  if (msg.op === 'say') {
+    const toId = String(msg.toId || '');
+    const res = dms.send(ctx.user, toId, msg.text);
+    if (!res) return;
+    sendTo(ctx.user.id, { type: 'dmMsg', friendId: toId, msg: res.msg, unread: dms.unreadCount(ctx.user.id) });
+    sendTo(toId, { type: 'dmMsg', friendId: ctx.user.id, msg: res.msg, unread: dms.unreadCount(toId) });
   }
 }
 
@@ -932,6 +959,7 @@ wss.on('connection', (ws, req) => {
         if (userSockets.get(user.id).size === 1) friendsChanged(user.id); // just came online
         sendFriends(user.id); // their own list, every connect (friendsChanged skips the person themselves)
         sendInbox(user.id);
+        sendDmSummary(user.id);
         // Back after a refresh or a dropped connection: return to the same room if it's still open
         const room = msg.rejoin && directory.findCode(msg.rejoin);
         if (room) {
@@ -1042,6 +1070,7 @@ wss.on('connection', (ws, req) => {
       }
       if (msg.type === 'friendInvite') return inviteFriend(ws, String(msg.to || ''));
       if (msg.type === 'lobbyChat') return handleLobbyChat(ws, msg);
+      if (msg.type === 'dm') return handleDm(ws, msg);
       if (msg.type === 'pass') {
         const given = msg.op === 'claimAll' ? store.claimAllPass(ctx.user.id) : [{ lane: msg.lane, tier: Number(msg.tier), ...store.claimPass(ctx.user.id, String(msg.lane), Number(msg.tier)) }];
         sendProfile(ctx.user.id);
@@ -1147,6 +1176,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     store.flush();
     leaderboard.flush();
     lobbyChat.flush();
+    dms.flush();
     quests.flush();
     weekly.flush();
     support.save();

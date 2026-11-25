@@ -290,6 +290,7 @@ function connect() {
       const parts = [coins && `+${coins} ${t('coins')}`, gems && `+${gems} ${t('gems')}`, ...items].filter(Boolean);
       if (parts.length) toast(`🎁 ${parts.join(' · ')}`, 'ok', 4500);
     } else if (msg.type === 'lobbyChat') onLobbyChat(msg);
+    else if (msg.type === 'dmSummary' || msg.type === 'dmHistory' || msg.type === 'dmMsg') onDmMessage(msg);
     else if (msg.type === 'translated') onTranslated(msg);
     else if (msg.type === 'awards') showAwards(msg.awards);
     else if (msg.type === 'quests') {
@@ -941,7 +942,7 @@ function renderEmojiPops() {
   pickerShown = key;
   for (const box of els.chats) renderEmojiPop(box, groups, current, (text) => send('chat', { text }));
   const lobbyBox = $('lobby-chat');
-  if (lobbyBox) renderEmojiPop(lobbyBox, groups, current, (text) => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text })));
+  if (lobbyBox) renderEmojiPop(lobbyBox, groups, current, sendActiveLobbyOrDm);
 }
 
 function pickedGroup(groups) {
@@ -2094,10 +2095,12 @@ function renderFriends() {
       if (p.asked) btn(t('Accept'), 'primary', t('They sent you a friend request'), friendOp('accept'));
       else if (p.sent) btn(t('Requested'), 'quiet', t('Waiting for them to accept. Tap to take it back.'), friendOp('cancel'));
       else btn(t('+ Add'), '', t('Send a friend request'), friendOp('add'));
-    } else
+    } else {
+      btn('💬', '', t('Message'), () => openDm(p.id, p.name));
       btn('✕', 'quiet', t('Remove friend'), () => {
         if (confirmRemove(p)) ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: p.id }));
       });
+    }
     list.appendChild(li);
   }
   const reqCount = (data.requests || []).length;
@@ -4360,6 +4363,56 @@ function lobbyChatPanel(open) {
   renderLobbyChat();
 }
 
+function updateChatDot() {
+  const any = !!(lchat.unseenTab || dmState.unread > 0);
+  document.querySelector('[data-dot="chat"]')?.classList.toggle('hidden', !any);
+}
+
+const dmState = { threads: [], activeId: '', friend: null, msgs: [], unread: 0 };
+function openDm(friendId, fallbackName = '') {
+  closePlayerCardModal();
+  lchat.tab = 'dm';
+  dmState.activeId = friendId;
+  if (!dmState.friend || dmState.friend.id !== friendId) dmState.friend = { id: friendId, name: fallbackName || 'Player', avatar: !String(friendId).startsWith('guest-') };
+  if (screen !== 'menu') showScreen('menu');
+  setPanel('chat');
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'dm', op: 'open', friendId }));
+}
+function sendActiveLobbyOrDm(text) {
+  if (!text || ws?.readyState !== WebSocket.OPEN) return;
+  if (lchat.tab === 'dm') {
+    if (!dmState.activeId) return;
+    ws.send(JSON.stringify({ type: 'dm', op: 'say', toId: dmState.activeId, text }));
+  } else {
+    ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text }));
+  }
+}
+function onDmMessage(msg) {
+  if (typeof msg.unread === 'number') dmState.unread = msg.unread;
+  if (msg.type === 'dmSummary') {
+    dmState.threads = msg.threads || [];
+  } else if (msg.type === 'dmHistory') {
+    dmState.activeId = msg.friendId;
+    dmState.friend = msg.friend;
+    dmState.msgs = msg.msgs || [];
+    if (msg.threads) dmState.threads = msg.threads;
+  } else if (msg.type === 'dmMsg') {
+    const isCurrent = lchat.tab === 'dm' && dmState.activeId === msg.friendId && ($('menu').dataset.panel === 'chat' || wide.matches);
+    if (dmState.activeId === msg.friendId) {
+      dmState.msgs.push(msg.msg);
+      if (dmState.msgs.length > 60) dmState.msgs.splice(0, dmState.msgs.length - 60);
+    }
+    if (isCurrent && msg.msg.from !== me?.id && ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'dm', op: 'open', friendId: msg.friendId }));
+    } else if (msg.msg.from !== me?.id) {
+      sfx('chat');
+    }
+    if (ws?.readyState === WebSocket.OPEN && !isCurrent) ws.send(JSON.stringify({ type: 'dm', op: 'list' }));
+  }
+  updateChatDot();
+  renderLobbyChat();
+}
+
 function onLobbyChat(msg) {
   if (msg.op === 'history') {
     lchat.lang = msg.lang;
@@ -4375,7 +4428,7 @@ function onLobbyChat(msg) {
     if (msg.userId !== me?.id && !muted.has(msg.userId) && $('menu').dataset.panel !== 'chat') {
       lchat.unseen[msg.channel] = true;
       lchat.unseenTab = true;
-      document.querySelector('[data-dot="chat"]')?.classList.remove('hidden');
+      updateChatDot();
     }
     return;
   } else if (msg.op === 'removed') {
@@ -4470,7 +4523,16 @@ function renderPlayerCardModal(u) {
   setFrame(av, u.frame);
   const acts = pcardEl.querySelector('.pcard-actions');
   if (u.friendState === 'friends') {
-    acts.innerHTML = `<span class="pcard-tag">✓ ${t('Friends')}</span>`;
+    const msgBtn = document.createElement('button');
+    msgBtn.type = 'button';
+    msgBtn.className = 'btn primary small';
+    msgBtn.textContent = `💬 ${t('Message')}`;
+    msgBtn.addEventListener('click', () => openDm(u.id, u.name));
+    acts.appendChild(msgBtn);
+    const tag = document.createElement('span');
+    tag.className = 'pcard-tag';
+    tag.textContent = `✓ ${t('Friends')}`;
+    acts.appendChild(tag);
   } else if (u.friendState === 'sent') {
     const b = document.createElement('button');
     b.type = 'button';
@@ -4498,18 +4560,116 @@ function renderPlayerCardModal(u) {
 
 function renderLobbyChat() {
   for (const b of document.querySelectorAll('[data-lchat]')) {
-    b.classList.toggle('active', b.dataset.lchat === lchat.tab);
-    b.classList.toggle('has-new', !!lchat.unseen[b.dataset.lchat] && b.dataset.lchat !== lchat.tab);
+    const tab = b.dataset.lchat;
+    b.classList.toggle('active', tab === lchat.tab);
+    const hasNew = tab === 'dm' ? dmState.unread > 0 : !!lchat.unseen[tab] && tab !== lchat.tab;
+    b.classList.toggle('has-new', hasNew);
   }
-  $('lobby-chat-input').placeholder = lchat.tab === 'global' ? t('Say something to everyone…') : t('Say something in {lang}…', { lang: langName(lchat.lang || currentLang()) });
+  const dmBar = $('dm-bar');
+  const dmList = $('dm-list');
   const log = $('lobby-chat-log');
-  const msgs = (lchat.tab === 'lang' ? lchat.local : lchat.global).filter((m) => !muted.has(m.userId));
+  const form = $('lobby-chat-form');
+  const isDm = lchat.tab === 'dm';
+  const dmListMode = isDm && !dmState.activeId;
+  dmBar.classList.toggle('hidden', !isDm || dmListMode);
+  dmList.classList.toggle('hidden', !dmListMode);
+  log.classList.toggle('hidden', dmListMode);
+  form.classList.toggle('hidden', dmListMode);
+
+  if (dmListMode) {
+    dmList.innerHTML = '';
+    const seen = new Set();
+    const rows = [];
+    for (const th of dmState.threads) {
+      seen.add(th.id);
+      rows.push(th);
+    }
+    for (const f of friendsData?.friends || []) {
+      if (!seen.has(f.id)) rows.push({ id: f.id, name: f.name, avatar: f.avatar, unread: 0, last: null });
+    }
+    if (!rows.length) {
+      const p = document.createElement('p');
+      p.className = 'dm-empty';
+      p.textContent = t('Add friends to send direct messages!');
+      dmList.appendChild(p);
+      return;
+    }
+    for (const r of rows) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'dm-row';
+      btn.addEventListener('click', () => openDm(r.id, r.name));
+      const av = document.createElement('span');
+      av.className = 'avatar lchat-av';
+      fillAvatar(av, { id: r.id, name: r.name, avatar: r.avatar });
+      setFrame(av, r.frame);
+      const meta = document.createElement('div');
+      meta.className = 'dm-row-meta';
+      const b = document.createElement('b');
+      if (r.vip) b.className = 'vip';
+      b.textContent = (r.vip ? '👑 ' : '') + r.name;
+      const small = document.createElement('small');
+      small.textContent = r.last ? r.last.text : t('Tap to say hi');
+      meta.append(b, small);
+      btn.append(av, meta);
+      if (r.unread > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'dm-unread';
+        badge.textContent = r.unread > 9 ? '9+' : String(r.unread);
+        btn.appendChild(badge);
+      }
+      dmList.appendChild(btn);
+    }
+    return;
+  }
+
+  if (isDm) {
+    const f = dmState.friend || { id: dmState.activeId, name: 'Player' };
+    dmBar.innerHTML = '';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'btn small';
+    back.textContent = '←';
+    back.addEventListener('click', () => {
+      dmState.activeId = '';
+      ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'dm', op: 'list' }));
+      renderLobbyChat();
+    });
+    const whoBtn = document.createElement('button');
+    whoBtn.type = 'button';
+    whoBtn.className = 'dm-who';
+    whoBtn.addEventListener('click', () => inspectPlayer(f.id, f.name));
+    const av = document.createElement('span');
+    av.className = 'avatar lchat-av';
+    fillAvatar(av, { id: f.id, name: f.name, avatar: f.avatar });
+    setFrame(av, f.frame);
+    const label = document.createElement('span');
+    label.textContent = (f.vip ? '👑 ' : '') + f.name;
+    if (f.vip) label.style.color = 'var(--gold)';
+    whoBtn.append(av, label);
+    dmBar.append(back, whoBtn);
+  }
+
+  $('lobby-chat-input').placeholder = isDm
+    ? t('Message {name}…', { name: dmState.friend?.name || 'friend' })
+    : lchat.tab === 'global'
+      ? t('Say something to everyone…')
+      : t('Say something in {lang}…', { lang: langName(lchat.lang || currentLang()) });
+
+  const raw = isDm
+    ? dmState.msgs.map((m) => ({ ...m, userId: m.from }))
+    : (lchat.tab === 'lang' ? lchat.local : lchat.global).filter((m) => !muted.has(m.userId));
+  const msgs = raw;
   const pinned = log._pinned !== false;
   log.innerHTML = '';
   if (!msgs.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = lchat.tab === 'global' ? t('No messages yet. Say hi to everyone!') : t('No messages yet. Say hi in {lang}!', { lang: langName(lchat.lang || currentLang()) });
+    li.textContent = isDm
+      ? t('No messages yet. Say hi!')
+      : lchat.tab === 'global'
+        ? t('No messages yet. Say hi to everyone!')
+        : t('No messages yet. Say hi in {lang}!', { lang: langName(lchat.lang || currentLang()) });
     log.appendChild(li);
   }
   const scope = lchat.tab;
@@ -4524,7 +4684,7 @@ function renderLobbyChat() {
     when.className = 'when';
     when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
     line.appendChild(when);
-    if (!stickerOnly && !isMe) addTranslate(line, scope, m.id);
+    if (!stickerOnly && !isMe && !isDm) addTranslate(line, scope, m.id);
 
     if (!stickerOnly && prev && !prev.stickerOnly && prev.userId === m.userId) {
       prev.body.appendChild(line);
@@ -4563,6 +4723,10 @@ for (const b of document.querySelectorAll('[data-lchat]')) {
   b.addEventListener('click', () => {
     lchat.tab = b.dataset.lchat;
     lchat.unseen[lchat.tab] = false;
+    if (lchat.tab === 'dm' && ws?.readyState === WebSocket.OPEN) {
+      if (dmState.activeId) ws.send(JSON.stringify({ type: 'dm', op: 'open', friendId: dmState.activeId }));
+      else ws.send(JSON.stringify({ type: 'dm', op: 'list' }));
+    }
     $('lobby-chat-log')._pinned = true;
     renderLobbyChat();
   });
@@ -4576,7 +4740,7 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   const input = $('lobby-chat-input');
   const text = input.value.trim();
   if (!text || ws?.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text }));
+  sendActiveLobbyOrDm(text);
   input.value = '';
   $('lobby-chat-log')._pinned = true;
 });
@@ -4835,7 +4999,11 @@ function setPanel(name) {
   if (name === 'chat' || lchat.open) lobbyChatPanel(name === 'chat');
   if (name === 'chat') {
     lchat.unseenTab = false;
-    document.querySelector('[data-dot="chat"]')?.classList.add('hidden');
+    updateChatDot();
+    if (lchat.tab === 'dm' && ws?.readyState === WebSocket.OPEN) {
+      if (dmState.activeId) ws.send(JSON.stringify({ type: 'dm', op: 'open', friendId: dmState.activeId }));
+      else ws.send(JSON.stringify({ type: 'dm', op: 'list' }));
+    }
   }
   $('menu').scrollTop = 0;
 }
