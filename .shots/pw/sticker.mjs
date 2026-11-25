@@ -1,0 +1,21 @@
+// sticker.mjs "<shop name>" <slug> : buy a single sticker, send it in a game, report what showed
+import chromium from '@sparticuz/chromium';
+import { chromium as pw } from 'playwright-core';
+const [, , name, slug] = process.argv;
+const b = await pw.launch({ executablePath: await chromium.executablePath(), args: chromium.args, headless: true });
+const p = await b.newPage({ viewport: { width: 1100, height: 800 } });
+const errors = []; p.on('pageerror', (e) => errors.push(e.message)); p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+await p.goto('http://localhost:3990/?name=Ann', { waitUntil: 'networkidle' }); await p.waitForTimeout(600);
+await p.click('.shop-btn'); await p.waitForTimeout(400);
+await p.click('#shop-tabs button:has-text("Emotes")'); await p.waitForTimeout(400);
+await p.locator('#shop-grid .item', { hasText: name }).locator('button').click(); await p.waitForTimeout(600);
+await p.goto('http://localhost:3990/?name=Ann', { waitUntil: 'networkidle' }); await p.waitForTimeout(600);
+await p.click('#create-btn'); await p.waitForTimeout(400);
+await p.click('#fill-btn'); await p.waitForTimeout(300);
+await p.click('#start-btn'); await p.waitForTimeout(1200);
+const box = 'section.chat:visible';
+await p.fill(`${box} input`, `:${slug}:`); await p.press(`${box} input`, 'Enter');
+await p.waitForTimeout(900);
+await p.screenshot({ path: process.env.HOME + `/mnt/ludo-activity/.shots/${slug}-game.png` });
+console.log(JSON.stringify(await p.evaluate(() => [...document.querySelectorAll('.chat-sticker')].map((i) => i.src.split('/').pop() + ':' + i.naturalWidth))), 'errors:', errors.join(' / ') || 'none');
+await b.close();

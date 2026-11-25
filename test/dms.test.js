@@ -9,7 +9,7 @@ import { ProfileStore } from '../server/store.js';
 
 const tempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-dm-'));
 
-test('DirectMessages: only friends can DM, tracks unread counts, and saves/reloads cleanly', () => {
+test('DirectMessages: allows non-friend DMs, enforces block, tracks unread counts, and saves/reloads cleanly', () => {
   let clock = 1_700_000_000_000;
   const dir = tempDir();
   const social = new SocialBook(null, { now: () => clock });
@@ -24,15 +24,19 @@ test('DirectMessages: only friends can DM, tracks unread counts, and saves/reloa
   const dmFile = path.join(dir, 'dms.json');
   const dms = new DirectMessages(dmFile, { profiles, social, now: () => clock });
 
-  // Non-friends cannot DM
-  assert.throws(() => dms.send(alice, bob.id, 'hi'), /only message friends/i);
-
-  // Make Alice & Bob friends
-  social.request(alice.id, bob.id);
-  social.accept(bob.id, alice.id);
-
+  // Anyone signed in with Discord can DM even if not friends yet
   dms.send(alice, bob.id, 'Hello Bob :cathello:'); // unowned sticker slug stays plain text
   assert.equal(dms.unreadCount(bob.id), 1);
+  assert.equal(dms.unreadCount(alice.id), 0);
+
+  // Blocking prevents DMs in both directions and hides unread/threads for blocker
+  social.block(eve.id, alice.id);
+  assert.throws(() => dms.send(alice, eve.id, 'hi'), /cannot message/i);
+  assert.throws(() => dms.send(eve, alice.id, 'hi'), /unblock/i);
+  social.unblock(eve.id, alice.id);
+  dms.send(eve, alice.id, 'Unblocked hi');
+  assert.equal(dms.unreadCount(alice.id), 1);
+  dms.history(alice.id, eve.id);
   assert.equal(dms.unreadCount(alice.id), 0);
 
   clock += 2000;
@@ -56,6 +60,6 @@ test('DirectMessages: only friends can DM, tracks unread counts, and saves/reloa
   const reloaded = new DirectMessages(dmFile, { profiles, social, now: () => clock });
   assert.equal(reloaded.unreadCount(alice.id), DM_KEEP);
   const threads = reloaded.threadsFor(alice.id);
-  assert.equal(threads.length, 1);
-  assert.equal(threads[0].unread, DM_KEEP);
+  assert.equal(threads.length, 2);
+  assert.equal(threads.find((t) => t.id === bob.id).unread, DM_KEEP);
 });

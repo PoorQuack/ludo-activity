@@ -82,7 +82,6 @@
   "A win": "एक जीत",
   "ALL IN": "ALL IN",
   "Accept": "स्वीकार करें",
-  "Add friends to send direct messages!": "सीधे संदेश भेजने के लिए मित्र जोड़ें!",
   "Alien": "एलियन",
   "All": "सभी",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "आपके अधिकतम {n} दोस्त हो सकते हैं",
   "You can invite friends and people you have played with": "आप दोस्तों और साथ खेले लोगों को बुला सकते हैं",
   "You can only gift to someone in your room": "आप केवल अपने कमरे में मौजूद किसी को उपहार दे सकते हैं",
-  "You can only message friends": "आप केवल मित्रों को संदेश भेज सकते हैं",
   "You can pin up to {n} badges": "आप {n} तक बैज पिन कर सकते हैं",
   "You can't gift that to yourself": "आप इसे खुद को उपहार नहीं दे सकते",
   "You can't kick yourself": "आप ख़ुद को नहीं निकाल सकते",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 खाली सीटें बॉट से भरें",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 बराबरी, दोनों के {points} अंक! निर्णायक दौर: हर टीम का एक रंग, साथी बारी-बारी से फेंकते हैं। जो रंग पहले घर पहुँचे, वह जीतेगा!",
   "🤝 You and {name} are friends now": "🤝 आप और {name} अब दोस्त हैं",
-  "🪙 Coins": "🪙 सिक्के"
+  "🪙 Coins": "🪙 सिक्के",
+  "Block": "ब्लॉक करें",
+  "Cannot send a friend request to this user": "इस उपयोगकर्ता को मित्रता अनुरोध नहीं भेजा जा सकता",
+  "No DMs yet. Tap anyone's profile to message them!": "अभी कोई DM नहीं। किसी की भी प्रोफ़ाइल पर टैप करके उन्हें संदेश भेजें!",
+  "Pick someone to message": "संदेश भेजने के लिए किसी को चुनें",
+  "Unblock": "अनब्लॉक करें",
+  "Unblock this player to message them": "संदेश भेजने के लिए इस खिलाड़ी को अनब्लॉक करें",
+  "You cannot message this player": "आप इस खिलाड़ी को संदेश नहीं भेज सकते"
 }

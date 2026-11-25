@@ -49,11 +49,10 @@ export class DirectMessages {
   send(fromUser, toId, text) {
     const fromId = String(fromUser?.id || '');
     const targetId = String(toId || '');
-    if (!fromId || !targetId || fromId === targetId) throw new Error('Pick a friend to message');
+    if (!fromId || !targetId || fromId === targetId) throw new Error('Pick someone to message');
     if (fromId.startsWith('guest-') || targetId.startsWith('guest-')) throw new Error('Sign in with Discord to send DMs');
-    if (this.social && !this.social.user(fromId).friends.includes(targetId)) {
-      throw new Error('You can only message friends');
-    }
+    if (this.social?.isBlocked?.(fromId, targetId)) throw new Error('Unblock this player to message them');
+    if (this.social?.isBlocked?.(targetId, fromId)) throw new Error('You cannot message this player');
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -111,8 +110,10 @@ export class DirectMessages {
 
   unreadCount(userId) {
     let total = 0;
-    for (const th of Object.values(this.threads)) {
-      if (th.users?.includes(userId)) total += this.unreadForThread(th, userId);
+    for (const [key, th] of Object.entries(this.threads)) {
+      if (!th.users?.includes(userId)) continue;
+      if (this.social?.isBlocked?.(userId, otherOf(key, userId))) continue;
+      total += this.unreadForThread(th, userId);
     }
     return total;
   }
@@ -122,6 +123,7 @@ export class DirectMessages {
     for (const [key, th] of Object.entries(this.threads)) {
       if (!th.users?.includes(userId) || !th.msgs.length) continue;
       const friendId = otherOf(key, userId);
+      if (this.social?.isBlocked?.(userId, friendId)) continue;
       const last = th.msgs[th.msgs.length - 1];
       out.push({
         ...this.#enrichUser(friendId),

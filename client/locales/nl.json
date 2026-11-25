@@ -82,7 +82,6 @@
   "A win": "Een overwinning",
   "ALL IN": "ALL IN",
   "Accept": "Accepteren",
-  "Add friends to send direct messages!": "Voeg vrienden toe om privéberichten te sturen!",
   "Alien": "Alien",
   "All": "Alles",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "Je kunt maximaal {n} vrienden hebben",
   "You can invite friends and people you have played with": "Je kunt vrienden en mensen met wie je hebt gespeeld uitnodigen",
   "You can only gift to someone in your room": "Je kunt alleen iets geven aan iemand in je kamer",
-  "You can only message friends": "Je kunt alleen vrienden berichten sturen",
   "You can pin up to {n} badges": "Je kunt tot {n} badges vastzetten",
   "You can't gift that to yourself": "Je kunt dat niet aan jezelf geven",
   "You can't kick yourself": "Je kunt jezelf niet verwijderen",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 Lege plekken vullen met bots",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Gelijkspel, {points} punten elk! Beslissingsronde: één kleur per team, teamgenoten gooien om de beurt. De eerste kleur thuis wint!",
   "🤝 You and {name} are friends now": "🤝 Jij en {name} zijn nu vrienden",
-  "🪙 Coins": "🪙 Munten"
+  "🪙 Coins": "🪙 Munten",
+  "Block": "Blokkeren",
+  "Cannot send a friend request to this user": "Kan geen vriendschapsverzoek sturen naar deze gebruiker",
+  "No DMs yet. Tap anyone's profile to message them!": "Nog geen DMs. Tik op iemands profiel om een bericht te sturen!",
+  "Pick someone to message": "Kies iemand om een bericht te sturen",
+  "Unblock": "Deblokkeren",
+  "Unblock this player to message them": "Deblokkeer deze speler om een bericht te sturen",
+  "You cannot message this player": "Je kunt deze speler geen bericht sturen"
 }

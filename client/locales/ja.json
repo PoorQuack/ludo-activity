@@ -82,7 +82,6 @@
   "A win": "勝利",
   "ALL IN": "ALL IN",
   "Accept": "承認",
-  "Add friends to send direct messages!": "フレンドを追加してダイレクトメッセージを送ろう！",
   "Alien": "エイリアン",
   "All": "すべて",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "フレンドは最大{n}人までです",
   "You can invite friends and people you have played with": "フレンドと一緒に遊んだ人を招待できます",
   "You can only gift to someone in your room": "同じルームにいる人にだけ贈れます",
-  "You can only message friends": "フレンドにのみメッセージを送れます",
   "You can pin up to {n} badges": "ピン留めできるバッジは最大{n}個です",
   "You can't gift that to yourself": "自分には贈れません",
   "You can't kick yourself": "自分をキックすることはできません",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 空席をボットで埋める",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 同点、各{points}ポイント！ 決勝戦：チームごとに1色、チームメイトが交代で振ります。先にゴールした色の勝ち！",
   "🤝 You and {name} are friends now": "🤝 {name}さんとフレンドになりました",
-  "🪙 Coins": "🪙 コイン"
+  "🪙 Coins": "🪙 コイン",
+  "Block": "ブロック",
+  "Cannot send a friend request to this user": "このユーザーにフレンド申請を送れません",
+  "No DMs yet. Tap anyone's profile to message them!": "DMはまだありません。プロフィールをタップして誰にでもメッセージを送れます！",
+  "Pick someone to message": "メッセージ相手を選んでください",
+  "Unblock": "ブロック解除",
+  "Unblock this player to message them": "メッセージを送るにはブロックを解除してください",
+  "You cannot message this player": "このプレイヤーにはメッセージを送れません"
 }

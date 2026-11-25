@@ -1,0 +1,32 @@
+import chromium from '@sparticuz/chromium';
+import { chromium as pw } from 'playwright-core';
+import fs from 'node:fs';
+const S = process.env.HOME + '/mnt/ludo-activity/.shots/';
+const b = await pw.launch({ executablePath: await chromium.executablePath(), args: chromium.args, headless: true });
+const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+await p.goto('http://localhost:3990/?name=Ann', { waitUntil: 'networkidle' }); await p.waitForTimeout(700);
+await p.click('.menu-tools [data-player-btn]'); await p.waitForTimeout(300);
+await p.click('#support-open'); await p.waitForTimeout(300);
+// missing answers are caught
+await p.click('#support-send'); await p.waitForTimeout(300);
+console.log('empty form says (inside the form):', await p.textContent('#support-status'), '| visible:', await p.isVisible('#support-status'));
+await p.fill('[data-for="bug"] [data-q="what"]', 'The dice stopped spinning and I could not move');
+await p.fill('[data-for="bug"] [data-q="before"]', 'I rolled a six in 2v2');
+await p.click('[data-q="often"] [data-v="sometimes"]'); await p.click('[data-q="where"] [data-v="game"]');
+await p.setInputFiles('#support-file', S + 'sheet3.png');
+await p.waitForTimeout(300);
+await p.screenshot({ path: S + 'support2.png', fullPage: false });
+await p.click('#support-send'); await p.waitForTimeout(2000);
+console.log('after send:', await p.isVisible('#support-done') ? await p.textContent('#support-done') : 'no confirmation!');
+await p.screenshot({ path: S + 'support4.png' });
+await p.click('#support-done-close');
+// feedback with stars
+await p.click('.menu-tools [data-player-btn]'); await p.click('#support-open'); await p.click('#support [data-kind="feedback"]');
+await p.click('[data-q="topic"] [data-v="boards"]'); await p.fill('[data-for="feedback"] [data-q="text"]', 'A space board would be sick');
+await p.click('[data-q="stars"] [data-v="4"]');
+await p.screenshot({ path: S + 'support3.png' });
+await p.click('#support-send'); await p.waitForTimeout(1200);
+console.log('feedback:', await p.isVisible('#support-done') ? (await p.textContent('#support-done')).replace(/\s+/g, ' ') : 'no confirmation!');
+console.log('errors:', errs.join(' / ') || 'none');
+await b.close();

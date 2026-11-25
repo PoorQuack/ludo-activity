@@ -309,6 +309,7 @@ function connect() {
       renderFriends();
       if (!$('room-friends-modal').classList.contains('hidden')) renderRoomFriends();
       renderPrefs();
+      renderLobbyChat();
       refreshInspectedPlayer();
     } else if (msg.type === 'playerProfile') {
       renderPlayerCardModal(msg.user);
@@ -636,6 +637,7 @@ let shownChatKey = '';
 
 // People you muted: their chat and emotes are hidden, only for you. Kept on this device.
 const muted = new Set(loadMuted());
+const isHiddenUser = (userId) => muted.has(userId) || !!friendsData?.blocked?.includes(userId);
 function loadMuted() {
   try {
     return JSON.parse(localStorage.getItem('ludo-muted') || '[]');
@@ -653,6 +655,7 @@ function toggleMute(userId) {
   }
   chatVersion++; // redraw the chat without (or with) them
   renderChat();
+  renderLobbyChat();
   renderUI();
 }
 
@@ -4422,10 +4425,10 @@ function onLobbyChat(msg) {
     const list = msg.channel === 'lang' ? lchat.local : lchat.global;
     list.push(msg.msg);
     if (list.length > 80) list.splice(0, list.length - 80);
-    if (msg.channel !== lchat.tab && msg.msg.userId !== me?.id && !muted.has(msg.msg.userId)) lchat.unseen[msg.channel] = true;
-    if (msg.msg.userId !== me?.id && !muted.has(msg.msg.userId) && msg.channel === lchat.tab) sfx('chat');
+    if (msg.channel !== lchat.tab && msg.msg.userId !== me?.id && !isHiddenUser(msg.msg.userId)) lchat.unseen[msg.channel] = true;
+    if (msg.msg.userId !== me?.id && !isHiddenUser(msg.msg.userId) && msg.channel === lchat.tab) sfx('chat');
   } else if (msg.op === 'ping') {
-    if (msg.userId !== me?.id && !muted.has(msg.userId) && $('menu').dataset.panel !== 'chat') {
+    if (msg.userId !== me?.id && !isHiddenUser(msg.userId) && $('menu').dataset.panel !== 'chat') {
       lchat.unseen[msg.channel] = true;
       lchat.unseenTab = true;
       updateChatDot();
@@ -4522,17 +4525,28 @@ function renderPlayerCardModal(u) {
   fillAvatar(av, { id: u.id, name: u.name, avatar: u.avatar });
   setFrame(av, u.frame);
   const acts = pcardEl.querySelector('.pcard-actions');
-  if (u.friendState === 'friends') {
+  if (u.friendState !== 'self' && u.friendState !== 'guest' && !u.blocked) {
     const msgBtn = document.createElement('button');
     msgBtn.type = 'button';
     msgBtn.className = 'btn primary small';
     msgBtn.textContent = `💬 ${t('Message')}`;
     msgBtn.addEventListener('click', () => openDm(u.id, u.name));
     acts.appendChild(msgBtn);
+  }
+  if (u.friendState === 'friends') {
     const tag = document.createElement('span');
     tag.className = 'pcard-tag';
     tag.textContent = `✓ ${t('Friends')}`;
     acts.appendChild(tag);
+    const rem = document.createElement('button');
+    rem.type = 'button';
+    rem.className = 'btn quiet small';
+    rem.textContent = t('Remove');
+    rem.title = t('Remove friend');
+    rem.addEventListener('click', () => {
+      if (confirmRemove({ name: u.name })) ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: u.id }));
+    });
+    acts.appendChild(rem);
   } else if (u.friendState === 'sent') {
     const b = document.createElement('button');
     b.type = 'button';
@@ -4547,14 +4561,35 @@ function renderPlayerCardModal(u) {
     b.textContent = t('Accept');
     b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'accept', id: u.id })));
     acts.appendChild(b);
-  } else if (u.friendState === 'none') {
+  } else if (u.friendState === 'none' && !u.blocked) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'btn primary small';
+    b.className = 'btn small';
     b.textContent = t('+ Add');
     b.title = t('Send a friend request');
     b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'add', id: u.id })));
     acts.appendChild(b);
+  }
+  if (u.friendState !== 'self' && u.friendState !== 'guest') {
+    const blk = document.createElement('button');
+    blk.type = 'button';
+    blk.className = 'btn quiet small';
+    blk.textContent = u.blocked ? t('Unblock') : t('Block');
+    blk.addEventListener('click', () => {
+      ws?.send(JSON.stringify({ type: 'friend', op: u.blocked ? 'unblock' : 'block', id: u.id }));
+    });
+    acts.appendChild(blk);
+  }
+  if (u.friendState !== 'self') {
+    const m = document.createElement('button');
+    m.type = 'button';
+    m.className = 'btn quiet small';
+    m.textContent = muted.has(u.id) ? t('Unmute') : t('Mute');
+    m.addEventListener('click', () => {
+      toggleMute(u.id);
+      renderPlayerCardModal(u);
+    });
+    acts.appendChild(m);
   }
 }
 
@@ -4590,7 +4625,7 @@ function renderLobbyChat() {
     if (!rows.length) {
       const p = document.createElement('p');
       p.className = 'dm-empty';
-      p.textContent = t('Add friends to send direct messages!');
+      p.textContent = t("No DMs yet. Tap anyone's profile to message them!");
       dmList.appendChild(p);
       return;
     }
@@ -4658,7 +4693,7 @@ function renderLobbyChat() {
 
   const raw = isDm
     ? dmState.msgs.map((m) => ({ ...m, userId: m.from }))
-    : (lchat.tab === 'lang' ? lchat.local : lchat.global).filter((m) => !muted.has(m.userId));
+    : (lchat.tab === 'lang' ? lchat.local : lchat.global).filter((m) => !isHiddenUser(m.userId));
   const msgs = raw;
   const pinned = log._pinned !== false;
   log.innerHTML = '';

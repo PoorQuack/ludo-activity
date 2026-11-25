@@ -82,7 +82,6 @@
   "A win": "胜利",
   "ALL IN": "ALL IN",
   "Accept": "接受",
-  "Add friends to send direct messages!": "添加好友即可发送私信！",
   "Alien": "外星人",
   "All": "全部",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "你最多可以有 {n} 个好友",
   "You can invite friends and people you have played with": "你可以邀请好友和一起玩过的人",
   "You can only gift to someone in your room": "只能送给同一房间里的人",
-  "You can only message friends": "只能给好友发消息",
   "You can pin up to {n} badges": "最多置顶 {n} 个徽章",
   "You can't gift that to yourself": "不能送给自己",
   "You can't kick yourself": "你不能踢出自己",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 用机器人填满空座位",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 平局，各 {points} 分！决胜局：每队一种颜色，队友轮流掷骰。最先到家的颜色获胜！",
   "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了",
-  "🪙 Coins": "🪙 金币"
+  "🪙 Coins": "🪙 金币",
+  "Block": "屏蔽",
+  "Cannot send a friend request to this user": "无法向该用户发送好友请求",
+  "No DMs yet. Tap anyone's profile to message them!": "暂无私信。点击任意玩家的资料即可发送消息！",
+  "Pick someone to message": "选择要发送消息的玩家",
+  "Unblock": "取消屏蔽",
+  "Unblock this player to message them": "取消屏蔽该玩家后即可发送消息",
+  "You cannot message this player": "你无法向该玩家发送消息"
 }

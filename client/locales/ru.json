@@ -82,7 +82,6 @@
   "A win": "Победа",
   "ALL IN": "ALL IN",
   "Accept": "Принять",
-  "Add friends to send direct messages!": "Добавьте друзей, чтобы отправлять личные сообщения!",
   "Alien": "Пришелец",
   "All": "Все",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "У вас может быть до {n} друзей",
   "You can invite friends and people you have played with": "Можно приглашать друзей и тех, с кем вы играли",
   "You can only gift to someone in your room": "Дарить можно только тем, кто в вашей комнате",
-  "You can only message friends": "Писать можно только друзьям",
   "You can pin up to {n} badges": "Можно закрепить до {n} значков",
   "You can't gift that to yourself": "Нельзя подарить это себе",
   "You can't kick yourself": "Нельзя выгнать самого себя",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 Заполнить свободные места ботами",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Ничья, по {points} очков! Решающий раунд: по одному цвету на команду, напарники бросают по очереди. Побеждает первый цвет, пришедший домой!",
   "🤝 You and {name} are friends now": "🤝 Теперь вы с {name} друзья",
-  "🪙 Coins": "🪙 Монеты"
+  "🪙 Coins": "🪙 Монеты",
+  "Block": "Заблокировать",
+  "Cannot send a friend request to this user": "Нельзя отправить запрос в друзья этому пользователю",
+  "No DMs yet. Tap anyone's profile to message them!": "Личных сообщений пока нет. Нажмите на профиль игрока, чтобы написать!",
+  "Pick someone to message": "Выберите, кому написать",
+  "Unblock": "Разблокировать",
+  "Unblock this player to message them": "Разблокируйте игрока, чтобы написать ему",
+  "You cannot message this player": "Вы не можете писать этому игроку"
 }

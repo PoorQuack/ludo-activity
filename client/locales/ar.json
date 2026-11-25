@@ -82,7 +82,6 @@
   "A win": "فوز",
   "ALL IN": "الكل أو لا شيء",
   "Accept": "قبول",
-  "Add friends to send direct messages!": "أضف أصدقاء لإرسال رسائل خاصة!",
   "Alien": "كائن فضائي",
   "All": "الكل",
   "All In": "الكل أو لا شيء",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "يمكن أن يكون لديك حتى {n} صديق",
   "You can invite friends and people you have played with": "يمكنك دعوة أصدقائك ومن لعبت معهم",
   "You can only gift to someone in your room": "يمكنك الإهداء فقط لمن في غرفتك",
-  "You can only message friends": "يمكنك مراسلة الأصدقاء فقط",
   "You can pin up to {n} badges": "يمكنك تثبيت {n} شارات كحد أقصى",
   "You can't gift that to yourself": "لا يمكنك إهداء ذلك لنفسك",
   "You can't kick yourself": "لا يمكنك طرد نفسك",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 املأ المقاعد الشاغرة بالبوتات",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 تعادل، {points} نقاط لكل فريق! الجولة الفاصلة: لون واحد لكل فريق، يتناوب الزملاء على الرمي. أول لون يصل إلى البيت يفوز!",
   "🤝 You and {name} are friends now": "🤝 أنت و{name} صديقان الآن",
-  "🪙 Coins": "🪙 العملات"
+  "🪙 Coins": "🪙 العملات",
+  "Block": "حظر",
+  "Cannot send a friend request to this user": "لا يمكن إرسال طلب صداقة لهذا المستخدم",
+  "No DMs yet. Tap anyone's profile to message them!": "لا توجد رسائل خاصة بعد. اضغط على ملف أي لاعب لمراسلته!",
+  "Pick someone to message": "اختر شخصاً لمراسلته",
+  "Unblock": "إلغاء الحظر",
+  "Unblock this player to message them": "ألغِ حظر هذا اللاعب لمراسلته",
+  "You cannot message this player": "لا يمكنك مراسلة هذا اللاعب"
 }

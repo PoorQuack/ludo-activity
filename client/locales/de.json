@@ -82,7 +82,6 @@
   "A win": "Ein Sieg",
   "ALL IN": "ALL IN",
   "Accept": "Annehmen",
-  "Add friends to send direct messages!": "Füge Freunde hinzu, um Direktnachrichten zu senden!",
   "Alien": "Alien",
   "All": "Alle",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "Du kannst bis zu {n} Freunde haben",
   "You can invite friends and people you have played with": "Du kannst Freunde und Leute einladen, mit denen du gespielt hast",
   "You can only gift to someone in your room": "Du kannst nur an jemanden in deinem Raum verschenken",
-  "You can only message friends": "Du kannst nur Freunden schreiben",
   "You can pin up to {n} badges": "Du kannst bis zu {n} Abzeichen anheften",
   "You can't gift that to yourself": "Das kannst du dir nicht selbst schenken",
   "You can't kick yourself": "Du kannst dich nicht selbst rauswerfen",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 Freie Plätze mit Bots füllen",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Unentschieden, je {points} Punkte! Stechen: eine Farbe pro Team, Teamkollegen würfeln abwechselnd. Die erste Farbe im Ziel gewinnt!",
   "🤝 You and {name} are friends now": "🤝 Du und {name} seid jetzt Freunde",
-  "🪙 Coins": "🪙 Münzen"
+  "🪙 Coins": "🪙 Münzen",
+  "Block": "Blockieren",
+  "Cannot send a friend request to this user": "Diesem Nutzer kann keine Freundschaftsanfrage gesendet werden",
+  "No DMs yet. Tap anyone's profile to message them!": "Noch keine DMs. Tippe auf das Profil eines Spielers, um ihm zu schreiben!",
+  "Pick someone to message": "Wähle jemanden zum Schreiben",
+  "Unblock": "Entblocken",
+  "Unblock this player to message them": "Entblocke diesen Spieler, um ihm zu schreiben",
+  "You cannot message this player": "Du kannst diesem Spieler keine Nachricht senden"
 }

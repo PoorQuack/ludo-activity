@@ -1016,6 +1016,14 @@ wss.on('connection', (ws, req) => {
         } else if (msg.op === 'remove') {
           social.removeFriend(ctx.user.id, id);
           return bothChanged(ctx.user.id, id);
+        } else if (msg.op === 'block') {
+          social.block(ctx.user.id, id);
+          sendDmSummary(ctx.user.id);
+          return bothChanged(ctx.user.id, id);
+        } else if (msg.op === 'unblock') {
+          social.unblock(ctx.user.id, id);
+          sendDmSummary(ctx.user.id);
+          return sendFriends(ctx.user.id);
         }
         return sendFriends(ctx.user.id);
       }
@@ -1054,6 +1062,7 @@ wss.on('connection', (ws, req) => {
             level,
             stats: { games, wins, captures },
             friendState,
+            blocked: social.isBlocked(ctx.user.id, targetId),
           },
         });
       }

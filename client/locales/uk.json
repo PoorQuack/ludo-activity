@@ -82,7 +82,6 @@
   "A win": "Перемога",
   "ALL IN": "ALL IN",
   "Accept": "Прийняти",
-  "Add friends to send direct messages!": "Додайте друзів, щоб надсилати особисті повідомлення!",
   "Alien": "Прибулець",
   "All": "Усі",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "У вас може бути до {n} друзів",
   "You can invite friends and people you have played with": "Можна запрошувати друзів і тих, з ким ви грали",
   "You can only gift to someone in your room": "Дарувати можна лише тим, хто у вашій кімнаті",
-  "You can only message friends": "Писати можна лише друзям",
   "You can pin up to {n} badges": "Можна закріпити до {n} значків",
   "You can't gift that to yourself": "Не можна подарувати це собі",
   "You can't kick yourself": "Не можна вигнати самого себе",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 Заповнити вільні місця ботами",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Нічия, по {points} очок! Вирішальний раунд: по одному кольору на команду, напарники кидають по черзі. Перемагає перший колір, що дійшов додому!",
   "🤝 You and {name} are friends now": "🤝 Тепер ви з {name} друзі",
-  "🪙 Coins": "🪙 Монети"
+  "🪙 Coins": "🪙 Монети",
+  "Block": "Заблокувати",
+  "Cannot send a friend request to this user": "Неможливо надіслати запит у друзі цьому користувачу",
+  "No DMs yet. Tap anyone's profile to message them!": "Повідомлень ще немає. Натисніть на профіль гравця, щоб написати!",
+  "Pick someone to message": "Оберіть, кому написати",
+  "Unblock": "Розблокувати",
+  "Unblock this player to message them": "Розблокуйте цього гравця, щоб написати йому",
+  "You cannot message this player": "Ви не можете писати цьому гравцю"
 }

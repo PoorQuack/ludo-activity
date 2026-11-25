@@ -52,9 +52,10 @@ export class SocialBook {
 
   user(id) {
     let u = this.users.get(id);
-    if (!u) this.users.set(id, (u = { met: [], friends: [], in: [], out: [] }));
+    if (!u) this.users.set(id, (u = { met: [], friends: [], in: [], out: [], blocked: [] }));
     u.in ||= [];
     u.out ||= [];
+    u.blocked ||= [];
     return u;
   }
 
@@ -104,6 +105,7 @@ export class SocialBook {
   // you're friends now), 'pending' (already asked) or 'friends' (already friends).
   request(id, other) {
     if (id === other) throw new Error("That's you!");
+    if (this.isBlockedEither(id, other)) throw new Error('Cannot send a friend request to this user');
     const u = this.user(id);
     if (u.friends.includes(other)) return 'friends';
     if (u.in.some((r) => r.id === other)) {
@@ -183,15 +185,45 @@ export class SocialBook {
     return this.users.get(id)?.friends.includes(friendId) || false;
   }
 
+  isBlocked(id, other) {
+    return this.users.get(id)?.blocked?.includes(other) || false;
+  }
+
+  isBlockedEither(a, b) {
+    return this.isBlocked(a, b) || this.isBlocked(b, a);
+  }
+
+  block(id, targetId) {
+    if (!id || !targetId || id === targetId) throw new Error("That's you!");
+    const u = this.user(id);
+    if (!u.blocked.includes(targetId)) {
+      u.blocked.unshift(targetId);
+      if (u.blocked.length > 200) u.blocked.length = 200;
+    }
+    u.friends = u.friends.filter((f) => f !== targetId);
+    const v = this.users.get(targetId);
+    if (v) v.friends = v.friends.filter((f) => f !== id);
+    this.dropRequest(id, targetId);
+    this.dropRequest(targetId, id);
+    this.save();
+  }
+
+  unblock(id, targetId) {
+    const u = this.user(id);
+    u.blocked = u.blocked.filter((b) => b !== targetId);
+    this.save();
+  }
+
   // The friends card: friends first, then people played with who aren't friends yet.
   view(id, isOnline = () => false) {
-    const u = this.users.get(id) || { met: [], friends: [], in: [], out: [] };
+    const u = this.users.get(id) || { met: [], friends: [], in: [], out: [], blocked: [] };
     const person = (pid, extra = {}) => ({ id: pid, name: this.names.get(pid) || 'Player', avatar: !isGuest(pid), online: isOnline(pid), ...extra });
     const sent = new Set((u.out || []).map((r) => r.id));
     const asked = new Set((u.in || []).map((r) => r.id));
     return {
       invitesOn: !u.noInvites,
       friends: u.friends.map((f) => person(f)),
+      blocked: u.blocked || [],
       // requests waiting for your answer (shown in the inbox and on the Friends card)
       requests: (u.in || []).map((r) => person(r.id, { at: r.at })),
       // people played with: "sent" = you asked them, "asked" = they asked you

@@ -1,0 +1,21 @@
+// Phone screenshots of the main screens, side by side, for checking the colours.
+import chromium from '@sparticuz/chromium';
+import { chromium as pw } from 'playwright-core';
+const S = process.env.HOME + '/mnt/ludo-activity/.shots/';
+const tag = process.argv[2] || 'pal';
+const b = await pw.launch({ executablePath: await chromium.executablePath(), args: chromium.args, headless: true });
+const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+await p.goto('http://localhost:3990/?name=Ann', { waitUntil: 'networkidle' }); await p.waitForTimeout(900);
+await p.screenshot({ path: `/tmp/${tag}-1.png` });
+await p.click('[data-go="shop"]'); await p.waitForTimeout(700);
+await p.screenshot({ path: `/tmp/${tag}-2.png` });
+await p.click('[data-go="menu"]').catch(() => {}); await p.waitForTimeout(400);
+await p.goto('http://localhost:3990/?name=Ann', { waitUntil: 'networkidle' }); await p.waitForTimeout(700);
+await p.click('#create-btn'); await p.waitForTimeout(500);
+await p.click('#fill-btn'); await p.waitForTimeout(500);
+await p.screenshot({ path: `/tmp/${tag}-3.png` });
+await p.click('#start-btn'); await p.waitForTimeout(2500);
+await p.screenshot({ path: `/tmp/${tag}-4.png` });
+console.log('errors:', errs.join(' / ') || 'none');
+await b.close();

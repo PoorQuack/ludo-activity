@@ -1,0 +1,17 @@
+import chromium from '@sparticuz/chromium';
+import { chromium as pw } from 'playwright-core';
+const rate = Number(process.argv[2] || 4);
+const variants = (process.argv[3] || 'full').split(';');
+const only = process.argv[4] ? process.argv[4].split(',').map((x) => 'board-' + x) : null;
+const b = await pw.launch({ executablePath: await chromium.executablePath(), args: [...chromium.args, '--enable-gpu-rasterization'], headless: true });
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+const p = await ctx.newPage();
+const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+await p.goto('http://localhost:3991/bench.html', { waitUntil: 'networkidle' });
+await p.waitForFunction(() => window.__ready);
+const cdp = await ctx.newCDPSession(p);
+await cdp.send('Emulation.setCPUThrottlingRate', { rate });
+const res = await p.evaluate((v) => window.bench(v[0], v[1]), [variants, only]);
+for (const [id, r] of Object.entries(res)) console.log(id.padEnd(22), Object.entries(r).map(([v, x]) => `${v}: ${x.avg.toFixed(1)}ms (p90 ${x.p90.toFixed(1)})`).join(' | '));
+console.log(errs.join(' / ') || 'no errors');
+await b.close();

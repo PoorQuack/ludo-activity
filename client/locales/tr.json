@@ -82,7 +82,6 @@
   "A win": "Bir zafer",
   "ALL IN": "ALL IN",
   "Accept": "Kabul et",
-  "Add friends to send direct messages!": "Özel mesaj göndermek için arkadaş ekle!",
   "Alien": "Uzaylı",
   "All": "Tümü",
   "All In": "All In",
@@ -821,7 +820,6 @@
   "You can have up to {n} friends": "En fazla {n} arkadaşın olabilir",
   "You can invite friends and people you have played with": "Arkadaşlarını ve birlikte oynadığın kişileri davet edebilirsin",
   "You can only gift to someone in your room": "Yalnızca odandaki birine hediye edebilirsin",
-  "You can only message friends": "Yalnızca arkadaşlarına mesaj gönderebilirsin",
   "You can pin up to {n} badges": "En fazla {n} rozet sabitleyebilirsin",
   "You can't gift that to yourself": "Bunu kendine hediye edemezsin",
   "You can't kick yourself": "Kendini atamazsın",
@@ -977,5 +975,12 @@
   "🤖 Fill empty seats with bots": "🤖 Boş yerleri botlarla doldur",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Berabere, ikisi de {points} puan! Karar turu: her takıma bir renk, takım arkadaşları sırayla zar atar. Eve ilk varan renk kazanır!",
   "🤝 You and {name} are friends now": "🤝 {name} ile artık arkadaşsınız",
-  "🪙 Coins": "🪙 Jetonlar"
+  "🪙 Coins": "🪙 Jetonlar",
+  "Block": "Engelle",
+  "Cannot send a friend request to this user": "Bu kullanıcıya arkadaşlık isteği gönderilemiyor",
+  "No DMs yet. Tap anyone's profile to message them!": "Henüz DM yok. Mesaj atmak için birinin profiline dokunun!",
+  "Pick someone to message": "Mesaj atmak için birini seçin",
+  "Unblock": "Engeli kaldır",
+  "Unblock this player to message them": "Mesaj atmak için bu oyuncunun engelini kaldırın",
+  "You cannot message this player": "Bu oyuncuya mesaj atamazsınız"
 }
