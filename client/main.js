@@ -4609,7 +4609,7 @@ function renderPlayerCardModal(u) {
     }
     if (u.friendState === 'friends') {
       addMenuItem(t('Remove friend'), 'danger', () => {
-        if (confirmRemove({ name: u.name })) ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: u.id }));
+        ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: u.id }));
       });
     }
     moreBtn.addEventListener('click', (e) => {
