@@ -5,6 +5,8 @@
 // Text from the server (errors, game log lines) goes through translateServer(), which also matches
 // keys with placeholders, e.g. "{name} rolled a {n}".
 
+import { CHAT_CODES, matchChatLanguage } from '../shared/chatlangs.js';
+
 export const LANGUAGES = [
   { code: 'en', name: 'English', native: 'English' },
   { code: 'es', name: 'Spanish', native: 'Español' },
@@ -100,6 +102,42 @@ export async function setLanguage(pref, { save = true } = {}) {
   document.documentElement.dir = info?.rtl ? 'rtl' : 'ltr';
   applyI18n(document);
   window.dispatchEvent(new Event('ludo-lang'));
+}
+
+// ---- the chat language: what Translate puts messages into, and which language channel you're in.
+// Any of the 37 in shared/chatlangs.js, so a Swedish player whose game is in English (no Swedish
+// screens yet) still chats and translates in Swedish. 'auto': the game's language, unless the
+// game is on automatic and Discord's language is one the game can't be shown in.
+const CHAT_KEY = 'ludo-chat-lang';
+export function chatLanguagePref() {
+  try {
+    const v = localStorage.getItem(CHAT_KEY);
+    return v && (v === 'auto' || CHAT_CODES.has(v)) ? v : 'auto';
+  } catch {
+    return 'auto';
+  }
+}
+export function chatLanguage() {
+  const pref = chatLanguagePref();
+  if (pref !== 'auto') return pref;
+  if (languagePref() === 'auto') {
+    for (const l of [autoLocale, ...(navigator.languages || [navigator.language])]) {
+      const m = matchChatLanguage(l);
+      if (!m) continue;
+      const base = m.split('-')[0];
+      if (base === lang) return m; // the game's language, or its regional kind (pt-PT, es-419, zh-TW)
+      return CODES.has(base) ? lang : m; // one the game can't be shown in (Swedish...): chat in it anyway
+    }
+  }
+  return lang;
+}
+export function setChatLanguage(pref) {
+  try {
+    localStorage.setItem(CHAT_KEY, pref);
+  } catch {
+    // only a preference
+  }
+  window.dispatchEvent(new Event('ludo-chat-lang'));
 }
 
 // Discord told us its language: follow it if the player hasn't picked one.

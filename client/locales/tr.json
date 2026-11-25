@@ -990,5 +990,8 @@
   "Cannot react to this thread": "Bu sohbette tepki verilemiyor",
   "React": "Tepki ver",
   "Reply": "Yanıtla",
-  "Replying to": "Yanıtlanan"
+  "Replying to": "Yanıtlanan",
+  "Chat language": "Sohbet dili",
+  "Empty answer": "Boş yanıt",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "Çevir mesajları bu dile çevirir; dil kanalın da bu dilde sohbet eden herkestir. 37 dil."
 }

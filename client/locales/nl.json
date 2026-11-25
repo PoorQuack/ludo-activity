@@ -990,5 +990,8 @@
   "Cannot react to this thread": "Kan niet reageren in dit gesprek",
   "React": "Reageren",
   "Reply": "Beantwoorden",
-  "Replying to": "Antwoord aan"
+  "Replying to": "Antwoord aan",
+  "Chat language": "Chattaal",
+  "Empty answer": "Leeg antwoord",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "Vertalen zet berichten in deze taal, en je taalkanaal is iedereen die erin chat. 37 talen."
 }

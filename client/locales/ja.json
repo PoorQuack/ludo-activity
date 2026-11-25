@@ -990,5 +990,8 @@
   "Cannot react to this thread": "このチャットではリアクションできません",
   "React": "リアクション",
   "Reply": "返信",
-  "Replying to": "返信先"
+  "Replying to": "返信先",
+  "Chat language": "チャットの言語",
+  "Empty answer": "空の応答",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "翻訳はメッセージをこの言語にし、言語チャンネルはこの言語で話す全員です。37言語。"
 }

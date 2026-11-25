@@ -990,5 +990,8 @@
   "Cannot react to this thread": "Неможливо відреагувати в цьому чаті",
   "React": "Реакція",
   "Reply": "Відповісти",
-  "Replying to": "Відповідь"
+  "Replying to": "Відповідь",
+  "Chat language": "Мова чату",
+  "Empty answer": "Порожня відповідь",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "«Перекласти» перекладає повідомлення цією мовою, а твій мовний канал — усі, хто нею спілкується. 37 мов."
 }

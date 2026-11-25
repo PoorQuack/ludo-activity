@@ -990,5 +990,8 @@
   "Cannot react to this thread": "이 대화에서는 반응할 수 없습니다",
   "React": "반응",
   "Reply": "답장",
-  "Replying to": "답장 대상"
+  "Replying to": "답장 대상",
+  "Chat language": "채팅 언어",
+  "Empty answer": "빈 응답",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "번역은 메시지를 이 언어로 바꾸고, 언어 채널은 이 언어로 채팅하는 모든 사람이에요. 37개 언어."
 }

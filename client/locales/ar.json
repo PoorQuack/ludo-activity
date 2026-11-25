@@ -990,5 +990,8 @@
   "Cannot react to this thread": "لا يمكن التفاعل مع هذه المحادثة",
   "React": "تفاعل",
   "Reply": "رد",
-  "Replying to": "الرد على"
+  "Replying to": "الرد على",
+  "Chat language": "لغة الدردشة",
+  "Empty answer": "إجابة فارغة",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "الترجمة تحوّل الرسائل إلى هذه اللغة، وقناة لغتك هي كل من يدردش بها. 37 لغة."
 }

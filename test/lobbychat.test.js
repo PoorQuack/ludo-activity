@@ -107,3 +107,57 @@ test('a failed translation says so plainly', async () => {
     console.error = err;
   }
 });
+
+// A stand-in for NVIDIA's endpoint: answers "<pair>: <text>", and Google as a fallback
+function fakeNvidia(calls, { fail = false } = {}) {
+  return async (url, init = {}) => {
+    if (url.includes('nvidia')) {
+      const body = JSON.parse(init.body);
+      calls.push({ pair: body.messages[0].content, text: body.messages[1].content, auth: init.headers.authorization });
+      if (fail) return { ok: false, status: 503 };
+      return { ok: true, json: async () => ({ choices: [{ message: { content: `${body.messages[0].content}: ${body.messages[1].content}` } }] }) };
+    }
+    calls.push({ google: true });
+    const qs = new URL(url).searchParams.getAll('q');
+    return { ok: true, json: async () => qs.map((q) => [q.toUpperCase(), 'es']) };
+  };
+}
+
+test('with a key, Riva Translate is told the pair, from the writer\'s chat language', async () => {
+  const calls = [];
+  const tr = new Translator({ fetch: fakeNvidia(calls), nvidiaKey: 'k' });
+  assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'es'), { text: 'es-es-en: hola amigo', from: 'es' });
+  assert.equal(calls[0].auth, 'Bearer k');
+  // 37 languages: Swedish to Brazilian Portuguese goes through English
+  const r = await tr.translate('ann', 'hej på dig', 'pt', 'sv');
+  assert.equal(r.text, 'en-pt-br: sv-en: hej på dig');
+  assert.equal(r.from, 'sv');
+  // the alphabet beats the hint; English slang from a Spanish player is English
+  await tr.translate('ann', '안녕하세요', 'en', 'es');
+  assert.equal(calls.at(-1).pair, 'ko-en');
+  await tr.translate('ann', 'gg nice game', 'fr', 'es');
+  assert.equal(calls.at(-1).pair, 'en-fr');
+  // no good guess (Latin letters, no hint): Google detects it
+  await tr.translate('ann', 'bonjour', 'en');
+  assert.ok(calls.at(-1).google);
+});
+
+test('when Riva fails, Google takes over', async () => {
+  const calls = [];
+  const tr = new Translator({ fetch: fakeNvidia(calls, { fail: true }), nvidiaKey: 'k' });
+  const err = console.error;
+  console.error = () => {};
+  try {
+    assert.deepEqual(await tr.translate('ann', 'hola', 'en', 'es'), { text: 'HOLA', from: 'es' });
+  } finally {
+    console.error = err;
+  }
+  assert.ok(calls.at(-1).google);
+});
+
+test('chat languages: locales map onto the 37', async () => {
+  const { matchChatLanguage, CHAT_LANGUAGES } = await import('../shared/chatlangs.js');
+  assert.equal(CHAT_LANGUAGES.length, 37);
+  for (const [loc, code] of [['sv-SE', 'sv'], ['pt-PT', 'pt-PT'], ['pt-BR', 'pt'], ['es-ES', 'es'], ['es-419', 'es-419'], ['zh-TW', 'zh-TW'], ['zh-CN', 'zh'], ['nb', 'no'], ['xx', null]])
+    assert.equal(matchChatLanguage(loc), code, loc);
+});

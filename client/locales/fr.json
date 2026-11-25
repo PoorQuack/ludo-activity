@@ -990,5 +990,8 @@
   "Cannot react to this thread": "Impossible de réagir dans cette conversation",
   "React": "Réagir",
   "Reply": "Répondre",
-  "Replying to": "En réponse à"
+  "Replying to": "En réponse à",
+  "Chat language": "Langue du chat",
+  "Empty answer": "Réponse vide",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "Traduire met les messages dans cette langue, et ton salon de langue réunit tous ceux qui discutent dans celle-ci. 37 langues."
 }

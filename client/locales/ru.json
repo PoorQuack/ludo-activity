@@ -990,5 +990,8 @@
   "Cannot react to this thread": "Нельзя поставить реакцию в этом чате",
   "React": "Реакция",
   "Reply": "Ответить",
-  "Replying to": "Ответ"
+  "Replying to": "Ответ",
+  "Chat language": "Язык чата",
+  "Empty answer": "Пустой ответ",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "«Перевести» переводит сообщения на этот язык, а твой языковой канал — все, кто на нём общается. 37 языков."
 }

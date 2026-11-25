@@ -990,5 +990,8 @@
   "Cannot react to this thread": "无法在此聊天中添加反应",
   "React": "添加反应",
   "Reply": "回复",
-  "Replying to": "回复"
+  "Replying to": "回复",
+  "Chat language": "聊天语言",
+  "Empty answer": "空回复",
+  "Translate puts messages into it, and your language channel is everyone chatting in it. 37 languages.": "翻译会把消息译成这种语言，你的语言频道就是所有用它聊天的人。37 种语言。"
 }
