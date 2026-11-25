@@ -408,17 +408,19 @@
           <!-- PC lobby: two columns. Elsewhere the columns step aside (display: contents) -->
           <div class="lobby-col lobby-main">
             <div id="mode-picker" class="mode-picker"></div>
-            <!-- Quick game: under the mode, where the game is chosen (the host flips it; everyone sees it) -->
-            <button type="button" id="quick-btn" class="quick-card" role="switch" aria-checked="false">
-              <span class="quick-bolt" aria-hidden="true">⚡</span>
-              <span class="quick-text"><b data-i18n>Quick game</b><small data-i18n>2 tokens each</small></span>
-              <span class="quick-pawns" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-              <span class="switch quick-switch" aria-hidden="true"><i></i></span>
-            </button>
-            <!-- Cash pot (Classic): optional Gold Coin pot shared by all finishing places except last -->
-            <div id="stake-picker" class="stake-card">
-              <span class="stake-text"><b data-i18n>Cash pot</b><small data-i18n>Everyone pays in; pot shared by all except last</small></span>
-              <div id="stake-options" class="stake-options" role="radiogroup" aria-label="Cash pot" data-i18n-attr="aria-label"></div>
+            <div class="lobby-opts">
+              <!-- Quick game: under the mode, where the game is chosen (the host flips it; everyone sees it) -->
+              <button type="button" id="quick-btn" class="quick-card" role="switch" aria-checked="false">
+                <span class="quick-bolt" aria-hidden="true">⚡</span>
+                <span class="quick-text"><b data-i18n>Quick game</b><small data-i18n>2 tokens each</small></span>
+                <span class="quick-pawns" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span class="switch quick-switch" aria-hidden="true"><i></i></span>
+              </button>
+              <!-- Cash pot (Classic): optional Gold Coin pot shared by all finishing places except last -->
+              <div id="stake-picker" class="stake-card">
+                <span class="stake-text"><b data-i18n>Cash pot</b><small data-i18n>Everyone pays in; pot shared by all except last</small></span>
+                <div id="stake-options" class="stake-options" role="radiogroup" aria-label="Cash pot" data-i18n-attr="aria-label"></div>
+              </div>
             </div>
             <div id="seats" class="seats"></div>
 

@@ -1679,8 +1679,8 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .reward-pill .coin { width: 16px; height: 16px; }
 
 /* The panel's order everywhere (the lobby columns only group things on PCs) */
-.lobby-col { display: contents; }
-.panel-head { order: 0; } #room-info { order: 1; } #drawer { order: 2; } #mode-picker { order: 3; } #quick-btn { order: 3; } #seats { order: 4; }
+.lobby-col, .lobby-opts { display: contents; }
+.panel-head { order: 0; } #room-info { order: 1; } #drawer { order: 2; } #mode-picker { order: 3; } #quick-btn { order: 3; } #stake-picker { order: 3; } #seats { order: 4; }
 #lobby-controls { order: 5; } #play-controls { order: 6; } #finish-controls { order: 7; } .panel .chat { order: 9; }
 
 /* ---------- PC / landscape: in game, sandwich menu opens as a floating popover dropdown so chat stays visible ---------- */
@@ -1753,7 +1753,15 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   #game[data-phase='lobby'] .panel .chat-log { flex: 1; height: auto; min-height: 0; }
   #game[data-phase='lobby'] #seats { gap: 10px; }
   #game[data-phase='lobby'] .seats .seat { padding: 14px; }
-  #game[data-phase='lobby'] .mode-picker .btn { padding: 10px 4px; font-size: 14px; }
+  #game[data-phase='lobby'] .mode-picker { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  #game[data-phase='lobby'] .mode-picker .btn,
+  #game[data-phase='lobby'] .mode-picker .btn.team { grid-column: auto; padding: 9px 6px; font-size: 13.5px; }
+  #game[data-phase='lobby'] .lobby-opts { display: grid; grid-template-columns: 1fr 1.25fr; gap: 10px; order: 3; }
+  #game[data-phase='lobby'] .lobby-opts:has(> .hidden) { grid-template-columns: 1fr; }
+  #game[data-phase='lobby'] .lobby-opts .quick-card,
+  #game[data-phase='lobby'] .lobby-opts .stake-card { padding: 9px 12px; gap: 10px; min-height: 54px; }
+  #game[data-phase='lobby'] .lobby-opts .quick-pawns { display: none; }
+  #game[data-phase='lobby'] .lobby-opts .stake-text small { font-size: 11.5px; line-height: 1.2; }
   #game[data-phase='lobby'] #start-btn { padding: 14px; font-size: 16px; }
 }
 
