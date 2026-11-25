@@ -225,6 +225,13 @@ function renderInfo() {
     main.classList.add('done');
     priceBox.innerHTML = '';
     progress.classList.add('hidden');
+  } else if (item.pass && ctx.canClaim?.(item)) {
+    // ready to claim on the Battle Pass track right now
+    main.textContent = t('Claim');
+    main.classList.add('equip');
+    main.onclick = () => ctx.onClaim?.(item);
+    priceBox.innerHTML = '';
+    progress.classList.add('hidden');
   } else if (item.pass) {
     // a Battle Pass exclusive: earned on the track, never sold
     main.textContent = `🎟️ ${t('Earn it on the Battle Pass')}`;

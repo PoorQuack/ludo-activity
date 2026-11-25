@@ -423,6 +423,7 @@ function onProfile(next) {
     bumpCoins();
   }
   if (screen === 'shop') drawShop();
+  else refreshItemView(shopContext());
   if (screen === 'profile') drawProfile();
   if ($('menu').dataset.panel === 'pass' || wide.matches) renderPass();
   passDot();
@@ -2516,7 +2517,27 @@ function shopContext() {
       if (short(currencyOf(item), priceOf(item))) return;
       sendShop('gift', item.id, friend.id); // (the server says 'gifted' back once it has gone through)
     },
+    canClaim: (item) => !!passClaimTarget(item),
+    onClaim: (item) => {
+      const target = passClaimTarget(item);
+      if (!target || ws?.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'pass', op: 'claim', lane: target.lane, tier: target.tier }));
+    },
   };
+}
+
+function passClaimTarget(item) {
+  const p = profile?.pass;
+  if (!p || !item) return null;
+  const { tiers } = passRewards(p.month);
+  for (const x of tiers) {
+    if (x.tier > p.tier) break;
+    for (const lane of ['free', 'premium']) {
+      if (lane === 'premium' && !p.active) continue;
+      if (x[lane]?.item === item.id && !p[lane].includes(x.tier)) return { lane, tier: x.tier };
+    }
+  }
+  return null;
 }
 
 function drawShop() {
@@ -4475,6 +4496,11 @@ function passReward(r) {
   else if (r.gems) el.innerHTML = `<span class="gem"></span><b>${r.gems}</b>`;
   else if (r.item && ITEMS[r.item]) {
     el.classList.add('pr-item');
+    const eye = document.createElement('span');
+    eye.className = 'pr-eye';
+    eye.setAttribute('aria-hidden', 'true');
+    eye.innerHTML = '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+    el.appendChild(eye);
     el.appendChild(itemPreview(ITEMS[r.item], ITEMS[r.item].type === 'board' ? r.item : profile?.equipped.board || 'board-classic'));
     const name = document.createElement('small');
     name.textContent = t(ITEMS[r.item].name);
@@ -4543,21 +4569,31 @@ function renderPass() {
     for (const lane of ['free', 'premium']) {
       const cell = document.createElement('button');
       cell.type = 'button';
-      cell.className = `pt-cell ${lane}`;
+      const reward = x[lane];
+      const item = reward.item && ITEMS[reward.item];
+      cell.className = `pt-cell ${lane}${item ? ' has-item' : ''}`;
       const done = p[lane].includes(x.tier);
       const locked = lane === 'premium' && !p.active;
-      cell.appendChild(passReward(x[lane]));
+      cell.appendChild(passReward(reward));
       if (done) {
         cell.classList.add('done');
-        cell.disabled = true;
-      } else if (!reached) cell.disabled = true;
-      else if (locked) {
+        if (!item) cell.disabled = true;
+      } else if (!reached) {
+        cell.classList.add('unreached');
+        if (!item) cell.disabled = true;
+      } else if (locked) {
         cell.classList.add('locked');
-        cell.disabled = true;
+        if (!item) cell.disabled = true;
       } else {
         cell.classList.add('ready');
-        cell.title = t('Claim');
-        cell.addEventListener('click', () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'pass', op: 'claim', lane, tier: x.tier })));
+        if (!item) {
+          cell.title = t('Claim');
+          cell.addEventListener('click', () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'pass', op: 'claim', lane, tier: x.tier })));
+        }
+      }
+      if (item) {
+        cell.title = t(item.name);
+        cell.addEventListener('click', () => openItemView(item, shopContext()));
       }
       li.appendChild(cell);
     }

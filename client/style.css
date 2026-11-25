@@ -2491,7 +2491,12 @@ button, .btn { touch-action: manipulation; }
 .pass-tier.next .pt-num { box-shadow: inset 0 0 0 2px var(--accent); color: var(--text); }
 .pt-cell { position: relative; min-height: 58px; border: 0; border-radius: 10px; background: var(--panel-2); color: var(--text); font: inherit; display: grid; place-items: center; padding: 6px; cursor: default; }
 .pt-cell.premium { background: color-mix(in srgb, var(--gold) 9%, var(--panel-2)); }
-.pt-cell:disabled:not(.done):not(.locked) { opacity: 0.55; }
+.pt-cell:disabled:not(.done):not(.locked), .pt-cell.unreached { opacity: 0.55; }
+.pt-cell.has-item { cursor: pointer; transition: transform 0.12s var(--ease-out), filter 0.12s; }
+.pt-cell.has-item:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .pt-cell.has-item:hover { filter: brightness(1.09); } }
+.pr-eye { position: absolute; top: 5px; left: 6px; width: 14px; height: 14px; color: var(--muted); opacity: 0.72; pointer-events: none; }
+.pr-eye svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .pt-cell.ready { cursor: pointer; box-shadow: inset 0 0 0 2px var(--accent); animation: ptGlow 1.6s ease-in-out infinite; }
 @keyframes ptGlow { 50% { box-shadow: inset 0 0 0 2px var(--accent), 0 0 14px rgba(var(--accent-rgb), 0.45); } }
 .pt-cell.done { opacity: 0.45; }
