@@ -1,6 +1,6 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
 import { MODES, boardFor } from '../shared/board.js';
-import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, dailyDeal, rarityOf, DEAL_DISCOUNT, dayKeyOf, currencyOf, STARTER } from '../shared/shop.js';
+import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, dailyDeal, rarityOf, DEAL_DISCOUNT, dayKeyOf, currencyOf, STARTER, POT_FEE } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop, itemPreview, commitShopSeen } from './shop-ui.js';
 import { TAUNT_FX } from './taunts.js';
@@ -1371,8 +1371,8 @@ function renderLeaderboard() {
     ? t("You're <b>{place}</b> of {players}.", { place: ordinal(b.me.rank), players: b.players })
     : b.top.length ? (all ? t("You're not on the board yet.") : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.")) : '';
   const how = pointsMode
-    ? t("Every game against other people also scores leaderboard points: 10 for each player you finish ahead of, plus 10 for beating them all (bots don't count). Only games count for the leaderboards. The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.")
-    : t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.');
+    ? `${t("Every game against other people also scores leaderboard points: 10 for each player you finish ahead of, plus 10 for beating them all (bots don't count). Only games count for the leaderboards. The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.")} <b>${t('From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.')}</b>`
+    : `${t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.')} ${t('All In games count 1.5×, for wins and for losses.')}`;
   const when = all
     ? t('Never resets · counting since {date}', { date: escapeHtml(sinceLabel(b.since)) })
     : week
@@ -3040,7 +3040,7 @@ function renderStakes() {
   const titleEl = box.querySelector('.stake-text b');
   const subEl = box.querySelector('.stake-text small');
   if (titleEl) titleEl.textContent = wta ? t('All In') : t('Cash pot');
-  if (subEl) subEl.textContent = wta ? t('Only 1st place wins the pot') : t('Everyone pays in; pot shared by all except last');
+  if (subEl) subEl.textContent = `${wta ? t('Only 1st place wins the pot') : t('Everyone pays in; pot shared by all except last')} · ${t('{n}% house fee', { n: Math.round(POT_FEE * 100) })}`;
   const opts = $('stake-options');
   const key = `${state.stake}|${wta}|${host}|${currentLang()}`;
   if (opts.dataset.key === key) return;

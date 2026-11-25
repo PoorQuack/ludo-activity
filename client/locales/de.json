@@ -1015,5 +1015,9 @@
   "changes in {time}": "wechselt in {time}",
   "leaves in {time}": "verschwindet in {time}",
   "{item} dice": "{item}-Würfel",
-  "{n}% off as a set": "{n} % günstiger als Set"
+  "{n}% off as a set": "{n} % günstiger als Set",
+  "All In games count 1.5×, for wins and for losses.": "All-In-Spiele zählen 1,5×, bei Siegen und bei Niederlagen.",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "Ab dem 1. Dezember zählen in den Ranglisten die Goldmünzen aus öffentlichen Einsatz-Räumen.",
+  "{n}% house fee": "{n} % Hausgebühr",
+  "🏦 House fee: {n} coins": "🏦 Hausgebühr: {n} Münzen"
 }

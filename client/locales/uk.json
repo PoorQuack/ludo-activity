@@ -1015,5 +1015,9 @@
   "changes in {time}": "зміниться через {time}",
   "leaves in {time}": "зникне через {time}",
   "{item} dice": "Кубики «{item}»",
-  "{n}% off as a set": "−{n}% за набір"
+  "{n}% off as a set": "−{n}% за набір",
+  "All In games count 1.5×, for wins and for losses.": "Ігри All In рахуються ×1,5 — і виграші, і програші.",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "З 1 грудня рейтинги рахують золоті монети, виграні у відкритих кімнатах зі ставками.",
+  "{n}% house fee": "комісія {n}%",
+  "🏦 House fee: {n} coins": "🏦 Комісія закладу: {n} монет"
 }

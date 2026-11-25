@@ -1015,5 +1015,9 @@
   "changes in {time}": "{time} 후 변경",
   "leaves in {time}": "{time} 후 사라짐",
   "{item} dice": "{item} 주사위",
-  "{n}% off as a set": "세트로 {n}% 할인"
+  "{n}% off as a set": "세트로 {n}% 할인",
+  "All In games count 1.5×, for wins and for losses.": "All In 게임은 이길 때도 질 때도 1.5배로 계산돼요.",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "12월 1일부터 순위표는 공개 판돈 방에서 딴 골드 코인으로 정해져요.",
+  "{n}% house fee": "{n}% 수수료",
+  "🏦 House fee: {n} coins": "🏦 수수료: 코인 {n}개"
 }

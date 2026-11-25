@@ -1015,5 +1015,9 @@
   "changes in {time}": "cambia tra {time}",
   "leaves in {time}": "se ne va tra {time}",
   "{item} dice": "Dadi {item}",
-  "{n}% off as a set": "−{n}% in set"
+  "{n}% off as a set": "−{n}% in set",
+  "All In games count 1.5×, for wins and for losses.": "Le partite All In contano ×1,5, sia vinte sia perse.",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "Dal 1° dicembre le classifiche contano le monete d’oro vinte nelle stanze pubbliche con posta.",
+  "{n}% house fee": "{n}% di commissione",
+  "🏦 House fee: {n} coins": "🏦 Commissione della casa: {n} monete"
 }

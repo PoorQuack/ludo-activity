@@ -235,6 +235,7 @@
     "{names} doesn't have {n} coins for the stake",
     "{names} don't have {n} coins for the stake",
     "💰 {names} takes the pot: {n} coins!",
+    "🏦 House fee: {n} coins",
     "💰 {names} split the pot: {n} coins!",
     "Everyone got their stake back.",
     "🎲 Test dice were used: everyone got their stake back.",

@@ -1015,5 +1015,9 @@
   "changes in {time}": "あと{time}で交代",
   "leaves in {time}": "あと{time}で終了",
   "{item} dice": "{item}のサイコロ",
-  "{n}% off as a set": "セットで{n}%オフ"
+  "{n}% off as a set": "セットで{n}%オフ",
+  "All In games count 1.5×, for wins and for losses.": "All In の試合は勝ちも負けも1.5倍で数えます。",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "12月1日からランキングは公開ステークス部屋で獲得したゴールドコインで決まります。",
+  "{n}% house fee": "{n}%の手数料",
+  "🏦 House fee: {n} coins": "🏦 手数料：{n}コイン"
 }

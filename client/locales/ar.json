@@ -1015,5 +1015,9 @@
   "changes in {time}": "يتغير بعد {time}",
   "leaves in {time}": "يغادر بعد {time}",
   "{item} dice": "نرد {item}",
-  "{n}% off as a set": "خصم {n}% كمجموعة"
+  "{n}% off as a set": "خصم {n}% كمجموعة",
+  "All In games count 1.5×, for wins and for losses.": "ألعاب All In تُحسب ×1.5، في الفوز والخسارة.",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "من 1 ديسمبر، ترتّب لوحات الصدارة العملات الذهبية المكسوبة في غرف الرهان العامة.",
+  "{n}% house fee": "رسوم {n}%",
+  "🏦 House fee: {n} coins": "🏦 رسوم البيت: {n} عملة"
 }

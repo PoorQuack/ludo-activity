@@ -1015,5 +1015,9 @@
   "changes in {time}": "{time} sonra değişir",
   "leaves in {time}": "{time} sonra gider",
   "{item} dice": "{item} zarları",
-  "{n}% off as a set": "Set olarak %{n} indirim"
+  "{n}% off as a set": "Set olarak %{n} indirim",
+  "All In games count 1.5×, for wins and for losses.": "All In oyunları kazanırken de kaybederken de 1,5× sayılır.",
+  "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "1 Aralık’tan itibaren sıralamalar, herkese açık bahisli odalarda kazanılan altın paraları sayar.",
+  "{n}% house fee": "%{n} kasa payı",
+  "🏦 House fee: {n} coins": "🏦 Kasa payı: {n} para"
 }

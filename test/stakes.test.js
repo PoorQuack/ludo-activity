@@ -13,10 +13,11 @@ const done = [B4.finished, B4.finished, B4.finished, B4.finished];
 const users = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase() }));
 const [a, b, c, d] = users;
 
-function stakeRoom(stake, { coins = 1000, mode = '4p', seat = [a, b], visibility = 'private', winnerTakeAll = false, onGameEnd } = {}) {
+// (the house fee is off here, so the splits are easy to read; it has its own test below)
+function stakeRoom(stake, { coins = 1000, mode = '4p', seat = [a, b], visibility = 'private', winnerTakeAll = false, onGameEnd, fee = () => 0 } = {}) {
   const store = new ProfileStore(null);
   for (const u of users) store.get(u.id).coins = coins;
-  const room = new Room('s', { profiles: store, visibility, onGameEnd, delays: { bot: 60_000, timeout: 60_000 } });
+  const room = new Room('s', { profiles: store, visibility, onGameEnd, fee, delays: { bot: 60_000, timeout: 60_000 } });
   for (const u of users) room.connect(u);
   room.host(a);
   if (mode !== '4p') room.setMode(a, mode);
@@ -138,7 +139,7 @@ test('a stakes game survives a server restart with its pot', () => {
   const { room, store } = stakeRoom(100);
   room.start(a);
   const saved = JSON.parse(JSON.stringify(room.toSave()));
-  const back = Room.fromSave(saved, { profiles: store, delays: { bot: 60_000, timeout: 60_000 } });
+  const back = Room.fromSave(saved, { profiles: store, fee: () => 0, delays: { bot: 60_000, timeout: 60_000 } });
   assert.equal(back.stake, 100);
   assert.deepEqual(back.pot.total, 200);
   back.tokens[0] = done;
@@ -192,7 +193,8 @@ test('Classic cash pot: shared across places except last (70/30 for 3p, 60/30/10
 test('Stakes Rooms (winnerTakeAll): only 1st place wins 100% of the pot, no Classic coins, and more points than Classic', () => {
   const classicPts = chipsFor(500, { winners: [1, 0, 2] });
   const stakesPts = chipsFor(500, { winnerTakeAll: true, winners: [1, 0, 2] });
-  assert.deepEqual(stakesPts, { b: 1500, a: -500, c: -500 });
+  // 1.5x both ways: the winner's +1000 profit scores 1500, each lost 500 stake scores -750
+  assert.deepEqual(stakesPts, { b: 1500, a: -750, c: -750 });
   assert.ok(stakesPts.b > classicPts.b);
   const { room, store } = stakeRoom(500, { seat: [a, b, c, d], winnerTakeAll: true });
   room.start(a);
@@ -227,7 +229,7 @@ test('Classic cash pot: surrendered players place last and their cut goes to 1st
 
 test('team stakes: the winning team splits the profit; losing team gets nothing', () => {
   assert.deepEqual(chipsFor(100, { mode: '2v2', seat: [a, b, c, d], winners: [0, 2, 1, 3] }), { a: 100, c: 100, b: -100, d: -100 });
-  assert.deepEqual(chipsFor(100, { mode: '2v2', seat: [a, b, c, d], winnerTakeAll: true, winners: [0, 2, 1, 3] }), { a: 150, c: 150, b: -100, d: -100 });
+  assert.deepEqual(chipsFor(100, { mode: '2v2', seat: [a, b, c, d], winnerTakeAll: true, winners: [0, 2, 1, 3] }), { a: 150, c: 150, b: -150, d: -150 });
 });
 
 test('a surrender still costs the stake on the board', () => {
@@ -246,7 +248,7 @@ test('six-player Classic cash pot splits 45/25/15/10/5, while Stakes Room gives 
   const six = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id, name: id.toUpperCase() }));
   const store = new ProfileStore(null);
   for (const u of six) store.get(u.id).coins = 1000;
-  const classic = new Room('s', { profiles: store, delays: { bot: 60_000, timeout: 60_000 } });
+  const classic = new Room('s', { profiles: store, fee: () => 0, delays: { bot: 60_000, timeout: 60_000 } });
   for (const u of six) classic.connect(u);
   classic.host(six[0]);
   classic.setMode(six[0], '6p');
@@ -260,7 +262,7 @@ test('six-player Classic cash pot splits 45/25/15/10/5, while Stakes Room gives 
 
   const store2 = new ProfileStore(null);
   for (const u of six) store2.get(u.id).coins = 1000;
-  const stakes = new Room('s2', { profiles: store2, delays: { bot: 60_000, timeout: 60_000 } });
+  const stakes = new Room('s2', { profiles: store2, fee: () => 0, delays: { bot: 60_000, timeout: 60_000 } });
   for (const u of six) stakes.connect(u);
   stakes.host(six[0]);
   stakes.setMode(six[0], '6p');
@@ -302,4 +304,29 @@ test('RoomDirectory keeps Classic bets and Stakes Rooms separate', () => {
   assert.equal(stakesRoom.winnerTakeAll, true);
   assert.throws(() => stakesRoom.setStake(b, 0), /require a stake/);
   dir.destroy();
+});
+
+test('the house keeps 5% of pots from 200 coins (at most 250); smaller pots are paid in full', async () => {
+  const { potFee } = await import('../shared/shop.js');
+  assert.equal(potFee(100), 0);
+  assert.equal(potFee(200), 10);
+  assert.equal(potFee(2000), 100);
+  assert.equal(potFee(60_000), 250);
+  // a real room, with the real fee: 4 x 500 in, the winner gets 2000 - 100
+  const { room, store } = stakeRoom(500, { seat: [a, b, c, d], winnerTakeAll: true, fee: potFee });
+  room.start(a);
+  room.winners = [2, 0, 3, 1];
+  room.finish();
+  assert.deepEqual(room.potWon, { 2: 1900 });
+  assert.equal(coins(store, c), 2400);
+  assert.ok(room.log.some((l) => /House fee: 100 coins/.test(l.text || l)));
+  room.destroy();
+});
+
+test("All In: trading wins between two players doesn't climb the leaderboard", () => {
+  // A wins one, B wins one, same stake: both end where they started
+  const one = chipsFor(500, { winnerTakeAll: true, seat: [a, b], winners: [0, 1] });
+  const two = chipsFor(500, { winnerTakeAll: true, seat: [a, b], winners: [1, 0] });
+  assert.equal(one.a + two.a, 0);
+  assert.equal(one.b + two.b, 0);
 });

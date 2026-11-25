@@ -25,6 +25,12 @@ export const STAKES = [
   5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500, 10000,
 ];
 export const POT_SPLIT = { 1: [100], 2: [100], 3: [70, 30], 4: [60, 30, 10], 5: [50, 25, 15, 10], 6: [45, 25, 15, 10, 5] };
+// The house keeps a small cut of every pot from POT_FEE_MIN coins up (5%, at most POT_FEE_MAX), so
+// coins leave the game as well as come in (daily rewards, quests and wins keep adding them).
+export const POT_FEE = 0.05;
+export const POT_FEE_MIN = 200;
+export const POT_FEE_MAX = 250;
+export const potFee = (total) => (total >= POT_FEE_MIN ? Math.min(POT_FEE_MAX, Math.floor(total * POT_FEE)) : 0);
 
 // RARITY says how far an item goes from the plain one, and sets its price band (see RARITIES):
 //   common     the default, basic look (free), and single stickers
