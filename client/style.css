@@ -304,7 +304,8 @@ html, body {
 #menu[data-panel='friends'] [data-panel-for='friends'],
 #menu[data-panel='ranking'] [data-panel-for='ranking'],
 #menu[data-panel='chat'] [data-panel-for='chat'] { display: flex; }
-.menu-hero { display: none; margin: 0; }
+/* (the little demo board under the side panel is gone: Friends, Ranking, Chat and Quests have the column to themselves) */
+.menu-hero { display: none !important; margin: 0; }
 
 /* ---- wide screens: the dock down the left, the panel in a column on the right ---- */
 @media (min-width: 900px) {
@@ -349,7 +350,6 @@ html, body {
   .hub-tile .ico { margin: 0; width: 30px; height: 30px; }
   .hub-tile b, .hub-tile small { display: block; }
   .tile-text { display: flex; flex-direction: column; }
-  .menu-hero { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 }
 @media (min-width: 900px) and (max-width: 1180px) { .hub-tile { flex-direction: column; justify-content: center; text-align: center; gap: 4px; } }
 #menu-board { display: block; max-width: 100%; }
