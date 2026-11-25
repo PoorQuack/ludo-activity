@@ -1,4 +1,4 @@
-// "Get gems": the + beside the VIP Gems. Gem packs and "Buy me a coffee", paid with real money through
+// "Get gems": the + beside the Die Gems. Gem packs and "Buy me a coffee", paid with real money through
 // Discord's own checkout (consumable SKUs; the server checks each purchase with Discord before
 // paying it out). A Ko-fi / Buy Me a Coffee link takes tips of any amount.
 import { PriceUtils } from '@discord/embedded-app-sdk';
@@ -74,7 +74,7 @@ function render() {
   el.innerHTML = `
     <div class="modal-card coin-card">
       <button type="button" class="set-close store-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
-      <h2 class="store-title">${t('Get VIP Gems')}</h2>
+      <h2 class="store-title">${t('Get Die Gems')}</h2>
       <p class="store-sub">${t('Paid securely through Discord. Gems arrive as soon as Discord confirms the payment.')}</p>
       ${note ? `<p class="store-note">${note}</p>` : ''}
       <div class="pack-grid">

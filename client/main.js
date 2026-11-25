@@ -4546,7 +4546,7 @@ function renderPass() {
         : `<div class="pass-status buy">
             <div><b>👑 ${t('Get the Battle Pass')}</b>
             <ul>
-              <li>${t('{n} VIP Gems over the month', { n: gemsTotal })}</li>
+              <li>${t('{n} Die Gems over the month', { n: gemsTotal })}</li>
               <li>${t('{n} exclusive items, never sold in the shop', { n: exclusive })}</li>
               <li>${t('A gold name with a crown in chat')}</li>
               <li>${t('Joining late? Every tier you reached unlocks at once')}</li>
