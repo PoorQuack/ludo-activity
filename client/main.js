@@ -830,8 +830,7 @@ function renderChat() {
       who.type = 'button';
       who.className = 'who who-btn';
       who.textContent = (m.vip ? '👑 ' : '') + (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
-      if (seat >= 0) who.style.color = col(board.colors[seat]);
-      else who.style.color = m.vip ? 'var(--gold)' : chatNameColor(m.userId);
+      if (m.vip) who.style.color = 'var(--gold)';
       who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
       li.appendChild(who);
       const body = document.createElement('div');
@@ -4446,10 +4445,6 @@ function onLobbyChat(msg) {
 }
 
 const isStickerOnly = (text) => text.trim().split(/\s+/).every((w) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(w)?.[1]]);
-function chatNameColor(userId) {
-  const hue = [...String(userId || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0);
-  return `hsl(${hue} 74% 72%)`;
-}
 function renderChatTokens(target, text, logEl, stickerOnly) {
   for (const part of text.split(/(:[a-z0-9-]+:)/g)) {
     const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
@@ -4792,7 +4787,6 @@ function renderLobbyChat() {
     const who = document.createElement('span');
     who.className = `who${m.vip ? ' vip' : ''}`;
     who.textContent = (m.vip ? '👑 ' : '') + m.name;
-    if (!m.vip) who.style.color = chatNameColor(m.userId);
     author.appendChild(who);
     li.appendChild(author);
     const body = document.createElement('div');
