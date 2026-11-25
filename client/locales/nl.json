@@ -804,8 +804,6 @@
  "Crown": "Kroon",
  "Cyber Neon": "Cyberneon",
  "Everyone got their stake back.": "Iedereen heeft zijn inzet terug.",
- "Everyone pays in, the winner takes the pot": "Iedereen legt in, de winnaar pakt de pot",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "Iedereen legt de inzet in goudmunten in als het potje begint. De winnaar pakt de hele pot; een winnend team deelt hem.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "Iedereen ziet hem: in het menu, op je plek en in de spelerslijst.",
  "Finish 1st on a weekly or monthly leaderboard": "Word 1e in een week- of maandklassement",
  "Finish 2nd on a weekly or monthly leaderboard": "Word 2e in een week- of maandklassement",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ Battle Pass ontgrendeld! Haal je premiumbeloningen op.",
  "Season 1: Way of the Warrior": "Seizoen 1: De weg van de krijger",
  "Unknown lane": "Onbekend spoor",
- "Unknown tier": "Onbekend niveau"
+ "Unknown tier": "Onbekend niveau",
+ "Everyone pays in, the pot is shared by place": "Iedereen legt in, de pot wordt per plaats verdeeld",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Iedereen betaalt de inzet in goudmunten bij de start. De pot wordt verdeeld naar eindplaats: met 4 spelers 60% / 30% / 10%. De laatste krijgt niets.",
+ "💰 The pot is shared by place: {list}": "💰 De pot wordt per plaats verdeeld: {list}"
 }

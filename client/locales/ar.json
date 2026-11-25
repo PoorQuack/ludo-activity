@@ -804,8 +804,6 @@
  "Crown": "التاج",
  "Cyber Neon": "نيون سايبر",
  "Everyone got their stake back.": "استعاد الجميع رهانهم.",
- "Everyone pays in, the winner takes the pot": "الجميع يدفع، والفائز يأخذ الرهان كله",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "يدفع الجميع الرهان بالعملات الذهبية عند بدء اللعبة. الفائز يأخذ الرهان كله؛ والفريق الفائز يتقاسمه.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "يراه الجميع: في القائمة وعلى مقعدك وفي قائمة اللاعبين.",
  "Finish 1st on a weekly or monthly leaderboard": "احتل المركز الأول في ترتيب أسبوعي أو شهري",
  "Finish 2nd on a weekly or monthly leaderboard": "احتل المركز الثاني في ترتيب أسبوعي أو شهري",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ فُتحت تذكرة المعركة! استلم مكافآتك المميزة.",
  "Season 1: Way of the Warrior": "الموسم 1: طريق المحارب",
  "Unknown lane": "مسار غير معروف",
- "Unknown tier": "مستوى غير معروف"
+ "Unknown tier": "مستوى غير معروف",
+ "Everyone pays in, the pot is shared by place": "الجميع يدفع، والجائزة تُقسم حسب المركز",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "يدفع الجميع الرهان بالعملات الذهبية عند بدء اللعبة. تُقسم الجائزة حسب المركز النهائي: مع 4 لاعبين 60% / 30% / 10%. الأخير لا يحصل على شيء.",
+ "💰 The pot is shared by place: {list}": "💰 قُسمت الجائزة حسب المركز: {list}"
 }

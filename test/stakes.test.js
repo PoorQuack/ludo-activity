@@ -37,7 +37,7 @@ test('only the host sets the stake, in the lobby, from the allowed amounts (coin
   room.destroy();
 });
 
-test('every human pays the stake at the start, and the winner takes the whole pot', () => {
+test('every human pays the stake at the start; when the others surrender, the winner takes it all', () => {
   const { room, store } = stakeRoom(500, { seat: [a, b, c] });
   room.addBot(a, 3); // bots never pay in
   room.start(a);
@@ -169,8 +169,29 @@ function chipsFor(stake, { seat = [a, b, c], mode = '4p', visibility = 'public',
   return Object.fromEntries(ended.map((r) => [r.userId, r.points]));
 }
 
-test('public stakes: the winner scores the pot minus their stake, everyone else loses their stake', () => {
-  assert.deepEqual(chipsFor(500, { winners: [1, 0, 2] }), { b: 1000, a: -500, c: -500 });
+test('public stakes: each player scores their cut of the pot minus their stake', () => {
+  // three players, 1500 in the pot: 70% / 30% / nothing
+  assert.deepEqual(chipsFor(500, { winners: [1, 0, 2] }), { b: 550, a: -50, c: -500 });
+});
+
+test('the pot is shared by finishing place: 60 / 30 / 10 with four players', () => {
+  const { room, store } = stakeRoom(500, { seat: [a, b, c, d] });
+  room.start(a);
+  room.winners = [2, 0, 3, 1];
+  room.finish();
+  assert.deepEqual(room.potWon, { 2: 1200, 0: 600, 3: 200 });
+  assert.equal(coins(store, b), 500 + (room.rewards[1] || 0)); // last: nothing back
+  room.destroy();
+});
+
+test('a surrendered player places last; a cut that would have been theirs goes to 1st', () => {
+  const { room } = stakeRoom(100, { seat: [a, b, c, d] });
+  room.start(a);
+  room.forfeited.push(1, 3); // b and d gave up
+  room.winners = [0, 2, 1, 3];
+  room.finish();
+  assert.deepEqual(room.potWon, { 0: 280, 2: 120 }); // 60% + the 10% nobody earned, and 30%
+  room.destroy();
 });
 
 test('team stakes: the winning team splits the profit', () => {

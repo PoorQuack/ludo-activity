@@ -804,8 +804,6 @@
  "Crown": "Corona",
  "Cyber Neon": "Neon cyber",
  "Everyone got their stake back.": "Tutti hanno riavuto la posta.",
- "Everyone pays in, the winner takes the pot": "Tutti puntano, chi vince prende il piatto",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "Tutti puntano monete d'oro quando la partita inizia. Chi vince prende tutto il piatto; una squadra vincente lo divide.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "Lo vedono tutti: nel menu, sul tuo posto e nella lista dei giocatori.",
  "Finish 1st on a weekly or monthly leaderboard": "Arriva 1º in una classifica settimanale o mensile",
  "Finish 2nd on a weekly or monthly leaderboard": "Arriva 2º in una classifica settimanale o mensile",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ Pass Battaglia sbloccato! Riscatta i premi premium.",
  "Season 1: Way of the Warrior": "Stagione 1: La via del guerriero",
  "Unknown lane": "Corsia sconosciuta",
- "Unknown tier": "Livello sconosciuto"
+ "Unknown tier": "Livello sconosciuto",
+ "Everyone pays in, the pot is shared by place": "Tutti puntano, il piatto si divide per posizione",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Tutti pagano la posta in monete d'oro all'inizio. Il piatto si divide in base alla posizione finale: con 4 giocatori, 60% / 30% / 10%. L'ultimo non prende nulla.",
+ "💰 The pot is shared by place: {list}": "💰 Il piatto è diviso per posizione: {list}"
 }

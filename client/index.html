@@ -276,7 +276,7 @@
         <div id="stakes-sheet" class="sheet-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="stakes-title">
           <div class="sheet">
             <div class="sheet-head"><h2 id="stakes-title" data-i18n>Stakes Rooms</h2><button type="button" class="sheet-x" data-sheet-close aria-label="Close" data-i18n-attr="aria-label"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button></div>
-            <p class="sheet-sub" data-i18n>Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.</p>
+            <p class="sheet-sub" data-i18n>Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.</p>
             <h3 class="sheet-h3" data-i18n>Make a stakes room</h3>
             <div id="stake-create" class="stake-create"></div>
             <h3 class="sheet-h3" data-i18n>Open stakes rooms</h3>
@@ -415,9 +415,9 @@
               <span class="quick-pawns" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
               <span class="switch quick-switch" aria-hidden="true"><i></i></span>
             </button>
-            <!-- Stakes: an entry fee in Gold Coins, the winner takes the pot (the host picks it) -->
+            <!-- Stakes: an entry fee in Gold Coins, the pot shared by finishing place (the host picks it) -->
             <div id="stake-picker" class="stake-card">
-              <span class="stake-text"><b data-i18n>Stakes</b><small data-i18n>Everyone pays in, the winner takes the pot</small></span>
+              <span class="stake-text"><b data-i18n>Stakes</b><small data-i18n>Everyone pays in, the pot is shared by place</small></span>
               <div id="stake-options" class="stake-options" role="radiogroup" aria-label="Stakes" data-i18n-attr="aria-label"></div>
             </div>
             <div id="seats" class="seats"></div>

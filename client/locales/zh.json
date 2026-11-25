@@ -804,8 +804,6 @@
  "Crown": "皇冠",
  "Cyber Neon": "赛博霓虹",
  "Everyone got their stake back.": "所有人都拿回了赌注。",
- "Everyone pays in, the winner takes the pot": "人人下注，赢家拿走奖池",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "游戏开始时每人用金币支付赌注。赢家拿走整个奖池；获胜队伍平分。",
  "Everyone sees it: in the menu, on your seat and in the players list.": "所有人都能看到：在菜单、你的座位和玩家列表中。",
  "Finish 1st on a weekly or monthly leaderboard": "在每周或每月排行榜获得第 1 名",
  "Finish 2nd on a weekly or monthly leaderboard": "在每周或每月排行榜获得第 2 名",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ 战斗通行证已解锁！领取你的高级奖励。",
  "Season 1: Way of the Warrior": "第1赛季：武士之道",
  "Unknown lane": "未知通道",
- "Unknown tier": "未知等级"
+ "Unknown tier": "未知等级",
+ "Everyone pays in, the pot is shared by place": "人人下注，奖池按名次分配",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "开局时每人用金币支付押注。奖池按最终名次分配：4人时 60% / 30% / 10%。最后一名一无所得。",
+ "💰 The pot is shared by place: {list}": "💰 奖池按名次分配：{list}"
 }

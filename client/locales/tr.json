@@ -804,8 +804,6 @@
  "Crown": "Taç",
  "Cyber Neon": "Siber Neon",
  "Everyone got their stake back.": "Herkes bahsini geri aldı.",
- "Everyone pays in, the winner takes the pot": "Herkes bahis koyar, kazanan potu alır",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "Oyun başlarken herkes bahsi altın jetonla öder. Kazanan potun tamamını alır; kazanan takım paylaşır.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "Herkes görür: menüde, koltuğunda ve oyuncu listesinde.",
  "Finish 1st on a weekly or monthly leaderboard": "Haftalık veya aylık sıralamada 1. ol",
  "Finish 2nd on a weekly or monthly leaderboard": "Haftalık veya aylık sıralamada 2. ol",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ Savaş Bileti açıldı! Premium ödüllerini al.",
  "Season 1: Way of the Warrior": "1. Sezon: Savaşçının Yolu",
  "Unknown lane": "Bilinmeyen şerit",
- "Unknown tier": "Bilinmeyen seviye"
+ "Unknown tier": "Bilinmeyen seviye",
+ "Everyone pays in, the pot is shared by place": "Herkes bahis koyar, pot sıraya göre paylaşılır",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Herkes oyun başında bahsi altın parayla öder. Pot bitiş sırasına göre paylaşılır: 4 oyuncuda %60 / %30 / %10. Sonuncu hiçbir şey almaz.",
+ "💰 The pot is shared by place: {list}": "💰 Pot sıraya göre paylaşıldı: {list}"
 }

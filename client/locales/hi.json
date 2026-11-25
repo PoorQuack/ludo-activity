@@ -804,8 +804,6 @@
  "Crown": "मुकुट",
  "Cyber Neon": "साइबर नियॉन",
  "Everyone got their stake back.": "सबको उनका दाँव वापस मिल गया।",
- "Everyone pays in, the winner takes the pot": "सब दाँव लगाते हैं, विजेता पॉट ले जाता है",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "गेम शुरू होते ही सब सोने के सिक्कों में दाँव देते हैं। विजेता पूरा पॉट ले जाता है; जीतने वाली टीम उसे बाँटती है।",
  "Everyone sees it: in the menu, on your seat and in the players list.": "सब इसे देखते हैं: मेन्यू में, आपकी सीट पर और खिलाड़ियों की सूची में।",
  "Finish 1st on a weekly or monthly leaderboard": "साप्ताहिक या मासिक लीडरबोर्ड पर पहले आएँ",
  "Finish 2nd on a weekly or monthly leaderboard": "साप्ताहिक या मासिक लीडरबोर्ड पर दूसरे आएँ",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ बैटल पास खुल गया! अपने प्रीमियम इनाम लें।",
  "Season 1: Way of the Warrior": "सीज़न 1: योद्धा का मार्ग",
  "Unknown lane": "अज्ञात लेन",
- "Unknown tier": "अज्ञात स्तर"
+ "Unknown tier": "अज्ञात स्तर",
+ "Everyone pays in, the pot is shared by place": "सब दांव लगाते हैं, पॉट स्थान के हिसाब से बंटता है",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "खेल शुरू होने पर सब सोने के सिक्कों में दांव देते हैं। पॉट अंतिम स्थान के हिसाब से बंटता है: 4 खिलाड़ियों में 60% / 30% / 10%। आख़िरी को कुछ नहीं मिलता।",
+ "💰 The pot is shared by place: {list}": "💰 पॉट स्थान के हिसाब से बंटा: {list}"
 }

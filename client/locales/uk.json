@@ -804,8 +804,6 @@
  "Crown": "Корона",
  "Cyber Neon": "Кібернеон",
  "Everyone got their stake back.": "Усі отримали ставку назад.",
- "Everyone pays in, the winner takes the pot": "Усі ставлять, переможець забирає банк",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "Усі платять ставку золотими монетами на початку гри. Переможець забирає весь банк; команда-переможниця ділить його.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "Її бачать усі: у меню, на твоєму місці та в списку гравців.",
  "Finish 1st on a weekly or monthly leaderboard": "Посядь 1-ше місце в тижневому чи місячному рейтингу",
  "Finish 2nd on a weekly or monthly leaderboard": "Посядь 2-ге місце в тижневому чи місячному рейтингу",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ Бойову перепустку відкрито! Забери преміум-нагороди.",
  "Season 1: Way of the Warrior": "Сезон 1: Шлях воїна",
  "Unknown lane": "Невідома лінія",
- "Unknown tier": "Невідомий рівень"
+ "Unknown tier": "Невідомий рівень",
+ "Everyone pays in, the pot is shared by place": "Усі вносять ставку, банк ділиться за місцями",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Усі платять ставку золотими монетами на початку гри. Банк ділиться за підсумковими місцями: при 4 гравцях 60% / 30% / 10%. Останній не отримує нічого.",
+ "💰 The pot is shared by place: {list}": "💰 Банк поділено за місцями: {list}"
 }

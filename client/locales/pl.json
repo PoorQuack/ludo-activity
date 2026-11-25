@@ -804,8 +804,6 @@
  "Crown": "Korona",
  "Cyber Neon": "Cyberneon",
  "Everyone got their stake back.": "Wszyscy odzyskali stawkę.",
- "Everyone pays in, the winner takes the pot": "Każdy wpłaca, zwycięzca zgarnia pulę",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "Każdy wpłaca stawkę w złotych monetach na starcie gry. Zwycięzca zgarnia całą pulę; zwycięska drużyna ją dzieli.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "Wszyscy ją widzą: w menu, przy twoim miejscu i na liście graczy.",
  "Finish 1st on a weekly or monthly leaderboard": "Zajmij 1. miejsce w rankingu tygodniowym lub miesięcznym",
  "Finish 2nd on a weekly or monthly leaderboard": "Zajmij 2. miejsce w rankingu tygodniowym lub miesięcznym",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ Przepustka Bojowa odblokowana! Odbierz nagrody premium.",
  "Season 1: Way of the Warrior": "Sezon 1: Droga wojownika",
  "Unknown lane": "Nieznany tor",
- "Unknown tier": "Nieznany poziom"
+ "Unknown tier": "Nieznany poziom",
+ "Everyone pays in, the pot is shared by place": "Każdy wpłaca, pula dzielona według miejsc",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Każdy płaci stawkę w złotych monetach na starcie. Pula jest dzielona według miejsca na mecie: przy 4 graczach 60% / 30% / 10%. Ostatni nie dostaje nic.",
+ "💰 The pot is shared by place: {list}": "💰 Pula podzielona według miejsc: {list}"
 }

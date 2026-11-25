@@ -1,7 +1,7 @@
 // One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor, teamsOf } from '../shared/board.js';
-import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, REWARDS, STAKES, ownsItem } from '../shared/shop.js';
+import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, POT_SPLIT, REWARDS, STAKES, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, bestBotScore, progressShare, BOT_LEVELS } from './rules.js';
 import { cleanText } from './filter.js';
 import { isRigged } from './rig.js';
@@ -58,7 +58,7 @@ export class Room {
     this.quick = false; // quick game: two tokens each instead of four (the host's choice, in the lobby)
     // Stakes: an entry fee in Gold Coins (STAKES; 0 = a normal game), the host's choice in the
     // lobby. Paid by every human when the game starts into `pot` { stake, total, paid: [{ seat,
-    // userId }] }; the winner takes it all, a winning team splits it (`potWon`: seat -> coins).
+    // userId }] }; shared by finishing place (payPot; `potWon`: seat -> coins).
     this.stake = 0;
     this.pot = null;
     this.potWon = null;
@@ -591,28 +591,47 @@ export class Room {
     this.pot = null;
   }
 
-  // The game is over: the best-placed group with someone who paid in (and didn't surrender) takes
-  // the pot, split evenly between them (any odd coins to the first). Bots ahead of them don't
-  // count: they never paid in.
+  // The game is over: the pot is shared by finishing place (POT_SPLIT), counting only people
+  // who paid in. A team shares its place's cut evenly (any odd coins to the first). Anyone who
+  // surrendered places last and gets nothing; a cut that would have gone to them goes to 1st.
+  // Bots ahead of people don't count: they never paid in.
   payPot() {
     const pot = this.pot;
     this.potWon = null;
     if (!pot) return;
     if (this.rigged) return this.refundPot('🎲 Test dice were used: everyone got their stake back.');
     const groups = this.teamOrder ? this.teamOrder.map((t) => this.teams[t].filter((s) => this.seats[s])) : this.winners.map((s) => [s]);
-    const paidIn = (s) => pot.paid.some((p) => p.seat === s && this.seats[s]?.userId === p.userId) && !this.forfeited.includes(s);
-    const winners = groups.map((g) => g.filter(paidIn)).find((g) => g.length);
-    if (!winners) return this.refundPot('Nobody who paid in finished: everyone got their stake back.');
-    const each = Math.floor(pot.total / winners.length);
-    let odd = pot.total - each * winners.length;
+    const paid = (s) => pot.paid.some((p) => p.seat === s && this.seats[s]?.userId === p.userId);
+    // the places, best first: every group with someone who paid in (for teams, the whole team)
+    const places = groups.map((g) => g.filter(paid)).filter((g) => g.length);
+    const placed = new Set(places.flat());
+    for (const p of pot.paid) if (!placed.has(p.seat) && this.seats[p.seat]?.userId === p.userId) places.push([p.seat]); // (anyone missing: last)
+    const live = (g) => g.some((s) => !this.forfeited.includes(s));
+    if (!places.some(live)) return this.refundPot('Nobody who paid in finished: everyone got their stake back.');
+    const split = POT_SPLIT[Math.min(places.length, 6)] || [100];
+    const cuts = places.map((g, i) => (live(g) ? split[i] || 0 : 0));
+    const first = cuts.findIndex((c, i) => live(places[i]));
+    cuts[first] += 100 - cuts.reduce((a, b) => a + b, 0); // surrendered places' cuts go to 1st
     this.potWon = {};
-    for (const s of winners) {
-      const coins = each + (odd-- > 0 ? 1 : 0);
-      this.profiles?.payStake(this.seats[s].userId, coins);
-      this.potWon[s] = coins;
-    }
-    const names = winners.map((s) => this.seats[s].name).join(' & ');
-    this.addLog(`💰 ${names} ${winners.length > 1 ? 'split' : 'takes'} the pot: ${pot.total} coins!`);
+    const shares = places.map((g, i) => Math.floor((pot.total * cuts[i]) / 100));
+    shares[first] += pot.total - shares.reduce((a, b) => a + b, 0); // rounding: to 1st
+    const lines = [];
+    places.forEach((g, i) => {
+      if (!shares[i]) return;
+      const members = g.filter((s) => !this.forfeited.includes(s));
+      const each = Math.floor(shares[i] / members.length);
+      let odd = shares[i] - each * members.length;
+      for (const s of members) {
+        const coins = each + (odd-- > 0 ? 1 : 0);
+        this.profiles?.payStake(this.seats[s].userId, coins);
+        this.potWon[s] = coins;
+        lines.push(`${this.seats[s].name} +${coins}`);
+      }
+    });
+    const winners = Object.keys(this.potWon);
+    if (winners.length === 1) this.addLog(`💰 ${this.seats[winners[0]].name} takes the pot: ${pot.total} coins!`);
+    else if (places.filter((g, i) => shares[i]).length === 1) this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${pot.total} coins!`);
+    else this.addLog(`💰 The pot is shared by place: ${lines.join(' · ')}`);
     this.pot = null;
   }
 

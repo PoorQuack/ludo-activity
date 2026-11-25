@@ -804,8 +804,6 @@
  "Crown": "クラウン",
  "Cyber Neon": "サイバーネオン",
  "Everyone got their stake back.": "全員に賭け金が戻りました。",
- "Everyone pays in, the winner takes the pot": "全員が賭けて、勝者がポットを総取り",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "ゲーム開始時に全員が金貨で賭け金を払います。勝者がポットを総取り。勝利チームは山分けします。",
  "Everyone sees it: in the menu, on your seat and in the players list.": "みんなに見えます：メニュー、あなたの席、プレイヤー一覧で。",
  "Finish 1st on a weekly or monthly leaderboard": "週間か月間ランキングで1位になる",
  "Finish 2nd on a weekly or monthly leaderboard": "週間か月間ランキングで2位になる",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ バトルパス解放！プレミアム報酬を受け取ろう。",
  "Season 1: Way of the Warrior": "シーズン1：武士の道",
  "Unknown lane": "不明なレーン",
- "Unknown tier": "不明なティア"
+ "Unknown tier": "不明なティア",
+ "Everyone pays in, the pot is shared by place": "全員が賭け、ポットは順位で分配",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "ゲーム開始時に全員がゴールドコインで賭け金を払います。ポットは最終順位で分配：4人なら60% / 30% / 10%。最下位は何ももらえません。",
+ "💰 The pot is shared by place: {list}": "💰 ポットを順位で分配：{list}"
 }

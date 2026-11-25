@@ -804,8 +804,6 @@
  "Crown": "Krone",
  "Cyber Neon": "Cyber-Neon",
  "Everyone got their stake back.": "Alle haben ihren Einsatz zurück.",
- "Everyone pays in, the winner takes the pot": "Alle zahlen ein, der Sieger nimmt den Topf",
- "Everyone pays the stake in Gold Coins when the game starts. The winner takes the whole pot; a winning team splits it.": "Alle zahlen den Einsatz in Goldmünzen, wenn das Spiel startet. Der Sieger nimmt den ganzen Topf; ein Siegerteam teilt ihn.",
  "Everyone sees it: in the menu, on your seat and in the players list.": "Alle sehen ihn: im Menü, auf deinem Platz und in der Spielerliste.",
  "Finish 1st on a weekly or monthly leaderboard": "Werde 1. in einer Wochen- oder Monatsrangliste",
  "Finish 2nd on a weekly or monthly leaderboard": "Werde 2. in einer Wochen- oder Monatsrangliste",
@@ -948,5 +946,8 @@
  "🎟️ Battle Pass unlocked! Claim your premium rewards.": "🎟️ Battle Pass freigeschaltet! Hol dir deine Premium-Belohnungen.",
  "Season 1: Way of the Warrior": "Saison 1: Der Weg des Kriegers",
  "Unknown lane": "Unbekannte Spur",
- "Unknown tier": "Unbekannte Stufe"
+ "Unknown tier": "Unbekannte Stufe",
+ "Everyone pays in, the pot is shared by place": "Alle zahlen ein, der Pot wird nach Platz verteilt",
+ "Everyone pays the stake in Gold Coins when the game starts. The pot is shared by finishing place: with 4 players, 60% / 30% / 10%. Last place gets nothing.": "Alle zahlen den Einsatz in Goldmünzen zu Spielbeginn. Der Pot wird nach Endplatz verteilt: bei 4 Spielern 60 % / 30 % / 10 %. Der Letzte bekommt nichts.",
+ "💰 The pot is shared by place: {list}": "💰 Der Pot wird nach Platz verteilt: {list}"
 }

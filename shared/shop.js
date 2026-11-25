@@ -15,8 +15,11 @@ export const REWARDS = { place: [25, 15, 10, 8, 6, 5], capture: 2, revenge: 5 };
 export const DAILY_COIN_CAP = 120;
 
 // Stakes rooms: the host can set an entry fee in Gold Coins (never gems). Every human pays it
-// when the game starts; the winner takes the whole pot (a winning team splits it).
+// when the game starts, and the pot is shared by finishing place, like a poker tournament, so
+// every place is worth playing for. POT_SPLIT[n]: the percentages for 1st, 2nd… when n players
+// (or n teams) paid in; the places after the list get nothing. Last place always loses its stake.
 export const STAKES = [0, 100, 500, 2500];
+export const POT_SPLIT = { 1: [100], 2: [100], 3: [70, 30], 4: [60, 30, 10], 5: [55, 30, 15], 6: [50, 25, 15, 10] };
 
 // RARITY says how far an item goes from the plain one, and sets its price band (see RARITIES):
 //   common     the default, basic look (free), and single stickers
