@@ -502,7 +502,9 @@ export class Room {
     if (now - (this.lastChat.get(user.id) || 0) < CHAT_COOLDOWN_MS) throw new Error('Slow down a little');
     this.lastChat.set(user.id, now);
     const msg = { id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now };
-    if (this.profiles?.passActive?.(this.profiles.peek(user.id))) msg.vip = true; // Battle Pass: a gold name with a crown
+    const prof = this.profiles?.peek(user.id);
+    if (this.profiles?.passActive?.(prof)) msg.vip = true; // Battle Pass: a gold name with a crown
+    if (prof?.equipped?.frame && prof.equipped.frame !== 'frame-none') msg.frame = prof.equipped.frame; // round their picture in the chat
     const replyTo = replyId ? makeReplySnapshot(this.chat.find((m) => m.id === Number(replyId))) : null;
     if (replyTo) msg.replyTo = replyTo;
     this.chat.push(msg);

@@ -1119,12 +1119,48 @@ html, body {
 .chat-log .who { font-weight: 700; margin-right: 6px; color: #fff; }
 .chat-log .who-btn { border: 0; padding: 0; background: transparent; font: inherit; font-weight: 800; cursor: pointer; text-align: start; }
 .chat-log .who.vip { color: var(--gold); }
-.chat-log .chat-msg { align-self: flex-start; max-width: 90%; padding: 6px 10px; border-radius: 14px 14px 14px 4px; background: var(--bubble-bg); border-left: 3px solid var(--seat-col, rgba(255, 255, 255, 0.16)); display: flex; flex-direction: column; gap: 2px; }
-.chat-log .chat-msg.me { align-self: flex-end; align-items: flex-end; text-align: end; border-radius: 14px 14px 4px 14px; background: var(--bubble-me); border-left: 0; border-right: 3px solid var(--seat-col, var(--accent)); }
-.chat-log .chat-msg.me .who { margin-right: 0; text-align: end; }
-.chat-log .chat-msg.me .chat-body { align-items: flex-end; }
-.chat-log .chat-msg.vip { box-shadow: inset 0 0 0 1px rgba(242, 191, 63, 0.35); }
-.chat-log .chat-msg.sticker-only { background: transparent; border: 0; box-shadow: none; padding: 2px 4px; }
+/* In a room: a light chat. Each message: their picture, the name on top, and under it a white
+   bubble outlined in their seat colour, only as wide as what was said. Translate sits just outside
+   the bubble; Reply and React float over the bubble's top corner on hover (or a tap on phones). */
+[data-chat] { --chat-bg: #f7f2ec; background: #f7f2ec; border-color: #e3d9ce; }
+[data-chat] .chat-log { --chat-bg: #f7f2ec; color: #1b1714; gap: 8px; }
+[data-chat] .chat-log .chat-msg { align-self: flex-start; max-width: calc(100% - 64px); display: flex; align-items: flex-start; gap: 7px; }
+[data-chat] .chat-log .chat-msg.me { align-self: flex-end; flex-direction: row-reverse; }
+[data-chat] .chat-log .chat-av { width: 30px; height: 30px; font-size: 13px; flex: none; margin-top: 1px; border: 0; padding: 0; cursor: pointer; color: #fff; }
+[data-chat] .chat-log .chat-col { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+[data-chat] .chat-log .chat-msg.me .chat-col { align-items: flex-end; }
+[data-chat] .chat-log .chat-msg .who { color: #1b1714; font-size: 12px; margin: 0 2px; line-height: 1.2; }
+[data-chat] .chat-log .chat-bubble { max-width: 100%; padding: 6px 10px; border-radius: 4px 12px 12px 12px; background: #ffffff; border: 2px solid var(--seat-col, #cdbfb1); box-shadow: 0 1px 2px rgba(60, 40, 20, 0.08); }
+[data-chat] .chat-log .chat-msg.me .chat-bubble { border-radius: 12px 4px 12px 12px; border-color: var(--seat-col, var(--accent)); }
+[data-chat] .chat-log .chat-msg.vip .chat-bubble { box-shadow: 0 0 0 2px rgba(214, 162, 30, 0.45); }
+[data-chat] .chat-log .chat-msg.sticker-only .chat-bubble { background: transparent; border: 0; box-shadow: none; padding: 0; }
+[data-chat] .chat-log .chat-msg.me .chat-body { align-items: flex-end; }
+[data-chat] .chat-log .chat-time { align-self: center; font-size: 11px; color: #8a7d70; font-variant-numeric: tabular-nums; padding: 2px 0; }
+[data-chat] .chat-log .chat-line { position: relative; width: auto; outline: none; }
+[data-chat] .chat-log .chat-line-row { display: block; }
+[data-chat] .chat-log .chat-line + .chat-line { margin-top: 3px; padding-top: 4px; border-top: 1px solid #f0e9e1; }
+/* Translate: a small chip just outside the bubble, by the line it's for */
+[data-chat] .chat-log .chat-line-content > .tr-btn { position: absolute; bottom: -3px; left: calc(100% + 15px); margin: 0; padding: 1px 6px; border-radius: 6px; border: 1px solid #d9cdc0; background: #fff; color: #6b5d50; font-size: 10.5px; font-weight: 700; white-space: nowrap; opacity: 1; }
+[data-chat] .chat-log .chat-msg.me .chat-line-content > .tr-btn { left: auto; right: calc(100% + 15px); }
+[data-chat] .chat-log .line-acts { position: absolute; top: -25px; right: 2px; z-index: 2; padding: 1px; border-radius: 8px; background: #fff; border: 1px solid #e3d9ce; opacity: 0; pointer-events: none; }
+[data-chat] .chat-log .chat-msg.me .line-acts { right: auto; left: 2px; }
+[data-chat] .chat-log .chat-msg.sticker-only .chat-line-content > .tr-btn { left: calc(100% + 4px); }
+[data-chat] .chat-log .chat-line:hover .line-acts, [data-chat] .chat-log .chat-line:focus-within .line-acts { opacity: 1; pointer-events: auto; }
+[data-chat] .chat-log .chat-line-content { color: #1b1714; }
+[data-chat] .chat-log .tr-btn { color: #6b6158; }
+[data-chat] .chat-log .tr-out { color: #1b1714; border-color: #cfc6bd; }
+[data-chat] .chat-log .tr-out small, [data-chat] .chat-log .empty, [data-chat] .chat-log .system { color: #6b6158; }
+[data-chat] .chat-log .line-act { color: #6b6158; }
+[data-chat] .chat-log .reply-quote { color: #4a423b; background: rgba(0, 0, 0, 0.05); }
+[data-chat] .chat-log .reply-quote b { color: #1b1714; }
+[data-chat] .chat-log .react-pill { background: #fff; color: #1b1714; border-color: #d8d0c7; }
+[data-chat] .chat-log .react-pill.mine { border-color: var(--accent); }
+[data-chat] .typing-line { color: #6b6158; background: transparent; }
+[data-chat] .chat-form { border-top-color: #e3ddd6; }
+[data-chat] .chat-form input { background: #f6f3f0; color: #1b1714; border-color: #ddd5cd; }
+[data-chat] .chat-form input::placeholder { color: #8a8078; }
+[data-chat] .chat-count { color: #6b6158; }
+[data-chat] .emoji-btn { color: #4a423b; }
 .chat-log .lchat-msg { align-self: flex-start; max-width: 88%; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 7px 10px; border-radius: 14px 14px 14px 4px; background: var(--bubble-bg); }
 .chat-log .lchat-msg.me { align-self: flex-end; align-items: flex-end; text-align: end; border-radius: 14px 14px 4px 14px; background: var(--bubble-me); }
 .chat-log .lchat-msg.me .who { margin-right: 0; }
@@ -2675,3 +2711,7 @@ button, .btn { touch-action: manipulation; }
 .pr-item .preview.pack span { grid-column: 1 / -1; font-size: 10px; line-height: 1; }
 .pr-item small { font-size: 10.5px; font-weight: 700; color: var(--gold); text-align: center; line-height: 1.15; }
 @media (prefers-reduced-motion: reduce) { .pt-cell.ready { animation: none; } }
+/* the folded one-line chat on phones and its close button, on the white chat */
+[data-chat] .chat-peek { background: #f1ede9; color: #1b1714; }
+[data-chat] .chat-peek .peek-text, [data-chat] .chat-peek.fresh .peek-text { color: #3a332d; }
+[data-chat] .chat-close { color: #4a423b; }

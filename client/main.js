@@ -810,6 +810,7 @@ function renderChat() {
       list.appendChild(li);
     }
     const after = fresh ? 0 : list._lastId;
+    if (fresh) list._lastAt = 0;
     list._lastId = latest;
     const replyFn = (m) => setRoomReply(box, m);
     const reactFn = (m, emoji) => send('react', { id: m.id, emoji });
@@ -828,6 +829,15 @@ function renderChat() {
         list.appendChild(li);
         continue;
       }
+      // the time, centred, when a while has passed since the last message
+      if (!list._lastAt || m.at - list._lastAt > 5 * 60_000) {
+        const stamp = document.createElement('li');
+        stamp.className = 'chat-time';
+        stamp.dataset.id = m.id;
+        stamp.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
+        list.appendChild(stamp);
+      }
+      list._lastAt = m.at;
       const seat = state.seats.findIndex((s) => s && !s.bot && s.userId === m.userId);
       const stickerOnly = isStickerOnly(m.text);
       const isMe = m.userId === me?.id;
@@ -840,20 +850,35 @@ function renderChat() {
         continue;
       }
       li.dataset.userId = m.userId;
-      li.className = `chat-msg chat-bubble${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
+      // The name on top, outside; the bubble under it, just as wide as what's said
+      li.className = `chat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
       if (seat >= 0) li.style.setProperty('--seat-col', col(board.colors[seat]));
-      if (m.replyTo) appendReplyQuote(li, m.replyTo, list);
       const who = document.createElement('button');
       who.type = 'button';
       who.className = 'who who-btn';
       who.textContent = (m.vip ? '👑 ' : '') + (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
-      if (m.vip) who.style.color = 'var(--gold)';
       who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
-      li.appendChild(who);
+      // their picture (in their frame) beside the name and bubble
+      const av = document.createElement('button');
+      av.type = 'button';
+      av.className = 'avatar chat-av';
+      av.setAttribute('aria-label', m.name);
+      fillAvatar(av, { id: m.userId, name: m.name, avatar: !String(m.userId).startsWith('guest-') });
+      setFrame(av, m.frame || state.seats[seat]?.skins?.frame);
+      av.addEventListener('click', () => inspectPlayer(m.userId, m.name));
+      li.appendChild(av);
+      const col2 = document.createElement('div');
+      col2.className = 'chat-col';
+      li.appendChild(col2);
+      col2.appendChild(who);
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble';
+      if (m.replyTo) appendReplyQuote(bubble, m.replyTo, list);
       const body = document.createElement('div');
       body.className = 'chat-body';
       body.appendChild(line);
-      li.appendChild(body);
+      bubble.appendChild(body);
+      col2.appendChild(bubble);
       list.appendChild(li);
     }
     if (list._pinned === false) list.scrollTop = readingAt;
@@ -4698,6 +4723,7 @@ function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onRe
   const line = document.createElement('div');
   line.className = 'chat-line';
   line.dataset.msgId = m.id;
+  line.tabIndex = -1; // a tap focuses it, which shows its Reply / React on phones
   const row = document.createElement('div');
   row.className = 'chat-line-row';
   const content = document.createElement('div');
