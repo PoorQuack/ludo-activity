@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
 import { Purchases, parseSkus } from './purchases.js';
+import { parseStripePrices, renderResultPage, renderStorePage, StripeStore } from './stripe.js';
 import { ProfileStore } from './store.js';
 import { Leaderboard } from './leaderboard.js';
 import { QuestBook } from './quests.js';
@@ -45,10 +46,22 @@ const FREE_SHOP = process.env.FREE_SHOP === 'true';
 const INBOX_FILE = process.env.INBOX_FILE || path.join(path.dirname(DATA_FILE), 'inbox.json');
 // Discord user ids (comma-separated) who can post announcements from inside the game
 const ADMIN_IDS = new Set((process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean));
+const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://ludo.commontern.com').trim().replace(/\/+$/, '');
 const ROOM_IDLE_MS = 2 * 60_000; // an empty room waits this long (for a refresh to rejoin) before closing
 const LIST_EVERY_MS = 1000; // the room list in everyone's menu refreshes at most this often
 
 const app = express();
+// Stripe webhooks must see the unparsed request body for HMAC signature verification.
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '256kb' }), async (req, res) => {
+  try {
+    const event = stripe.verifyWebhook(req.body, req.headers['stripe-signature']);
+    await stripe.handleWebhook(event);
+    res.json({ received: true });
+  } catch (err) {
+    console.warn('Stripe webhook rejected:', err.message);
+    res.status(400).send(err.message);
+  }
+});
 app.use(express.json({ limit: '4kb' }));
 
 // The VM only listens behind a Cloudflare tunnel, so this header is trustworthy there; locally it's absent.
@@ -84,8 +97,20 @@ setInterval(() => {
 // "Buy me a coffee" for any amount: a Ko-fi / Buy Me a Coffee page (the fixed coffees and the
 // coin packs are paid through Discord, see SHOP_SKUS)
 const TIP_URL = /^https:\/\/\S+$/.test((process.env.TIP_URL || '').trim()) ? process.env.TIP_URL.trim() : '';
-app.get('/api/config', (_req, res) => {
-  res.json({ clientId: CLIENT_ID, allowGuests: ALLOW_GUESTS, freeShop: FREE_SHOP, paid: { skus: purchases.enabled ? purchases.list() : [], tipUrl: TIP_URL } });
+app.get('/api/config', async (_req, res) => {
+  const webPrices = stripe.enabled ? await stripe.listPrices().catch(() => ({})) : {};
+  res.json({
+    clientId: CLIENT_ID,
+    allowGuests: ALLOW_GUESTS,
+    freeShop: FREE_SHOP,
+    paid: {
+      skus: purchases.enabled ? purchases.list() : [],
+      tipUrl: TIP_URL,
+      webStore: stripe.enabled,
+      publicUrl: PUBLIC_URL,
+      webPrices,
+    },
+  });
 });
 
 // Discord profile pictures, fetched from Discord's CDN by the server: the Activity can't load
@@ -255,6 +280,153 @@ app.get('/api/status', (req, res) => {
   res.json({ rooms: directory.rooms.size, ...activity(), uptimeSec: Math.round(process.uptime()) });
 });
 
+const STORE_COOKIE = 'ludo_store';
+const OAUTH_COOKIE = 'ludo_oauth';
+const cookieOpts = (maxAgeSec) => [
+  `Path=/`,
+  `HttpOnly`,
+  `SameSite=Lax`,
+  `Max-Age=${maxAgeSec}`,
+  ...(PUBLIC_URL.startsWith('https://') ? ['Secure'] : []),
+].join('; ');
+function readCookies(req) {
+  const out = {};
+  for (const part of String(req.headers.cookie || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return out;
+}
+function storeUserFromReq(req) {
+  const cookies = readCookies(req);
+  const data = stripe.verifyToken(cookies[STORE_COOKIE]);
+  if (!data?.userId) return null;
+  const seen = social.avatars?.has?.(data.userId);
+  return { id: data.userId, name: data.name || (seen ? undefined : null) || 'Player' };
+}
+
+app.get('/store', async (req, res) => {
+  if (req.query.t) {
+    const data = stripe.verifyToken(String(req.query.t));
+    if (data?.userId) {
+      const cookieTok = stripe.signToken({ userId: data.userId, name: data.name || 'Player' }, 7 * 86_400_000);
+      res.setHeader('Set-Cookie', `${STORE_COOKIE}=${encodeURIComponent(cookieTok)}; ${cookieOpts(7 * 86_400)}`);
+    }
+    return res.redirect(302, '/store');
+  }
+  const user = storeUserFromReq(req);
+  const profile = user ? store.peek(user.id) : null;
+  const prices = stripe.enabled ? await stripe.listPrices().catch(() => ({})) : {};
+  const notice = req.query.cancelled ? 'Checkout was cancelled. You were not charged.' : '';
+  noCache(res);
+  res.type('html').send(renderStorePage({ user, profile, prices, enabled: stripe.enabled, notice, authUrl: CLIENT_ID ? '/store/auth' : '' }));
+});
+
+app.get('/store/auth', (_req, res) => {
+  if (!CLIENT_ID) return res.status(503).send('Discord sign-in is not configured.');
+  const nonce = randomUUID();
+  const state = stripe.signToken({ nonce }, 10 * 60_000);
+  res.setHeader('Set-Cookie', `${OAUTH_COOKIE}=${encodeURIComponent(nonce)}; ${cookieOpts(600)}`);
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: `${PUBLIC_URL}/store/callback`,
+    scope: 'identify',
+    state,
+  });
+  res.redirect(302, `https://discord.com/oauth2/authorize?${params}`);
+});
+
+app.get('/store/callback', async (req, res) => {
+  try {
+    const code = String(req.query.code || '');
+    const state = String(req.query.state || '');
+    const cookies = readCookies(req);
+    const parsedState = stripe.verifyToken(state);
+    if (!code || !parsedState?.nonce || parsedState.nonce !== cookies[OAUTH_COOKIE]) {
+      return res.status(400).type('html').send(renderResultPage({ ok: false, title: 'Sign-in expired', body: 'Please go back to the store and try signing in with Discord again.' }));
+    }
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: `${PUBLIC_URL}/store/callback`,
+      }),
+    });
+    const tok = await tokenRes.json();
+    if (!tokenRes.ok || !tok?.access_token) throw new Error('Discord login failed');
+    const meRes = await fetch('https://discord.com/api/v10/users/@me', {
+      headers: { Authorization: `Bearer ${tok.access_token}` },
+    });
+    const me = await meRes.json();
+    if (!meRes.ok || !/^\d{5,25}$/.test(String(me?.id || ''))) throw new Error('Could not read Discord profile');
+    const name = String(me.global_name || me.username || 'Player').slice(0, 40);
+    const sessionTok = stripe.signToken({ userId: String(me.id), name }, 7 * 86_400_000);
+    res.setHeader('Set-Cookie', [
+      `${STORE_COOKIE}=${encodeURIComponent(sessionTok)}; ${cookieOpts(7 * 86_400)}`,
+      `${OAUTH_COOKIE}=; ${cookieOpts(0)}`,
+    ]);
+    res.redirect(302, '/store');
+  } catch (err) {
+    res.status(400).type('html').send(renderResultPage({ ok: false, title: 'Sign-in failed', body: err.message || 'Please try again.' }));
+  }
+});
+
+app.post('/store/logout', (_req, res) => {
+  res.setHeader('Set-Cookie', `${STORE_COOKIE}=; ${cookieOpts(0)}`);
+  res.redirect(302, '/store');
+});
+
+app.get('/pay', async (req, res) => {
+  try {
+    let userId = '';
+    let itemId = '';
+    if (req.query.t) {
+      const tok = stripe.verifyToken(String(req.query.t));
+      if (!tok?.userId) throw new Error('Checkout link expired — tap the item in Ludo again.');
+      userId = tok.userId;
+      itemId = String(tok.itemId || req.query.item || '');
+      // Also sign them into /store in case they press Back or Cancel in Stripe Checkout.
+      const cookieTok = stripe.signToken({ userId, name: tok.name || 'Player' }, 7 * 86_400_000);
+      res.setHeader('Set-Cookie', `${STORE_COOKIE}=${encodeURIComponent(cookieTok)}; ${cookieOpts(7 * 86_400)}`);
+    } else {
+      const u = storeUserFromReq(req);
+      if (!u) return res.redirect(302, '/store');
+      userId = u.id;
+      itemId = String(req.query.item || '');
+    }
+    if (!itemId) return res.redirect(302, '/store');
+    if (!purchaseLimiter.hit(`pay:${userId}`)) throw new Error('Too many checkout attempts — please wait a minute.');
+    const session = await stripe.createCheckoutSession({ userId, itemId });
+    res.redirect(303, session.url);
+  } catch (err) {
+    res.status(400).type('html').send(renderResultPage({ ok: false, title: 'Checkout unavailable', body: err.message || 'Please try again.' }));
+  }
+});
+
+app.get('/pay/success', async (req, res) => {
+  try {
+    const sessionId = String(req.query.session_id || '');
+    const r = await stripe.confirmSession(sessionId);
+    if (!r.paid) {
+      return res.type('html').send(renderResultPage({ ok: false, title: 'Payment pending', body: 'Your payment has not finished processing yet. Switch back to Discord in a moment and your items will arrive automatically.' }));
+    }
+    const label = r.item?.kind === 'gems'
+      ? `${r.item.gems} Die Gems have been added to your account.`
+      : r.item?.kind === 'pass'
+        ? 'Your Battle Pass is now active! Claim your unlocked rewards in Discord.'
+        : 'Thank you so much for your coffee!';
+    noCache(res);
+    res.type('html').send(renderResultPage({ ok: true, title: 'Purchase complete!', body: `${label} Switch back to Discord — your profile is already updated.` }));
+  } catch (err) {
+    res.status(400).type('html').send(renderResultPage({ ok: false, title: 'Could not verify payment', body: err.message || 'If you were charged, return to Discord in a minute — the webhook will finish crediting your account.' }));
+  }
+});
+
 const dist = path.join(__dirname, '..', 'dist');
 // The page itself is never cached, so players always get the newest version after an update.
 // Built files have a hash in their name that changes with every build, so those can be kept.
@@ -285,6 +457,18 @@ const purchases = new Purchases({
   token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
   skus: parseSkus(process.env.SHOP_SKUS),
   store,
+});
+// Stripe Web Store & Apple Pay / Safari checkout (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICES)
+const stripe = new StripeStore({
+  secretKey: process.env.STRIPE_SECRET_KEY,
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  signingSecret: process.env.CHECKOUT_SECRET || CLIENT_SECRET || process.env.STRIPE_SECRET_KEY,
+  publicUrl: PUBLIC_URL,
+  prices: parseStripePrices(process.env.STRIPE_PRICES),
+  store,
+  onFulfill: (userId, granted) => {
+    for (const g of granted) sendTo(userId, { type: 'purchased', ...g });
+  },
 });
 // Pay out anything this player bought that hasn't been paid yet, and tell them.
 function claimPurchases(userId) {
@@ -759,6 +943,16 @@ wss.on('connection', (ws, req) => {
       if (msg.type === 'claimPurchases') {
         if (!purchaseLimiter.hit(ctx.user.id)) return;
         return claimPurchases(ctx.user.id);
+      }
+      if (msg.type === 'checkout') {
+        const reqId = String(msg.reqId || '').slice(0, 64);
+        if (!stripe.enabled) return send({ type: 'checkoutUrl', reqId, error: 'Web checkout is not enabled' });
+        if (ctx.user.id.startsWith('guest-')) return send({ type: 'checkoutUrl', reqId, error: 'Sign in with Discord first' });
+        if (!purchaseLimiter.hit(`tok:${ctx.user.id}`)) return send({ type: 'checkoutUrl', reqId, error: 'Too many requests — wait a moment' });
+        const itemId = typeof msg.itemId === 'string' && stripe.hasPrice(msg.itemId) ? msg.itemId : '';
+        const token = stripe.signToken({ userId: ctx.user.id, name: ctx.user.name, itemId }, 30 * 60_000);
+        const url = itemId ? `${PUBLIC_URL}/pay?t=${encodeURIComponent(token)}` : `${PUBLIC_URL}/store?t=${encodeURIComponent(token)}`;
+        return send({ type: 'checkoutUrl', reqId, itemId, url });
       }
       if (msg.type === 'leaderboard') return send({ type: 'leaderboard', boards: leaderboard.view(ctx.user.id) });
       if (msg.type === 'quests') return send({ type: 'quests', quests: quests.view(ctx.user.id), weekly: weekly.view(ctx.user.id) });

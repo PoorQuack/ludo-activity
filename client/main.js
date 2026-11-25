@@ -327,6 +327,14 @@ function connect() {
       if (msg.kind === 'gems') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
       else if (msg.kind === 'pass') toast(t('🎟️ Battle Pass unlocked! Claim your premium rewards.'), 'ok', 6000);
       else toast(t('☕ Thank you so much for the coffee!'), 'ok', 5000);
+    } else if (msg.type === 'checkoutUrl') {
+      const w = checkoutWaiters.get(msg.reqId);
+      if (w) {
+        checkoutWaiters.delete(msg.reqId);
+        clearTimeout(w.timer);
+        if (msg.error || !msg.url) w.reject(new Error(msg.error || 'Checkout unavailable'));
+        else w.resolve(msg.url);
+      }
     } else if (msg.type === 'referral') {
       sfx('buy');
       toast(t('🎉 {name} played their first game: +{coins} coins for inviting them!', { name: msg.name, coins: msg.coins }), 'ok', 5000);
@@ -4251,8 +4259,42 @@ window.addEventListener('ludo-lang', renderReferral);
 // Real money buys VIP Gems only (Gold Coins are earned). The "+" beside the gems (in the shop and
 // the menu's top bar) opens the gem store.
 const claimPurchases = () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'claimPurchases' }));
+const checkoutWaiters = new Map();
+let checkoutSeq = 0;
+let webCheckoutAt = 0;
+async function openWebCheckout(itemId = '') {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    toast(t('Connecting… try again in a moment.'), 'notice', 3000);
+    return;
+  }
+  try {
+    const url = await new Promise((resolve, reject) => {
+      const reqId = String(++checkoutSeq);
+      const timer = setTimeout(() => {
+        checkoutWaiters.delete(reqId);
+        reject(new Error('Timed out starting checkout'));
+      }, 6000);
+      checkoutWaiters.set(reqId, { resolve, reject, timer });
+      ws.send(JSON.stringify({ type: 'checkout', reqId, itemId }));
+    });
+    webCheckoutAt = Date.now();
+    if (discordSdk) await discordSdk.commands.openExternalLink({ url });
+    else window.open(url, '_blank', 'noopener');
+  } catch (err) {
+    const detail = err?.message || '';
+    if (!/cancel|closed|dismiss|abort/i.test(detail)) {
+      toast(detail ? t('Purchase failed: {why}', { why: detail }) : t('Purchase could not be started.'), 'err', 4500);
+    }
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && webCheckoutAt && Date.now() - webCheckoutAt > 1500) {
+    webCheckoutAt = 0;
+    claimPurchases();
+  }
+});
 function openGemStore() {
-  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases, toast });
+  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases, onWebCheckout: openWebCheckout, toast });
 }
 for (const b of document.querySelectorAll('#get-coins, [data-get-gems]')) b.addEventListener('click', openGemStore);
 
@@ -4467,7 +4509,17 @@ async function loadPassPrice() {
   } catch {}
 }
 async function buyPass(btn) {
-  if (!discordSdk || !passSku()) return toast(t('The Battle Pass can be bought in the Discord app.'));
+  if (!discordSdk) return toast(t('The Battle Pass can be bought in the Discord app.'));
+  if (discordSdk.platform === 'mobile' && paidConfig.webStore && (paidConfig.webPrices?.pass || passSku())) {
+    btn.disabled = true;
+    try {
+      await openWebCheckout(PASS_SKU_ID);
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+  if (!passSku()) return toast(t('The Battle Pass can be bought in the Discord app.'));
   btn.disabled = true;
   try {
     await discordSdk.commands.startPurchase({ sku_id: passSku() });
@@ -4475,11 +4527,15 @@ async function buyPass(btn) {
   } catch (err) {
     const detail = err?.message || (typeof err === 'string' ? err : err ? JSON.stringify(err) : '');
     if (/cancel|closed|dismiss|abort/i.test(detail)) return;
+    const unsupported = err?.code === 4002 || /unsupported command/i.test(detail);
+    if (unsupported && paidConfig.webStore) {
+      await openWebCheckout(PASS_SKU_ID);
+      return;
+    }
     console.warn('Battle Pass startPurchase failed:', err);
     const why = [err?.code != null && !String(detail).includes(String(err.code)) ? `[${err.code}]` : '', detail].filter(Boolean).join(' ').trim();
     if (discordSdk.platform === 'mobile') {
       const base = t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.");
-      const unsupported = err?.code === 4002 || /unsupported command/i.test(detail);
       toast(why && !unsupported ? `${base} (${why})` : base, 'notice', 5500);
     } else {
       toast(why ? t('Purchase failed: {why}', { why }) : t('Purchase could not be started.'), 'err', 4500);
