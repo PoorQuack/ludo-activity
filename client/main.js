@@ -4215,7 +4215,7 @@ window.addEventListener('ludo-lang', renderReferral);
 // the menu's top bar) opens the gem store.
 const claimPurchases = () => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'claimPurchases' }));
 function openGemStore() {
-  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases });
+  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases, toast });
 }
 for (const b of document.querySelectorAll('#get-coins, [data-get-gems]')) b.addEventListener('click', openGemStore);
 
@@ -4435,8 +4435,15 @@ async function buyPass(btn) {
   try {
     await discordSdk.commands.startPurchase({ sku_id: passSku() });
     claimPurchases();
-  } catch {
-    // closed the checkout: nothing happened
+  } catch (err) {
+    const msg = String(err?.message || err || '').trim();
+    if (/cancel|closed|dismiss|abort/i.test(msg)) return;
+    console.warn('Battle Pass startPurchase failed:', err);
+    if (discordSdk.platform === 'mobile') {
+      toast(t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy."), 'notice', 5000);
+    } else {
+      toast(msg ? t('Purchase failed: {why}', { why: msg }) : t('Purchase could not be started.'), 'err', 4500);
+    }
   } finally {
     btn.disabled = false;
   }

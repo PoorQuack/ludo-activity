@@ -8,6 +8,7 @@ import { t, currentLanguage as getLanguage } from './i18n.js';
 let el = null;
 let ctx = null; // { sdk, paid: { skus: [{ id, sku }], tipUrl }, onBought, toast }
 let prices = null; // item id -> formatted price, from Discord
+let mobileUnavailable = false;
 
 const skuOf = (id) => ctx?.paid?.skus.find((s) => s.id === id)?.sku || null;
 
@@ -44,9 +45,14 @@ async function loadPrices() {
       const s = skus.find((k) => k.id === sku);
       if (s?.price) prices[id] = PriceUtils.formatPrice(s.price, getLanguage());
     }
+    if (ctx.sdk.platform === 'mobile' && !skus?.length) mobileUnavailable = true;
     render();
   } catch {
     prices = {}; // the buttons still work, they just say "Buy"
+    if (ctx.sdk.platform === 'mobile') {
+      mobileUnavailable = true;
+      render();
+    }
   }
 }
 
@@ -58,7 +64,13 @@ function pile(n) {
 function render() {
   const inDiscord = !!ctx.sdk;
   const anySku = !!ctx.paid?.skus.length;
-  const note = !inDiscord ? t('Purchases work in the Discord app.') : !anySku ? t('Gem packs are coming soon.') : '';
+  const note = !inDiscord
+    ? t('Purchases work in the Discord app.')
+    : !anySku
+      ? t('Gem packs are coming soon.')
+      : mobileUnavailable
+        ? t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.")
+        : '';
   el.innerHTML = `
     <div class="modal-card coin-card">
       <button type="button" class="set-close store-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
@@ -114,8 +126,17 @@ async function buy(id, btn) {
   try {
     await ctx.sdk.commands.startPurchase({ sku_id: sku });
     ctx.onBought(); // ask the server to check with Discord and pay out
-  } catch {
-    // closed the checkout, or it failed: nothing was charged, nothing to do
+  } catch (err) {
+    const msg = String(err?.message || err || '').trim();
+    if (/cancel|closed|dismiss|abort/i.test(msg)) return;
+    console.warn('startPurchase failed:', err);
+    if (ctx.sdk.platform === 'mobile') {
+      mobileUnavailable = true;
+      render();
+      ctx.toast?.(t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy."), 'notice', 5000);
+    } else {
+      ctx.toast?.(msg ? t('Purchase failed: {why}', { why: msg }) : t('Purchase could not be started.'), 'err', 4500);
+    }
   } finally {
     btn.disabled = false;
   }
