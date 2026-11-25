@@ -2460,7 +2460,7 @@ button, .btn { touch-action: manipulation; }
 .dm-list { display: flex; flex-direction: column; gap: 6px; padding: 10px; flex: 1 1 0; height: auto; min-height: 0; overflow-y: auto; }
 @media (min-width: 900px) { .dm-list { flex: none; height: clamp(380px, calc(100vh - 300px), 640px); } }
 @media (max-width: 899px) {
-  #menu[data-panel='chat'] .hub { height: 100dvh; overflow: hidden; }
+  #menu[data-panel='chat'] .hub { height: 100%; overflow: hidden; }
   #menu[data-panel='chat'] .hub-side,
   #menu[data-panel='chat'] [data-panel-for='chat'] { flex: 1 1 0; min-height: 0; }
   .lobby-chat .chat-form, .lobby-chat .emoji-pop { flex: none; }
