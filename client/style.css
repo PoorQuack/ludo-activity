@@ -2464,6 +2464,30 @@ button, .btn { touch-action: manipulation; }
   #menu[data-panel='chat'] .hub-side,
   #menu[data-panel='chat'] [data-panel-for='chat'] { flex: 1 1 0; min-height: 0; }
   .lobby-chat .chat-form, .lobby-chat .emoji-pop { flex: none; }
+  .kb-open #menu:not(.hidden) {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--kb-top, 0px);
+    height: var(--kb-h, 100%);
+    overflow: hidden;
+    animation: none;
+  }
+  .kb-open #menu:not(.hidden)[data-panel='chat'] .hub {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+  .kb-open #menu:not(.hidden)[data-panel='chat'] .hub-top,
+  .kb-open #menu:not(.hidden)[data-panel='chat'] .hub-dock {
+    display: none;
+  }
+  .kb-open #menu:not(.hidden)[data-panel='chat'] .panel-back {
+    gap: 8px;
+  }
+  .kb-open #menu:not(.hidden)[data-panel='chat'] .panel-title {
+    font-size: 17px;
+  }
 }
 .dm-row { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 12px; padding: 9px 10px; background: var(--panel-2); color: inherit; font: inherit; text-align: start; cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .dm-row:hover { filter: brightness(1.08); } }

@@ -1183,6 +1183,9 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
       shown = `${h}|${top}`;
       root.style.setProperty('--kb-h', `${h}px`);
       root.style.setProperty('--kb-top', `${top}px`);
+      if (screen === 'menu') $('menu').scrollTop = 0;
+      const chatLog = $(screen === 'menu' ? 'lobby-chat-log' : 'chat-log');
+      if (chatLog && chatLog._pinned !== false) requestAnimationFrame(() => { chatLog.scrollTop = chatLog.scrollHeight; });
     });
   };
   let fullH = 0; // the visible height before the keyboard came up
@@ -1196,7 +1199,7 @@ if (matchMedia('(hover: none) and (pointer: coarse)').matches) {
     window.scrollTo(0, 0); // iPhones leave the page scrolled after the keyboard goes
   };
   document.addEventListener('focusin', (e) => {
-    if (!isChat(e.target) || screen !== 'game') return;
+    if (!isChat(e.target) || (screen !== 'game' && screen !== 'menu')) return;
     if (!root.classList.contains('kb-open')) {
       fullH = Math.round(vv ? vv.height : window.innerHeight);
       kbSeen = false;
