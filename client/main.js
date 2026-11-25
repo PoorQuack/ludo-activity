@@ -807,6 +807,18 @@ function renderChat() {
       const seat = state.seats.findIndex((s) => s && !s.bot && s.userId === m.userId);
       const stickerOnly = isStickerOnly(m.text);
       const isMe = m.userId === me?.id;
+      const prevLi = list.lastElementChild;
+      const canGroup = !stickerOnly && prevLi?.classList.contains('chat-msg') && !prevLi.classList.contains('sticker-only') && prevLi.dataset.userId === m.userId;
+      if (canGroup) {
+        const line = document.createElement('div');
+        line.className = 'chat-line';
+        renderChatTokens(line, m.text, list, false);
+        if (!isMe) addTranslate(line, 'room', m.id);
+        prevLi.querySelector('.chat-body')?.appendChild(line);
+        prevLi.dataset.id = m.id;
+        continue;
+      }
+      li.dataset.userId = m.userId;
       li.className = `chat-msg chat-bubble${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
       if (seat >= 0) li.style.setProperty('--seat-col', col(board.colors[seat]));
       const who = document.createElement('button');
@@ -817,11 +829,14 @@ function renderChat() {
       else who.style.color = m.vip ? 'var(--gold)' : chatNameColor(m.userId);
       who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
       li.appendChild(who);
-      const body = document.createElement('span');
+      const body = document.createElement('div');
       body.className = 'chat-body';
-      renderChatTokens(body, m.text, list, stickerOnly);
+      const line = document.createElement('div');
+      line.className = 'chat-line';
+      renderChatTokens(line, m.text, list, stickerOnly);
+      if (!stickerOnly && !isMe) addTranslate(line, 'room', m.id);
+      body.appendChild(line);
       li.appendChild(body);
-      if (!stickerOnly && !isMe) addTranslate(li, 'room', m.id);
       list.appendChild(li);
     }
     if (list._pinned === false) list.scrollTop = readingAt;
@@ -4483,10 +4498,25 @@ function renderLobbyChat() {
     log.appendChild(li);
   }
   const scope = lchat.tab;
+  let prev = null;
   for (const m of msgs) {
-    const li = document.createElement('li');
     const stickerOnly = isStickerOnly(m.text);
     const isMe = m.userId === me?.id;
+    const line = document.createElement('div');
+    line.className = 'chat-line';
+    renderChatTokens(line, m.text, log, stickerOnly);
+    const when = document.createElement('time');
+    when.className = 'when';
+    when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
+    line.appendChild(when);
+    if (!stickerOnly && !isMe) addTranslate(line, scope, m.id);
+
+    if (!stickerOnly && prev && !prev.stickerOnly && prev.userId === m.userId) {
+      prev.body.appendChild(line);
+      continue;
+    }
+
+    const li = document.createElement('li');
     li.className = `lchat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
     const author = document.createElement('button');
     author.type = 'button';
@@ -4503,16 +4533,12 @@ function renderLobbyChat() {
     if (!m.vip) who.style.color = chatNameColor(m.userId);
     author.appendChild(who);
     li.appendChild(author);
-    const body = document.createElement('span');
+    const body = document.createElement('div');
     body.className = 'lchat-body';
-    renderChatTokens(body, m.text, log, stickerOnly);
-    const when = document.createElement('time');
-    when.className = 'when';
-    when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
-    body.appendChild(when);
-    if (!stickerOnly && !isMe) addTranslate(body, scope, m.id);
+    body.appendChild(line);
     li.appendChild(body);
     log.appendChild(li);
+    prev = stickerOnly ? null : { userId: m.userId, stickerOnly, body };
   }
   log._pinned = pinned;
   keepAtBottom(log);
