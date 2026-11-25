@@ -940,7 +940,7 @@ function renderEmojiPops() {
   if (key === pickerShown) return;
   pickerShown = key;
   for (const box of els.chats) renderEmojiPop(box, groups, current, (text) => send('chat', { text }));
-  const lobbyBox = $('lobby-chat-box');
+  const lobbyBox = $('lobby-chat');
   if (lobbyBox) renderEmojiPop(lobbyBox, groups, current, (text) => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text })));
 }
 
@@ -4573,7 +4573,7 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   input.value = '';
   $('lobby-chat-log')._pinned = true;
 });
-wireEmojiToggle($('lobby-chat-box'));
+wireEmojiToggle($('lobby-chat'));
 
 // Translate: one small button after someone else's message. The answer is kept, so the message
 // shows it again whenever the chat is redrawn.
