@@ -2911,7 +2911,7 @@ function renderStakes() {
   box.classList.toggle('on', !!state.stake);
   const titleEl = box.querySelector('.stake-text b');
   const subEl = box.querySelector('.stake-text small');
-  if (titleEl) titleEl.textContent = wta ? t('Stakes Rooms') : t('Cash pot');
+  if (titleEl) titleEl.textContent = wta ? t('All In') : t('Cash pot');
   if (subEl) subEl.textContent = wta ? t('Only 1st place wins the pot') : t('Everyone pays in; pot shared by all except last');
   const opts = $('stake-options');
   const key = `${state.stake}|${wta}|${host}|${currentLang()}`;
@@ -4791,7 +4791,7 @@ function renderStakesSheet() {
   if (!open.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = t('No stakes rooms open right now: make one!');
+    li.textContent = t('No All In rooms open right now: make one!');
     list.appendChild(li);
   }
   for (const r of open) {

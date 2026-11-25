@@ -559,7 +559,7 @@ export class Room {
     this.requirePhase('lobby');
     stake = Number(stake);
     if (!STAKES.includes(stake)) throw new Error('Unknown stake');
-    if (this.winnerTakeAll && !stake) throw new Error('Stakes rooms require a stake');
+    if (this.winnerTakeAll && !stake) throw new Error('All In rooms require a stake');
     this.stake = stake;
     this.changed();
   }
