@@ -5,7 +5,7 @@ import path from 'node:path';
 import { randomInt } from 'node:crypto';
 import { BADGES, BADGES_BY_ID, BADGE_STATS, LEVELS, MAX_PINS, badgeValue, levelFor } from '../shared/badges.js';
 import { PASS_TIERS, PASS_XP, passRewards, seasonMonth, seasonEnd, tierFor, XP_PER_TIER } from '../shared/pass.js';
-import { ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem, SETS_BY_ID, setPrice, priceOf, currencyOf } from '../shared/shop.js';
+import { FIRST_PACK_BONUS, ITEMS, STARTING_COINS, DEFAULT_EQUIPPED, DAILY_COIN_CAP, ownsItem, SETS_BY_ID, setPrice, priceOf, currencyOf, inShop } from '../shared/shop.js';
 
 const SAVE_DELAY_MS = 1000;
 // The daily chest: a d20, 5 coins a pip
@@ -100,7 +100,7 @@ export class ProfileStore {
   view(id) {
     const p = this.profiles.get(id);
     if (!p) return null;
-    const { invite, daily, streak, ref, bought, pass, passUntil, ...rest } = p; // the server-invite answer isn't the client's business
+    const { invite, daily, streak, ref, bought, pass, passUntil, packs, ...rest } = p; // the server-invite answer isn't the client's business
     return {
       ...rest,
       pass: this.passView(p),
@@ -109,6 +109,7 @@ export class ProfileStore {
       streakDay: this.streakDay(p), // today's place in the 7-day strip (1–7)
       dailyNext: Date.parse(`${this.dayKey()}T00:00:00Z`) + 86_400_000, // next UTC midnight
       referrals: { count: ref.count, coins: ref.count * REFERRAL_COINS, per: REFERRAL_COINS },
+      firstPack: !packs, // their first gem pack gives double gems
     };
   }
 
@@ -196,6 +197,39 @@ export class ProfileStore {
   // A real-money purchase (a Discord entitlement): pays its gems once. Real money only ever buys
   // VIP Gems, never Gold Coins. The entitlement id is kept so the same purchase can never pay
   // twice. Returns whether it paid now.
+  // A real-money purchase (Discord entitlement or Stripe payment `key`, paid once): gem packs
+  // (a player's first one gives FIRST_PACK_BONUS times the gems), the Starter Pack (gems, coins
+  // and its exclusive item), or a tip. Returns what was given, or null when `key` was paid before.
+  grantPaid(id, key, item) {
+    const p = this.get(id);
+    if (p.bought.includes(key)) return null;
+    p.bought.push(key);
+    const given = { id: item.id, kind: item.kind, gems: 0 };
+    if (item.kind === 'gems') {
+      given.gems = item.gems * (p.packs ? 1 : FIRST_PACK_BONUS);
+      if (!p.packs) {
+        given.first = true;
+        p.bought.push(`${key}:x${FIRST_PACK_BONUS}`); // so a refund takes the doubled amount back
+      }
+      p.packs += 1;
+    } else if (item.kind === 'starter') {
+      given.gems = item.gems;
+      if (!p.starter) {
+        p.starter = true;
+        given.coins = item.coins;
+        p.coins += item.coins;
+        if (!p.owned.includes(item.item)) {
+          p.owned.push(item.item);
+          given.item = item.item;
+        }
+      }
+    }
+    p.gems += given.gems;
+    this.changed(id);
+    this.flush(); // money: write it now
+    return given;
+  }
+
   grantPurchase(id, entitlementId, gems) {
     const p = this.get(id);
     if (p.bought.includes(entitlementId)) return false;
@@ -428,7 +462,8 @@ export class ProfileStore {
     const p = this.get(id);
     if (ownsItem(p, itemId)) throw new Error('You already own that');
     if (item.award) throw new Error("That can't be bought: it's won on the leaderboard");
-    this.charge(p, currencyOf(item), priceOf(item, this.dayKey())); // (today's deal is 30% off)
+    if (!inShop(item, this.dayKey())) throw new Error("That isn't in the shop right now");
+    this.charge(p, currencyOf(item), priceOf(item, this.dayKey())); // (today's deals are 30% off)
     p.owned.push(itemId);
     if (!['emote', 'emote-pack'].includes(item.type)) p.equipped[item.type] = itemId;
     this.changed(id);
@@ -440,6 +475,7 @@ export class ProfileStore {
   gift(id, toId, itemId) {
     const item = ITEMS[itemId];
     if (!item || !item.price || item.award) throw new Error('Unknown item');
+    if (!inShop(item, this.dayKey())) throw new Error("That isn't in the shop right now");
     if (!toId || toId === id) throw new Error("You can't gift that to yourself");
     const to = this.get(toId);
     if (ownsItem(to, itemId)) throw new Error('They already own that');
@@ -459,6 +495,7 @@ export class ProfileStore {
     if (!set) throw new Error('Unknown item');
     const p = this.get(id);
     const { price, missing, currency } = setPrice(set, p);
+    if (!missing.every((m) => inShop(ITEMS[m], this.dayKey()))) throw new Error("That isn't in the shop right now");
     if (!missing.length) throw new Error('You already own that');
     this.charge(p, currency, price);
     p.owned.push(...missing);
@@ -617,7 +654,7 @@ function normalize(p) {
   };
   // Discord entitlement ids and Stripe payment/refund ids already processed (see grantPurchase / revokePurchase).
   const bought = Array.isArray(p.bought)
-    ? p.bought.filter((e) => typeof e === 'string' && /^(?:\d{5,25}|stripe:[A-Za-z0-9_:-]{6,120})$/.test(e))
+    ? p.bought.filter((e) => typeof e === 'string' && /^(?:\d{5,25}|stripe:[A-Za-z0-9_:-]{6,120})(?::x\d)?$/.test(e))
     : [];
   // Badges: lifetime stat totals, the level reached on each badge (0-3), the title worn, the pins
   const stats = {};
@@ -639,6 +676,9 @@ function normalize(p) {
     login: /^\d{4}-\d{2}-\d{2}$/.test(p.pass?.login || '') ? p.pass.login : '',
   };
   const passUntil = Number.isFinite(p.passUntil) && p.passUntil > 0 ? p.passUntil : 0;
+  // Real-money gem packs bought so far (the first one is doubled), and the once-only Starter Pack
+  const packs = Number.isInteger(p.packs) && p.packs > 0 ? p.packs : 0;
+  const starter = p.starter === true;
   const nonNeg = (v) => (Number.isInteger(v) && v >= 0 ? v : 0);
   const played = {
     games: nonNeg(p.played?.games),
@@ -648,7 +688,7 @@ function normalize(p) {
     botCaptures: nonNeg(p.played?.botCaptures),
     botSixes: nonNeg(p.played?.botSixes),
   };
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, played, badges, title, pins, pass, passUntil };
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, played, badges, title, pins, pass, passUntil, packs, starter };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }

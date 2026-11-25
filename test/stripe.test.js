@@ -78,7 +78,7 @@ test('Stripe Checkout confirms once and ignores duplicate webhook + confirmation
 
   const first = await s.confirmSession('cs_test_1');
   assert.equal(first.paid, true);
-  assert.equal(store.peek('11111111111111111').gems, 220);
+  assert.equal(store.peek('11111111111111111').gems, 440); // a first pack: double
   assert.equal(fulfilled.length, 1);
 
   // Duplicate signed webhook for the exact same session must NOT double-pay.
@@ -96,7 +96,7 @@ test('Stripe Checkout confirms once and ignores duplicate webhook + confirmation
   const sig = crypto.createHmac('sha256', webhookSecret).update(`${ts}.${payload}`).digest('hex');
   const event = s.verifyWebhook(Buffer.from(payload), `t=${ts},v1=${sig}`);
   await s.handleWebhook(event);
-  assert.equal(store.peek('11111111111111111').gems, 220);
+  assert.equal(store.peek('11111111111111111').gems, 440); // a first pack: double
   assert.equal(fulfilled.length, 1);
 
   assert.throws(() => s.verifyWebhook(Buffer.from(payload), `t=${ts},v1=${'0'.repeat(64)}`), /mismatch/);
@@ -169,12 +169,12 @@ test('Stripe refund and dispute claw back Die Gems, remove bought gem items, and
   let store = new ProfileStore(file);
   store.get('33333333333333333');
 
-  // Grant 220 gems, buy Cyber Neon frame (280? let's grant 300 total -> buy 280 -> 20 left)
+  // 220 + 300 gems, then the Dragon's Lair board (500): 20 left
   store.grantPurchase('33333333333333333', 'stripe:cs_pack_1', 220);
-  store.grantPurchase('33333333333333333', 'stripe:cs_pack_0', 100);
-  store.buy('33333333333333333', 'frame-neon'); // costs 280 gems -> 40 gems remaining, frame-neon equipped
-  assert.equal(store.peek('33333333333333333').gems, 40);
-  assert.equal(store.peek('33333333333333333').equipped.frame, 'frame-neon');
+  store.grantPurchase('33333333333333333', 'stripe:cs_pack_0', 300);
+  store.buy('33333333333333333', 'board-lair');
+  assert.equal(store.peek('33333333333333333').gems, 20);
+  assert.equal(store.peek('33333333333333333').equipped.board, 'board-lair');
 
   // Reload from disk to confirm stripe: bought ids survive restart
   store = new ProfileStore(file);
@@ -198,22 +198,22 @@ test('Stripe refund and dispute claw back Die Gems, remove bought gem items, and
     },
   });
 
-  // Refunding 220 gems when player only has 40 left removes frame-neon (280) and leaves 100 change!
+  // Refunding 220 gems with 20 left: the board (500) goes, and 300 comes back as change
   await s.handleWebhook({
     type: 'charge.refunded',
     data: { object: { id: 'ch_1', payment_intent: 'pi_refund', refunded: true, amount: 199, amount_refunded: 199, metadata: {} } },
   });
   const after = store.peek('33333333333333333');
-  assert.equal(after.owned.includes('frame-neon'), false);
-  assert.equal(after.equipped.frame, 'frame-none');
-  assert.equal(after.gems, 100);
+  assert.equal(after.owned.includes('board-lair'), false);
+  assert.equal(after.equipped.board, 'board-classic');
+  assert.equal(after.gems, 300);
 
   // Duplicate refund webhook is ignored (idempotent)
   await s.handleWebhook({
     type: 'charge.refunded',
     data: { object: { id: 'ch_1', payment_intent: 'pi_refund', refunded: true, amount: 199, amount_refunded: 199, metadata: {} } },
   });
-  assert.equal(store.peek('33333333333333333').gems, 100);
+  assert.equal(store.peek('33333333333333333').gems, 300);
 
   // Dispute on Battle Pass charge revokes pass immediately
   store.setPassUntil('33333333333333333', Date.now() + 20 * 86_400_000);

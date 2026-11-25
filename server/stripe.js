@@ -3,6 +3,8 @@
 // `setPassUntil`) with `stripe:<id>` idempotency keys so a payment can never pay out twice.
 import crypto from 'node:crypto';
 import { COIN_PACKS, PAID_ITEMS, TIPS } from '../shared/shop.js';
+import { passRewards, seasonMonth } from '../shared/pass.js';
+const PASS_GEMS = passRewards(seasonMonth(Date.now())).tiers.reduce((n, x) => n + (x.premium.gems || 0), 0);
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 
@@ -218,11 +220,10 @@ export class StripeStore {
         this.log.log?.(`🎟️ [Stripe] ${userId} Battle Pass until ${new Date(until).toISOString()}`);
       }
     } else {
-      const gems = item.kind === 'gems' ? item.gems : 0;
-      if (this.store.grantPurchase(userId, `stripe:${session.id}`, gems)) {
-        const g = { id: item.id, kind: item.kind, gems };
-        granted.push(g);
-        this.log.log?.(`💳 [Stripe] ${userId} bought ${item.id}${gems ? ` (+${gems} gems)` : ''}`);
+      const given = this.store.grantPaid(userId, `stripe:${session.id}`, item);
+      if (given) {
+        granted.push(given);
+        this.log.log?.(`💳 [Stripe] ${userId} bought ${item.id}${given.gems ? ` (+${given.gems} gems)` : ''}`);
       }
     }
     if (granted.length && this.onFulfill) this.onFulfill(userId, granted);
@@ -312,9 +313,12 @@ export class StripeStore {
         this.log.log?.(`↩️ [Stripe] Revoked Battle Pass for ${target.userId} (${event.type})`);
         return { handled: true, userId: target.userId, revoked: 'pass' };
       }
-      if (item.kind === 'gems') {
-        const res = this.store.revokePurchase(target.userId, revokeId, item.gems);
-        this.log.log?.(`↩️ [Stripe] Clawed back ${item.gems} gems from ${target.userId} (${event.type}, removed items: ${res.removedItems.join(',') || 'none'})`);
+      if (item.kind === 'gems' || item.kind === 'starter') {
+        // a first pack paid double: take back what was actually given
+        const doubled = target.sessionId && this.store.peek(target.userId)?.bought.includes(`stripe:${target.sessionId}:x2`);
+        const gems = item.gems * (doubled ? 2 : 1);
+        const res = this.store.revokePurchase(target.userId, revokeId, gems);
+        this.log.log?.(`↩️ [Stripe] Clawed back ${gems} gems from ${target.userId} (${event.type}, removed items: ${res.removedItems.join(',') || 'none'})`);
         return { handled: true, userId: target.userId, ...res };
       }
       return { handled: true, userId: target.userId };
@@ -334,7 +338,7 @@ export class StripeStore {
         const sess = list?.data?.[0];
         const uid = String(sess?.metadata?.userId || sess?.client_reference_id || '');
         const itemId = String(sess?.metadata?.itemId || '');
-        if (/^\d{5,25}$/.test(uid) && itemId) return { userId: uid, itemId };
+        if (/^\d{5,25}$/.test(uid) && itemId) return { userId: uid, itemId, sessionId: sess.id };
       }
     }
     if (charge.invoice) {
@@ -418,7 +422,7 @@ export function renderStorePage({ user, profile, prices, enabled, notice = '', a
   <div class="card pass">
     <h2>👑 Battle Pass</h2>
     <ul>
-      <li>Up to 615 Die Gems over the season</li>
+      <li>Up to ${PASS_GEMS} Die Gems over the season</li>
       <li>Exclusive boards, tokens &amp; sticker pack</li>
       <li>Gold name with crown in chat &amp; instant unlock of reached tiers</li>
     </ul>
