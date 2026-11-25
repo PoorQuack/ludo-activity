@@ -77,7 +77,12 @@ function build() {
       </div>
     </div>`;
   document.body.appendChild(el);
-  el.addEventListener('pointerdown', (e) => e.target === el && closeItemView());
+  let downOnBackdrop = false;
+  el.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === el; });
+  el.addEventListener('click', (e) => {
+    if (downOnBackdrop && e.target === el) closeItemView();
+    downOnBackdrop = false;
+  });
   el.querySelector('.item-close').addEventListener('click', closeItemView);
   window.addEventListener('keydown', (e) => e.key === 'Escape' && open && closeItemView());
 }

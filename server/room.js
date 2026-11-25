@@ -36,7 +36,7 @@ const EMOTE_TTL_MS = 3000;
 const LB_PER_BEATEN = 10; // v1 leaderboard points for each human finished ahead of (until Dec 2026)
 const LB_WIN_BONUS = 10; // …and for finishing ahead of every other human
 const TYPING_MS = 2500; // "is typing…" lasts this long after the last ping (clients ping every second)
-const BOT_NAMES = ['Bot Neko', 'Bot Mila', 'Bot Gigi', 'Bot Lizzy', 'Bot SamSam'];
+const BOT_NAMES = ['Bot Neko', 'Bot Mila', 'Bot Gigi', 'Bot Lizzy', 'Bot SamSam', 'Bot Coco'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 // What toSave() keeps of a room (see "surviving a server restart" below).
@@ -305,7 +305,7 @@ export class Room {
     this.requirePhase('lobby');
     this.requireHost(user);
     if (!this.validSeat(seat) || this.seats[seat]) throw new Error('That seat is taken');
-    this.seats[seat] = newBot(seat);
+    this.seats[seat] = newBot(seat, 'medium', this.seats);
     this.changed();
   }
 
@@ -322,7 +322,7 @@ export class Room {
   fillBots(user) {
     this.requirePhase('lobby');
     this.requireHost(user);
-    for (const i of MODES[this.mode].seats) if (!this.seats[i]) this.seats[i] = newBot(i);
+    for (const i of MODES[this.mode].seats) if (!this.seats[i]) this.seats[i] = newBot(i, 'medium', this.seats);
     this.changed();
   }
 
@@ -361,7 +361,7 @@ export class Room {
     }
     for (const o of old.filter((o) => o.s.bot)) {
       const i = allowed.includes(o.i) && !this.seats[o.i] ? o.i : free();
-      if (i !== undefined) this.seats[i] = newBot(i, o.s.level);
+      if (i !== undefined) this.seats[i] = newBot(i, o.s.level, this.seats);
     }
     this.changed();
   }
@@ -1541,6 +1541,9 @@ export class Room {
   }
 }
 
-function newBot(seat, level = 'medium') {
-  return { userId: `bot-${seat}`, name: BOT_NAMES[seat % BOT_NAMES.length], bot: true, connected: true, level };
+function newBot(seat, level = 'medium', seats = []) {
+  const taken = new Set(seats.filter((s) => s?.bot).map((s) => s.name));
+  const preferred = BOT_NAMES[seat % BOT_NAMES.length];
+  const name = !taken.has(preferred) ? preferred : BOT_NAMES.find((n) => !taken.has(n)) || preferred;
+  return { userId: `bot-${seat}`, name, bot: true, connected: true, level };
 }

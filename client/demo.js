@@ -39,7 +39,12 @@ function build() {
       <div class="demo-jump"></div>
     </div>`;
   document.body.appendChild(el);
-  el.addEventListener('pointerdown', (e) => e.target === el && closeDemo());
+  let downOnBackdrop = false;
+  el.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === el; });
+  el.addEventListener('click', (e) => {
+    if (downOnBackdrop && e.target === el) closeDemo();
+    downOnBackdrop = false;
+  });
   el.querySelector('.demo-close').addEventListener('click', closeDemo);
   window.addEventListener('keydown', (e) => e.key === 'Escape' && el && !el.classList.contains('hidden') && (e.stopImmediatePropagation(), closeDemo()), true);
   renderer = new BoardRenderer(el.querySelector('.demo-board'));

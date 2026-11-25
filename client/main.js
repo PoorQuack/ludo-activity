@@ -4714,7 +4714,12 @@ function closeSheets() {
   for (const el of document.querySelectorAll('.sheet-wrap')) el.classList.add('hidden');
 }
 for (const el of document.querySelectorAll('.sheet-wrap')) {
-  el.addEventListener('pointerdown', (e) => e.target === el && closeSheets());
+  let downOnBackdrop = false;
+  el.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === el; });
+  el.addEventListener('click', (e) => {
+    if (downOnBackdrop && e.target === el) closeSheets();
+    downOnBackdrop = false;
+  });
   for (const x of el.querySelectorAll('[data-sheet-close]')) x.addEventListener('click', closeSheets);
 }
 window.addEventListener('keydown', (e) => e.key === 'Escape' && closeSheets());

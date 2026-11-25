@@ -20,7 +20,12 @@ function build() {
   el.setAttribute('role', 'dialog');
   el.setAttribute('aria-modal', 'true');
   document.body.appendChild(el);
-  el.addEventListener('pointerdown', (e) => e.target === el && closeCoinStore());
+  let downOnBackdrop = false;
+  el.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === el; });
+  el.addEventListener('click', (e) => {
+    if (downOnBackdrop && e.target === el) closeCoinStore();
+    downOnBackdrop = false;
+  });
   window.addEventListener('keydown', (e) => e.key === 'Escape' && !el.classList.contains('hidden') && closeCoinStore());
   window.addEventListener('ludo-lang', () => !el.classList.contains('hidden') && render());
 }
