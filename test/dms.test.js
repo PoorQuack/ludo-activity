@@ -62,4 +62,18 @@ test('DirectMessages: allows non-friend DMs, enforces block, tracks unread count
   const threads = reloaded.threadsFor(alice.id);
   assert.equal(threads.length, 2);
   assert.equal(threads.find((t) => t.id === bob.id).unread, DM_KEEP);
+
+  // Recording games tracks both human-vs-human and solo/bot games cleanly across reload
+  profiles.get(alice.id);
+  profiles.recordGame(alice.id, { won: true, vsBotsOnly: true, captures: 3, sixes: 5 });
+  profiles.recordGame(alice.id, { won: false, vsBotsOnly: false, captures: 2, sixes: 4 });
+  profiles.flush();
+  const profReloaded = new ProfileStore(path.join(dir, 'profiles.json'), { now: () => clock });
+  const ap = profReloaded.peek(alice.id);
+  assert.equal(ap.played.games, 2);
+  assert.equal(ap.played.wins, 1);
+  assert.equal(ap.played.botGames, 1);
+  assert.equal(ap.played.botWins, 1);
+  assert.equal(ap.played.botCaptures, 3);
+  assert.equal(ap.played.botSixes, 5);
 });

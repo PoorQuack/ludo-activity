@@ -6,7 +6,7 @@ import { renderShop, itemPreview, commitShopSeen } from './shop-ui.js';
 import { TAUNT_FX } from './taunts.js';
 import { setSceneLighting, setSceneMode, sceneSwitch } from './scene.js';
 import { renderProfile, lookHtml, medalHtml } from './profile.js';
-import { playerLevel, BADGES, BADGES_BY_ID, levelFor } from '../shared/badges.js';
+import { playerLevel, BADGES, BADGES_BY_ID, LEVELS, levelFor } from '../shared/badges.js';
 import { openItemView, refreshItemView, closeItemView } from './item-view.js';
 import { D20 } from './d20.js';
 import { openCoinStore } from './coin-store.js';
@@ -4505,94 +4505,143 @@ function renderPlayerCardModal(u) {
   if (!u || !pcardEl || pcardEl.classList.contains('hidden')) return;
   pcardUser = u;
   const titleText = u.title && BADGES_BY_ID[u.title] ? t(BADGES_BY_ID[u.title].title) : t('Ludo player');
+  const badges = u.badges || {};
+  const earnedBadges = BADGES.filter((b) => (badges[b.id] || 0) > 0);
+  const earnedLevels = earnedBadges.reduce((n, b) => n + (badges[b.id] || 0), 0);
+  const pins = (u.pins || []).filter((id) => BADGES_BY_ID[id]);
+  const tierNames = ['Bronze', 'Silver', 'Gold'];
+  const pinHtml = pins.length
+    ? `<div class="pcard-pins">${pins.map((id) => medalHtml(BADGES_BY_ID[id], badges[id] || 1, 'tiny')).join('')}</div>`
+    : '';
+  const badgesHtml = earnedBadges.length
+    ? `<div class="pcard-badge-grid">${earnedBadges
+        .map((b) => {
+          const lvl = badges[b.id] || 0;
+          const pinned = pins.includes(b.id);
+          return `<div class="pcard-badge-pill${pinned ? ' pinned' : ''}" title="${escapeHtml(`${t(b.name)} · ${t(tierNames[lvl - 1] || 'Bronze')}`)}">${medalHtml(b, lvl, 'small')}<span><b>${escapeHtml(t(b.name))}</b><small>${escapeHtml(t(tierNames[lvl - 1] || 'Bronze'))}</small></span></div>`;
+        })
+        .join('')}</div>`
+    : `<p class="pcard-empty">${escapeHtml(t('No badges earned yet'))}</p>`;
+
   pcardEl.innerHTML = `
     <div class="modal-card pcard-box${u.vip ? ' vip' : ''}">
-      <button type="button" class="set-close pcard-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <div class="pcard-topbar">
+        <button type="button" class="set-close pcard-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+        ${u.friendState !== 'self' ? `<div class="pcard-more-wrap"><button type="button" class="set-close pcard-more" aria-label="${t('More options')}" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.75" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.75" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.75" fill="currentColor" stroke="none"/></svg></button><div class="pcard-menu hidden" role="menu"></div></div>` : ''}
+      </div>
       <div class="pcard-head">
-        <span class="avatar pcard-av"><span class="level-badge">${u.level || 0}</span></span>
+        <span class="avatar pcard-av"><span class="level-badge">${u.level || 1}</span></span>
         <div class="pcard-meta">
           <b class="pcard-name${u.vip ? ' vip' : ''}">${u.vip ? '👑 ' : ''}${escapeHtml(u.name)}</b>
           <small class="pcard-title">${escapeHtml(titleText)}</small>
-          ${u.pins?.length ? `<div class="pcard-pins">${u.pins.filter((id) => BADGES_BY_ID[id]).map((id) => `<span title="${escapeHtml(t(BADGES_BY_ID[id].title))}">${BADGES_BY_ID[id].icon}</span>`).join('')}</div>` : ''}
+          ${pinHtml}
         </div>
+        <div class="pcard-top-act"></div>
       </div>
       <div class="pcard-stats">
-        <div><b>${u.stats?.wins ?? 0}</b><small>${t('Wins')}</small></div>
-        <div><b>${u.stats?.games ?? 0}</b><small>${t('Games')}</small></div>
-        <div><b>${u.stats?.captures ?? 0}</b><small>${t('Captures')}</small></div>
+        <div><b>${(u.stats?.games ?? 0).toLocaleString()}</b><small>${t('Games')}</small></div>
+        <div><b>${(u.stats?.wins ?? 0).toLocaleString()}</b><small>${t('Wins')}</small></div>
+        <div><b>${(u.stats?.captures ?? 0).toLocaleString()}</b><small>${t('Captures')}</small></div>
+        <div><b>${(u.stats?.sixes ?? 0).toLocaleString()}</b><small>${t('Sixes')}</small></div>
       </div>
-      <div class="pcard-actions"></div>
+      <div class="pcard-badges">
+        <div class="pcard-sec-head"><span>${t('Badges')}</span><small>${earnedLevels}/${BADGES.length * LEVELS.length}</small></div>
+        ${badgesHtml}
+      </div>
+      <div class="pcard-foot"></div>
     </div>`;
   pcardEl.querySelector('.pcard-close').addEventListener('click', closePlayerCardModal);
   const av = pcardEl.querySelector('.pcard-av');
   fillAvatar(av, { id: u.id, name: u.name, avatar: u.avatar });
   setFrame(av, u.frame);
-  const acts = pcardEl.querySelector('.pcard-actions');
-  if (u.friendState !== 'self' && u.friendState !== 'guest' && !u.blocked) {
-    const msgBtn = document.createElement('button');
-    msgBtn.type = 'button';
-    msgBtn.className = 'btn primary small';
-    msgBtn.textContent = `💬 ${t('Message')}`;
-    msgBtn.addEventListener('click', () => openDm(u.id, u.name));
-    acts.appendChild(msgBtn);
-  }
+
+  // Top action: Add as friend / Requested / Accept / Friends
+  const topAct = pcardEl.querySelector('.pcard-top-act');
   if (u.friendState === 'friends') {
     const tag = document.createElement('span');
     tag.className = 'pcard-tag';
     tag.textContent = `✓ ${t('Friends')}`;
-    acts.appendChild(tag);
-    const rem = document.createElement('button');
-    rem.type = 'button';
-    rem.className = 'btn quiet small';
-    rem.textContent = t('Remove');
-    rem.title = t('Remove friend');
-    rem.addEventListener('click', () => {
-      if (confirmRemove({ name: u.name })) ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: u.id }));
-    });
-    acts.appendChild(rem);
+    topAct.appendChild(tag);
   } else if (u.friendState === 'sent') {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'btn small';
     b.textContent = t('Requested');
     b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'cancel', id: u.id })));
-    acts.appendChild(b);
+    topAct.appendChild(b);
   } else if (u.friendState === 'incoming') {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'btn primary small';
     b.textContent = t('Accept');
     b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'accept', id: u.id })));
-    acts.appendChild(b);
+    topAct.appendChild(b);
   } else if (u.friendState === 'none' && !u.blocked) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'btn small';
-    b.textContent = t('+ Add');
-    b.title = t('Send a friend request');
+    b.textContent = t('Add as friend');
     b.addEventListener('click', () => ws?.send(JSON.stringify({ type: 'friend', op: 'add', id: u.id })));
-    acts.appendChild(b);
+    topAct.appendChild(b);
   }
-  if (u.friendState !== 'self' && u.friendState !== 'guest') {
-    const blk = document.createElement('button');
-    blk.type = 'button';
-    blk.className = 'btn quiet small';
-    blk.textContent = u.blocked ? t('Unblock') : t('Block');
-    blk.addEventListener('click', () => {
-      ws?.send(JSON.stringify({ type: 'friend', op: u.blocked ? 'unblock' : 'block', id: u.id }));
-    });
-    acts.appendChild(blk);
-  }
-  if (u.friendState !== 'self') {
-    const m = document.createElement('button');
-    m.type = 'button';
-    m.className = 'btn quiet small';
-    m.textContent = muted.has(u.id) ? t('Unmute') : t('Mute');
-    m.addEventListener('click', () => {
+
+  // Top-right 3-dots menu: Mute, Block, Remove as friend (if friends)
+  const moreBtn = pcardEl.querySelector('.pcard-more');
+  const menu = pcardEl.querySelector('.pcard-menu');
+  if (moreBtn && menu) {
+    const addMenuItem = (label, cls, fn) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.setAttribute('role', 'menuitem');
+      if (cls) item.className = cls;
+      item.textContent = label;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.add('hidden');
+        moreBtn.setAttribute('aria-expanded', 'false');
+        fn();
+      });
+      menu.appendChild(item);
+    };
+    addMenuItem(muted.has(u.id) ? t('Unmute') : t('Mute'), '', () => {
       toggleMute(u.id);
       renderPlayerCardModal(u);
     });
-    acts.appendChild(m);
+    if (u.friendState !== 'guest') {
+      addMenuItem(u.blocked ? t('Unblock') : t('Block'), u.blocked ? '' : 'danger', () => {
+        ws?.send(JSON.stringify({ type: 'friend', op: u.blocked ? 'unblock' : 'block', id: u.id }));
+      });
+    }
+    if (u.friendState === 'friends') {
+      addMenuItem(t('Remove friend'), 'danger', () => {
+        if (confirmRemove({ name: u.name })) ws?.send(JSON.stringify({ type: 'friend', op: 'remove', id: u.id }));
+      });
+    }
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = menu.classList.toggle('hidden');
+      moreBtn.setAttribute('aria-expanded', String(!open));
+    });
+    pcardEl.querySelector('.pcard-box').addEventListener('click', () => {
+      menu.classList.add('hidden');
+      moreBtn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // Bottom primary Message button (no emoji)
+  const foot = pcardEl.querySelector('.pcard-foot');
+  if (u.friendState !== 'self' && u.friendState !== 'guest' && !u.blocked) {
+    const msgBtn = document.createElement('button');
+    msgBtn.type = 'button';
+    msgBtn.className = 'btn primary pcard-msg-btn';
+    msgBtn.textContent = t('Message');
+    msgBtn.addEventListener('click', () => openDm(u.id, u.name));
+    foot.appendChild(msgBtn);
+  } else if (u.blocked) {
+    const note = document.createElement('p');
+    note.className = 'pcard-empty';
+    note.textContent = t('You blocked this player');
+    foot.appendChild(note);
   }
 }
 

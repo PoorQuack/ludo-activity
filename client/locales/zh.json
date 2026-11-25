@@ -982,5 +982,9 @@
   "Pick someone to message": "选择要发送消息的玩家",
   "Unblock": "取消屏蔽",
   "Unblock this player to message them": "取消屏蔽该玩家后即可发送消息",
-  "You cannot message this player": "你无法向该玩家发送消息"
+  "You cannot message this player": "你无法向该玩家发送消息",
+  "Add as friend": "添加好友",
+  "More options": "更多选项",
+  "No badges earned yet": "暂未获得徽章",
+  "You blocked this player": "你已屏蔽该玩家"
 }

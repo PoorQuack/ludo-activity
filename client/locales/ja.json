@@ -982,5 +982,9 @@
   "Pick someone to message": "メッセージ相手を選んでください",
   "Unblock": "ブロック解除",
   "Unblock this player to message them": "メッセージを送るにはブロックを解除してください",
-  "You cannot message this player": "このプレイヤーにはメッセージを送れません"
+  "You cannot message this player": "このプレイヤーにはメッセージを送れません",
+  "Add as friend": "フレンド追加",
+  "More options": "その他のオプション",
+  "No badges earned yet": "まだバッジがありません",
+  "You blocked this player": "このプレイヤーをブロックしています"
 }

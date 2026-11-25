@@ -22,6 +22,7 @@ import { LobbyChat, channelId } from './lobbychat.js';
 import { DirectMessages } from './dms.js';
 import { Translator, LANGS } from './translate.js';
 import { PASS_XP } from '../shared/pass.js';
+import { playerLevel } from '../shared/badges.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3001);
@@ -1043,12 +1044,15 @@ wss.on('connection', (ws, req) => {
         else if (meSocial.out.some((r) => r.id === targetId)) friendState = 'sent';
         else if (meSocial.in.some((r) => r.id === targetId)) friendState = 'incoming';
         const badges = p?.badges || {};
-        const level = Object.values(badges).reduce((s, n) => s + (Number(n) || 0), 0);
+        const level = p ? playerLevel(p) : 1;
         const monthLb = leaderboard.boards?.month?.scores?.[targetId];
         const allLb = leaderboard.allTime?.scores?.[targetId];
-        const wins = Math.max(p?.stats?.win || 0, allLb?.wins || 0, monthLb?.wins || 0);
-        const games = Math.max(allLb?.games || 0, monthLb?.games || 0, wins);
-        const captures = p?.stats?.capture || 0;
+        const botWins = p?.played?.botWins || 0;
+        const botGames = p?.played?.botGames || 0;
+        const wins = Math.max(p?.played?.wins || 0, (p?.stats?.win || 0) + botWins, (allLb?.wins || 0) + botWins, (monthLb?.wins || 0) + botWins);
+        const games = Math.max(p?.played?.games || 0, (allLb?.games || 0) + botGames, (monthLb?.games || 0) + botGames, wins);
+        const captures = (p?.stats?.capture || 0) + (p?.played?.botCaptures || 0);
+        const sixes = (p?.stats?.six || 0) + (p?.played?.botSixes || 0);
         return send({
           type: 'playerProfile',
           user: {
@@ -1058,9 +1062,10 @@ wss.on('connection', (ws, req) => {
             vip: !!(p && store.passActive(p)),
             frame: p?.equipped?.frame || 'frame-none',
             title: p?.title || '',
+            badges,
             pins: Array.isArray(p?.pins) ? p.pins : [],
             level,
-            stats: { games, wins, captures },
+            stats: { games, wins, captures, sixes, botGames },
             friendState,
             blocked: social.isBlocked(ctx.user.id, targetId),
           },

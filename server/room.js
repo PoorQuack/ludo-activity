@@ -1092,6 +1092,20 @@ export class Room {
     this.clearTimer();
     const pot = this.pot; // (payPot settles and clears it)
     const results = this.giveRewards();
+    if (!this.rigged && this.profiles?.recordGame) {
+      const humans = this.activeSeats().filter((s) => !this.seats[s].bot);
+      const vsBotsOnly = humans.length < 2;
+      const winTeam = this.teamOrder ? this.teamOrder[0] : -1;
+      for (const s of humans) {
+        const won = !this.forfeited.includes(s) && (winTeam >= 0 ? this.teams[winTeam].includes(s) : this.winners[0] === s);
+        this.profiles.recordGame(this.seats[s].userId, {
+          won,
+          vsBotsOnly,
+          captures: this.captures[s] || 0,
+          sixes: this.tally[s]?.six || 0,
+        });
+      }
+    }
     this.payPot();
     this.reportResults(results, pot);
     this.changed();

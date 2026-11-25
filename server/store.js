@@ -476,6 +476,22 @@ export class ProfileStore {
     this.changed(id);
   }
 
+  // Record every finished non-rigged game (both against people and against bots) for player profile totals.
+  recordGame(id, { won = false, vsBotsOnly = false, captures = 0, sixes = 0 } = {}) {
+    if (!id || String(id).startsWith('guest-')) return;
+    const p = this.peek(id);
+    if (!p) return;
+    p.played.games += 1;
+    if (won) p.played.wins += 1;
+    if (vsBotsOnly) {
+      p.played.botGames += 1;
+      if (won) p.played.botWins += 1;
+      p.played.botCaptures += Math.max(0, Number(captures) || 0);
+      p.played.botSixes += Math.max(0, Number(sixes) || 0);
+    }
+    this.changed(id);
+  }
+
   // ---------- badges (shared/badges.js) ----------
 
   // A stat from a game against people (captures, wins…): lifetime totals for the badges
@@ -623,7 +639,16 @@ function normalize(p) {
     login: /^\d{4}-\d{2}-\d{2}$/.test(p.pass?.login || '') ? p.pass.login : '',
   };
   const passUntil = Number.isFinite(p.passUntil) && p.passUntil > 0 ? p.passUntil : 0;
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, badges, title, pins, pass, passUntil };
+  const nonNeg = (v) => (Number.isInteger(v) && v >= 0 ? v : 0);
+  const played = {
+    games: nonNeg(p.played?.games),
+    wins: nonNeg(p.played?.wins),
+    botGames: nonNeg(p.played?.botGames),
+    botWins: nonNeg(p.played?.botWins),
+    botCaptures: nonNeg(p.played?.botCaptures),
+    botSixes: nonNeg(p.played?.botSixes),
+  };
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, played, badges, title, pins, pass, passUntil };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }
