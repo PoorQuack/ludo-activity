@@ -120,9 +120,10 @@ function fakeNvidia(calls, { fail = false, langs = {} } = {}) {
         if (langs[text] === 'fail') return { ok: false, status: 429 };
         return { ok: true, json: async () => ({ choices: [{ message: { content: langs[text] ?? 'und' } }] }) };
       }
-      calls.push({ pair: body.messages[0].content, text, auth: init.headers.authorization });
+      const last = body.messages.at(-1).content;
+      calls.push({ pair: body.messages[0].content, text: last, shots: body.messages.length - 2, auth: init.headers.authorization });
       if (fail) return { ok: false, status: 503 };
-      return { ok: true, json: async () => ({ choices: [{ message: { content: `${body.messages[0].content}: ${text}` } }] }) };
+      return { ok: true, json: async () => ({ choices: [{ message: { content: `${body.messages[0].content}: ${last}` } }] }) };
     }
     calls.push({ google: true });
     const qs = new URL(url).searchParams.getAll('q');
@@ -145,6 +146,7 @@ test('with a key, the language check tells Riva Translate the pair', async () =>
   const tr = new Translator({ fetch: fakeNvidia(calls, { langs }), nvidiaKey: 'k' });
   assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'es-es-en: hola amigo', from: 'es' });
   assert.equal(calls.find((c) => c.pair).auth, 'Bearer k');
+  assert.equal(calls.find((c) => c.pair).shots, 6); // three worked examples, Spanish -> English
   // the writer's setting picks between neighbours (Spain / Latin America, Danish / Norwegian)
   assert.equal((await tr.translate('ann', 'hola amigo', 'fr', 'es-419')).text, 'en-fr: es-us-en: hola amigo');
   assert.equal((await tr.translate('ann', 'jeg vil spille igen', 'en', 'da')).from, 'da');
@@ -172,9 +174,11 @@ test('when the language check is busy, the writer and the alphabet decide; when 
   assert.ok(calls.at(-1).google);
 });
 
-test('chat languages: locales map onto the 37', async () => {
+test('chat languages: locales map onto the 37, each with its Ludo examples', async () => {
   const { matchChatLanguage, CHAT_LANGUAGES } = await import('../shared/chatlangs.js');
+  const { LUDO_PHRASES } = await import('../shared/ludo-phrases.js');
   assert.equal(CHAT_LANGUAGES.length, 37);
+  for (const l of CHAT_LANGUAGES) assert.equal(LUDO_PHRASES[l.code]?.length, 3, l.code);
   for (const [loc, code] of [['sv-SE', 'sv'], ['pt-PT', 'pt-PT'], ['pt-BR', 'pt'], ['es-ES', 'es'], ['es-419', 'es-419'], ['zh-TW', 'zh-TW'], ['zh-CN', 'zh'], ['nb', 'no'], ['xx', null]])
     assert.equal(matchChatLanguage(loc), code, loc);
 });

@@ -9,6 +9,7 @@
 // can't run up requests.
 
 import { CHAT_CODES, CHAT_LANG, normalizeDetected } from '../shared/chatlangs.js';
+import { LUDO_PHRASES } from '../shared/ludo-phrases.js';
 
 const GOOGLE = 'https://clients5.google.com/translate_a/t';
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
@@ -225,6 +226,11 @@ export class Translator {
           model: RIVA_MODEL,
           messages: [
             { role: 'system', content: `${CHAT_LANG[from].riva}-${CHAT_LANG[to].riva}` },
+            // worked examples, so it knows it's a dice game (shared/ludo-phrases.js)
+            ...(LUDO_PHRASES[from] || []).flatMap((line, i) => [
+              { role: 'user', content: line },
+              { role: 'assistant', content: LUDO_PHRASES[to][i] },
+            ]),
             { role: 'user', content: text.slice(0, 1900) },
           ],
           temperature: 0,
