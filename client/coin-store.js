@@ -127,15 +127,17 @@ async function buy(id, btn) {
     await ctx.sdk.commands.startPurchase({ sku_id: sku });
     ctx.onBought(); // ask the server to check with Discord and pay out
   } catch (err) {
-    const msg = String(err?.message || err || '').trim();
-    if (/cancel|closed|dismiss|abort/i.test(msg)) return;
+    const detail = err?.message || (typeof err === 'string' ? err : err ? JSON.stringify(err) : '');
+    if (/cancel|closed|dismiss|abort/i.test(detail)) return;
     console.warn('startPurchase failed:', err);
+    const why = [err?.code != null && !String(detail).includes(String(err.code)) ? `[${err.code}]` : '', detail].filter(Boolean).join(' ').trim();
     if (ctx.sdk.platform === 'mobile') {
       mobileUnavailable = true;
       render();
-      ctx.toast?.(t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy."), 'notice', 5000);
+      const base = t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.");
+      ctx.toast?.(why ? `${base} (${why})` : base, 'notice', 6500);
     } else {
-      ctx.toast?.(msg ? t('Purchase failed: {why}', { why: msg }) : t('Purchase could not be started.'), 'err', 4500);
+      ctx.toast?.(why ? t('Purchase failed: {why}', { why }) : t('Purchase could not be started.'), 'err', 4500);
     }
   } finally {
     btn.disabled = false;

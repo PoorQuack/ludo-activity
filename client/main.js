@@ -4446,13 +4446,15 @@ async function buyPass(btn) {
     await discordSdk.commands.startPurchase({ sku_id: passSku() });
     claimPurchases();
   } catch (err) {
-    const msg = String(err?.message || err || '').trim();
-    if (/cancel|closed|dismiss|abort/i.test(msg)) return;
+    const detail = err?.message || (typeof err === 'string' ? err : err ? JSON.stringify(err) : '');
+    if (/cancel|closed|dismiss|abort/i.test(detail)) return;
     console.warn('Battle Pass startPurchase failed:', err);
+    const why = [err?.code != null && !String(detail).includes(String(err.code)) ? `[${err.code}]` : '', detail].filter(Boolean).join(' ').trim();
     if (discordSdk.platform === 'mobile') {
-      toast(t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy."), 'notice', 5000);
+      const base = t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.");
+      toast(why ? `${base} (${why})` : base, 'notice', 6500);
     } else {
-      toast(msg ? t('Purchase failed: {why}', { why: msg }) : t('Purchase could not be started.'), 'err', 4500);
+      toast(why ? t('Purchase failed: {why}', { why }) : t('Purchase could not be started.'), 'err', 4500);
     }
   } finally {
     btn.disabled = false;
