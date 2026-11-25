@@ -108,50 +108,67 @@ test('a failed translation says so plainly', async () => {
   }
 });
 
-// A stand-in for NVIDIA's endpoint: answers "<pair>: <text>", and Google as a fallback
-function fakeNvidia(calls, { fail = false } = {}) {
+// A stand-in for NVIDIA's endpoint: the language check answers from `langs` (text -> code, or
+// 'fail'); Riva answers "<pair>: <text>". Google is the fallback.
+function fakeNvidia(calls, { fail = false, langs = {} } = {}) {
   return async (url, init = {}) => {
     if (url.includes('nvidia')) {
       const body = JSON.parse(init.body);
-      calls.push({ pair: body.messages[0].content, text: body.messages[1].content, auth: init.headers.authorization });
+      const text = body.messages[1].content;
+      if (body.model.includes('lightning')) {
+        calls.push({ detect: text });
+        if (langs[text] === 'fail') return { ok: false, status: 429 };
+        return { ok: true, json: async () => ({ choices: [{ message: { content: langs[text] ?? 'und' } }] }) };
+      }
+      calls.push({ pair: body.messages[0].content, text, auth: init.headers.authorization });
       if (fail) return { ok: false, status: 503 };
-      return { ok: true, json: async () => ({ choices: [{ message: { content: `${body.messages[0].content}: ${body.messages[1].content}` } }] }) };
+      return { ok: true, json: async () => ({ choices: [{ message: { content: `${body.messages[0].content}: ${text}` } }] }) };
     }
     calls.push({ google: true });
     const qs = new URL(url).searchParams.getAll('q');
     return { ok: true, json: async () => qs.map((q) => [q.toUpperCase(), 'es']) };
   };
 }
-
-test('with a key, Riva Translate is told the pair, from the writer\'s chat language', async () => {
-  const calls = [];
-  const tr = new Translator({ fetch: fakeNvidia(calls), nvidiaKey: 'k' });
-  assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'es'), { text: 'es-es-en: hola amigo', from: 'es' });
-  assert.equal(calls[0].auth, 'Bearer k');
-  // 37 languages: Swedish to Brazilian Portuguese goes through English
-  const r = await tr.translate('ann', 'hej på dig', 'pt', 'sv');
-  assert.equal(r.text, 'en-pt-br: sv-en: hej på dig');
-  assert.equal(r.from, 'sv');
-  // the alphabet beats the hint; English slang from a Spanish player is English
-  await tr.translate('ann', '안녕하세요', 'en', 'es');
-  assert.equal(calls.at(-1).pair, 'ko-en');
-  await tr.translate('ann', 'gg nice game', 'fr', 'es');
-  assert.equal(calls.at(-1).pair, 'en-fr');
-  // no good guess (Latin letters, no hint): Google detects it
-  await tr.translate('ann', 'bonjour', 'en');
-  assert.ok(calls.at(-1).google);
-});
-
-test('when Riva fails, Google takes over', async () => {
-  const calls = [];
-  const tr = new Translator({ fetch: fakeNvidia(calls, { fail: true }), nvidiaKey: 'k' });
+const quiet = async (fn) => {
   const err = console.error;
   console.error = () => {};
   try {
-    assert.deepEqual(await tr.translate('ann', 'hola', 'en', 'es'), { text: 'HOLA', from: 'es' });
+    return await fn();
   } finally {
     console.error = err;
   }
+};
+
+test('with a key, the language check tells Riva Translate the pair', async () => {
+  const calls = [];
+  const langs = { 'hola amigo': 'es', 'hej på dig': 'sv', 'jeg vil spille igen': 'no', 'Callate ik u aint': 'es', 'hello there': 'en', 'ok': 'und' };
+  const tr = new Translator({ fetch: fakeNvidia(calls, { langs }), nvidiaKey: 'k' });
+  assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'es-es-en: hola amigo', from: 'es' });
+  assert.equal(calls.find((c) => c.pair).auth, 'Bearer k');
+  // the writer's setting picks between neighbours (Spain / Latin America, Danish / Norwegian)
+  assert.equal((await tr.translate('ann', 'hola amigo', 'fr', 'es-419')).text, 'en-fr: es-us-en: hola amigo');
+  assert.equal((await tr.translate('ann', 'jeg vil spille igen', 'en', 'da')).from, 'da');
+  // 37 languages: Swedish to Brazilian Portuguese goes through English
+  assert.equal((await tr.translate('ann', 'hej på dig', 'pt', 'en')).text, 'en-pt-br: sv-en: hej på dig');
+  // mixed Spanish and English
+  assert.equal((await tr.translate('ann', 'Callate ik u aint', 'en', '')).text, 'es-es-en: Callate ik u aint');
+  // already in their language: nothing translated, nothing more asked
+  const before = calls.length;
+  assert.deepEqual(await tr.translate('ann', 'hello there', 'en', 'es'), { text: 'hello there', from: 'en' });
+  assert.equal(calls.length, before + 1); // just the check
+  // the check said "und" and nothing else gives a clue: Google detects it
+  await tr.translate('ann', 'ok', 'fr', '');
+  assert.ok(calls.at(-1).google);
+});
+
+test('when the language check is busy, the writer and the alphabet decide; when Riva fails, Google', async () => {
+  const calls = [];
+  const langs = { '안녕하세요': 'fail', 'hola': 'fail' };
+  const tr = new Translator({ fetch: fakeNvidia(calls, { langs }), nvidiaKey: 'k' });
+  await quiet(() => tr.translate('ann', '안녕하세요', 'en', 'es'));
+  assert.equal(calls.at(-1).pair, 'ko-en');
+  const broken = new Translator({ fetch: fakeNvidia(calls, { fail: true, langs: { hola: 'es' } }), nvidiaKey: 'k' });
+  assert.deepEqual(await quiet(() => broken.translate('ann', 'hola', 'en', 'es')), { text: 'HOLA', from: 'es' });
   assert.ok(calls.at(-1).google);
 });
 
