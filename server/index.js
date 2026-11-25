@@ -1000,22 +1000,23 @@ wss.on('connection', (ws, req) => {
         else if (meSocial.in.some((r) => r.id === targetId)) friendState = 'incoming';
         const badges = p?.badges || {};
         const level = Object.values(badges).reduce((s, n) => s + (Number(n) || 0), 0);
+        const monthLb = leaderboard.boards?.month?.scores?.[targetId];
+        const allLb = leaderboard.allTime?.scores?.[targetId];
+        const wins = Math.max(p?.stats?.win || 0, allLb?.wins || 0, monthLb?.wins || 0);
+        const games = Math.max(allLb?.games || 0, monthLb?.games || 0, wins);
+        const captures = p?.stats?.capture || 0;
         return send({
           type: 'playerProfile',
           user: {
             id: targetId,
-            name: social.names.get(targetId) || 'Player',
+            name: social.names.get(targetId) || monthLb?.name || allLb?.name || 'Player',
             avatar: !targetId.startsWith('guest-') && social.avatars.has(targetId),
             vip: !!(p && store.passActive(p)),
             frame: p?.equipped?.frame || 'frame-none',
             title: p?.title || '',
             pins: Array.isArray(p?.pins) ? p.pins : [],
             level,
-            stats: {
-              games: p?.stats?.games || 0,
-              wins: p?.stats?.wins || 0,
-              captures: p?.stats?.captures || 0,
-            },
+            stats: { games, wins, captures },
             friendState,
           },
         });
