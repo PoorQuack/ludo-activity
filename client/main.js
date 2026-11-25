@@ -5097,10 +5097,20 @@ function renderLobbyChat() {
   const replyFn = (m) => setLobbyReply(m);
   const reactFn = (m, emoji) => sendLobbyOrDmReact(m.id, emoji);
   let prev = null;
+  let lastAt = 0;
   for (const m of msgs) {
     const stickerOnly = isStickerOnly(m.text);
     const isMe = m.userId === me?.id;
-    const line = buildChatLine({ msg: m, isMe, scope: isDm ? 'dm' : scope, logEl: log, stickerOnly, showTime: true, onReply: replyFn, onReact: reactFn });
+    // the time, centred, when a while has passed (as in the game's chat)
+    if (m.at && (!lastAt || m.at - lastAt > 5 * 60_000)) {
+      const stamp = document.createElement('li');
+      stamp.className = 'chat-time';
+      stamp.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
+      log.appendChild(stamp);
+      prev = null;
+    }
+    lastAt = m.at || lastAt;
+    const line = buildChatLine({ msg: m, isMe, scope: isDm ? 'dm' : scope, logEl: log, stickerOnly, showTime: false, onReply: replyFn, onReact: reactFn });
 
     if (!stickerOnly && !m.replyTo && prev && !prev.stickerOnly && prev.userId === m.userId) {
       prev.body.appendChild(line);
@@ -5108,26 +5118,34 @@ function renderLobbyChat() {
     }
 
     const li = document.createElement('li');
-    li.className = `lchat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
-    if (m.replyTo) appendReplyQuote(li, m.replyTo, log);
-    const author = document.createElement('button');
-    author.type = 'button';
-    author.className = 'lchat-who-btn';
-    author.addEventListener('click', () => inspectPlayer(m.userId, m.name));
-    const av = document.createElement('span');
-    av.className = 'avatar lchat-av';
+    // Like the game's chat: their picture, the name on top, a bubble under it in their own colour
+    li.className = `chat-msg lchat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
+    if (!isMe) li.style.setProperty('--seat-col', `hsl(${[...String(m.userId)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0)} 55% 48%)`);
+    const av = document.createElement('button');
+    av.type = 'button';
+    av.className = 'avatar chat-av';
+    av.setAttribute('aria-label', m.name || '');
     fillAvatar(av, { id: m.userId, name: m.name, avatar: !String(m.userId).startsWith('guest-') });
     setFrame(av, m.frame);
-    author.appendChild(av);
-    const who = document.createElement('span');
-    who.className = `who${m.vip ? ' vip' : ''}`;
-    who.textContent = (m.vip ? '👑 ' : '') + m.name;
-    author.appendChild(who);
-    li.appendChild(author);
+    av.addEventListener('click', () => inspectPlayer(m.userId, m.name));
+    li.appendChild(av);
+    const col2 = document.createElement('div');
+    col2.className = 'chat-col';
+    const who = document.createElement('button');
+    who.type = 'button';
+    who.className = `who who-btn${m.vip ? ' vip' : ''}`;
+    who.textContent = (m.vip ? '👑 ' : '') + (m.name || '');
+    who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
+    col2.appendChild(who);
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    if (m.replyTo) appendReplyQuote(bubble, m.replyTo, log);
     const body = document.createElement('div');
-    body.className = 'lchat-body';
+    body.className = 'chat-body lchat-body';
     body.appendChild(line);
-    li.appendChild(body);
+    bubble.appendChild(body);
+    col2.appendChild(bubble);
+    li.appendChild(col2);
     log.appendChild(li);
     prev = stickerOnly ? null : { userId: m.userId, stickerOnly, body };
   }
