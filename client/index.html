@@ -80,23 +80,22 @@
               <button data-i18n id="leave-btn" class="btn big">Leave room</button>
             </section>
 
-            <!-- The two ways to play: Classic (straight into an open game) and Power (teams, quick games, what's coming) -->
+            <!-- The two main ways to play: Classic and Stakes Rooms, with Power Cards coming soon -->
             <div id="play-card" class="hero-row">
               <button id="play-now" class="hero-card hero-classic" type="button">
                 <span class="hero-art" aria-hidden="true"><i class="ha-board"></i><i class="ha-pawn p1"></i><i class="ha-pawn p2"></i><i class="ha-die"></i></span>
                 <span class="hero-text"><b data-i18n>CLASSIC</b><small data-i18n>Jump into an open game</small></span>
                 <span class="hero-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" /></svg></span>
               </button>
-              <button id="power-btn" class="hero-card hero-power locked" type="button" disabled aria-disabled="true">
+              <button id="stakes-btn" class="hero-card hero-power" type="button" aria-haspopup="dialog">
                 <span class="hero-art" aria-hidden="true"><i class="ha-bolt"></i><i class="ha-card c1"></i><i class="ha-card c2"></i></span>
-                <span class="hero-text"><b data-i18n>POWER</b><small data-i18n>Coming soon</small></span>
-                <span class="hero-go" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg></span>
+                <span class="hero-text"><b data-i18n>Stakes Rooms</b><small data-i18n>Win the pot</small></span>
+                <span class="hero-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" /></svg></span>
               </button>
             </div>
-            <div class="tile-row">
-              <button id="stakes-btn" class="hub-tile tile-stakes" type="button" aria-haspopup="dialog"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="5.5" /><path d="M14.4 9.6A5.5 5.5 0 1 1 9.6 14.4" /><path d="M9 6.5v5M7.3 7.8h2.6a1 1 0 0 1 0 2H8.1a1 1 0 0 0 0 2h2.6" /></svg><span class="tile-text"><b data-i18n>Stakes Rooms</b><small data-i18n>Win the pot</small></span></button>
-              <button id="friends-tile" class="hub-tile tile-friends" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM16.5 10.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 19.5a5.5 5.5 0 0 1 11 0M11 19.5a5.5 5.5 0 0 1 11 0" /></svg><span class="tile-text"><b data-i18n>Friends</b><small data-i18n>Private room</small></span></button>
-              <button id="bots-tile" class="hub-tile tile-bots" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="8" width="15" height="11" rx="3" /><path d="M12 4.5V8M9 13h.01M15 13h.01M9.5 16.2h5M2.5 13v2M21.5 13v2" /><circle cx="12" cy="3.6" r="1.1" /></svg><span class="tile-text"><b data-i18n>Vs. Bots</b><small data-i18n>Practice</small></span></button>
+            <div class="soon-card hub-soon" aria-label="Coming soon" data-i18n-attr="aria-label">
+              <div class="soon-art" aria-hidden="true"><i class="pc pc1">✦</i><i class="pc pc2">⇄</i><i class="pc pc3">🛡</i><i class="sd">✸</i></div>
+              <div class="soon-text"><span class="soon-tag" data-i18n>Coming soon</span><b data-i18n>Power Cards &amp; Special Dice</b><small data-i18n>Swap places, shield a token, roll a die with its own faces. Being made now.</small></div>
             </div>
 
             <!-- Rooms: make your own, join with a code, or pick an open one -->

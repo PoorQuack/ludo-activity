@@ -4724,11 +4724,6 @@ for (const el of document.querySelectorAll('.sheet-wrap')) {
 }
 window.addEventListener('keydown', (e) => e.key === 'Escape' && closeSheets());
 
-// CLASSIC is "Play now" (#play-now, wired above). POWER is locked while still under development.
-$('power-btn').addEventListener('click', (e) => {
-  if (e.currentTarget.disabled) return;
-  openSheet('power-sheet');
-});
 for (const b of document.querySelectorAll('[data-power]')) {
   b.addEventListener('click', () => {
     closeSheets();
@@ -4737,17 +4732,6 @@ for (const b of document.querySelectorAll('[data-power]')) {
     else sendLobby('create', { visibility: 'public', mode: what });
   });
 }
-
-// Friends tile: a private room to bring your friends into (invite them from the Friends tab)
-$('friends-tile').addEventListener('click', () => {
-  sendLobby('create', { visibility: 'private' });
-  toast(t('Private room made: invite friends from the Friends tab, or share the code'), 'ok', 4500);
-});
-// Vs. Bots: a private room that fills itself with bots and starts (practice: no coins)
-$('bots-tile').addEventListener('click', () => {
-  afterCreate = 'bots';
-  sendLobby('create', { visibility: 'private' });
-});
 
 // Stakes Rooms: pick one stake (100 .. 10,000 Gold Coins) with left/right arrows or join an open one
 let chosenStake = STAKES[1] || 100;
