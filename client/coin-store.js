@@ -135,7 +135,8 @@ async function buy(id, btn) {
       mobileUnavailable = true;
       render();
       const base = t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.");
-      ctx.toast?.(why ? `${base} (${why})` : base, 'notice', 6500);
+      const unsupported = err?.code === 4002 || /unsupported command/i.test(detail);
+      ctx.toast?.(why && !unsupported ? `${base} (${why})` : base, 'notice', 5500);
     } else {
       ctx.toast?.(why ? t('Purchase failed: {why}', { why }) : t('Purchase could not be started.'), 'err', 4500);
     }
