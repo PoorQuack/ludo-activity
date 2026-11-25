@@ -80,3 +80,15 @@ test('the subscription comes from Discord: never consumed, open until its period
   assert.ok(!calls.some(([m]) => m === 'POST'), 'a subscription is never consumed');
   assert.deepEqual(await p.claim('123456789'), []); // nothing new
 });
+
+test('a test subscription without ends_at only notifies once across logins', async () => {
+  const c = clock('2026-11-25T11:00Z');
+  const store = new ProfileStore(null, { now: c.now });
+  const fetchImpl = async () => ({ ok: true, json: async () => [{ id: '90000002', sku_id: '70000001', user_id: '123456789', ends_at: null }] });
+  const p = new Purchases({ appId: '1', token: 't', skus: parseSkus('pass:70000001'), store, fetchImpl, log: {} });
+  const first = await p.claim('123456789');
+  assert.equal(first.length, 1);
+  assert.equal(first[0].kind, 'pass');
+  c.t += 60_000; // reopen the game a minute later
+  assert.deepEqual(await p.claim('123456789'), []);
+});

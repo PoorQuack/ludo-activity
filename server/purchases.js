@@ -60,9 +60,14 @@ export class Purchases {
       // The Battle Pass subscription: never consumed; its period end opens the premium lane until
       // then (a test purchase has no end: a month from now). Cancelling keeps it until the end.
       if (item.kind === 'pass') {
-        const until = e.ends_at ? Date.parse(e.ends_at) : Date.now() + 31 * 86_400_000;
+        const cur = this.store.peek(userId);
+        const now = this.store.now?.() || Date.now();
+        const active = !!(cur?.passUntil && cur.passUntil > now);
+        // Test subscriptions arrive with no ends_at: once active, keep the expiry instead of
+        // minting a new timestamp on every login and re-triggering the unlock toast.
+        const until = e.ends_at ? Date.parse(e.ends_at) : (active ? cur.passUntil : now + 31 * 86_400_000);
         if (Number.isFinite(until) && this.store.setPassUntil(userId, until)) {
-          granted.push({ id: item.id, kind: 'pass', until });
+          if (!active) granted.push({ id: item.id, kind: 'pass', until });
           this.log.log?.(`🎟️ ${userId} has the Battle Pass until ${new Date(until).toISOString()}`);
         }
         continue;
