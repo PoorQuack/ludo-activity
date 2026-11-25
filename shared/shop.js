@@ -14,15 +14,17 @@ export const REWARDS = { place: [25, 15, 10, 8, 6, 5], capture: 2, revenge: 5 };
 // The most coins one player can earn in a single UTC day.
 export const DAILY_COIN_CAP = 120;
 
-// Stakes rooms: the host can set an entry fee in Gold Coins (never gems). Every human pays it
-// when the game starts, and winner takes all: only 1st place (or the winning team) wins the pot,
-// with no Classic placement/capture coin rewards.
+// Betting in rooms:
+//   Classic (`winnerTakeAll: false`): optional cash pot shared by all finishing places except last
+//     (POT_SPLIT[n]), on top of Classic placement rewards.
+//   Stakes Rooms (`winnerTakeAll: true`): go big or go home — only 1st place wins 100% of the pot,
+//     with no Classic placement coins, and higher leaderboard points for the extra risk.
 export const STAKES = [
   0, 100, 500,
   1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000,
   5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500, 10000,
 ];
-export const POT_SPLIT = { 1: [100], 2: [100], 3: [100], 4: [100], 5: [100], 6: [100] };
+export const POT_SPLIT = { 1: [100], 2: [100], 3: [70, 30], 4: [60, 30, 10], 5: [50, 25, 15, 10], 6: [45, 25, 15, 10, 5] };
 
 // RARITY says how far an item goes from the plain one, and sets its price band (see RARITIES):
 //   common     the default, basic look (free), and single stickers

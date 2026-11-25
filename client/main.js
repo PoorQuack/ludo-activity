@@ -2575,8 +2575,8 @@ function renderMenu() {
       ? t('Anyone can find it in the room list and join.')
       : t('Only people in your Discord call see it. Others join with its code.');
 
-  // The room list: your call's rooms first, then public rooms from anywhere
-  const others = roomList.filter((r) => r.id !== state?.roomId);
+  // The room list: Classic rooms only (Stakes Rooms live in the Stakes Rooms sheet)
+  const others = roomList.filter((r) => !r.winnerTakeAll && r.id !== state?.roomId);
   els.roomsCount.textContent = t('{n} open', { n: others.length });
   els.roomList.innerHTML = '';
   if (!others.length) {
@@ -2873,18 +2873,24 @@ function roomInfoText() {
   return `${kind} · ${t('code {code}', { code: state.code })}${stake}`;
 }
 
-// Stakes: Off or 100..10,000 Gold Coins (the host steps left/right; players see the active stake)
+// Cash pot (Classic: Off or 100..10,000, shared by all except last) vs Stakes Room (100..10,000, winner takes all)
 function renderStakes() {
   const box = $('stake-picker');
   const host = isHost();
+  const wta = !!state.winnerTakeAll;
   box.classList.toggle('hidden', state.phase !== 'lobby');
   box.classList.toggle('on', !!state.stake);
+  const titleEl = box.querySelector('.stake-text b');
+  const subEl = box.querySelector('.stake-text small');
+  if (titleEl) titleEl.textContent = wta ? t('Stakes Rooms') : t('Cash pot');
+  if (subEl) subEl.textContent = wta ? t('Only 1st place wins the pot') : t('Everyone pays in; pot shared by all except last');
   const opts = $('stake-options');
-  const key = `${state.stake}|${host}|${currentLang()}`;
+  const key = `${state.stake}|${wta}|${host}|${currentLang()}`;
   if (opts.dataset.key === key) return;
   opts.dataset.key = key;
   opts.innerHTML = '';
-  const stakes = state.stakes || STAKES;
+  const all = state.stakes || STAKES;
+  const stakes = wta ? all.filter((n) => n > 0) : all;
   const idx = Math.max(0, stakes.indexOf(state.stake || 0));
   const amount = stakes[idx] || 0;
   const pill = document.createElement('span');
@@ -4678,7 +4684,7 @@ function renderStakesSheet() {
   const go = () => {
     if (have < amount) return toast(t('You need {n} more coins', { n: amount - have }));
     closeSheets();
-    sendLobby('create', { visibility: 'public', stake: amount });
+    sendLobby('create', { visibility: 'public', stake: amount, winnerTakeAll: true });
   };
   if (have < amount) card.title = t('You need {n} more coins', { n: amount - have });
   card.addEventListener('click', go);
@@ -4699,7 +4705,7 @@ function renderStakesSheet() {
   create.append(stepper, btn);
   const list = $('stake-rooms');
   list.innerHTML = '';
-  const open = roomList.filter((r) => r.stake && r.id !== state?.roomId);
+  const open = roomList.filter((r) => r.stake && r.winnerTakeAll && r.id !== state?.roomId);
   if (!open.length) {
     const li = document.createElement('li');
     li.className = 'empty';

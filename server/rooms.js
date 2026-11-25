@@ -29,7 +29,7 @@ export class RoomDirectory {
   }
 
   // A new room with `user` as host, in the lobby with them seated.
-  create(user, { visibility = 'public', mode = '4p', instanceId = null, stake = 0, quick = false, extra = {} } = {}) {
+  create(user, { visibility = 'public', mode = '4p', instanceId = null, stake = 0, winnerTakeAll = false, quick = false, extra = {} } = {}) {
     if (this.rooms.size >= MAX_ROOMS) throw new Error('The server is full right now, try again in a bit');
     const id = randomUUID();
     const code = this.newCode();
@@ -46,7 +46,10 @@ export class RoomDirectory {
     room.host(user);
     if (MODES[mode] && mode !== room.mode) room.setMode(user, mode);
     if (quick) room.setQuick(user, true); // a quick game (two tokens each)
-    if (stake && STAKES.includes(stake)) room.setStake(user, stake); // a stakes room (the host can still change it in the lobby)
+    if (stake && STAKES.includes(stake)) {
+      room.setStake(user, stake);
+      room.winnerTakeAll = !!winnerTakeAll;
+    }
     return room;
   }
 

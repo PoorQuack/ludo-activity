@@ -46,7 +46,7 @@ const SAVED_FIELDS = [
   'lastRoll', 'winners', 'teamOrder', 'forfeited', 'feud', 'streak', 'revenges', 'hits', 'wasLast', 'captures', 'timeouts', 'stuck', 'turnTimedOut',
   'rewards', 'endedEarly', 'rewardCapped', 'rewardPartial', 'lastMove', 'seq', 'log',
   'emoteSeq', 'chat', 'chatSeq', 'noCoins', 'noPoints', 'decider', 'actor', 'racePoints', 'rigged',
-  'stake', 'pot', 'potWon',
+  'stake', 'winnerTakeAll', 'pot', 'potWon',
 ];
 
 export class Room {
@@ -58,10 +58,11 @@ export class Room {
     this.code = code; // short code anyone can join with, e.g. "K7QX"
     this.visibility = visibility; // 'public': listed for everyone; 'private': your Discord call or the code
     this.quick = false; // quick game: two tokens each instead of four (the host's choice, in the lobby)
-    // Stakes: an entry fee in Gold Coins (STAKES; 0 = a normal game), the host's choice in the
-    // lobby. Paid by every human when the game starts into `pot` { stake, total, paid: [{ seat,
-    // userId }] }; shared by finishing place (payPot; `potWon`: seat -> coins).
+    // Cash bets: `stake` is the Gold Coin entry fee (0 = free). In Classic (`winnerTakeAll: false`),
+    // the pot splits across all places except last; in Stakes Rooms (`winnerTakeAll: true`), only
+    // 1st place (or winning team) wins 100% of the pot and earns extra leaderboard points.
     this.stake = 0;
+    this.winnerTakeAll = false;
     this.pot = null;
     this.potWon = null;
     this.instanceId = instanceId; // the Discord call it was created in
@@ -209,6 +210,7 @@ export class Room {
       visibility: this.visibility,
       quick: this.quick,
       stake: this.stake,
+      winnerTakeAll: this.winnerTakeAll,
       sameCall: !!instanceId && instanceId === this.instanceId,
     };
   }
@@ -551,12 +553,13 @@ export class Room {
     this.changed();
   }
 
-  // Stakes: the entry fee every human pays when the game starts (Gold Coins only, never gems).
+  // Stakes / Classic bet: Gold Coins entry fee. Stakes Rooms keep `winnerTakeAll` and require > 0.
   setStake(user, stake) {
     this.requireHost(user);
     this.requirePhase('lobby');
     stake = Number(stake);
     if (!STAKES.includes(stake)) throw new Error('Unknown stake');
+    if (this.winnerTakeAll && !stake) throw new Error('Stakes rooms require a stake');
     this.stake = stake;
     this.changed();
   }
@@ -593,9 +596,10 @@ export class Room {
     this.pot = null;
   }
 
-  // The game is over: winner takes all — 100% of the pot goes to the highest-placed live
-  // human (or live members of the winning team). Anyone who surrendered gets nothing.
-  // Bots ahead of people don't count: they never paid in.
+  // The game is over:
+  // - Stakes Rooms (`winnerTakeAll: true`): 100% of the pot goes to 1st place (or winning team).
+  // - Classic (`winnerTakeAll: false`): split across all finishing places except last (POT_SPLIT).
+  // Anyone who surrendered places last and gets nothing; bots never paid in.
   payPot() {
     const pot = this.pot;
     this.potWon = null;
@@ -611,17 +615,33 @@ export class Room {
     const first = places.findIndex(live);
     if (first < 0) return this.refundPot('Nobody who paid in finished: everyone got their stake back.');
     this.potWon = {};
-    const members = places[first].filter((s) => !this.forfeited.includes(s));
-    const each = Math.floor(pot.total / members.length);
-    let odd = pot.total - each * members.length;
-    for (const s of members) {
-      const coins = each + (odd-- > 0 ? 1 : 0);
-      this.profiles?.payStake(this.seats[s].userId, coins);
-      this.potWon[s] = coins;
+    const split = this.winnerTakeAll ? [100] : (POT_SPLIT[Math.min(places.length, 6)] || [100]);
+    const cuts = places.map((g, i) => (live(g) ? split[i] || 0 : 0));
+    if (this.winnerTakeAll) {
+      cuts.fill(0);
+      cuts[first] = 100;
+    } else {
+      cuts[first] += 100 - cuts.reduce((a, b) => a + b, 0); // surrendered places' cuts go to 1st
     }
+    const shares = places.map((g, i) => Math.floor((pot.total * cuts[i]) / 100));
+    shares[first] += pot.total - shares.reduce((a, b) => a + b, 0); // rounding: to 1st
+    const lines = [];
+    places.forEach((g, i) => {
+      if (!shares[i]) return;
+      const members = g.filter((s) => !this.forfeited.includes(s));
+      const each = Math.floor(shares[i] / members.length);
+      let odd = shares[i] - each * members.length;
+      for (const s of members) {
+        const coins = each + (odd-- > 0 ? 1 : 0);
+        this.profiles?.payStake(this.seats[s].userId, coins);
+        this.potWon[s] = coins;
+        lines.push(`${this.seats[s].name} +${coins}`);
+      }
+    });
     const winners = Object.keys(this.potWon);
     if (winners.length === 1) this.addLog(`💰 ${this.seats[winners[0]].name} takes the pot: ${pot.total} coins!`);
-    else this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${pot.total} coins!`);
+    else if (places.filter((g, i) => shares[i]).length === 1) this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${pot.total} coins!`);
+    else this.addLog(`💰 The pot is shared by place: ${lines.join(' · ')}`);
     this.pot = null;
   }
 
@@ -1098,17 +1118,24 @@ export class Room {
         continue;
       }
       const won = this.potWon?.[p.seat] || 0;
-      r.points = won - pot.stake;
+      const net = won - pot.stake;
       r.won = won > 0;
-      // Higher stakes give higher leaderboard points in v1 too (only the winner scores in Stakes Rooms).
-      r.placePoints = won > 0 ? (r.placePoints || 0) + Math.max(2, Math.round(pot.stake / 100)) : 0;
+      if (this.winnerTakeAll) {
+        // Stakes Rooms: only the winner wins, and wins earn 1.5x leaderboard points over Classic.
+        r.points = net > 0 ? Math.round(net * 1.5) : net;
+        r.placePoints = won > 0 ? (r.placePoints || 0) + Math.max(5, Math.round(pot.stake / 50)) : 0;
+      } else {
+        // Classic bet: shared pot across places, 1x profit in v2 and smaller bet bonus in v1.
+        r.points = net;
+        if (net > 0) r.placePoints = (r.placePoints || 0) + Math.max(1, Math.round(pot.stake / 200));
+      }
       r.opponents = humans.filter((id) => id !== r.userId);
     }
     this.onGameEnd([...byUser.values()]);
   }
 
   // Classic rewards for every human who didn't surrender: by finishing place, plus a bonus per
-  // capture. Stakes Rooms are a separate mode (winner takes all from the pot, no Classic coins).
+  // capture. Stakes Rooms (`winnerTakeAll`) are a separate mode with no Classic coin rewards.
   // Only games against other people pay: playing bots on your own earns nothing.
   giveRewards() {
     this.rewards = {};
@@ -1135,7 +1162,7 @@ export class Room {
     // by teaming up against easy bots).
     const coop = !!this.teamOrder && humanGroups.length === 1;
     if (coop) this.noPoints = 'coop';
-    const isStakes = this.stake > 0;
+    const noClassicCoins = this.winnerTakeAll;
     this.winners.forEach((s) => {
       const place = placeOf(s);
       const seat = this.seats[s];
@@ -1143,7 +1170,7 @@ export class Room {
       // A game cut short by a surrender pays for how far you got; a game that ran
       // its course pays the full placement even if the last-placed seat didn't finish.
       const share = this.endedEarly ? progressShare(this.tokens, s, this.board) : 1;
-      if (!isStakes) {
+      if (!noClassicCoins) {
         if (share < 1) this.rewardPartial.push(s);
         const coins = Math.round(REWARDS.place[place] * share + this.captures[s] * REWARDS.capture + (this.revenges[s] || 0) * REWARDS.revenge);
         const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
@@ -1445,6 +1472,7 @@ export class Room {
       visibility: this.visibility,
       quick: this.quick,
       stake: this.stake,
+      winnerTakeAll: this.winnerTakeAll,
       stakes: STAKES,
       pot: this.pot && { stake: this.pot.stake, total: this.pot.total },
       potWon: this.potWon,

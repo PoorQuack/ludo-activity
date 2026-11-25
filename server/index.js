@@ -599,6 +599,7 @@ function handleLobby(ws, msg) {
       visibility: msg.visibility,
       mode: msg.mode,
       stake: Number(msg.stake) || 0,
+      winnerTakeAll: msg.winnerTakeAll === true,
       quick: msg.quick === true,
       instanceId,
       extra: { onKick: (userId) => kickFromRoom(room, userId) },
