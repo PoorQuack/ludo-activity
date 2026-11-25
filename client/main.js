@@ -16,7 +16,8 @@ import { setFrame } from './frames.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour } from './tour.js';
 import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, TOKEN_SIGNATURES } from './skins.js';
-import { t, translateServer, setLanguage, languagePref, setAutoLocale, LANGUAGES, applyI18n, currentLanguage as currentLang } from './i18n.js';
+import { t, translateServer, setLanguage, languagePref, setAutoLocale, LANGUAGES, applyI18n, currentLanguage as currentLang, chatLanguage, chatLanguagePref, setChatLanguage } from './i18n.js';
+import { CHAT_LANGUAGES, CHAT_LANG } from '../shared/chatlangs.js';
 import { unlockAudio, playedJustNow, sfx, setMusic, setSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
 
 // The menu's chat: which channel is shown, what's in each (see "the menu's chat" below)
@@ -232,6 +233,8 @@ function connect() {
     const msg = JSON.parse(e.data);
     if (msg.type === 'welcome') {
       me = msg.you;
+      chatLangSent = null; // a new connection: tell this one
+      sendChatLang();
       els.loading.classList.add('hidden');
       if (updating) {
         updating = false;
@@ -1731,7 +1734,47 @@ function languageName(code) {
   }
 }
 
+// The chat language (Settings → Language, under the game's languages): 37 to pick from
+function renderChatLangPick() {
+  const sel = $('chat-lang');
+  if (!sel) return;
+  const pref = chatLanguagePref();
+  sel.innerHTML = '';
+  const auto = document.createElement('option');
+  auto.value = 'auto';
+  auto.textContent = `${t('Automatic')} (${langName(chatLanguage())})`;
+  sel.appendChild(auto);
+  const named = CHAT_LANGUAGES.map((l) => ({ ...l, mine: languageName(l.code === 'zh-TW' ? 'zh-Hant' : l.code) || '' }));
+  for (const l of named.sort((a, b) => a.native.localeCompare(b.native))) {
+    const o = document.createElement('option');
+    o.value = l.code;
+    o.textContent = l.mine && l.mine.toLowerCase() !== l.native.toLowerCase() ? `${l.native} · ${l.mine}` : l.native;
+    o.selected = l.code === pref;
+    sel.appendChild(o);
+  }
+}
+
+// Tell the server (it guesses what your messages are written in from it), and move to the new
+// language channel if the chat is open
+let chatLangSent = null;
+function sendChatLang() {
+  if (ws?.readyState !== WebSocket.OPEN) return;
+  const code = chatLanguage();
+  if (code === chatLangSent) return;
+  chatLangSent = code;
+  ws.send(JSON.stringify({ type: 'chatLang', lang: code }));
+  if (lchat.open && lchat.lang !== code) lobbyChatJoin();
+  $('lobby-chat-lang').textContent = langName(code);
+}
+$('chat-lang')?.addEventListener('change', (e) => setChatLanguage(e.target.value));
+window.addEventListener('ludo-chat-lang', () => {
+  renderChatLangPick();
+  sendChatLang();
+  renderLobbyChat();
+});
+
 function renderLangList() {
+  renderChatLangPick();
   const list = $('lang-list');
   const pref = languagePref();
   list.innerHTML = '';
@@ -1753,6 +1796,7 @@ function renderLangList() {
 
 // The language changed: everything drawn by code is drawn again in it.
 window.addEventListener('ludo-lang', () => {
+  sendChatLang();
   chatVersion++;
   renderOnline();
   pickerShown = '';
@@ -4347,11 +4391,11 @@ for (const b of $('quest-tabs').children)
 // Only listened to while the Chat panel is open. Anyone's message can be translated into your
 // game's language: the server looks the message up and asks the translator.
 
-const langName = (code) => LANGUAGES.find((l) => l.code === code)?.native || code;
+const langName = (code) => CHAT_LANG[code]?.native || LANGUAGES.find((l) => l.code === code)?.native || code;
 // A language's name in the player's own language ("inglés" for a Spanish player), for "Translated from …"
 function langInMine(code) {
   try {
-    const n = new Intl.DisplayNames([currentLang()], { type: 'language' }).of(code);
+    const n = new Intl.DisplayNames([currentLang()], { type: 'language' }).of(code === 'zh' ? 'zh-Hans' : code === 'zh-TW' ? 'zh-Hant' : code);
     if (n && n !== code) return n;
   } catch {}
   return langName(code);
@@ -4359,16 +4403,17 @@ function langInMine(code) {
 
 function lobbyChatJoin() {
   if (ws?.readyState !== WebSocket.OPEN || !prefs.chat) return;
-  lchat.lang = currentLang();
+  lchat.lang = chatLanguage();
   ws.send(JSON.stringify({ type: 'lobbyChat', op: 'join', lang: lchat.lang }));
+  chatLangSent = lchat.lang;
 }
 
 function lobbyChatPanel(open) {
   const box = $('lobby-chat');
   box.classList.toggle('off', !prefs.chat);
   $('lobby-chat-off').classList.toggle('hidden', prefs.chat);
-  $('lobby-chat-lang').textContent = langName(currentLang());
-  if (open && prefs.chat && (!lchat.open || lchat.lang !== currentLang())) {
+  $('lobby-chat-lang').textContent = langName(chatLanguage());
+  if (open && prefs.chat && (!lchat.open || lchat.lang !== chatLanguage())) {
     lchat.open = true;
     lobbyChatJoin();
   } else if ((!open || !prefs.chat) && lchat.open) {
@@ -4748,7 +4793,7 @@ function renderLobbyChat() {
     ? t('Message {name}…', { name: dmState.friend?.name || 'friend' })
     : lchat.tab === 'global'
       ? t('Say something to everyone…')
-      : t('Say something in {lang}…', { lang: langName(lchat.lang || currentLang()) });
+      : t('Say something in {lang}…', { lang: langName(lchat.lang || chatLanguage()) });
 
   const raw = isDm
     ? dmState.msgs.map((m) => ({ ...m, userId: m.from }))
@@ -4763,7 +4808,7 @@ function renderLobbyChat() {
       ? t('No messages yet. Say hi!')
       : lchat.tab === 'global'
         ? t('No messages yet. Say hi to everyone!')
-        : t('No messages yet. Say hi in {lang}!', { lang: langName(lchat.lang || currentLang()) });
+        : t('No messages yet. Say hi in {lang}!', { lang: langName(lchat.lang || chatLanguage()) });
     log.appendChild(li);
   }
   const scope = lchat.tab;
@@ -4856,7 +4901,7 @@ function addTranslate(li, scope, id) {
   b.type = 'button';
   b.className = 'tr-btn';
   b.textContent = t('Translate');
-  b.title = t('Translate into {lang}', { lang: langInMine(currentLang()) });
+  b.title = t('Translate into {lang}', { lang: langInMine(chatLanguage()) });
   if (done === 'pending') b.disabled = true;
   b.addEventListener('click', () => {
     if (ws?.readyState !== WebSocket.OPEN) return;
@@ -4865,7 +4910,7 @@ function addTranslate(li, scope, id) {
       el.disabled = true;
       el.textContent = t('Translating…');
     }
-    ws.send(JSON.stringify({ type: 'translate', scope, id, to: currentLang() }));
+    ws.send(JSON.stringify({ type: 'translate', scope, id, to: chatLanguage() }));
   });
   li.appendChild(b);
 }
@@ -4875,11 +4920,11 @@ function showTranslation(li, r) {
   const out = document.createElement('span');
   out.className = `tr-out${r.error ? ' err' : ''}`;
   if (r.error) out.textContent = translateServer(r.error);
-  else if (r.from === currentLang()) out.textContent = t('Already in {lang}', { lang: langInMine(currentLang()) });
+  else if (r.already) out.textContent = t('Already in {lang}', { lang: langInMine(chatLanguage()) });
   else {
     out.textContent = r.text;
     const note = document.createElement('small');
-    note.textContent = r.from && LANGUAGES.some((l) => l.code === r.from) ? t('Translated from {lang}', { lang: langInMine(r.from) }) : t('Translated');
+    note.textContent = r.from && CHAT_LANG[r.from] ? t('Translated from {lang}', { lang: langInMine(r.from) }) : t('Translated');
     out.appendChild(note);
   }
   li.appendChild(out);
@@ -4888,7 +4933,7 @@ function showTranslation(li, r) {
 }
 function onTranslated(msg) {
   const key = `${msg.scope}:${msg.id}`;
-  const r = msg.error ? { error: msg.error } : { text: msg.text, from: msg.from };
+  const r = msg.error ? { error: msg.error } : { text: msg.text, from: msg.from, already: !!msg.already };
   if (msg.error) translations.delete(key); // they can try again
   else translations.set(key, r);
   for (const li of document.querySelectorAll(`[data-tr="${key}"]`)) {

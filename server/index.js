@@ -487,7 +487,7 @@ const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward
 
 // The menu's chat (Global, and one channel per language) and chat translation
 const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
-const translator = new Translator();
+const translator = new Translator({ nvidiaKey: process.env.NVIDIA_API_KEY });
 const lobbyListeners = new Set(); // sockets with the menu chat open; ws.ctx.lobbyLang says which language
 
 function handleLobbyChat(ws, msg) {
@@ -495,6 +495,7 @@ function handleLobbyChat(ws, msg) {
   const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
   if (msg.op === 'join') {
     ctx.lobbyLang = LANGS.has(msg.lang) ? msg.lang : 'en';
+    ctx.chatLang = ctx.lobbyLang;
     lobbyListeners.add(ws);
     return send({ type: 'lobbyChat', op: 'history', lang: ctx.lobbyLang, global: lobbyChat.history('global'), local: lobbyChat.history(`lang:${ctx.lobbyLang}`) });
   }
@@ -514,6 +515,7 @@ function handleLobbyChat(ws, msg) {
     if (!lobbyListeners.has(ws)) throw new Error('Open the chat first');
     const m = lobbyChat.say(ctx.user, id, msg.text);
     if (m) {
+      m.lang = ctx.lobbyLang || 'en'; // the language they chat in: what Translate guesses it's written in
       reach({ type: 'lobbyChat', op: 'msg', channel, msg: m });
       const ping = JSON.stringify({ type: 'lobbyChat', op: 'ping', channel, userId: m.userId });
       for (const c of wss.clients) {
@@ -566,9 +568,17 @@ function handleTranslate(ws, msg) {
   else if (scope === 'global' || scope === 'lang') found = lobbyChat.find(channelId(scope, ctx.lobbyLang || 'en'), msgId);
   const reply = { type: 'translated', scope, id: msgId };
   if (!found) return send({ ...reply, error: 'That message is gone' });
+  // what it's probably written in: the writer's chat language (Riva Translate has to be told)
+  let hint = found.lang || '';
+  if (!hint) for (const c of userSockets.get(found.userId) || []) hint ||= c.ctx?.chatLang || '';
   translator
-    .translate(ctx.user.id, found.text, String(msg.to))
-    .then((r) => send({ ...reply, text: r.text, from: r.from }))
+    .translate(ctx.user.id, found.text, String(msg.to), hint)
+    .then((r) => {
+      const to = String(msg.to);
+      // already in their language (Spanish from Spain for a Latin American player counts, unless it changed)
+      const already = r.from === to || (r.from.split('-')[0] === to.split('-')[0] && r.text.trim() === found.text.trim());
+      send({ ...reply, text: r.text, from: r.from, already });
+    })
     .catch((err) => send({ ...reply, error: err.message }));
 }
 setInterval(() => leaderboard.rollover(), 60_000).unref(); // pays out as soon as a week or month ends
@@ -1092,6 +1102,10 @@ wss.on('connection', (ws, req) => {
         return send({ type: 'passClaimed', given });
       }
       if (msg.type === 'translate') return handleTranslate(ws, msg);
+      if (msg.type === 'chatLang') {
+        if (LANGS.has(msg.lang)) ctx.chatLang = msg.lang;
+        return;
+      }
       if (msg.type === 'support') {
         // ⚙ Settings → Contact the developer. The room and device help with bug reports.
         const room = ctx.room;

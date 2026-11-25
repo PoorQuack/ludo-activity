@@ -1,15 +1,21 @@
-// Chat translation: a player taps "Translate" under a message and gets it in the language their
-// game is set to. Uses Google's free web endpoint (no key, unofficial, so it could be limited at
-// any time), and MyMemory's free API if Google says no. The server asks, never the client, so
+// Chat translation: a player taps "Translate" under a message and gets it in their chat language
+// (one of the 37 in shared/chatlangs.js). With NVIDIA_API_KEY set, NVIDIA's Riva Translate model
+// does it (built for translation, and better with chat-speak); otherwise, or when it's slow, busy
+// or down, Google's free web endpoint (no key, unofficial, so it could be limited at any time),
+// then MyMemory's free API. The server asks, never the client, so
 // the Discord sandbox doesn't need them allowed. (Google's usual translate_a/single address
 // refuses cloud servers like ours; this one, used by its browser extension, doesn't.)
 // Answers are cached, and there's a cap per player and for the whole server, so a busy chat
 // can't run up requests.
 
+import { CHAT_CODES, CHAT_LANG, normalizeDetected } from '../shared/chatlangs.js';
+
 const GOOGLE = 'https://clients5.google.com/translate_a/t';
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
-export const LANGS = new Set(['en', 'es', 'fr', 'de', 'pt', 'it', 'nl', 'pl', 'tr', 'ru', 'uk', 'ar', 'hi', 'ja', 'ko', 'zh']);
-const GOOGLE_CODE = { zh: 'zh-CN' };
+const NVIDIA = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const RIVA_MODEL = 'nvidia/riva-translate-4b-instruct-v2';
+export const LANGS = CHAT_CODES;
+const googleCode = (code) => CHAT_LANG[code]?.google || code;
 const CACHE_MAX = 3000;
 const TIMEOUT_MS = 6000;
 
@@ -21,9 +27,11 @@ export class Translator {
    * @param {object} options
    *  fetch: injectable for tests
    *  perUser: requests a player may make per minute; perServer: for everyone together
+   *  nvidiaKey: NVIDIA's API key (build.nvidia.com); without one, Google and MyMemory only
    */
-  constructor({ fetch: f = globalThis.fetch, now = Date.now, perUser = 20, perServer = 400 } = {}) {
+  constructor({ fetch: f = globalThis.fetch, now = Date.now, perUser = 20, perServer = 400, nvidiaKey = '' } = {}) {
     this.fetch = f;
+    this.nvidiaKey = String(nvidiaKey || '').trim();
     this.now = now;
     this.perUser = perUser;
     this.perServer = perServer;
@@ -45,8 +53,9 @@ export class Translator {
   }
 
   /** Translates `text` into `to` (a game language code). Resolves to { text, from } ("from": the
-   *  detected language; text is unchanged when it was already in `to`). */
-  async translate(userId, text, to) {
+   *  detected language; text is unchanged when it was already in `to`). `hint`: the language the
+   *  writer chats in, a guess at what it's written in (Riva has to be told). */
+  async translate(userId, text, to, hint = '') {
     if (!LANGS.has(to)) throw new Error('Unknown language');
     const parts = String(text).split(STICKER);
     const words = parts.map((p, i) => (i % 2 === 0 ? p : null));
@@ -61,8 +70,16 @@ export class Translator {
     }
     this.allowed(userId);
     const pieces = sendable.map((p) => p.replace(/\s+/g, ' ').trim());
-    let got;
-    try {
+    let got = null;
+    const source = this.nvidiaKey ? guessSource(pieces.join(' '), hint) : null;
+    if (source && source !== to) {
+      try {
+        got = await this.riva(pieces, source, to);
+      } catch (err) {
+        console.error(`Translation (Riva) failed: ${err.message}`);
+      }
+    }
+    if (!got) try {
       got = await this.google(pieces, to);
     } catch (err) {
       console.error(`Translation (Google) failed: ${err.message}`);
@@ -73,9 +90,7 @@ export class Translator {
         throw new Error("Couldn't translate that right now");
       }
     }
-    let from = String(got.from || '').toLowerCase();
-    if (from.startsWith('zh')) from = 'zh';
-    from = from.split('-')[0];
+    const from = normalizeDetected(got.from);
     let n = 0;
     const rebuilt = parts
       .map((p, i) => {
@@ -92,11 +107,11 @@ export class Translator {
     return result;
   }
 
-  async get(url) {
+  async get(url, init = {}, timeout = TIMEOUT_MS) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const r = await this.fetch(url, { signal: ctrl.signal });
+      const r = await this.fetch(url, { ...init, signal: ctrl.signal });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return await r.json();
     } finally {
@@ -107,7 +122,7 @@ export class Translator {
   // [["translated", "es"], ...]: one pair per q
   async google(pieces, to) {
     const q = pieces.map((p) => `&q=${encodeURIComponent(p)}`).join('');
-    const body = await this.get(`${GOOGLE}?client=dict-chrome-ex&sl=auto&tl=${GOOGLE_CODE[to] || to}${q}`);
+    const body = await this.get(`${GOOGLE}?client=dict-chrome-ex&sl=auto&tl=${googleCode(to)}${q}`);
     if (!Array.isArray(body) || body.length !== pieces.length) throw new Error('Unexpected answer');
     const pairs = body.map((x) => (Array.isArray(x) ? x : [x, '']));
     return { texts: pairs.map((x) => String(x[0] ?? '')), from: pairs[0][1] };
@@ -117,11 +132,94 @@ export class Translator {
     const texts = [];
     let from = '';
     for (const p of pieces) {
-      const body = await this.get(`${MYMEMORY}?q=${encodeURIComponent(p)}&langpair=Autodetect|${GOOGLE_CODE[to] || to}`);
+      const body = await this.get(`${MYMEMORY}?q=${encodeURIComponent(p)}&langpair=Autodetect|${googleCode(to)}`);
       if (body?.responseStatus !== 200 || body?.quotaFinished) throw new Error(body?.responseDetails || 'refused');
       texts.push(String(body.responseData?.translatedText ?? p));
       from ||= body.responseData?.detectedLanguage || '';
     }
     return { texts, from };
   }
+
+  // NVIDIA Riva Translate: the language pair goes in the system message ("fr-de"). It's documented
+  // to and from English, so other pairs go through English (two short calls).
+  async riva(pieces, from, to) {
+    const steps = from === 'en' || to === 'en' ? [[from, to]] : [[from, 'en'], ['en', to]];
+    let texts = pieces;
+    for (const [a, b] of steps) texts = await Promise.all(texts.map((p) => this.rivaOne(p, a, b)));
+    return { texts, from };
+  }
+
+  async rivaOne(text, from, to) {
+    const body = await this.get(
+      NVIDIA,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${this.nvidiaKey}` },
+        body: JSON.stringify({
+          model: RIVA_MODEL,
+          messages: [
+            { role: 'system', content: `${CHAT_LANG[from].riva}-${CHAT_LANG[to].riva}` },
+            { role: 'user', content: text.slice(0, 1900) },
+          ],
+          temperature: 0,
+          max_tokens: 400,
+          stream: false,
+        }),
+      },
+      4000, // then Google gets its turn
+    );
+    let out = String(body?.choices?.[0]?.message?.content ?? '').trim();
+    if (!out) throw new Error('Empty answer');
+    // the odd answer comes back quoted, or with a label in front
+    out = out.replace(/^(translation|traducción|traduction)\s*:\s*/i, '');
+    if (/^["“«].*["”»]$/s.test(out) && !/^["“«].*["”»]$/s.test(text)) out = out.slice(1, -1).trim();
+    return out;
+  }
+}
+
+// ---- which language a chat line is in ----
+// Riva has to be told. The writer's chat language is the best guess, checked against the alphabet
+// (a Russian player writing in Latin letters is probably writing English; anyone writing in hangul
+// is writing Korean). null: no good guess, so Google (which detects) does it instead.
+const SCRIPTS = [
+  ['hangul', /[\uac00-\ud7af\u1100-\u11ff]/g],
+  ['japanese', /[\u3040-\u30ff]/g],
+  ['han', /[\u4e00-\u9fff]/g],
+  ['arabic', /[\u0600-\u06ff]/g],
+  ['devanagari', /[\u0900-\u097f]/g],
+  ['thai', /[\u0e00-\u0e7f]/g],
+  ['greek', /[\u0370-\u03ff]/g],
+  ['cyrillic', /[\u0400-\u04ff]/g],
+  ['latin', /[a-zA-Z\u00c0-\u024f]/g],
+];
+const ENGLISH = new Set('the you your are is was and not but this that what why how have just its it\'s i\'m im dont don\'t cant can\'t lol gg wp nice good game play win lost lose my me we they hi hello thanks thank please yes no anyone who'.split(' '));
+
+export function scriptOf(text) {
+  let best = null;
+  let most = 0;
+  for (const [name, re] of SCRIPTS) {
+    const n = (text.match(re) || []).length;
+    // Japanese is kana *and* kanji: any kana makes it Japanese
+    if (name === 'japanese' && n) return 'japanese';
+    if (n > most) [best, most] = [name, n];
+  }
+  return best;
+}
+
+export function guessSource(text, hint) {
+  const script = scriptOf(text);
+  if (!script) return null;
+  const words = text.toLowerCase().match(/[a-z']+/g) || [];
+  const english = words.length && words.filter((w) => ENGLISH.has(w)).length / words.length >= 0.3;
+  const h = CHAT_LANG[hint];
+  // letters only Ukrainian / Bulgarian use beat the hint
+  if (script === 'cyrillic' && /[іїєґ]/i.test(text)) return 'uk';
+  if (h && h.script === script) {
+    // a Spanish player's "gg nice game" is English
+    if (script === 'latin' && hint !== 'en' && english) return 'en';
+    return hint;
+  }
+  if (script === 'latin') return english ? 'en' : null;
+  if (script === 'cyrillic') return /[іїєґ]/i.test(text) ? 'uk' : /ъ/i.test(text) && !/[ыэё]/i.test(text) ? 'bg' : 'ru';
+  return { hangul: 'ko', japanese: 'ja', han: 'zh', arabic: 'ar', devanagari: 'hi', thai: 'th', greek: 'el' }[script] || null;
 }
