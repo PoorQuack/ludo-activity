@@ -209,3 +209,20 @@ test('private rooms, test dice and games without a stake never score', () => {
   const rigged = chipsFor(500, { winners: [1, 0, 2], rig: true });
   assert.ok(Object.values(rigged).every((p) => p === 0));
 });
+
+test('every place but the last gets a cut: six players 45 / 25 / 15 / 10 / 5', () => {
+  const six = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id, name: id.toUpperCase() }));
+  const store = new ProfileStore(null);
+  for (const u of six) store.get(u.id).coins = 1000;
+  const room = new Room('s', { profiles: store, delays: { bot: 60_000, timeout: 60_000 } });
+  for (const u of six) room.connect(u);
+  room.host(six[0]);
+  room.setMode(six[0], '6p');
+  six.forEach((u, i) => room.sit(u, i));
+  room.setStake(six[0], 500);
+  room.start(six[0]);
+  room.winners = [0, 1, 2, 3, 4, 5];
+  room.finish();
+  assert.deepEqual(room.potWon, { 0: 1350, 1: 750, 2: 450, 3: 300, 4: 150 });
+  room.destroy();
+});
