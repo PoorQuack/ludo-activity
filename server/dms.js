@@ -18,10 +18,11 @@ const otherOf = (key, me) => {
 };
 
 export class DirectMessages {
-  constructor(file, { profiles = null, social = null, now = Date.now } = {}) {
+  constructor(file, { profiles = null, social = null, isOnline = () => false, now = Date.now } = {}) {
     this.file = file;
     this.profiles = profiles;
     this.social = social;
+    this.isOnline = isOnline;
     this.now = now;
     this.threads = {}; // pairKey -> { seq, users: [a, b], msgs: [...], read: { [id]: lastReadId }, updatedAt }
     this.last = new Map(); // userId -> last send timestamp
@@ -35,7 +36,8 @@ export class DirectMessages {
     const vip = !!this.profiles?.passActive?.(p);
     const name = this.social?.names?.get(id) || 'Player';
     const avatar = !String(id).startsWith('guest-') && !!this.social?.avatars?.has?.(id);
-    return { id, name, avatar, vip, ...(frame ? { frame } : {}) };
+    const online = !!this.isOnline(id);
+    return { id, name, avatar, vip, online, ...(frame ? { frame } : {}) };
   }
 
   #enrichMsg(m) {

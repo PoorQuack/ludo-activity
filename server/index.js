@@ -19,7 +19,7 @@ import { ServerInvite, SNOOZE_MS } from './invite.js';
 import { SocialBook, sendDm } from './social.js';
 import { Inbox } from './inbox.js';
 import { LobbyChat, channelId } from './lobbychat.js';
-import { DirectMessages } from './dms.js';
+import { DirectMessages, pairKey } from './dms.js';
 import { Translator, LANGS } from './translate.js';
 import { PASS_XP } from '../shared/pass.js';
 import { playerLevel } from '../shared/badges.js';
@@ -589,8 +589,8 @@ async function maybeInvite(ws, userId) {
   if (ws.readyState === 1 && store.wantsInvite(userId)) ws.send(JSON.stringify({ type: 'invite', url: invite.url }));
 }
 const social = new SocialBook(SOCIAL_FILE);
-const dms = new DirectMessages(DMS_FILE, { profiles: store, social });
 const isOnline = (id) => userSockets.has(id);
+const dms = new DirectMessages(DMS_FILE, { profiles: store, social, isOnline });
 function sendFriends(userId) {
   sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null });
 }
@@ -615,6 +615,7 @@ function friendsChanged(userId) {
   for (const other of userSockets.keys()) {
     const u = social.users.get(other);
     if (other === userId || u?.friends.includes(userId) || u?.met.some((m) => m.id === userId)) sendFriends(other);
+    if (other !== userId && dms.threads[pairKey(other, userId)]) sendDmSummary(other);
   }
 }
 // DM invites to people who weren't online: if one opens the game for the first time, whoever

@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ Aggiornamento fatto, sei tornato!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ Aggiornamento completato, bentornato! La partita riprende da dove era.",
   "🌇 Golden hour": "🌇 Ora d’oro",
-  "🌍 Global": "🌍 Globale",
   "🌙 Night": "🌙 Notte",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name} ha giocato la prima partita: +{coins} monete per averlo invitato!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} XP Pass Battaglia · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name} ti ha inviato una richiesta di amicizia",
   "👥 Modes": "👥 Modalità",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} gemme! Grazie per il supporto",
-  "💬 DMs": "💬 DM",
   "💬 Feedback": "💬 Suggerimento",
   "💰 The pot is shared by place: {list}": "💰 Il piatto è diviso per posizione: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} si dividono il piatto: {n} monete!",
@@ -986,5 +984,6 @@
   "Add as friend": "Aggiungi come amico",
   "More options": "Altre opzioni",
   "No badges earned yet": "Nessun badge ottenuto ancora",
-  "You blocked this player": "Hai bloccato questo giocatore"
+  "You blocked this player": "Hai bloccato questo giocatore",
+  "Global": "Globale"
 }

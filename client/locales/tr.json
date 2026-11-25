@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ Güncelleme bitti, geri döndün!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ Güncelleme tamamlandı, tekrar hoş geldin! Oyun kaldığı yerden devam ediyor.",
   "🌇 Golden hour": "🌇 Altın saat",
-  "🌍 Global": "🌍 Küresel",
   "🌙 Night": "🌙 Gece",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name} ilk oyununu oynadı: davet ettiğin için +{coins} jeton!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} Savaş Bileti XP · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name} sana arkadaşlık isteği gönderdi",
   "👥 Modes": "👥 Modlar",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} mücevher! Desteğin için teşekkürler",
-  "💬 DMs": "💬 DM",
   "💬 Feedback": "💬 Geri bildirim",
   "💰 The pot is shared by place: {list}": "💰 Pot sıraya göre paylaşıldı: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} potu paylaşıyor: {n} jeton!",
@@ -986,5 +984,6 @@
   "Add as friend": "Arkadaş olarak ekle",
   "More options": "Diğer seçenekler",
   "No badges earned yet": "Henüz kazanılmış rozet yok",
-  "You blocked this player": "Bu oyuncuyu engelledin"
+  "You blocked this player": "Bu oyuncuyu engelledin",
+  "Global": "Küresel"
 }

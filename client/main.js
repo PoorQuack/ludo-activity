@@ -4661,13 +4661,14 @@ function renderLobbyChat() {
   if (dmListMode) {
     dmList.innerHTML = '';
     const seen = new Set();
+    const onlineMap = new Map((friendsData?.friends || []).map((f) => [f.id, !!f.online]));
     const rows = [];
     for (const th of dmState.threads) {
       seen.add(th.id);
-      rows.push(th);
+      rows.push({ ...th, online: th.online ?? !!onlineMap.get(th.id) });
     }
     for (const f of friendsData?.friends || []) {
-      if (!seen.has(f.id)) rows.push({ id: f.id, name: f.name, avatar: f.avatar, unread: 0, last: null });
+      if (!seen.has(f.id)) rows.push({ id: f.id, name: f.name, avatar: f.avatar, online: !!f.online, unread: 0, last: null });
     }
     if (!rows.length) {
       const p = document.createElement('p');
@@ -4682,7 +4683,7 @@ function renderLobbyChat() {
       btn.className = 'dm-row';
       btn.addEventListener('click', () => openDm(r.id, r.name));
       const av = document.createElement('span');
-      av.className = 'avatar lchat-av';
+      av.className = `avatar lchat-av${r.online ? ' online' : ''}`;
       fillAvatar(av, { id: r.id, name: r.name, avatar: r.avatar });
       setFrame(av, r.frame);
       const meta = document.createElement('div');
@@ -4707,10 +4708,11 @@ function renderLobbyChat() {
 
   if (isDm) {
     const f = dmState.friend || { id: dmState.activeId, name: 'Player' };
+    const fOnline = f.online ?? !!friendsData?.friends?.find((x) => x.id === f.id)?.online;
     dmBar.innerHTML = '';
     const back = document.createElement('button');
     back.type = 'button';
-    back.className = 'btn small';
+    back.className = 'btn small dm-back';
     back.textContent = '←';
     back.addEventListener('click', () => {
       dmState.activeId = '';
@@ -4722,7 +4724,7 @@ function renderLobbyChat() {
     whoBtn.className = 'dm-who';
     whoBtn.addEventListener('click', () => inspectPlayer(f.id, f.name));
     const av = document.createElement('span');
-    av.className = 'avatar lchat-av';
+    av.className = `avatar lchat-av${fOnline ? ' online' : ''}`;
     fillAvatar(av, { id: f.id, name: f.name, avatar: f.avatar });
     setFrame(av, f.frame);
     const label = document.createElement('span');

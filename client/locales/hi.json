@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ अपडेट हो गया, आप वापस आ गए!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ अपडेट पूरा, वापसी पर स्वागत है! खेल वहीं से जारी है।",
   "🌇 Golden hour": "🌇 सुनहरा समय",
-  "🌍 Global": "🌍 ग्लोबल",
   "🌙 Night": "🌙 रात",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name} ने पहला गेम खेला: बुलाने के लिए +{coins} सिक्के!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} बैटल पास XP · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name} ने आपको दोस्ती का अनुरोध भेजा",
   "👥 Modes": "👥 मोड",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} रत्न! आपके साथ के लिए धन्यवाद",
-  "💬 DMs": "💬 DM",
   "💬 Feedback": "💬 फ़ीडबैक",
   "💰 The pot is shared by place: {list}": "💰 पॉट स्थान के हिसाब से बंटा: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} पॉट बाँटते हैं: {n} सिक्के!",
@@ -986,5 +984,6 @@
   "Add as friend": "मित्र के रूप में जोड़ें",
   "More options": "अधिक विकल्प",
   "No badges earned yet": "अभी तक कोई बैज नहीं मिला",
-  "You blocked this player": "आपने इस खिलाड़ी को ब्लॉक कर दिया है"
+  "You blocked this player": "आपने इस खिलाड़ी को ब्लॉक कर दिया है",
+  "Global": "ग्लोबल"
 }

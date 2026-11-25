@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ 업데이트 완료, 다시 오셨네요!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ 업데이트 완료, 다시 오신 걸 환영해요! 게임은 멈춘 곳부터 이어져요.",
   "🌇 Golden hour": "🌇 골든 아워",
-  "🌍 Global": "🌍 글로벌",
   "🌙 Night": "🌙 밤",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name}님이 첫 게임을 했어요: 초대 보상 +{coins}코인!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ 배틀 패스 XP +{xp} · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name}님이 친구 요청을 보냈어요",
   "👥 Modes": "👥 모드",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems}젬! 응원해 줘서 고마워요",
-  "💬 DMs": "💬 DM",
   "💬 Feedback": "💬 피드백",
   "💰 The pot is shared by place: {list}": "💰 판돈을 순위대로 나눴어요: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names}님이 팟을 나눠 가져요: {n}코인!",
@@ -986,5 +984,6 @@
   "Add as friend": "친구 추가",
   "More options": "더 보기",
   "No badges earned yet": "아직 획득한 배지가 없습니다",
-  "You blocked this player": "이 플레이어를 차단했습니다"
+  "You blocked this player": "이 플레이어를 차단했습니다",
+  "Global": "글로벌"
 }

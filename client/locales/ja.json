@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ アップデート完了、おかえりなさい！",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ アップデート完了、おかえりなさい！ ゲームは中断したところから続きます。",
   "🌇 Golden hour": "🌇 夕暮れ",
-  "🌍 Global": "🌍 グローバル",
   "🌙 Night": "🌙 夜",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name}が最初のゲームをプレイ：招待ボーナス+{coins}コイン！",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ バトルパスXP +{xp}・{why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name}さんからフレンド申請が届きました",
   "👥 Modes": "👥 モード",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems}ジェム！応援ありがとう",
-  "💬 DMs": "💬 DM",
   "💬 Feedback": "💬 フィードバック",
   "💰 The pot is shared by place: {list}": "💰 ポットを順位で分配：{list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names}がポットを山分け：{n}コイン！",
@@ -986,5 +984,6 @@
   "Add as friend": "フレンド追加",
   "More options": "その他のオプション",
   "No badges earned yet": "まだバッジがありません",
-  "You blocked this player": "このプレイヤーをブロックしています"
+  "You blocked this player": "このプレイヤーをブロックしています",
+  "Global": "グローバル"
 }

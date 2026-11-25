@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ اكتمل التحديث، لقد عدت!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ اكتمل التحديث، أهلًا بعودتك! تستمر المباراة من حيث توقفت.",
   "🌇 Golden hour": "🌇 الساعة الذهبية",
-  "🌍 Global": "🌍 عام",
   "🌙 Night": "🌙 ليل",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 لعب {name} أول مباراة: +{coins} عملة لدعوته!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} XP لتذكرة المعركة · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 أرسل لك {name} طلب صداقة",
   "👥 Modes": "👥 الأوضاع",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} جوهرة! شكرًا لدعمك",
-  "💬 DMs": "💬 رسائل",
   "💬 Feedback": "💬 ملاحظة",
   "💰 The pot is shared by place: {list}": "💰 قُسمت الجائزة حسب المركز: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} يتقاسمون الرهان: {n} عملة!",
@@ -986,5 +984,6 @@
   "Add as friend": "إضافة كصديق",
   "More options": "المزيد من الخيارات",
   "No badges earned yet": "لا توجد شارات بعد",
-  "You blocked this player": "لقد حظرت هذا اللاعب"
+  "You blocked this player": "لقد حظرت هذا اللاعب",
+  "Global": "عام"
 }

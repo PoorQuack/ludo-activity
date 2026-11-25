@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ Оновлення готове, ви знову тут!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ Оновлення завершено, з поверненням! Гра триває з того самого місця.",
   "🌇 Golden hour": "🌇 Золота година",
-  "🌍 Global": "🌍 Загальний",
   "🌙 Night": "🌙 Ніч",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name} зіграв першу партію: +{coins} монет за запрошення!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} XP Бойової перепустки · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name} надсилає тобі запит у друзі",
   "👥 Modes": "👥 Режими",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} самоцвітів! Дякуємо за підтримку",
-  "💬 DMs": "💬 ОП",
   "💬 Feedback": "💬 Відгук",
   "💰 The pot is shared by place: {list}": "💰 Банк поділено за місцями: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} ділять банк: {n} монет!",
@@ -986,5 +984,6 @@
   "Add as friend": "Додати в друзі",
   "More options": "Ще",
   "No badges earned yet": "Значків ще немає",
-  "You blocked this player": "Ви заблокували цього гравця"
+  "You blocked this player": "Ви заблокували цього гравця",
+  "Global": "Загальний"
 }

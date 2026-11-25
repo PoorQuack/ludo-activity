@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ Обновление готово, вы снова здесь!",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ Обновление завершено, с возвращением! Игра продолжается с того же места.",
   "🌇 Golden hour": "🌇 Золотой час",
-  "🌍 Global": "🌍 Общий",
   "🌙 Night": "🌙 Ночь",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name} сыграл первую партию: +{coins} монет за приглашение!",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} XP Боевого пропуска · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name} отправляет тебе запрос в друзья",
   "👥 Modes": "👥 Режимы",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} самоцветов! Спасибо за поддержку",
-  "💬 DMs": "💬 ЛС",
   "💬 Feedback": "💬 Отзыв",
   "💰 The pot is shared by place: {list}": "💰 Банк поделён по местам: {list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} делят банк: {n} монет!",
@@ -986,5 +984,6 @@
   "Add as friend": "Добавить в друзья",
   "More options": "Ещё",
   "No badges earned yet": "Значков пока нет",
-  "You blocked this player": "Вы заблокировали этого игрока"
+  "You blocked this player": "Вы заблокировали этого игрока",
+  "Global": "Общий"
 }

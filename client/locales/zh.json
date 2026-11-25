@@ -943,7 +943,6 @@
   "✅ Update done, you're back!": "✅ 更新完成，欢迎回来！",
   "✅ Update finished, welcome back! The game carries on where it was.": "✅ 更新完成，欢迎回来！游戏从刚才的地方继续。",
   "🌇 Golden hour": "🌇 黄金时刻",
-  "🌍 Global": "🌍 全球",
   "🌙 Night": "🌙 夜晚",
   "🎉 {name} played their first game: +{coins} coins for inviting them!": "🎉 {name} 完成了第一局：邀请奖励 +{coins} 金币！",
   "🎟️ +{xp} Battle Pass XP · {why}": "🎟️ +{xp} 战斗通行证XP · {why}",
@@ -958,7 +957,6 @@
   "👋 {name} sent you a friend request": "👋 {name} 向你发送了好友请求",
   "👥 Modes": "👥 模式",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} 宝石！感谢你的支持",
-  "💬 DMs": "💬 私信",
   "💬 Feedback": "💬 反馈",
   "💰 The pot is shared by place: {list}": "💰 奖池按名次分配：{list}",
   "💰 {names} split the pot: {n} coins!": "💰 {names} 平分奖池：{n} 金币！",
@@ -986,5 +984,6 @@
   "Add as friend": "添加好友",
   "More options": "更多选项",
   "No badges earned yet": "暂未获得徽章",
-  "You blocked this player": "你已屏蔽该玩家"
+  "You blocked this player": "你已屏蔽该玩家",
+  "Global": "全球"
 }
