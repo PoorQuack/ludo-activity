@@ -202,7 +202,7 @@ export class Leaderboard {
         period: this.boards[kind].id,
         endsAt: periodEnd(kind, this.now()),
         prizes: PRIZES[kind],
-        top: ranked.slice(0, TOP).map((e, i) => ({ rank: i + 1, name: e.name, points: e.points, wins: e.wins, games: e.games, you: e.userId === userId })),
+        top: ranked.slice(0, TOP).map((e, i) => ({ rank: i + 1, id: e.userId, avatar: !String(e.userId).startsWith('guest-'), name: e.name, points: e.points, wins: e.wins, games: e.games, you: e.userId === userId })),
         me: mine >= 0 ? { rank: mine + 1, points: ranked[mine].points, wins: ranked[mine].wins, games: ranked[mine].games } : null,
         players: ranked.length,
         last: this.last[kind],
@@ -214,7 +214,7 @@ export class Leaderboard {
       mode: 'stakes',
       ...(mode === 'points' ? { startsAt: this.stakesAt } : {}),
       since: this.allTime.since,
-      top: ranked.slice(0, TOP).map((e, i) => ({ rank: i + 1, name: e.name, points: e.points, wins: e.wins, games: e.games, you: e.userId === userId })),
+      top: ranked.slice(0, TOP).map((e, i) => ({ rank: i + 1, id: e.userId, avatar: !String(e.userId).startsWith('guest-'), name: e.name, points: e.points, wins: e.wins, games: e.games, you: e.userId === userId })),
       me: mine >= 0 ? { rank: mine + 1, points: ranked[mine].points, wins: ranked[mine].wins, games: ranked[mine].games } : null,
       players: ranked.length,
     };

@@ -1254,14 +1254,13 @@ function renderLeaderboard() {
   const lang = document.documentElement.lang || undefined;
   const chips = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString(lang)}`;
   const scoreHtml = (n) => (pointsMode ? `${Number(n).toLocaleString(lang)} <small>${t('pts')}</small>` : `${coin}${chips(n)}`);
-  const initial = (name) => escapeHtml([...String(name || '?').trim()][0]?.toUpperCase() || '?');
   // The podium: 2nd, 1st, 3rd (1st in the middle, highest); empty places wait for someone
   const slot = (place) => {
     const e = b.top[place - 1];
     const prize = !all && b.prizes ? `<span class="pod-prize">${coin}${b.prizes[place - 1]}</span>` : '';
     if (!e) return `<div class="pod pod${place} empty"><div class="pod-pic"><span>?</span></div><b class="pod-name">—</b>${prize}<div class="pod-step"><span>${place}</span></div></div>`;
     return `<div class="pod pod${place}${e.you ? ' you' : ''}">
-        <div class="pod-pic"><span>${initial(e.name)}</span><img src="/frames/frame-rank-${place}.webp" alt="" class="pod-frame"></div>
+        <div class="pod-pic"><span class="avatar pod-avatar" data-lb-avatar="${place}"></span><img src="/frames/frame-rank-${place}.webp" alt="" class="pod-frame"></div>
         <b class="pod-name">${escapeHtml(e.name)}${e.you ? ` <small>${t('(you)')}</small>` : ''}</b>
         <span class="pod-chips${!pointsMode && e.points < 0 ? ' neg' : ''}">${scoreHtml(e.points)}</span>
         ${prize}
@@ -1271,11 +1270,11 @@ function renderLeaderboard() {
   const podium = `<div class="lb-podium">${slot(2)}${slot(1)}${slot(3)}</div>`;
   const row = (e, mine) => `<li class="lb-row${mine ? ' you' : ''}">
       <span class="lb-rank">${e.rank}</span>
-      <span class="lb-name">${escapeHtml(e.name)}${mine ? ` <small>${t('(you)')}</small>` : ''}</span>
+      <span class="lb-name"><span class="avatar lb-avatar" data-lb-avatar="r${e.rank}"></span><span class="lb-name-text">${escapeHtml(e.name)}${mine ? ` <small>${t('(you)')}</small>` : ''}</span></span>
       <b class="lb-pts${!pointsMode && e.points < 0 ? ' neg' : ''}">${scoreHtml(e.points)}</b>
     </li>`;
   let rows = b.top.slice(3).map((e) => row(e, e.you)).join('');
-  if (b.me && b.me.rank > b.top.length) rows += `<li class="lb-gap">⋯</li>${row({ ...b.me, name: me?.name || t('You') }, true)}`;
+  if (b.me && b.me.rank > b.top.length) rows += `<li class="lb-gap">⋯</li>${row({ ...b.me, id: me?.id, avatar: me?.avatar, name: me?.name || t('You') }, true)}`;
   const list = rows ? `<ol class="lb-list">${rows}</ol>` : '';
   const upcomingAll = all && b.startsAt && b.startsAt > Date.now() + clockOffset;
   const empty = !b.top.length
@@ -1306,6 +1305,13 @@ function renderLeaderboard() {
     <p class="lb-note">${when}</p>
     <p class="lb-note lb-how">${how}</p>
     ${last}`;
+  for (const av of body.querySelectorAll('[data-lb-avatar]')) {
+    const key = av.dataset.lbAvatar;
+    const person = key.startsWith('r')
+      ? (b.top.find((e) => `r${e.rank}` === key) || (b.me && { id: me?.id || 'me', name: me?.name || t('You'), avatar: me?.avatar }))
+      : b.top[Number(key) - 1];
+    if (person) fillAvatar(av, person.id ? person : { id: person.name || key, name: person.name, avatar: false });
+  }
 }
 
 // ---------------- daily quests ----------------

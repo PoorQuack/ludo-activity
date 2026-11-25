@@ -37,6 +37,8 @@ test('games add up points and wins; ties go to more wins, then whoever got there
   assert.deepEqual(v.week.top.map((e) => e.name), ['ANN', 'BOB', 'CAT']);
   assert.equal(v.week.me.rank, 2);
   assert.equal(v.week.top[1].you, true);
+  assert.equal(v.week.top[0].id, 'ann');
+  assert.equal(v.week.top[0].avatar, true);
   assert.equal(v.month.top[0].points, 27);
   assert.deepEqual(v.week.prizes, PRIZES.week);
 });
