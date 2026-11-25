@@ -876,5 +876,11 @@
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} gemmes ! Merci pour ton soutien",
  "💰 {names} split the pot: {n} coins!": "💰 {names} se partagent le pot : {n} pièces !",
  "💰 {names} takes the pot: {n} coins!": "💰 {names} rafle le pot : {n} pièces !",
- "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "En équipe contre des bots : des pièces, mais pas de points au classement. Affrontez-vous pour grimper au classement."
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "En équipe contre des bots : des pièces, mais pas de points au classement. Affrontez-vous pour grimper au classement.",
+ "Buff cat": "Chat costaud",
+ "Eating chips": "Mange des chips",
+ "Invite friends": "Inviter des amis",
+ "No friends yet — add people from Played with.": "Pas encore d'amis — ajoute des gens depuis « Joué avec ».",
+ "Sent!": "Envoyé !",
+ "👋 Invite friends": "👋 Inviter des amis"
 }

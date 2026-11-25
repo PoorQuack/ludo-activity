@@ -876,5 +876,11 @@
  "💎 +{gems} gems! Thank you for your support": "💎 +{gems} edelstenen! Bedankt voor je steun",
  "💰 {names} split the pot: {n} coins!": "💰 {names} delen de pot: {n} munten!",
  "💰 {names} takes the pot: {n} coins!": "💰 {names} pakt de pot: {n} munten!",
- "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Samen tegen bots: munten, maar geen ranglijstpunten. Speel tegen elkaar om te stijgen op de ranglijst."
+ "Teamed up against bots: coins, but no leaderboard points. Play against each other to climb the board.": "Samen tegen bots: munten, maar geen ranglijstpunten. Speel tegen elkaar om te stijgen op de ranglijst.",
+ "Buff cat": "Gespierde kat",
+ "Eating chips": "Chips eten",
+ "Invite friends": "Vrienden uitnodigen",
+ "No friends yet — add people from Played with.": "Nog geen vrienden — voeg mensen toe via 'Samen gespeeld'.",
+ "Sent!": "Verstuurd!",
+ "👋 Invite friends": "👋 Vrienden uitnodigen"
 }
