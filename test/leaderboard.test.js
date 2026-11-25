@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Leaderboard, periodId, periodEnd, PRIZES } from '../server/leaderboard.js';
+import { Leaderboard, periodId, periodEnd, PRIZES, STAKES_FROM } from '../server/leaderboard.js';
 import { ProfileStore } from '../server/store.js';
 import { Room } from '../server/room.js';
 import { REWARDS } from '../shared/shop.js';
@@ -28,7 +28,7 @@ test('weeks run Monday to Monday (ISO weeks, UTC); months by the calendar', () =
 
 test('games add up points and wins; ties go to more wins, then whoever got there first', () => {
   const c = clock('2026-11-05T10:00Z');
-  const lb = new Leaderboard(null, { now: c.now });
+  const lb = new Leaderboard(null, { now: c.now, stakesAt: 0 });
   lb.record(game(['ann', 27, true], ['bob', 15]));
   c.t += 60_000;
   lb.record(game(['bob', 12, true], ['cat', 27, true]));
@@ -42,7 +42,7 @@ test('games add up points and wins; ties go to more wins, then whoever got there
 });
 
 test('guests and games that paid nothing are not ranked', () => {
-  const lb = new Leaderboard(null, { now: clock('2026-11-05T10:00Z').now });
+  const lb = new Leaderboard(null, { now: clock('2026-11-05T10:00Z').now, stakesAt: 0 });
   lb.record(game(['guest-abc', 25, true], ['ann', 0]));
   assert.equal(lb.view('ann').week.players, 0);
 });
@@ -51,7 +51,7 @@ test('when the week ends, the top three are paid once and told once', () => {
   const c = clock('2026-11-05T10:00Z');
   const profiles = new ProfileStore(null, { now: c.now });
   const told = [];
-  const lb = new Leaderboard(null, { profiles, now: c.now, onAward: (id) => told.push(id) });
+  const lb = new Leaderboard(null, { profiles, now: c.now, onAward: (id) => told.push(id), stakesAt: 0 });
   lb.record(game(['ann', 40, true], ['bob', 30], ['cat', 20], ['dan', 10]));
   c.t = at('2026-11-09T00:00:30Z'); // Monday
   lb.rollover();
@@ -78,7 +78,7 @@ test('prizes ignore the daily earning cap', () => {
   const c = clock('2026-11-30T10:00Z');
   const profiles = new ProfileStore(null, { now: c.now });
   profiles.addCoins('ann', 1000); // hits today's cap
-  const lb = new Leaderboard(null, { profiles, now: c.now });
+  const lb = new Leaderboard(null, { profiles, now: c.now, stakesAt: 0 });
   lb.record(game(['ann', 25, true], ['bob', -25]));
   c.t = at('2026-12-01T00:01Z'); // a new month (and a new week? no: Tuesday is mid-week)
   lb.rollover();
@@ -89,12 +89,12 @@ test('saved to disk and read back; an owed prize is paid on start', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-'));
   const file = path.join(dir, 'leaderboard.json');
   const c = clock('2026-11-05T10:00Z');
-  const lb = new Leaderboard(file, { now: c.now });
+  const lb = new Leaderboard(file, { now: c.now, stakesAt: 0 });
   lb.record(game(['ann', 40, true], ['bob', -40]));
   lb.awards.push({ userId: 'bob', kind: 'week', period: '2026-W44', place: 1, coins: 300, paid: false, seen: false }); // as if a crash hit mid-payout
   lb.flush();
   const profiles = new ProfileStore(null, { now: c.now });
-  const again = new Leaderboard(file, { profiles, now: c.now });
+  const again = new Leaderboard(file, { profiles, now: c.now, stakesAt: 0 });
   assert.equal(again.view('ann').week.top[0].points, 40);
   assert.equal(profiles.peek('bob').coins, 150 + 300);
   const third = new Leaderboard(file, { profiles, now: c.now });
@@ -145,7 +145,7 @@ test('the all-time board keeps every point through week and month ends, and is s
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-all-'));
   const file = path.join(dir, 'leaderboard.json');
   const c = clock('2026-11-05T10:00Z');
-  const lb = new Leaderboard(file, { now: c.now });
+  const lb = new Leaderboard(file, { now: c.now, stakesAt: 0 });
   lb.record(game(['ann', 20, true], ['bob', 10]));
   c.t = at('2026-12-02T10:00Z'); // a new week and a new month
   lb.record(game(['bob', 30, true], ['ann', 5]));
@@ -155,7 +155,7 @@ test('the all-time board keeps every point through week and month ends, and is s
   assert.deepEqual(v.all.me, { rank: 2, points: 25, wins: 1, games: 2 });
   assert.equal(v.all.since, '2026-11');
   lb.flush();
-  const again = new Leaderboard(file, { now: c.now });
+  const again = new Leaderboard(file, { now: c.now, stakesAt: 0 });
   assert.equal(again.view('bob').all.top[0].points, 40);
 });
 
@@ -166,7 +166,7 @@ test('an old save (places, not stakes) starts the boards again, keeping past win
   const c = clock('2026-11-20T10:00Z');
   const last = { period: '2026-W46', podium: [{ name: 'ANN', points: 40, place: 1, coins: 300 }] };
   fs.writeFileSync(file, JSON.stringify({ version: 1, boards: { week: { id: '2026-W47', scores: { ann: { name: 'ANN', points: 99, wins: 3, games: 5, at: 1 } } }, month: { id: '2026-11', scores: {} } }, last: { week: last, month: null }, awards: [] }));
-  const lb = new Leaderboard(file, { now: c.now });
+  const lb = new Leaderboard(file, { now: c.now, stakesAt: 0 });
   const v = lb.view('ann');
   assert.equal(v.week.players, 0);
   assert.equal(v.all.players, 0);
@@ -176,7 +176,7 @@ test('an old save (places, not stakes) starts the boards again, keeping past win
 test('chips: a lost stake counts against you, and nobody in the red wins a prize', () => {
   const c = clock('2026-11-05T10:00Z');
   const profiles = new ProfileStore(null, { now: c.now });
-  const lb = new Leaderboard(null, { profiles, now: c.now });
+  const lb = new Leaderboard(null, { profiles, now: c.now, stakesAt: 0 });
   lb.record(game(['ann', 1000, true], ['bob', -500], ['cat', -500]));
   c.t += 60_000;
   lb.record(game(['bob', 100, true], ['cat', -100]));
@@ -190,7 +190,7 @@ test('chips: a lost stake counts against you, and nobody in the red wins a prize
 
 test('the same people only count 3 times a day: farming a friend stops paying', () => {
   const c = clock('2026-11-05T10:00Z');
-  const lb = new Leaderboard(null, { now: c.now });
+  const lb = new Leaderboard(null, { now: c.now, stakesAt: 0 });
   for (let i = 0; i < 5; i++) lb.record(game(['ann', 100, true], ['bob', -100]));
   assert.equal(lb.view('ann').week.top[0].points, 300);
   lb.record(game(['ann', 200, true], ['bob', -100], ['cat', -100])); // a new face: it counts
@@ -198,4 +198,54 @@ test('the same people only count 3 times a day: farming a friend stops paying', 
   c.t = at('2026-11-06T10:00Z'); // the next day: counts again
   lb.record(game(['ann', 100, true], ['bob', -100]));
   assert.equal(lb.view('ann').week.top[0].points, 600);
+});
+
+test('November 2026 keeps v1 scores and pays monthly winners on Dec 1 before switching to stakes', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-lb-nov-'));
+  const file = path.join(dir, 'leaderboard.json');
+  const c = clock('2026-11-25T11:00Z');
+  const profiles = new ProfileStore(null, { now: c.now });
+  // Restored v1 leaderboard from Nov 25
+  fs.writeFileSync(file, JSON.stringify({
+    version: 1,
+    boards: {
+      week: { id: '2026-W48', scores: { ann: { name: 'ANN', points: 100, wins: 3, games: 5, at: 1 } } },
+      month: { id: '2026-11', scores: { ann: { name: 'ANN', points: 500, wins: 15, games: 25, at: 1 }, bob: { name: 'BOB', points: 400, wins: 12, games: 22, at: 2 } } },
+    },
+    last: { week: { period: '2026-W47', podium: [{ name: 'CAT', points: 80, place: 1, coins: 300 }] }, month: null },
+    awards: [],
+  }));
+  const lb = new Leaderboard(file, { profiles, now: c.now, stakesAt: STAKES_FROM });
+  assert.equal(lb.view('ann').week.mode, 'points');
+  assert.equal(lb.view('ann').month.top[0].points, 500);
+  // Games in late November add placePoints (even without a stake)
+  lb.record([{ userId: 'bob', name: 'BOB', points: 0, placePoints: 20, won: true, opponents: ['ann'] }]);
+  assert.equal(lb.view('bob').week.top.find((e) => e.name === 'BOB').points, 20);
+  assert.equal(lb.view('bob').month.top.find((e) => e.name === 'BOB').points, 420);
+  assert.equal(lb.view('bob').all.players, 0);
+  // Week W48 ends Nov 30: pays weekly top 3, starts W49 in v1
+  c.t = at('2026-11-30T00:01Z');
+  lb.rollover();
+  assert.equal(profiles.peek('ann').coins, 150 + PRIZES.week[0]);
+  assert.equal(lb.view('ann').week.last.unit, 'pts');
+  lb.record([{ userId: 'bob', name: 'BOB', points: 0, placePoints: 20, won: true, opponents: ['ann'] }]);
+  assert.equal(lb.view('bob').week.top[0].points, 20);
+  // Dec 1: pays November's monthly winners, clears Nov 30's W49 v1 points, switches to stakes v2
+  c.t = at('2026-12-01T00:01Z');
+  lb.rollover();
+  assert.equal(profiles.peek('ann').coins, 150 + PRIZES.week[0] + PRIZES.month[0]);
+  assert.equal(profiles.peek('bob').coins, 150 + PRIZES.week[1] + PRIZES.month[1]);
+  assert.ok(profiles.peek('ann').owned.includes('frame-rank-1'));
+  const dec = lb.view('ann');
+  assert.equal(dec.month.mode, 'stakes');
+  assert.equal(dec.month.period, '2026-12');
+  assert.equal(dec.month.last.period, '2026-11');
+  assert.equal(dec.month.last.unit, 'pts');
+  assert.equal(dec.week.players, 0);
+  assert.equal(dec.all.since, '2026-12');
+  // Stakes games now score chips
+  lb.record(game(['bob', 500, true], ['ann', -500]));
+  assert.equal(lb.view('bob').month.top[0].points, 500);
+  assert.equal(lb.view('bob').all.top[0].points, 500);
+  fs.rmSync(dir, { recursive: true, force: true });
 });

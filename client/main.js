@@ -1249,8 +1249,11 @@ function renderLeaderboard() {
   }
   const week = lbTab === 'week';
   const all = lbTab === 'all';
+  const pointsMode = b.mode === 'points';
   const coin = '<span class="coin"></span>';
-  const chips = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString(document.documentElement.lang || undefined)}`;
+  const lang = document.documentElement.lang || undefined;
+  const chips = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString(lang)}`;
+  const scoreHtml = (n) => (pointsMode ? `${Number(n).toLocaleString(lang)} <small>${t('pts')}</small>` : `${coin}${chips(n)}`);
   const initial = (name) => escapeHtml([...String(name || '?').trim()][0]?.toUpperCase() || '?');
   // The podium: 2nd, 1st, 3rd (1st in the middle, highest); empty places wait for someone
   const slot = (place) => {
@@ -1260,7 +1263,7 @@ function renderLeaderboard() {
     return `<div class="pod pod${place}${e.you ? ' you' : ''}">
         <div class="pod-pic"><span>${initial(e.name)}</span><img src="/frames/frame-rank-${place}.webp" alt="" class="pod-frame"></div>
         <b class="pod-name">${escapeHtml(e.name)}${e.you ? ` <small>${t('(you)')}</small>` : ''}</b>
-        <span class="pod-chips${e.points < 0 ? ' neg' : ''}">${coin}${chips(e.points)}</span>
+        <span class="pod-chips${!pointsMode && e.points < 0 ? ' neg' : ''}">${scoreHtml(e.points)}</span>
         ${prize}
         <div class="pod-step"><span>${place}</span></div>
       </div>`;
@@ -1269,24 +1272,30 @@ function renderLeaderboard() {
   const row = (e, mine) => `<li class="lb-row${mine ? ' you' : ''}">
       <span class="lb-rank">${e.rank}</span>
       <span class="lb-name">${escapeHtml(e.name)}${mine ? ` <small>${t('(you)')}</small>` : ''}</span>
-      <b class="lb-pts${e.points < 0 ? ' neg' : ''}">${coin}${chips(e.points)}</b>
+      <b class="lb-pts${!pointsMode && e.points < 0 ? ' neg' : ''}">${scoreHtml(e.points)}</b>
     </li>`;
   let rows = b.top.slice(3).map((e) => row(e, e.you)).join('');
   if (b.me && b.me.rank > b.top.length) rows += `<li class="lb-gap">⋯</li>${row({ ...b.me, name: me?.name || t('You') }, true)}`;
   const list = rows ? `<ol class="lb-list">${rows}</ol>` : '';
-  const empty = !b.top.length ? `<p class="lb-empty">${t('Nobody yet. Win a public stakes game to be first on the board.')}</p>` : '';
+  const upcomingAll = all && b.startsAt && b.startsAt > Date.now() + clockOffset;
+  const empty = !b.top.length
+    ? (upcomingAll ? `<p class="lb-empty">${t('Coming soon')} — ${escapeHtml(sinceLabel(b.since))}</p>` : pointsMode ? '' : `<p class="lb-empty">${t('Nobody yet. Win a public stakes game to be first on the board.')}</p>`)
+    : '';
   const yours = b.me
     ? t("You're <b>{place}</b> of {players}.", { place: ordinal(b.me.rank), players: b.players })
     : b.top.length ? (all ? t("You're not on the board yet.") : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.")) : '';
-  const how = t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.');
+  const how = pointsMode
+    ? t("Every game against other people also scores leaderboard points: 10 for each player you finish ahead of, plus 10 for beating them all (bots don't count). Only games count for the leaderboards. The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.")
+    : t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.');
   const when = all
     ? t('Never resets · counting since {date}', { date: escapeHtml(sinceLabel(b.since)) })
     : week
       ? t('Top 3 win coins when the week ends · resets in <b>{time}</b>', { time: timeLeft(b.endsAt - (Date.now() + clockOffset)) })
       : t('Top 3 win coins when the month ends · resets in <b>{time}</b>', { time: timeLeft(b.endsAt - (Date.now() + clockOffset)) });
+  const lastPts = b.last?.unit === 'pts' || pointsMode;
   const last = !all && b.last?.podium?.length
     ? `<section class="lb-last"><h3>${week ? t("Last week's winners") : t("Last month's winners")}</h3><ol>${b.last.podium
-        .map((p) => `<li>${MEDALS[p.place - 1]} ${escapeHtml(p.name)} <span>${coin}${chips(p.points)} · ${t('prize')} +${p.coins}</span></li>`)
+        .map((p) => `<li>${MEDALS[p.place - 1]} ${escapeHtml(p.name)} <span>${lastPts ? `${Number(p.points).toLocaleString(lang)} ${t('pts')}` : `${coin}${chips(p.points)}`} · ${t('prize')} +${p.coins}</span></li>`)
         .join('')}</ol></section>`
     : '';
   body.innerHTML = `
@@ -4583,8 +4592,11 @@ for (const el of document.querySelectorAll('.sheet-wrap')) {
 }
 window.addEventListener('keydown', (e) => e.key === 'Escape' && closeSheets());
 
-// CLASSIC is "Play now" (#play-now, wired above). POWER: teams, quick games, and what's coming.
-$('power-btn').addEventListener('click', () => openSheet('power-sheet'));
+// CLASSIC is "Play now" (#play-now, wired above). POWER is locked while still under development.
+$('power-btn').addEventListener('click', (e) => {
+  if (e.currentTarget.disabled) return;
+  openSheet('power-sheet');
+});
 for (const b of document.querySelectorAll('[data-power]')) {
   b.addEventListener('click', () => {
     closeSheets();

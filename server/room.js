@@ -33,6 +33,8 @@ const CHAT_COOLDOWN_MS = 700;
 const CHAT_KEEP = 40; // messages kept (and sent) per room
 const CHAT_MAX_LEN = 100;
 const EMOTE_TTL_MS = 3000;
+const LB_PER_BEATEN = 10; // v1 leaderboard points for each human finished ahead of (until Dec 2026)
+const LB_WIN_BONUS = 10; // …and for finishing ahead of every other human
 const TYPING_MS = 2500; // "is typing…" lasts this long after the last ping (clients ping every second)
 const BOT_NAMES = ['Bot Neko', 'Bot Mila', 'Bot Gigi', 'Bot Lizzy', 'Bot SamSam'];
 const PLACES = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
@@ -1153,10 +1155,12 @@ export class Room {
       const granted = this.profiles ? this.profiles.addCoins(seat.userId, coins) : coins;
       this.rewards[s] = granted;
       if (granted < coins) this.rewardCapped.push(s);
-      // (leaderboard points come from the pot: see reportResults)
+      // (leaderboard points come from the pot in v2, or finishing places in v1 until Dec 2026)
       const humanPlace = humanGroups.findIndex((g) => g.includes(s));
+      const beaten = humanGroups.slice(humanPlace + 1).reduce((n, g) => n + g.length, 0);
       const won = !coop && humanPlace === 0;
-      results.push({ userId: seat.userId, name: seat.name, points: 0, won });
+      const placePoints = coop ? 0 : Math.round((beaten * LB_PER_BEATEN + (won ? LB_WIN_BONUS : 0)) * share);
+      results.push({ userId: seat.userId, name: seat.name, points: 0, placePoints, won });
       this.stat(s, 'game');
       if (won) {
         this.stat(s, 'win');
