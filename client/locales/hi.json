@@ -985,5 +985,10 @@
   "More options": "अधिक विकल्प",
   "No badges earned yet": "अभी तक कोई बैज नहीं मिला",
   "You blocked this player": "आपने इस खिलाड़ी को ब्लॉक कर दिया है",
-  "Global": "ग्लोबल"
+  "Global": "ग्लोबल",
+  "Cancel": "रद्द करें",
+  "Cannot react to this thread": "इस चैट पर प्रतिक्रिया नहीं दी जा सकती",
+  "React": "प्रतिक्रिया",
+  "Reply": "जवाब दें",
+  "Replying to": "जवाब दे रहे हैं"
 }

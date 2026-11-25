@@ -985,5 +985,10 @@
   "More options": "Diğer seçenekler",
   "No badges earned yet": "Henüz kazanılmış rozet yok",
   "You blocked this player": "Bu oyuncuyu engelledin",
-  "Global": "Küresel"
+  "Global": "Küresel",
+  "Cancel": "İptal",
+  "Cannot react to this thread": "Bu sohbette tepki verilemiyor",
+  "React": "Tepki ver",
+  "Reply": "Yanıtla",
+  "Replying to": "Yanıtlanan"
 }

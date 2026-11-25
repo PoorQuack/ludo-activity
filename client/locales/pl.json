@@ -985,5 +985,10 @@
   "More options": "Więcej opcji",
   "No badges earned yet": "Brak zdobytych odznak",
   "You blocked this player": "Zablokowałeś tego gracza",
-  "Global": "Globalny"
+  "Global": "Globalny",
+  "Cancel": "Anuluj",
+  "Cannot react to this thread": "Nie można zareagować w tej rozmowie",
+  "React": "Zareaguj",
+  "Reply": "Odpowiedz",
+  "Replying to": "Odpowiedź do"
 }

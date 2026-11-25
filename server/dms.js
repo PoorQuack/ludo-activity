@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cleanText } from './filter.js';
 import { EMOTE_SLUGS, ownsItem } from '../shared/shop.js';
+import { makeReplySnapshot, toggleReaction } from '../shared/chat.js';
 
 export const DM_KEEP = 50;
 export const DM_MAX_LEN = 200;
@@ -48,7 +49,7 @@ export class DirectMessages {
     return { ...m, ...(vip ? { vip: true } : {}), ...(frame ? { frame } : {}) };
   }
 
-  send(fromUser, toId, text) {
+  send(fromUser, toId, text, { replyId } = {}) {
     const fromId = String(fromUser?.id || '');
     const targetId = String(toId || '');
     if (!fromId || !targetId || fromId === targetId) throw new Error('Pick someone to message');
@@ -83,6 +84,8 @@ export class DirectMessages {
     };
     if (this.profiles?.passActive?.(prof)) msg.vip = true;
     if (prof?.equipped?.frame && prof.equipped.frame !== 'frame-none') msg.frame = prof.equipped.frame;
+    const replyTo = replyId ? makeReplySnapshot(th.msgs.find((m) => m.id === Number(replyId))) : null;
+    if (replyTo) msg.replyTo = replyTo;
 
     th.msgs.push(msg);
     if (th.msgs.length > DM_KEEP) th.msgs.splice(0, th.msgs.length - DM_KEEP);
@@ -97,6 +100,20 @@ export class DirectMessages {
 
     this.save();
     return { msg: this.#enrichMsg(msg), key };
+  }
+
+  react(userId, otherId, msgId, emoji) {
+    const uid = String(userId || '');
+    const oid = String(otherId || '');
+    if (!uid || !oid || uid === oid) return null;
+    if (uid.startsWith('guest-') || oid.startsWith('guest-')) return null;
+    if (this.social?.isBlockedEither?.(uid, oid)) throw new Error('Cannot react to this thread');
+    const th = this.threads[pairKey(uid, oid)];
+    const msg = th?.msgs.find((m) => m.id === Number(msgId));
+    if (!msg) return null;
+    if (!toggleReaction(msg, uid, emoji)) return null;
+    this.save();
+    return { id: msg.id, reactions: msg.reactions || {} };
   }
 
   unreadForThread(th, userId) {

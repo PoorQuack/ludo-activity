@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { DirectMessages, DM_KEEP } from '../server/dms.js';
+import { LobbyChat } from '../server/lobbychat.js';
+import { Room } from '../server/room.js';
 import { SocialBook } from '../server/social.js';
 import { ProfileStore } from '../server/store.js';
 
@@ -76,4 +78,31 @@ test('DirectMessages: allows non-friend DMs, enforces block, tracks unread count
   assert.equal(ap.played.botWins, 1);
   assert.equal(ap.played.botCaptures, 3);
   assert.equal(ap.played.botSixes, 5);
+
+  // Reply quotes and reactions across LobbyChat, DirectMessages, and Room
+  const lchat = new LobbyChat(null, { profiles, now: () => clock });
+  const m1 = lchat.say(alice, 'global', 'Hello world!');
+  clock += 3000;
+  const m2 = lchat.say(bob, 'global', 'Hey Alice!', { replyId: m1.id });
+  assert.deepEqual(m2.replyTo, { id: m1.id, name: 'Alice', text: 'Hello world!' });
+  const r1 = lchat.react(bob.id, 'global', m1.id, '❤️');
+  assert.deepEqual(r1.reactions, { '❤️': [bob.id] });
+  const r2 = lchat.react(bob.id, 'global', m1.id, '❤️');
+  assert.deepEqual(r2.reactions, {});
+
+  clock += 3000;
+  const targetDmId = reloaded.history(bob.id, alice.id).msgs.at(-1).id;
+  const dmRep = reloaded.send(alice, bob.id, 'Replying to DM', { replyId: targetDmId });
+  assert.equal(dmRep.msg.replyTo.id, targetDmId);
+  const dmReact = reloaded.react(bob.id, alice.id, dmRep.msg.id, '😂');
+  assert.deepEqual(dmReact.reactions, { '😂': [bob.id] });
+
+  const room = new Room('TEST', { profiles });
+  room.host(alice);
+  room.join(bob);
+  room.say(alice, 'Good luck!');
+  const rMsgId = room.chat.at(-1).id;
+  room.react(bob, rMsgId, '🔥');
+  assert.deepEqual(room.chat.at(-1).reactions, { '🔥': [bob.id] });
+  room.destroy();
 });

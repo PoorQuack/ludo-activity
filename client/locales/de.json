@@ -985,5 +985,10 @@
   "More options": "Weitere Optionen",
   "No badges earned yet": "Noch keine Abzeichen verdient",
   "You blocked this player": "Du hast diesen Spieler blockiert",
-  "Global": "Global"
+  "Global": "Global",
+  "Cancel": "Abbrechen",
+  "Cannot react to this thread": "In diesem Chat kann nicht reagiert werden",
+  "React": "Reagieren",
+  "Reply": "Antworten",
+  "Replying to": "Antwort an"
 }

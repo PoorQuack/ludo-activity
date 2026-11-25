@@ -512,7 +512,7 @@ function handleLobbyChat(ws, msg) {
   };
   if (msg.op === 'say') {
     if (!lobbyListeners.has(ws)) throw new Error('Open the chat first');
-    const m = lobbyChat.say(ctx.user, id, msg.text);
+    const m = lobbyChat.say(ctx.user, id, msg.text, { replyId: msg.replyId });
     if (m) {
       reach({ type: 'lobbyChat', op: 'msg', channel, msg: m });
       const ping = JSON.stringify({ type: 'lobbyChat', op: 'ping', channel, userId: m.userId });
@@ -522,6 +522,12 @@ function handleLobbyChat(ws, msg) {
         c.send(ping);
       }
     }
+    return;
+  }
+  if (msg.op === 'react') {
+    if (!lobbyListeners.has(ws)) throw new Error('Open the chat first');
+    const res = lobbyChat.react(ctx.user.id, id, msg.id, String(msg.emoji || ''));
+    if (res) reach({ type: 'lobbyChat', op: 'react', channel, id: res.id, reactions: res.reactions });
     return;
   }
   if (msg.op === 'delete') {
@@ -547,10 +553,18 @@ function handleDm(ws, msg) {
   }
   if (msg.op === 'say') {
     const toId = String(msg.toId || '');
-    const res = dms.send(ctx.user, toId, msg.text);
+    const res = dms.send(ctx.user, toId, msg.text, { replyId: msg.replyId });
     if (!res) return;
     sendTo(ctx.user.id, { type: 'dmMsg', friendId: toId, msg: res.msg, unread: dms.unreadCount(ctx.user.id) });
     sendTo(toId, { type: 'dmMsg', friendId: ctx.user.id, msg: res.msg, unread: dms.unreadCount(toId) });
+    return;
+  }
+  if (msg.op === 'react') {
+    const toId = String(msg.toId || '');
+    const res = dms.react(ctx.user.id, toId, msg.id, String(msg.emoji || ''));
+    if (!res) return;
+    sendTo(ctx.user.id, { type: 'dmReact', friendId: toId, id: res.id, reactions: res.reactions });
+    sendTo(toId, { type: 'dmReact', friendId: ctx.user.id, id: res.id, reactions: res.reactions });
   }
 }
 

@@ -985,5 +985,10 @@
   "More options": "المزيد من الخيارات",
   "No badges earned yet": "لا توجد شارات بعد",
   "You blocked this player": "لقد حظرت هذا اللاعب",
-  "Global": "عام"
+  "Global": "عام",
+  "Cancel": "إلغاء",
+  "Cannot react to this thread": "لا يمكن التفاعل مع هذه المحادثة",
+  "React": "تفاعل",
+  "Reply": "رد",
+  "Replying to": "الرد على"
 }

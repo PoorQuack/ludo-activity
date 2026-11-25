@@ -6,6 +6,7 @@ import path from 'node:path';
 import { cleanText } from './filter.js';
 import { EMOTE_SLUGS, ownsItem } from '../shared/shop.js';
 import { LANGS } from './translate.js';
+import { makeReplySnapshot, toggleReaction } from '../shared/chat.js';
 
 export const KEEP = 60; // messages kept per channel
 export const MAX_LEN = 200;
@@ -53,7 +54,7 @@ export class LobbyChat {
   }
 
   /** Adds a message; returns it (or null when nothing was left to say). Throws when too fast. */
-  say(user, id, text) {
+  say(user, id, text, { replyId } = {}) {
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -74,10 +75,20 @@ export class LobbyChat {
     const msg = { id: ++ch.seq, userId: user.id, name: String(user.name || 'Player').slice(0, 32), text: clean, at: t };
     if (this.profiles?.passActive?.(prof)) msg.vip = true; // Battle Pass: a gold name with a crown
     if (prof?.equipped?.frame && prof.equipped.frame !== 'frame-none') msg.frame = prof.equipped.frame;
+    const replyTo = replyId ? makeReplySnapshot(this.find(id, Number(replyId))) : null;
+    if (replyTo) msg.replyTo = replyTo;
     ch.msgs.push(msg);
     if (ch.msgs.length > KEEP) ch.msgs.splice(0, ch.msgs.length - KEEP);
     this.save();
     return msg;
+  }
+
+  react(userId, id, msgId, emoji) {
+    const msg = this.find(id, Number(msgId));
+    if (!msg) return null;
+    if (!toggleReaction(msg, userId, emoji)) return null;
+    this.save();
+    return { id: msg.id, reactions: msg.reactions || {} };
   }
 
   /** The game's owner can take a message down. Returns whether it was there. */

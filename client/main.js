@@ -11,6 +11,7 @@ import { openItemView, refreshItemView, closeItemView } from './item-view.js';
 import { D20 } from './d20.js';
 import { openCoinStore } from './coin-store.js';
 import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, seasonFor } from '../shared/pass.js';
+import { REACTION_EMOJIS } from '../shared/chat.js';
 import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
 import { setFrame } from './frames.js';
 import { signatureHome } from './signatures.js';
@@ -290,7 +291,7 @@ function connect() {
       const parts = [coins && `+${coins} ${t('coins')}`, gems && `+${gems} ${t('gems')}`, ...items].filter(Boolean);
       if (parts.length) toast(`🎁 ${parts.join(' · ')}`, 'ok', 4500);
     } else if (msg.type === 'lobbyChat') onLobbyChat(msg);
-    else if (msg.type === 'dmSummary' || msg.type === 'dmHistory' || msg.type === 'dmMsg') onDmMessage(msg);
+    else if (msg.type === 'dmSummary' || msg.type === 'dmHistory' || msg.type === 'dmMsg' || msg.type === 'dmReact') onDmMessage(msg);
     else if (msg.type === 'translated') onTranslated(msg);
     else if (msg.type === 'awards') showAwards(msg.awards);
     else if (msg.type === 'quests') {
@@ -766,19 +767,28 @@ function renderChat() {
   for (const box of els.chats) renderTyping(box.querySelector('.typing-line'));
   const msgs = (state.chat || []).filter((m) => !muted.has(m.userId));
   const latest = msgs.at(-1)?.id || 0;
-  const key = `${chatVersion}|${latest}`;
+  const reactSig = msgs.map((m) => (m.reactions ? `${m.id}:${Object.entries(m.reactions).map(([e, u]) => `${e}${u.length}${u.includes(me?.id) ? 1 : 0}`).join(',')}` : '')).filter(Boolean).join('|');
+  const key = `${chatVersion}|${latest}|${reactSig}`;
   if (key === shownChatKey) return;
+  const onlyReactionsChanged = shownChatKey.startsWith(`${chatVersion}|${latest}|`);
   shownChatKey = key;
-  const fromOthers = chatPrimed && latest > shownChatId && msgs.at(-1).userId !== me?.id;
+  const fromOthers = !onlyReactionsChanged && chatPrimed && latest > shownChatId && msgs.at(-1).userId !== me?.id;
   chatPrimed = true;
   if (prefs.chat && fromOthers) sfx('chat');
   if (fromOthers && chatFolded()) chatUnread += msgs.filter((m) => m.id > shownChatId && m.userId !== me?.id).length;
   shownChatId = latest;
-  renderChatPeek(msgs, fromOthers);
+  if (!onlyReactionsChanged) renderChatPeek(msgs, fromOthers);
 
   const board = boardFor(state.mode);
   for (const box of els.chats) {
     const list = box.querySelector('.chat-log');
+    if (onlyReactionsChanged) {
+      for (const m of msgs) {
+        const line = list.querySelector(`.chat-line[data-msg-id="${m.id}"]`);
+        if (line) syncLineReacts(line, m.reactions, (emoji) => send('react', { id: m.id, emoji }));
+      }
+      continue;
+    }
     const readingAt = list.scrollTop; // kept when you're scrolled up reading
     // New messages are added to the end; the rest stay as they are. (Rebuilding the whole list
     // for every message made the chat flash on phones and restarted every animated sticker.)
@@ -798,8 +808,14 @@ function renderChat() {
     }
     const after = fresh ? 0 : list._lastId;
     list._lastId = latest;
+    const replyFn = (m) => setRoomReply(box, m);
+    const reactFn = (m, emoji) => send('react', { id: m.id, emoji });
     for (const m of msgs) {
-      if (m.id <= after) continue;
+      if (m.id <= after) {
+        const line = list.querySelector(`.chat-line[data-msg-id="${m.id}"]`);
+        if (line) syncLineReacts(line, m.reactions, (emoji) => reactFn(m, emoji));
+        continue;
+      }
       const li = document.createElement('li');
       li.dataset.id = m.id;
       if (m.system) {
@@ -813,12 +829,9 @@ function renderChat() {
       const stickerOnly = isStickerOnly(m.text);
       const isMe = m.userId === me?.id;
       const prevLi = list.lastElementChild;
-      const canGroup = !stickerOnly && prevLi?.classList.contains('chat-msg') && !prevLi.classList.contains('sticker-only') && prevLi.dataset.userId === m.userId;
+      const canGroup = !stickerOnly && !m.replyTo && prevLi?.classList.contains('chat-msg') && !prevLi.classList.contains('sticker-only') && prevLi.dataset.userId === m.userId;
+      const line = buildChatLine({ msg: m, isMe, scope: 'room', logEl: list, stickerOnly, showTime: false, onReply: replyFn, onReact: reactFn });
       if (canGroup) {
-        const line = document.createElement('div');
-        line.className = 'chat-line';
-        renderChatTokens(line, m.text, list, false);
-        if (!isMe) addTranslate(line, 'room', m.id);
         prevLi.querySelector('.chat-body')?.appendChild(line);
         prevLi.dataset.id = m.id;
         continue;
@@ -826,6 +839,7 @@ function renderChat() {
       li.dataset.userId = m.userId;
       li.className = `chat-msg chat-bubble${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
       if (seat >= 0) li.style.setProperty('--seat-col', col(board.colors[seat]));
+      if (m.replyTo) appendReplyQuote(li, m.replyTo, list);
       const who = document.createElement('button');
       who.type = 'button';
       who.className = 'who who-btn';
@@ -835,10 +849,6 @@ function renderChat() {
       li.appendChild(who);
       const body = document.createElement('div');
       body.className = 'chat-body';
-      const line = document.createElement('div');
-      line.className = 'chat-line';
-      renderChatTokens(line, m.text, list, stickerOnly);
-      if (!stickerOnly && !isMe) addTranslate(line, 'room', m.id);
       body.appendChild(line);
       li.appendChild(body);
       list.appendChild(li);
@@ -1112,7 +1122,9 @@ for (const box of els.chats) {
     e.preventDefault();
     const text = input.value.trim();
     if (!text) return;
-    send('chat', { text });
+    const replyId = box._reply?.id || null;
+    send('chat', replyId ? { text, replyId } : { text });
+    setRoomReply(box, null);
     input.value = '';
     lastTypingSent = 0; // the server clears "typing" when the message arrives
     updateCount();
@@ -1122,6 +1134,7 @@ for (const box of els.chats) {
     keepAtBottom(list);
     if (document.documentElement.classList.contains('kb-open')) input.focus({ preventScroll: true });
   });
+  input.addEventListener('keydown', (e) => e.key === 'Escape' && box._reply && setRoomReply(box, null));
 }
 
 // Coming back to the app: phones (iPhones especially) may have thrown away the board's drawing
@@ -4384,8 +4397,59 @@ function updateChatDot() {
 }
 
 const dmState = { threads: [], activeId: '', friend: null, msgs: [], unread: 0 };
+let lobbyReply = null;
+function formatReplyPreview(text) {
+  return String(text || '')
+    .replace(/:([a-z0-9-]+):/g, (m, slug) => (EMOTE_SLUGS[slug] ? `[${EMOTE_SLUGS[slug].name}]` : m))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function ensureReplyBar(container, formEl, onCancel) {
+  let bar = container.querySelector(':scope > .reply-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'reply-bar hidden';
+    container.insertBefore(bar, formEl);
+  }
+  bar._onCancel = onCancel;
+  return bar;
+}
+function renderReplyBar(bar, target) {
+  bar.classList.toggle('hidden', !target);
+  bar.innerHTML = '';
+  if (!target) return;
+  const txt = document.createElement('span');
+  txt.className = 'reply-bar-text';
+  const strong = document.createElement('b');
+  strong.textContent = target.name || 'Player';
+  txt.append(document.createTextNode(`${t('Replying to')} `), strong);
+  const pv = formatReplyPreview(target.text);
+  if (pv) txt.append(document.createTextNode(`: ${pv}`));
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'reply-cancel';
+  cancel.setAttribute('aria-label', t('Cancel'));
+  cancel.textContent = '✕';
+  for (const ev of ['pointerdown', 'mousedown']) cancel.addEventListener(ev, (e) => e.preventDefault());
+  cancel.addEventListener('click', () => bar._onCancel?.());
+  bar.append(txt, cancel);
+}
+function setRoomReply(box, msg) {
+  box._reply = msg ? { id: msg.id, name: msg.name, text: msg.text } : null;
+  const bar = ensureReplyBar(box, box.querySelector('.chat-form'), () => setRoomReply(box, null));
+  renderReplyBar(bar, box._reply);
+  if (msg) box.querySelector('.chat-form input')?.focus({ preventScroll: true });
+}
+function setLobbyReply(msg) {
+  lobbyReply = msg ? { id: msg.id, name: msg.name, text: msg.text } : null;
+  const box = $('lobby-chat');
+  const bar = ensureReplyBar(box, $('lobby-chat-form'), () => setLobbyReply(null));
+  renderReplyBar(bar, lobbyReply);
+  if (msg) $('lobby-chat-input')?.focus({ preventScroll: true });
+}
 function openDm(friendId, fallbackName = '') {
   closePlayerCardModal();
+  setLobbyReply(null);
   lchat.tab = 'dm';
   dmState.activeId = friendId;
   if (!dmState.friend || dmState.friend.id !== friendId) dmState.friend = { id: friendId, name: fallbackName || 'Player', avatar: !String(friendId).startsWith('guest-') };
@@ -4393,13 +4457,13 @@ function openDm(friendId, fallbackName = '') {
   setPanel('chat');
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'dm', op: 'open', friendId }));
 }
-function sendActiveLobbyOrDm(text) {
+function sendActiveLobbyOrDm(text, replyId = null) {
   if (!text || ws?.readyState !== WebSocket.OPEN) return;
   if (lchat.tab === 'dm') {
     if (!dmState.activeId) return;
-    ws.send(JSON.stringify({ type: 'dm', op: 'say', toId: dmState.activeId, text }));
+    ws.send(JSON.stringify({ type: 'dm', op: 'say', toId: dmState.activeId, text, ...(replyId ? { replyId } : {}) }));
   } else {
-    ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text }));
+    ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text, ...(replyId ? { replyId } : {}) }));
   }
 }
 function onDmMessage(msg) {
@@ -4411,6 +4475,19 @@ function onDmMessage(msg) {
     dmState.friend = msg.friend;
     dmState.msgs = msg.msgs || [];
     if (msg.threads) dmState.threads = msg.threads;
+  } else if (msg.type === 'dmReact') {
+    if (dmState.activeId === msg.friendId) {
+      const target = dmState.msgs.find((m) => m.id === msg.id);
+      if (target) {
+        if (Object.keys(msg.reactions || {}).length) target.reactions = msg.reactions;
+        else delete target.reactions;
+        if (lchat.tab === 'dm') {
+          const line = $('lobby-chat-log').querySelector(`.chat-line[data-msg-id="${msg.id}"]`);
+          if (line) syncLineReacts(line, target.reactions, (emoji) => sendLobbyOrDmReact(msg.id, emoji));
+        }
+      }
+    }
+    return;
   } else if (msg.type === 'dmMsg') {
     const isCurrent = lchat.tab === 'dm' && dmState.activeId === msg.friendId && ($('menu').dataset.panel === 'chat' || wide.matches);
     if (dmState.activeId === msg.friendId) {
@@ -4428,6 +4505,16 @@ function onDmMessage(msg) {
   renderLobbyChat();
 }
 
+function sendLobbyOrDmReact(msgId, emoji) {
+  if (ws?.readyState !== WebSocket.OPEN) return;
+  if (lchat.tab === 'dm') {
+    if (!dmState.activeId) return;
+    ws.send(JSON.stringify({ type: 'dm', op: 'react', toId: dmState.activeId, id: msgId, emoji }));
+  } else {
+    ws.send(JSON.stringify({ type: 'lobbyChat', op: 'react', channel: lchat.tab, id: msgId, emoji }));
+  }
+}
+
 function onLobbyChat(msg) {
   if (msg.op === 'history') {
     lchat.lang = msg.lang;
@@ -4439,6 +4526,18 @@ function onLobbyChat(msg) {
     if (list.length > 80) list.splice(0, list.length - 80);
     if (msg.channel !== lchat.tab && msg.msg.userId !== me?.id && !isHiddenUser(msg.msg.userId)) lchat.unseen[msg.channel] = true;
     if (msg.msg.userId !== me?.id && !isHiddenUser(msg.msg.userId) && msg.channel === lchat.tab) sfx('chat');
+  } else if (msg.op === 'react') {
+    const list = msg.channel === 'lang' ? lchat.local : lchat.global;
+    const target = list.find((m) => m.id === msg.id);
+    if (target) {
+      if (Object.keys(msg.reactions || {}).length) target.reactions = msg.reactions;
+      else delete target.reactions;
+      if (msg.channel === lchat.tab) {
+        const line = $('lobby-chat-log').querySelector(`.chat-line[data-msg-id="${msg.id}"]`);
+        if (line) syncLineReacts(line, target.reactions, (emoji) => sendLobbyOrDmReact(msg.id, emoji));
+      }
+    }
+    return;
   } else if (msg.op === 'ping') {
     if (msg.userId !== me?.id && !isHiddenUser(msg.userId) && $('menu').dataset.panel !== 'chat') {
       lchat.unseen[msg.channel] = true;
@@ -4455,6 +4554,145 @@ function onLobbyChat(msg) {
 }
 
 const isStickerOnly = (text) => text.trim().split(/\s+/).every((w) => EMOTE_SLUGS[/^:([a-z0-9-]+):$/.exec(w)?.[1]]);
+let reactPopEl = null;
+function closeReactPop() {
+  reactPopEl?.classList.add('hidden');
+}
+function openReactPop(anchor, reactions, onPick) {
+  if (!reactPopEl) {
+    reactPopEl = document.createElement('div');
+    reactPopEl.className = 'react-pop hidden';
+    reactPopEl.setAttribute('role', 'menu');
+    for (const ev of ['pointerdown', 'mousedown']) {
+      reactPopEl.addEventListener(ev, (e) => {
+        if (e.target.closest('button')) e.preventDefault();
+      });
+    }
+    document.body.appendChild(reactPopEl);
+    document.addEventListener('click', (e) => {
+      if (!reactPopEl.contains(e.target) && !e.target.closest('.line-act-react')) closeReactPop();
+    });
+    window.addEventListener('keydown', (e) => e.key === 'Escape' && closeReactPop());
+  }
+  const sameAnchor = !reactPopEl.classList.contains('hidden') && reactPopEl._anchor === anchor;
+  if (sameAnchor) return closeReactPop();
+  reactPopEl._anchor = anchor;
+  reactPopEl.innerHTML = '';
+  for (const emoji of REACTION_EMOJIS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    if (reactions?.[emoji]?.includes(me?.id)) b.className = 'mine';
+    b.textContent = emoji;
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeReactPop();
+      onPick(emoji);
+    });
+    reactPopEl.appendChild(b);
+  }
+  reactPopEl.classList.remove('hidden');
+  const r = anchor.getBoundingClientRect();
+  const vv = window.visualViewport;
+  const vw = vv ? vv.offsetLeft + vv.width : window.innerWidth;
+  const ceiling = (vv ? vv.offsetTop : 0) + 8;
+  const w = reactPopEl.offsetWidth;
+  const h = reactPopEl.offsetHeight;
+  const top = r.top - h - 6 >= ceiling ? r.top - h - 6 : r.bottom + 6;
+  const left = Math.max(8, Math.min(vw - w - 8, r.right - w));
+  reactPopEl.style.top = `${top}px`;
+  reactPopEl.style.left = `${left}px`;
+}
+function syncLineReacts(line, reactions, onPick) {
+  let bar = line.querySelector('.msg-reacts');
+  const entries = Object.entries(reactions || {}).filter(([, ids]) => ids?.length);
+  if (!entries.length) {
+    bar?.remove();
+    return;
+  }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'msg-reacts';
+    for (const ev of ['pointerdown', 'mousedown']) bar.addEventListener(ev, (e) => e.target.closest('button') && e.preventDefault());
+    line.appendChild(bar);
+  }
+  bar.innerHTML = '';
+  for (const [emoji, ids] of entries) {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = `react-pill${ids.includes(me?.id) ? ' mine' : ''}`;
+    pill.textContent = `${emoji} ${ids.length}`;
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onPick(emoji);
+    });
+    bar.appendChild(pill);
+  }
+}
+function appendReplyQuote(parentEl, replyTo, logEl) {
+  const q = document.createElement('button');
+  q.type = 'button';
+  q.className = 'reply-quote';
+  const b = document.createElement('b');
+  b.textContent = replyTo.name || 'Player';
+  const txt = document.createElement('span');
+  txt.textContent = formatReplyPreview(replyTo.text);
+  q.append(document.createTextNode('↩ '), b, txt);
+  q.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const hit = logEl?.querySelector(`.chat-line[data-msg-id="${replyTo.id}"]`);
+    if (!hit) return;
+    hit.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    hit.classList.remove('reply-flash');
+    void hit.offsetWidth;
+    hit.classList.add('reply-flash');
+  });
+  parentEl.appendChild(q);
+}
+function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onReply, onReact }) {
+  const line = document.createElement('div');
+  line.className = 'chat-line';
+  line.dataset.msgId = m.id;
+  const row = document.createElement('div');
+  row.className = 'chat-line-row';
+  const content = document.createElement('div');
+  content.className = 'chat-line-content';
+  renderChatTokens(content, m.text, logEl, stickerOnly);
+  if (showTime) {
+    const when = document.createElement('time');
+    when.className = 'when';
+    when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
+    content.appendChild(when);
+  }
+  if (!stickerOnly && !isMe && scope && scope !== 'dm') addTranslate(content, scope, m.id);
+  const acts = document.createElement('div');
+  acts.className = 'line-acts';
+  for (const ev of ['pointerdown', 'mousedown']) acts.addEventListener(ev, (e) => e.target.closest('button') && e.preventDefault());
+  const replyBtn = document.createElement('button');
+  replyBtn.type = 'button';
+  replyBtn.className = 'line-act';
+  replyBtn.title = t('Reply');
+  replyBtn.setAttribute('aria-label', t('Reply'));
+  replyBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 4L2.5 8l4 4M3 8h6.5a4 4 0 0 1 4 4v.5" /></svg>';
+  replyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onReply(m);
+  });
+  const reactBtn = document.createElement('button');
+  reactBtn.type = 'button';
+  reactBtn.className = 'line-act line-act-react';
+  reactBtn.title = t('React');
+  reactBtn.setAttribute('aria-label', t('React'));
+  reactBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" /><circle cx="6" cy="6.6" r=".8" fill="currentColor" stroke="none" /><circle cx="10" cy="6.6" r=".8" fill="currentColor" stroke="none" /><path d="M5.6 9.6a3.1 3.1 0 0 0 4.8 0" /></svg>';
+  reactBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openReactPop(reactBtn, m.reactions, (emoji) => onReact(m, emoji));
+  });
+  acts.append(replyBtn, reactBtn);
+  row.append(content, acts);
+  line.appendChild(row);
+  syncLineReacts(line, m.reactions, (emoji) => onReact(m, emoji));
+  return line;
+}
 function renderChatTokens(target, text, logEl, stickerOnly) {
   for (const part of text.split(/(:[a-z0-9-]+:)/g)) {
     const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
@@ -4725,6 +4963,7 @@ function renderLobbyChat() {
     back.className = 'btn small dm-back';
     back.textContent = '←';
     back.addEventListener('click', () => {
+      setLobbyReply(null);
       dmState.activeId = '';
       ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'dm', op: 'list' }));
       renderLobbyChat();
@@ -4767,26 +5006,22 @@ function renderLobbyChat() {
     log.appendChild(li);
   }
   const scope = lchat.tab;
+  const replyFn = (m) => setLobbyReply(m);
+  const reactFn = (m, emoji) => sendLobbyOrDmReact(m.id, emoji);
   let prev = null;
   for (const m of msgs) {
     const stickerOnly = isStickerOnly(m.text);
     const isMe = m.userId === me?.id;
-    const line = document.createElement('div');
-    line.className = 'chat-line';
-    renderChatTokens(line, m.text, log, stickerOnly);
-    const when = document.createElement('time');
-    when.className = 'when';
-    when.textContent = new Date(m.at).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit' });
-    line.appendChild(when);
-    if (!stickerOnly && !isMe && !isDm) addTranslate(line, scope, m.id);
+    const line = buildChatLine({ msg: m, isMe, scope: isDm ? 'dm' : scope, logEl: log, stickerOnly, showTime: true, onReply: replyFn, onReact: reactFn });
 
-    if (!stickerOnly && prev && !prev.stickerOnly && prev.userId === m.userId) {
+    if (!stickerOnly && !m.replyTo && prev && !prev.stickerOnly && prev.userId === m.userId) {
       prev.body.appendChild(line);
       continue;
     }
 
     const li = document.createElement('li');
     li.className = `lchat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
+    if (m.replyTo) appendReplyQuote(li, m.replyTo, log);
     const author = document.createElement('button');
     author.type = 'button';
     author.className = 'lchat-who-btn';
@@ -4814,6 +5049,7 @@ function renderLobbyChat() {
 
 for (const b of document.querySelectorAll('[data-lchat]')) {
   b.addEventListener('click', () => {
+    setLobbyReply(null);
     lchat.tab = b.dataset.lchat;
     lchat.unseen[lchat.tab] = false;
     if (lchat.tab === 'dm' && ws?.readyState === WebSocket.OPEN) {
@@ -4835,13 +5071,15 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   const input = $('lobby-chat-input');
   const text = input.value.trim();
   if (!text || ws?.readyState !== WebSocket.OPEN) return;
-  sendActiveLobbyOrDm(text);
+  sendActiveLobbyOrDm(text, lobbyReply?.id || null);
+  setLobbyReply(null);
   input.value = '';
   const log = $('lobby-chat-log');
   log._pinned = true;
   keepAtBottom(log);
   if (document.documentElement.classList.contains('kb-open')) input.focus({ preventScroll: true });
 });
+$('lobby-chat-input').addEventListener('keydown', (e) => e.key === 'Escape' && lobbyReply && setLobbyReply(null));
 wireEmojiToggle($('lobby-chat'));
 
 // Translate: one small button after someone else's message. The answer is kept, so the message

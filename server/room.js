@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { MODES, boardFor, teamsOf } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, POT_SPLIT, REWARDS, STAKES, ownsItem } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, bestBotScore, progressShare, BOT_LEVELS } from './rules.js';
+import { makeReplySnapshot, toggleReaction } from '../shared/chat.js';
 import { cleanText } from './filter.js';
 import { isRigged } from './rig.js';
 
@@ -245,7 +246,8 @@ export class Room {
       case 'move': return this.move(user, msg.token, msg.roll);
       case 'emote': return this.emote(user, msg.item, msg.idx);
       case 'typing': return this.typing(user, msg.on !== false);
-      case 'chat': return this.say(user, msg.text);
+      case 'chat': return this.say(user, msg.text, msg.replyId);
+      case 'react': return this.react(user, msg.id, msg.emoji);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
       case 'setVisibility': return this.setVisibility(user, msg.visibility);
@@ -481,7 +483,7 @@ export class Room {
 
   // The host can end a game at any time; once a game is over, anyone can start the next one.
   // Chat is open to everyone in the Activity, players and watchers alike.
-  say(user, text) {
+  say(user, text, replyId = null) {
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -501,6 +503,8 @@ export class Room {
     this.lastChat.set(user.id, now);
     const msg = { id: ++this.chatSeq, userId: user.id, name: this.people.get(user.id) || user.name, text: clean, at: now };
     if (this.profiles?.passActive?.(this.profiles.peek(user.id))) msg.vip = true; // Battle Pass: a gold name with a crown
+    const replyTo = replyId ? makeReplySnapshot(this.chat.find((m) => m.id === Number(replyId))) : null;
+    if (replyTo) msg.replyTo = replyTo;
     this.chat.push(msg);
     this.typingAt.delete(user.id); // they sent it: no longer typing
     if (this.chat.length > CHAT_KEEP) this.chat.shift();
@@ -512,6 +516,13 @@ export class Room {
       this.emotes.push({ id: ++this.emoteSeq, seat, img: EMOTE_SLUGS[solo[1]].img, at: now });
     }
     this.onChange(this); // nothing in the game changed, so skip automate()
+  }
+
+  react(user, msgId, emoji) {
+    if (!user?.id || (!this.people.has(user.id) && this.seatOf(user.id) < 0)) return;
+    const msg = this.chat.find((m) => m.id === Number(msgId));
+    if (!msg) return;
+    if (toggleReaction(msg, user.id, emoji)) this.onChange(this);
   }
 
   // A line from the game itself (e.g. "updating, back in a few seconds"), shown in everyone's chat.

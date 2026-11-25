@@ -985,5 +985,10 @@
   "More options": "Ещё",
   "No badges earned yet": "Значков пока нет",
   "You blocked this player": "Вы заблокировали этого игрока",
-  "Global": "Общий"
+  "Global": "Общий",
+  "Cancel": "Отмена",
+  "Cannot react to this thread": "Нельзя поставить реакцию в этом чате",
+  "React": "Реакция",
+  "Reply": "Ответить",
+  "Replying to": "Ответ"
 }

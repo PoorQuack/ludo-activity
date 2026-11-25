@@ -985,5 +985,10 @@
   "More options": "더 보기",
   "No badges earned yet": "아직 획득한 배지가 없습니다",
   "You blocked this player": "이 플레이어를 차단했습니다",
-  "Global": "글로벌"
+  "Global": "글로벌",
+  "Cancel": "취소",
+  "Cannot react to this thread": "이 대화에서는 반응할 수 없습니다",
+  "React": "반응",
+  "Reply": "답장",
+  "Replying to": "답장 대상"
 }

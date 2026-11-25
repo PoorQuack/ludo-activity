@@ -985,5 +985,10 @@
   "More options": "Ще",
   "No badges earned yet": "Значків ще немає",
   "You blocked this player": "Ви заблокували цього гравця",
-  "Global": "Загальний"
+  "Global": "Загальний",
+  "Cancel": "Скасувати",
+  "Cannot react to this thread": "Неможливо відреагувати в цьому чаті",
+  "React": "Реакція",
+  "Reply": "Відповісти",
+  "Replying to": "Відповідь"
 }

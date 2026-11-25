@@ -985,5 +985,10 @@
   "More options": "その他のオプション",
   "No badges earned yet": "まだバッジがありません",
   "You blocked this player": "このプレイヤーをブロックしています",
-  "Global": "グローバル"
+  "Global": "グローバル",
+  "Cancel": "キャンセル",
+  "Cannot react to this thread": "このチャットではリアクションできません",
+  "React": "リアクション",
+  "Reply": "返信",
+  "Replying to": "返信先"
 }

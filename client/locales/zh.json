@@ -985,5 +985,10 @@
   "More options": "更多选项",
   "No badges earned yet": "暂未获得徽章",
   "You blocked this player": "你已屏蔽该玩家",
-  "Global": "全球"
+  "Global": "全球",
+  "Cancel": "取消",
+  "Cannot react to this thread": "无法在此聊天中添加反应",
+  "React": "添加反应",
+  "Reply": "回复",
+  "Replying to": "回复"
 }
