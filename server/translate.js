@@ -14,6 +14,21 @@ const GOOGLE = 'https://clients5.google.com/translate_a/t';
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
 const NVIDIA = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const RIVA_MODEL = 'nvidia/riva-translate-4b-instruct-v2';
+// Riva has to be told what it's translating from, so a fast general model reads the message first
+// (tested on chat lines: 20 of 23 right in about 0.2s; its misses were Danish/Norwegian-type
+// neighbours, which Riva translates fine anyway).
+const DETECT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
+const DETECT_PROMPT =
+  'You identify the language of a chat message from an online board game. Reply with ONLY one code from this list: ' +
+  `${[...CHAT_CODES].join(', ')}. Players write casually: slang, typos, no accents, gamer words (gg, lol, wp, ez). ` +
+  'If the message mixes English with another language, even one word of it (callate, bhai, kurwa), reply with the other language. ' +
+  'Portuguese from Portugal (pá, estás a, fixe) is pt-PT; from Brazil is pt. Serbian or Bosnian counts as hr. ' +
+  'If it is only laughter, emoji or a word used in every language (ok, haha, gg), reply: und';
+// what the detector might say that isn't one of ours
+const DETECT_ALIAS = { sr: 'hr', bs: 'hr', sh: 'hr', mk: 'bg', be: 'ru', nb: 'no', nn: 'no', 'pt-br': 'pt', 'zh-cn': 'zh', 'zh-hans': 'zh', 'zh-hant': 'zh-TW', 'zh-tw': 'zh-TW', 'es-es': 'es', 'es-us': 'es-419', 'es-mx': 'es-419', 'pt-pt': 'pt-PT' };
+// languages close enough that the writer's own setting is the better pick between them
+const FAMILY = [['es', 'es-419'], ['pt', 'pt-PT'], ['zh', 'zh-TW'], ['no', 'da', 'sv'], ['cs', 'sk']];
+const sameFamily = (a, b) => a === b || FAMILY.some((f) => f.includes(a) && f.includes(b));
 export const LANGS = CHAT_CODES;
 const googleCode = (code) => CHAT_LANG[code]?.google || code;
 const CACHE_MAX = 3000;
@@ -36,6 +51,7 @@ export class Translator {
     this.perUser = perUser;
     this.perServer = perServer;
     this.cache = new Map(); // `${to}|${text}` -> { text, from }
+    this.detected = new Map(); // text -> language code, or 'und'
     this.windows = new Map(); // userId -> { start, count }
     this.server = { start: 0, count: 0 };
   }
@@ -71,8 +87,14 @@ export class Translator {
     this.allowed(userId);
     const pieces = sendable.map((p) => p.replace(/\s+/g, ' ').trim());
     let got = null;
-    const source = this.nvidiaKey ? guessSource(pieces.join(' '), hint) : null;
-    if (source && source !== to) {
+    const source = this.nvidiaKey ? await this.sourceOf(pieces.join(' '), hint) : null;
+    if (source === to) {
+      // already in their language: nothing to send
+      const result = { text, from: to };
+      this.cache.set(key, result);
+      return result;
+    }
+    if (source) {
       try {
         got = await this.riva(pieces, source, to);
       } catch (err) {
@@ -138,6 +160,50 @@ export class Translator {
       from ||= body.responseData?.detectedLanguage || '';
     }
     return { texts, from };
+  }
+
+  /** What `text` is written in, for Riva: the detector model, with the writer's chat language to
+   *  choose between near neighbours and the alphabet checks when the detector can't help (busy,
+   *  down, or "und"). null: no good guess (Google, which detects, does it). */
+  async sourceOf(text, hint) {
+    let d = this.detected.get(text);
+    if (d === undefined) {
+      try {
+        d = await this.detect(text);
+        this.detected.set(text, d);
+        if (this.detected.size > CACHE_MAX) this.detected.delete(this.detected.keys().next().value);
+      } catch (err) {
+        console.error(`Language check failed: ${err.message}`);
+        d = null; // not cached: next time it may work
+      }
+    }
+    if (d && d !== 'und') return CHAT_CODES.has(hint) && sameFamily(d, hint) ? hint : d;
+    return guessSource(text, hint);
+  }
+
+  async detect(text) {
+    const body = await this.get(
+      NVIDIA,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json', authorization: `Bearer ${this.nvidiaKey}` },
+        body: JSON.stringify({
+          model: DETECT_MODEL,
+          messages: [
+            { role: 'system', content: DETECT_PROMPT },
+            { role: 'user', content: text.slice(0, 500) },
+          ],
+          temperature: 0,
+          max_tokens: 8,
+          chat_template_kwargs: { enable_thinking: false },
+          stream: false,
+        }),
+      },
+      2500,
+    );
+    const raw = String(body?.choices?.[0]?.message?.content ?? '').trim().toLowerCase().replace(/[^a-z-]/g, '');
+    const code = DETECT_ALIAS[raw] || [...CHAT_CODES].find((c) => c.toLowerCase() === raw) || 'und';
+    return code;
   }
 
   // NVIDIA Riva Translate: the language pair goes in the system message ("fr-de"). It's documented
