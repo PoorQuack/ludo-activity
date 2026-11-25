@@ -2873,30 +2873,40 @@ function roomInfoText() {
   return `${kind} · ${t('code {code}', { code: state.code })}${stake}`;
 }
 
-// Stakes: Off or 100..10,000 Gold Coins (the host picks; players see the active stake)
+// Stakes: Off or 100..10,000 Gold Coins (the host steps left/right; players see the active stake)
 function renderStakes() {
   const box = $('stake-picker');
   const host = isHost();
   box.classList.toggle('hidden', state.phase !== 'lobby');
   box.classList.toggle('on', !!state.stake);
-  box.classList.toggle('host', host);
   const opts = $('stake-options');
   const key = `${state.stake}|${host}|${currentLang()}`;
   if (opts.dataset.key === key) return;
   opts.dataset.key = key;
   opts.innerHTML = '';
-  const list = host ? (state.stakes || STAKES) : [state.stake || 0];
-  for (const amount of list) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-checked', String(amount === state.stake));
-    b.className = amount === state.stake ? 'on' : '';
-    b.innerHTML = amount ? `<span class="coin"></span>${amount.toLocaleString(currentLang())}` : escapeHtml(t('Off'));
-    b.disabled = !host;
-    if (host) b.addEventListener('click', () => send('setStake', { stake: amount }));
-    opts.appendChild(b);
+  const stakes = state.stakes || STAKES;
+  const idx = Math.max(0, stakes.indexOf(state.stake || 0));
+  const amount = stakes[idx] || 0;
+  const pill = document.createElement('span');
+  pill.className = `stake-val${amount ? ' on' : ''}`;
+  pill.innerHTML = amount ? `<span class="coin"></span>${amount.toLocaleString(currentLang())}` : escapeHtml(t('Off'));
+  if (!host) {
+    opts.appendChild(pill);
+    return;
   }
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.className = 'stake-step';
+  prev.textContent = '‹';
+  prev.disabled = idx <= 0;
+  prev.addEventListener('click', () => idx > 0 && send('setStake', { stake: stakes[idx - 1] }));
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'stake-step';
+  next.textContent = '›';
+  next.disabled = idx >= stakes.length - 1;
+  next.addEventListener('click', () => idx < stakes.length - 1 && send('setStake', { stake: stakes[idx + 1] }));
+  opts.append(prev, pill, next);
 }
 
 // ☰ → room settings: only the host can change them.
@@ -4633,7 +4643,8 @@ $('bots-tile').addEventListener('click', () => {
   sendLobby('create', { visibility: 'private' });
 });
 
-// Stakes Rooms: make one (100 .. 10,000 Gold Coins) or join an open one
+// Stakes Rooms: pick one stake (100 .. 10,000 Gold Coins) with left/right arrows or join an open one
+let chosenStake = STAKES[1] || 100;
 $('stakes-btn').addEventListener('click', () => {
   renderStakesSheet();
   openSheet('stakes-sheet');
@@ -4643,23 +4654,47 @@ function renderStakesSheet() {
   const create = $('stake-create');
   create.innerHTML = '';
   const have = profile?.coins ?? 0;
-  for (const amount of STAKES.filter((n) => n > 0)) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'stake-opt';
-    b.innerHTML = `<span class="coin"></span><b>${amount.toLocaleString(currentLang())}</b><small></small>`;
-    b.querySelector('small').textContent = t('Pot up to {n}', { n: (amount * 4).toLocaleString(currentLang()) });
-    if (have < amount) {
-      b.classList.add('cant');
-      b.title = t('You need {n} more coins', { n: amount - have });
-    }
-    b.addEventListener('click', () => {
-      if (have < amount) return toast(t('You need {n} more coins', { n: amount - have }));
-      closeSheets();
-      sendLobby('create', { visibility: 'public', stake: amount });
-    });
-    create.appendChild(b);
-  }
+  const stakes = STAKES.filter((n) => n > 0);
+  const idx = Math.max(0, stakes.indexOf(chosenStake));
+  const amount = stakes[idx];
+  chosenStake = amount;
+  const stepper = document.createElement('div');
+  stepper.className = 'stake-stepper';
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.className = 'stake-nav';
+  prev.textContent = '‹';
+  prev.disabled = idx <= 0;
+  prev.addEventListener('click', () => {
+    if (idx > 0) (chosenStake = stakes[idx - 1]), renderStakesSheet();
+  });
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = `stake-opt${have < amount ? ' cant' : ''}`;
+  card.innerHTML = `<span class="coin"></span><b>${amount.toLocaleString(currentLang())}</b><small></small>`;
+  card.querySelector('small').textContent = t('Pot up to {n}', { n: (amount * 4).toLocaleString(currentLang()) });
+  const go = () => {
+    if (have < amount) return toast(t('You need {n} more coins', { n: amount - have }));
+    closeSheets();
+    sendLobby('create', { visibility: 'public', stake: amount });
+  };
+  if (have < amount) card.title = t('You need {n} more coins', { n: amount - have });
+  card.addEventListener('click', go);
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'stake-nav';
+  next.textContent = '›';
+  next.disabled = idx >= stakes.length - 1;
+  next.addEventListener('click', () => {
+    if (idx < stakes.length - 1) (chosenStake = stakes[idx + 1]), renderStakesSheet();
+  });
+  stepper.append(prev, card, next);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = `btn primary stake-go${have < amount ? ' cant' : ''}`;
+  btn.textContent = t('Create room');
+  btn.addEventListener('click', go);
+  create.append(stepper, btn);
   const list = $('stake-rooms');
   list.innerHTML = '';
   const open = roomList.filter((r) => r.stake && r.id !== state?.roomId);
