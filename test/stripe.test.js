@@ -163,3 +163,63 @@ test('Stripe Battle Pass subscription activates, renews on invoice.paid, and can
   });
   assert.equal(store.passActive(store.peek('22222222222222222')), false);
 });
+
+test('Stripe refund and dispute claw back Die Gems, remove bought gem items, and revoke Battle Pass', async () => {
+  const file = tempFile();
+  let store = new ProfileStore(file);
+  store.get('33333333333333333');
+
+  // Grant 220 gems, buy Cyber Neon frame (280? let's grant 300 total -> buy 280 -> 20 left)
+  store.grantPurchase('33333333333333333', 'stripe:cs_pack_1', 220);
+  store.grantPurchase('33333333333333333', 'stripe:cs_pack_0', 100);
+  store.buy('33333333333333333', 'frame-neon'); // costs 280 gems -> 40 gems remaining, frame-neon equipped
+  assert.equal(store.peek('33333333333333333').gems, 40);
+  assert.equal(store.peek('33333333333333333').equipped.frame, 'frame-neon');
+
+  // Reload from disk to confirm stripe: bought ids survive restart
+  store = new ProfileStore(file);
+  assert.ok(store.peek('33333333333333333').bought.includes('stripe:cs_pack_1'));
+
+  const s = new StripeStore({
+    secretKey: 'sk_test_1',
+    webhookSecret: 'whsec_1',
+    signingSecret: 's',
+    publicUrl: 'https://ludo.commontern.com',
+    prices: parseStripePrices('pack-2:price_2,pass:price_pass'),
+    store,
+    fetchImpl: async (url) => {
+      if (url.includes('/checkout/sessions?payment_intent=pi_refund')) {
+        return new Response(
+          JSON.stringify({ data: [{ metadata: { userId: '33333333333333333', itemId: 'pack-2' } }] }),
+          { status: 200 },
+        );
+      }
+      return new Response('{}', { status: 404 });
+    },
+  });
+
+  // Refunding 220 gems when player only has 40 left removes frame-neon (280) and leaves 100 change!
+  await s.handleWebhook({
+    type: 'charge.refunded',
+    data: { object: { id: 'ch_1', payment_intent: 'pi_refund', refunded: true, amount: 199, amount_refunded: 199, metadata: {} } },
+  });
+  const after = store.peek('33333333333333333');
+  assert.equal(after.owned.includes('frame-neon'), false);
+  assert.equal(after.equipped.frame, 'frame-none');
+  assert.equal(after.gems, 100);
+
+  // Duplicate refund webhook is ignored (idempotent)
+  await s.handleWebhook({
+    type: 'charge.refunded',
+    data: { object: { id: 'ch_1', payment_intent: 'pi_refund', refunded: true, amount: 199, amount_refunded: 199, metadata: {} } },
+  });
+  assert.equal(store.peek('33333333333333333').gems, 100);
+
+  // Dispute on Battle Pass charge revokes pass immediately
+  store.setPassUntil('33333333333333333', Date.now() + 20 * 86_400_000);
+  await s.handleWebhook({
+    type: 'charge.dispute.created',
+    data: { object: { id: 'dp_1', charge: { id: 'ch_2', metadata: { userId: '33333333333333333', itemId: 'pass' } }, metadata: { userId: '33333333333333333', itemId: 'pass' } } },
+  });
+  assert.equal(store.passActive(store.peek('33333333333333333')), false);
+});

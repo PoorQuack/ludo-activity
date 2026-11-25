@@ -173,6 +173,9 @@ export class StripeStore {
     if (isPass) {
       body.set('subscription_data[metadata][userId]', userId);
       body.set('subscription_data[metadata][itemId]', itemId);
+    } else {
+      body.set('payment_intent_data[metadata][userId]', userId);
+      body.set('payment_intent_data[metadata][itemId]', itemId);
     }
     const session = await this.#stripe('POST', '/checkout/sessions', body);
     if (!session?.url) throw new Error('Stripe did not return a checkout URL');
@@ -292,7 +295,59 @@ export class StripeStore {
         return { handled: true, userId };
       }
     }
+    if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
+      const chargeObj = event.type === 'charge.dispute.created' && typeof obj.charge === 'string'
+        ? await this.#stripe('GET', `/charges/${encodeURIComponent(obj.charge)}`).catch(() => obj)
+        : obj;
+      if (event.type === 'charge.refunded' && !chargeObj.refunded && !(Number(chargeObj.amount_refunded) > 0 && Number(chargeObj.amount_refunded) >= Number(chargeObj.amount))) {
+        return { handled: false };
+      }
+      const target = await this.#resolveChargeTarget(chargeObj);
+      if (!target?.userId || !target?.itemId) return { handled: false };
+      const item = PAID_ITEMS[target.itemId];
+      if (!item) return { handled: false };
+      const revokeId = `stripe:rev:${chargeObj.payment_intent || chargeObj.id || obj.id}`;
+      if (item.kind === 'pass') {
+        this.store.setPassUntil(target.userId, 0);
+        this.log.log?.(`↩️ [Stripe] Revoked Battle Pass for ${target.userId} (${event.type})`);
+        return { handled: true, userId: target.userId, revoked: 'pass' };
+      }
+      if (item.kind === 'gems') {
+        const res = this.store.revokePurchase(target.userId, revokeId, item.gems);
+        this.log.log?.(`↩️ [Stripe] Clawed back ${item.gems} gems from ${target.userId} (${event.type}, removed items: ${res.removedItems.join(',') || 'none'})`);
+        return { handled: true, userId: target.userId, ...res };
+      }
+      return { handled: true, userId: target.userId };
+    }
     return { handled: false };
+  }
+
+  async #resolveChargeTarget(charge) {
+    if (!charge) return null;
+    const directUid = String(charge.metadata?.userId || '');
+    const directItem = String(charge.metadata?.itemId || '');
+    if (/^\d{5,25}$/.test(directUid) && directItem) return { userId: directUid, itemId: directItem };
+    if (charge.payment_intent) {
+      const pi = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent.id;
+      if (pi) {
+        const list = await this.#stripe('GET', `/checkout/sessions?payment_intent=${encodeURIComponent(pi)}&limit=1`).catch(() => null);
+        const sess = list?.data?.[0];
+        const uid = String(sess?.metadata?.userId || sess?.client_reference_id || '');
+        const itemId = String(sess?.metadata?.itemId || '');
+        if (/^\d{5,25}$/.test(uid) && itemId) return { userId: uid, itemId };
+      }
+    }
+    if (charge.invoice) {
+      const invId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice.id;
+      if (invId) {
+        const inv = await this.#stripe('GET', `/invoices/${encodeURIComponent(invId)}?expand[]=subscription`).catch(() => null);
+        const subMeta = inv?.subscription?.metadata || inv?.parent?.subscription_details?.metadata || {};
+        const uid = String(subMeta.userId || '');
+        const itemId = String(subMeta.itemId || '');
+        if (/^\d{5,25}$/.test(uid) && itemId) return { userId: uid, itemId };
+      }
+    }
+    return null;
   }
 }
 

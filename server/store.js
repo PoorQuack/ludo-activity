@@ -206,6 +206,37 @@ export class ProfileStore {
     return true;
   }
 
+  // Refund / chargeback clawback: idempotent via `revokeId` in `p.bought`. Deducts Die Gems first,
+  // then removes recently bought gem-priced shop items (and unequips them) to cover any shortfall.
+  revokePurchase(id, revokeId, gems) {
+    const p = this.get(id);
+    if (p.bought.includes(revokeId)) return { revoked: false, removedItems: [] };
+    p.bought.push(revokeId);
+    const removedItems = [];
+    let deficit = Math.max(0, Math.floor(gems || 0));
+    const fromBal = Math.min(p.gems, deficit);
+    p.gems -= fromBal;
+    deficit -= fromBal;
+    if (deficit > 0) {
+      for (let i = p.owned.length - 1; i >= 0 && deficit > 0; i--) {
+        const itemId = p.owned[i];
+        const item = ITEMS[itemId];
+        if (!item || item.award || item.pass || currencyOf(item) !== 'gems' || !(item.price > 0)) continue;
+        p.owned.splice(i, 1);
+        removedItems.push(itemId);
+        if (p.equipped[item.type] === itemId) p.equipped[item.type] = DEFAULT_EQUIPPED[item.type];
+        deficit -= item.price;
+      }
+      if (deficit < 0) {
+        p.gems += -deficit; // give back change if a removed item cost more than the refunded pack
+        deficit = 0;
+      }
+    }
+    this.changed(id);
+    this.flush();
+    return { revoked: true, removedItems, remainingDeficit: deficit };
+  }
+
   // An item won (the leaderboard's rank frames): owned from now on, put on if nothing else is
   grantItem(id, itemId) {
     const item = ITEMS[itemId];
@@ -568,9 +599,10 @@ function normalize(p) {
     paid: p.ref?.paid === true,
     count: Number.isInteger(p.ref?.count) && p.ref.count >= 0 ? p.ref.count : 0,
   };
-  // Discord entitlement ids already paid out (see grantPurchase). Never trimmed: it's what stops a
-  // purchase paying twice.
-  const bought = Array.isArray(p.bought) ? p.bought.filter((e) => typeof e === 'string' && /^\d{5,25}$/.test(e)) : [];
+  // Discord entitlement ids and Stripe payment/refund ids already processed (see grantPurchase / revokePurchase).
+  const bought = Array.isArray(p.bought)
+    ? p.bought.filter((e) => typeof e === 'string' && /^(?:\d{5,25}|stripe:[A-Za-z0-9_:-]{6,120})$/.test(e))
+    : [];
   // Badges: lifetime stat totals, the level reached on each badge (0-3), the title worn, the pins
   const stats = {};
   for (const k of BADGE_STATS) if (Number.isInteger(p.stats?.[k]) && p.stats[k] > 0) stats[k] = p.stats[k];
