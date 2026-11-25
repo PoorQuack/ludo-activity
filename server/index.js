@@ -486,7 +486,6 @@ const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward
 
 // The menu's chat (Global, and one channel per language) and chat translation
 const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
-const dms = new DirectMessages(DMS_FILE, { profiles: store, social });
 const translator = new Translator();
 const lobbyListeners = new Set(); // sockets with the menu chat open; ws.ctx.lobbyLang says which language
 
@@ -589,6 +588,7 @@ async function maybeInvite(ws, userId) {
   if (ws.readyState === 1 && store.wantsInvite(userId)) ws.send(JSON.stringify({ type: 'invite', url: invite.url }));
 }
 const social = new SocialBook(SOCIAL_FILE);
+const dms = new DirectMessages(DMS_FILE, { profiles: store, social });
 const isOnline = (id) => userSockets.has(id);
 function sendFriends(userId) {
   sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null });
