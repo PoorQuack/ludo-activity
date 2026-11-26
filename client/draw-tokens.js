@@ -740,16 +740,19 @@ export function paintPawn(ctx, r, hex, style, sign) {
     const glow = bundleTokenPic(style.bundle, 'token_glow');
     const img = bundleTokenPic(style.bundle, `token_${col}`);
     if (img) {
-      const h = r * 2.75;
+      const h = r * 3.18;
       const w = (h * img.naturalWidth) / img.naturalHeight;
       if (glow) {
         const gw = (h * glow.naturalWidth) / glow.naturalHeight;
         ctx.save();
-        ctx.globalAlpha *= 0.68;
-        ctx.drawImage(glow, -gw / 2, -h + r * 0.14, gw, h);
+        ctx.globalAlpha *= 0.85;
+        ctx.drawImage(glow, -gw * 0.56, -h + r * 0.2, gw * 1.12, h * 1.06);
         ctx.restore();
       }
-      ctx.drawImage(img, -w / 2, -h + r * 0.14, w, h);
+      ctx.save();
+      if ('filter' in ctx) ctx.filter = 'brightness(1.18) contrast(1.06)';
+      ctx.drawImage(img, -w / 2, -h + r * 0.25, w, h);
+      ctx.restore();
       return;
     }
     return paintPawn(ctx, r, hex, {}, sign);

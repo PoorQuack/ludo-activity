@@ -400,8 +400,12 @@ function preview(item, theme) {
   ctx.scale(dpr, dpr);
 
   if (item.type === 'token') {
-    const wide = ['token-constellation', 'token-ufo', 'token-dragon', 'token-samurai', 'token-woodland-grove', 'token-street-playground', 'token-space-odyssey', 'token-pharaohs-oasis', 'token-mystic-alchemy', 'token-christmas-holiday', 'token-turtle-lotus', 'token-pirates-cove', 'token-celestial-olympus', 'token-steampunk-workshop'].includes(item.id);
-    const draw = (c, now) => ['red', 'green', 'yellow', 'blue'].forEach((col, i) => drawToken(c, (wide ? 25.5 + i * 33 : 30 + i * 30), 68, wide ? 12.5 : 14, playerColor(theme, col), item.id, { sign: col, t: now }));
+    const bundle = PAWN_STYLES[item.id]?.bundle;
+    const wide = ['token-constellation', 'token-ufo', 'token-dragon', 'token-samurai'].includes(item.id);
+    const draw = (c, now) =>
+      ['red', 'green', 'yellow', 'blue'].forEach((col, i) =>
+        drawToken(c, wide || bundle ? 25.5 + i * 33 : 30 + i * 30, bundle ? 73 : 68, bundle ? 13.8 : wide ? 12.5 : 14, playerColor(theme, col), item.id, { sign: col, t: now }),
+      );
     draw(ctx, performance.now());
     const st = PAWN_STYLES[item.id];
     animated.push({ canvas, dpr, draw, once: !st?.fx && !st?.hover, dirty: true });

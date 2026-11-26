@@ -3,6 +3,19 @@
 Newest entry first. Whoever finishes a piece of work adds an entry: date, who, branch, what
 changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
 
+## 26 Nov 2026, Antigravity: `antigravity/cosmetic-effects-and-previews`
+- **Branch**: `antigravity/cosmetic-effects-and-previews` (rebased onto `39e4e28`, not merged/deployed).
+- **Shop preview bug fixes**:
+  - `client/shop-ui.js`: fixed `once: true` token/board cards clearing `a.dirty` while still off-screen under `IntersectionObserver`, which had left `token-mystic-alchemy`, `token-christmas-holiday`, `token-turtle-lotus`, `token-pirates-cove`, and `token-dino` stuck on fallback silhouettes; enabled preview animations whenever a token defines idle `fx`/`hover`.
+  - `client/draw-tokens.js`: prevented `pawnSprite` from caching fallback shapes before async images finish loading, dispatched `ludo-textures` in `dinoPicture`/`dragonPicture`, and scaled/brightened bundle tokens so Common/Rare (`token-woodland-grove`, `token-street-playground`, `token-space-odyssey`, `token-pharaohs-oasis`) and Epic/Legendary bundle previews match `Candy`/`Neon` brightness & size.
+  - `client/taunts.js`: reworked `drawTauntPreview` for all 11 taunt items (`taunt-none`, `taunt-bonk`, `taunt-bye`, `taunt-chicken`, `taunt-violin`, `taunt-clown`, `taunt-l`, `taunt-ggez`, `taunt-skill`, `taunt-cackle`, `taunt-fireworks`) to show Red capturer + Blue victim reactions inside bounds without clipped hammers, overlapping text, or duplicate skulls.
+- **Themed Dice, Token & Board FX** (all 10 Carbon bundles + roll/hop juice):
+  - `client/draw-tokens.js`: added dedicated `TOKEN_FX` (`woodland`, `playground`, `odyssey`, `pharaoh`, `alchemy`, `holiday`, `lotus`, `pirate`, `olympus`, `steampunk`) with halos, orbiting satellites/cogwheels, furnace core pulse, potion bubbles, water ripples, falling snow, lotus petals, and zero-g hover.
+  - `client/draw-dice.js` & `client/skins.js`: added `die_glow.webp` aura behind tumbling 3D cubes (`drawDiceCube`), face glints/twinkles, and 10 themed `DICE_PROPS` (`woodland`, `playground`, `odyssey`, `pharaoh`, `alchemy`, `holiday`, `lotus`, `pirate`, `olympus`, `steampunk`).
+  - `client/renderer.js` & `client/skins.js`: added ambient board `fx` across all 10 Carbon boards (`fireflies`, `chalk`, `radar`, `sand`, `alchemy`, `snow`, `pond`, `ocean`, `olympus`, `steampunk`) plus breathing `safeGlow` rims on custom safe tiles.
+  - `client/main.js`: colored roll-landing rings & bursts by equipped `DICE_STYLES` (stronger on `6`) and added 2-particle hop sparkle trails for Epic `TOKEN_SIGNATURES`.
+- **Checks**: `npm run build`, `npm test` (275/275), `npm run smoke`, desktop & 390px mobile headless Shop/Item/Try-it/Game screenshots with zero console errors.
+
 ## 26 Nov 2026, Claude: state of `main` (live on ludo.commontern.com)
 - Translation: DeepL → Azure → NVIDIA Riva → Google → MyMemory, with Indonesian slang rewriting
   and player ratings ("Rate" on a translation; 3 matching suggestions become the translation).
