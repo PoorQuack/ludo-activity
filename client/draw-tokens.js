@@ -454,15 +454,15 @@ export const GOLD_DARK = '#9a6f00';
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
 export function paintPawn(ctx, r, hex, style, sign) {
   if (style.shape) return TOKEN_SHAPES[style.shape](ctx, r, hex, sign);
-  const body = style.neon ? '#1c1c26' : hex;
-  const edge = style.neon ? hex : mix(hex, '#000000', 0.38);
-  const trim = mix(body, '#ffffff', 0.22);
-  ctx.lineWidth = Math.max(1, r * (style.neon ? 0.1 : 0.05));
+  const body = style.neon ? '#141724' : hex;
+  const edge = style.neon ? mix(hex, '#ffffff', 0.25) : mix(hex, '#000000', 0.38);
+  const trim = style.neon ? mix(hex, '#090b12', 0.68) : mix(body, '#ffffff', 0.22);
+  ctx.lineWidth = Math.max(1, r * (style.neon ? 0.12 : 0.05));
   ctx.strokeStyle = edge;
   ctx.lineJoin = 'round';
   if (style.neon) {
     ctx.shadowColor = hex;
-    ctx.shadowBlur = r * 0.7;
+    ctx.shadowBlur = r * 0.95;
   }
 
   // Base: a short cylinder with a lighter top
@@ -546,9 +546,19 @@ export function paintPawn(ctx, r, hex, style, sign) {
     ctx.fill();
   }
   if (style.neon) {
-    circle(ctx, 0, hy, r * 0.2);
+    circle(ctx, 0, hy, r * 0.26);
     ctx.fillStyle = hex;
     ctx.fill();
+    circle(ctx, 0, hy, r * 0.13);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    // glowing core stripe down the center of the pawn
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.44);
+    ctx.lineTo(0, -r * 1.15);
+    ctx.lineWidth = Math.max(1.2, r * 0.09);
+    ctx.strokeStyle = mix(hex, '#ffffff', 0.55);
+    ctx.stroke();
   }
   ctx.shadowBlur = 0;
   if (style.star) drawStar(ctx, 0, hy, r * 0.3, '#ffffff');
@@ -1679,70 +1689,103 @@ export const TOKEN_SHAPES = {
     }
     ctx.restore();
   },
-  // Two stacked game checkers with a ridged top.
+  // Two stacked 3D king checkers with fluted rims and a beveled crown star emblem.
   checker(ctx, r, hex) {
     outline(ctx, r, hex);
-    for (const y0 of [0, -r * 0.34]) {
+    const rim = mix(hex, '#ffffff', 0.24);
+    const groove = mix(hex, '#000000', 0.35);
+    for (const [idx, y0] of [[0, 0], [1, -r * 0.42]]) {
       ctx.beginPath();
-      ctx.ellipse(0, y0 - r * 0.05, r, r * 0.42, 0, 0, Math.PI);
-      ctx.lineTo(-r, y0 - r * 0.32);
-      ctx.ellipse(0, y0 - r * 0.32, r, r * 0.42, 0, Math.PI, TAU);
+      ctx.ellipse(0, y0 - r * 0.06, r, r * 0.44, 0, 0, Math.PI);
+      ctx.lineTo(-r, y0 - r * 0.4);
+      ctx.ellipse(0, y0 - r * 0.4, r, r * 0.44, 0, Math.PI, TAU);
       ctx.closePath();
-      ctx.fillStyle = cylinder(ctx, r, hex);
+      ctx.fillStyle = cylinder(ctx, r, idx ? hex : mix(hex, '#000000', 0.12));
       ctx.fill();
       ctx.stroke();
+      // vertical knurled edge ridges
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = Math.max(0.8, r * 0.045);
+      for (const fx of [-0.65, -0.34, 0, 0.34, 0.65]) {
+        const yEdge = y0 - r * 0.4 + Math.sqrt(Math.max(0, 1 - fx * fx)) * r * 0.42;
+        ctx.beginPath();
+        ctx.moveTo(fx * r, yEdge);
+        ctx.lineTo(fx * r, yEdge + r * 0.3);
+        ctx.stroke();
+      }
+      outline(ctx, r, hex);
       ctx.beginPath();
-      ctx.ellipse(0, y0 - r * 0.32, r, r * 0.42, 0, 0, TAU);
-      ctx.fillStyle = mix(hex, '#ffffff', 0.18);
+      ctx.ellipse(0, y0 - r * 0.4, r, r * 0.44, 0, 0, TAU);
+      ctx.fillStyle = rim;
       ctx.fill();
       ctx.stroke();
     }
-    const ty = -r * 0.66;
+    const ty = -r * 0.82;
     ctx.beginPath();
-    ctx.ellipse(0, ty, r * 0.66, r * 0.27, 0, 0, TAU);
-    ctx.strokeStyle = mix(hex, '#000000', 0.22);
+    ctx.ellipse(0, ty, r * 0.72, r * 0.3, 0, 0, TAU);
+    ctx.fillStyle = groove;
+    ctx.fill();
+    ctx.strokeStyle = mix(hex, '#ffffff', 0.3);
     ctx.stroke();
-    drawStar(ctx, 0, ty, r * 0.26, mix(hex, '#ffffff', 0.55));
+    ctx.beginPath();
+    ctx.ellipse(0, ty + r * 0.02, r * 0.62, r * 0.24, 0, 0, TAU);
+    ctx.fillStyle = rim;
+    ctx.fill();
+    drawStar(ctx, 0, ty + r * 0.02, r * 0.3, '#ffffff');
   },
 
-  // A friendly ghost with a wavy hem.
+  // A luminous spectral ghost with a soft ectoplasm glow, rosy cheeks and wavy hem.
   ghost(ctx, r, hex) {
     outline(ctx, r, hex);
-    const hem = -r * 0.15;
+    const hem = -r * 0.16;
+    ctx.save();
+    ctx.shadowColor = mix(hex, '#ffffff', 0.45);
+    ctx.shadowBlur = r * 0.45;
     ctx.beginPath();
-    ctx.moveTo(-r * 0.78, hem);
-    ctx.lineTo(-r * 0.78, -r * 1.3);
-    ctx.arc(0, -r * 1.3, r * 0.78, Math.PI, 0);
-    ctx.lineTo(r * 0.78, hem);
-    const w = (r * 1.56) / 4;
+    ctx.moveTo(-r * 0.8, hem);
+    ctx.lineTo(-r * 0.8, -r * 1.32);
+    ctx.arc(0, -r * 1.32, r * 0.8, Math.PI, 0);
+    ctx.lineTo(r * 0.8, hem);
+    const w = (r * 1.6) / 4;
     for (let i = 0; i < 4; i++) {
-      const x0 = r * 0.78 - i * w;
-      ctx.quadraticCurveTo(x0 - w / 2, hem + r * 0.32, x0 - w, hem);
+      const x0 = r * 0.8 - i * w;
+      ctx.quadraticCurveTo(x0 - w / 2, hem + r * 0.36, x0 - w, hem);
     }
     ctx.closePath();
-    const g = ctx.createRadialGradient(-r * 0.3, -r * 1.55, r * 0.1, 0, -r * 1.1, r * 1.2);
-    g.addColorStop(0, mix(hex, '#ffffff', 0.75));
-    g.addColorStop(0.55, mix(hex, '#ffffff', 0.3));
-    g.addColorStop(1, hex);
+    const g = ctx.createRadialGradient(-r * 0.28, -r * 1.6, r * 0.08, 0, -r * 1.05, r * 1.25);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.45, mix(hex, '#ffffff', 0.55));
+    g.addColorStop(1, mix(hex, '#181432', 0.2));
     ctx.fillStyle = g;
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.stroke();
+    ctx.restore();
+    // glossy sheen crest
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.34, -r * 1.66, r * 0.16, r * 0.09, -0.5, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fill();
     for (const sx of [-1, 1]) {
       ctx.beginPath();
-      ctx.ellipse(sx * r * 0.27, -r * 1.38, r * 0.13, r * 0.2, 0, 0, TAU);
-      ctx.fillStyle = '#1a1a24';
+      ctx.ellipse(sx * r * 0.44, -r * 1.12, r * 0.11, r * 0.07, 0, 0, TAU);
+      ctx.fillStyle = 'rgba(255, 110, 150, 0.45)';
       ctx.fill();
-      circle(ctx, sx * r * 0.27 - r * 0.04, -r * 1.45, r * 0.045);
+      ctx.beginPath();
+      ctx.ellipse(sx * r * 0.26, -r * 1.36, r * 0.14, r * 0.21, 0, 0, TAU);
+      ctx.fillStyle = '#191828';
+      ctx.fill();
+      circle(ctx, sx * r * 0.26 - r * 0.04, -r * 1.43, r * 0.055);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
     }
     ctx.beginPath();
-    ctx.ellipse(0, -r * 0.98, r * 0.1, r * 0.13, 0, 0, TAU);
-    ctx.fillStyle = '#1a1a24';
+    ctx.ellipse(0, -r * 0.96, r * 0.11, r * 0.14, 0, 0, TAU);
+    ctx.fillStyle = '#191828';
     ctx.fill();
   },
 
-  // A glossy jelly blob with big eyes.
+  // A glossy translucent jelly blob with an inner core bubble, big eyes, and rim highlight.
   slime(ctx, r, hex) {
     outline(ctx, r, hex);
     ctx.beginPath();
@@ -1751,16 +1794,22 @@ export const TOKEN_SHAPES = {
     ctx.bezierCurveTo(r * 0.62, -r * 1.72, r * 1.05, -r * 0.95, r * 0.98, -r * 0.12);
     ctx.quadraticCurveTo(0, r * 0.18, -r * 0.98, -r * 0.12);
     ctx.closePath();
-    const g = ctx.createRadialGradient(-r * 0.3, -r * 1.25, r * 0.08, 0, -r * 0.8, r * 1.2);
-    g.addColorStop(0, mix(hex, '#ffffff', 0.55));
-    g.addColorStop(0.6, hex);
-    g.addColorStop(1, mix(hex, '#000000', 0.3));
+    const g = ctx.createRadialGradient(-r * 0.25, -r * 1.25, r * 0.08, 0, -r * 0.8, r * 1.2);
+    g.addColorStop(0, mix(hex, '#ffffff', 0.68));
+    g.addColorStop(0.55, hex);
+    g.addColorStop(1, mix(hex, '#000000', 0.34));
     ctx.fillStyle = g;
     ctx.fill();
+    // suspended inner jelly bubbles
+    for (const [bx, by, br] of [[0.38, -0.5, 0.1], [-0.46, -0.45, 0.08], [0.16, -1.36, 0.07]]) {
+      circle(ctx, bx * r, by * r, br * r);
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.fill();
+    }
     ctx.stroke();
     ctx.beginPath();
-    ctx.ellipse(-r * 0.42, -r * 1.33, r * 0.2, r * 0.1, -0.5, 0, TAU);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.ellipse(-r * 0.42, -r * 1.33, r * 0.22, r * 0.1, -0.5, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
     ctx.fill();
     eye(ctx, -r * 0.3, -r * 0.92, r * 0.17, r * 0.21, 0.4);
     eye(ctx, r * 0.3, -r * 0.92, r * 0.17, r * 0.21, 0.4);

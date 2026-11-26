@@ -187,7 +187,7 @@ function starterHtml(inDiscord, isMobile) {
       <span class="starter-ribbon">${t('Once only')}</span>
       <div class="starter-art"></div>
       <div class="starter-text">
-        <b>🎁 ${t(STARTER.name)}</b>
+        <b><span class="p-ico p-gift" aria-hidden="true"></span>${t(STARTER.name)}</b>
         <span><span class="gem"></span>${STARTER.gems} · <span class="coin"></span>${STARTER.coins} · ${t('{item} dice', { item: t(dice?.name || '') })}</span>
         <small>${t('The {item} dice are only in this pack.', { item: t(dice?.name || '') })}</small>
       </div>

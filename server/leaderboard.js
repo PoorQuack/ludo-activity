@@ -175,7 +175,8 @@ export class Leaderboard {
     if (!owed.length) return;
     for (const a of owed) {
       this.profiles?.grantPrize(a.userId, a.coins);
-      this.profiles?.grantItem?.(a.userId, `frame-rank-${a.place}`); // and the place's frame, to keep
+      const prefix = a.kind === 'month' ? 'frame-month' : 'frame-rank';
+      this.profiles?.grantItem?.(a.userId, `${prefix}-${a.place}`); // and the place's frame, to keep
     }
     this.profiles?.flush();
     for (const a of owed) a.paid = true;

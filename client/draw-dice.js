@@ -393,20 +393,38 @@ export const DICE_ART = {
     }
     glint(ctx, t, 2600, 0.75);
   },
-  // Frosted ice: cold gradient, white cracks, crystals in the corners, a glint
+  // Frosted ice: faceted glacier crystal gradient, crisp cracks, crystals in the corners, a glint
   frost(ctx, st, t) {
     const g = ctx.createLinearGradient(-50, -50, 50, 50);
-    g.addColorStop(0, '#ffffff');
-    g.addColorStop(0.5, '#d6f0fc');
-    g.addColorStop(1, '#9fd2ee');
+    g.addColorStop(0, '#eefaff');
+    g.addColorStop(0.5, '#b8e4f9');
+    g.addColorStop(1, '#6bb5df');
     ctx.fillStyle = g;
     ctx.fillRect(-50, -50, 100, 100);
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 1.4;
     strokeCracks(ctx);
     ctx.stroke();
-    for (const [x, y] of [[-40, -40], [40, 40], [40, -40], [-40, 40]]) snowflake(ctx, x, y, 7, 'rgba(255,255,255,0.85)', 1.3);
+    for (const [x, y] of [[-40, -40], [40, 40], [40, -40], [-40, 40]]) snowflake(ctx, x, y, 7, 'rgba(255,255,255,0.9)', 1.3);
     glint(ctx, t, 3000, 0.7);
+  },
+  // Spectral violet mist swirl for Ghost dice
+  spirit(ctx, st, t) {
+    const g = ctx.createRadialGradient(-16, -20, 6, 0, 0, 74);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.55, '#e8e2ff');
+    g.addColorStop(1, '#bfb5f2');
+    ctx.fillStyle = g;
+    ctx.fillRect(-50, -50, 100, 100);
+    ctx.strokeStyle = 'rgba(130, 110, 220, 0.28)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const ph = Math.sin(t / 1200 + i * 2) * 5;
+      ctx.beginPath();
+      ctx.moveTo(-50, -20 + i * 26);
+      ctx.bezierCurveTo(-18, -32 + i * 26 + ph, 18, -8 + i * 26 - ph, 50, -22 + i * 26);
+      ctx.stroke();
+    }
   },
   // Peppermint: a red-and-white pinwheel that slowly turns
   peppermint(ctx, st, t) {
@@ -489,11 +507,11 @@ export const DICE_ART = {
     ctx.globalCompositeOperation = 'source-over';
     twinkles(ctx, t, 14, '#ffffff', 5);
   },
-  // Neon: a faint grid in the glow colour
+  // Neon: dark cyber plate with recessed grid and glowing inner tube bezel
   grid(ctx, st, t) {
     ctx.strokeStyle = st.edge;
-    ctx.globalAlpha = 0.14 + 0.06 * Math.sin(t / 300);
-    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.22 + 0.08 * Math.sin(t / 300);
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
     for (let k = -40; k <= 40; k += 13.3) {
       ctx.moveTo(k, -50);
@@ -501,6 +519,11 @@ export const DICE_ART = {
       ctx.moveTo(-50, k);
       ctx.lineTo(50, k);
     }
+    ctx.stroke();
+    ctx.globalAlpha = 0.65 + 0.2 * Math.sin(t / 280);
+    ctx.strokeStyle = st.outline || st.edge;
+    ctx.lineWidth = 2;
+    roundRect(ctx, -40, -40, 80, 80, 10);
     ctx.stroke();
     ctx.globalAlpha = 1;
   },
@@ -1145,30 +1168,40 @@ export const DICE_PROPS = {
     }
     ctx.restore();
   },
-  // Neon: electricity crackling off the corners
+  // Neon: glowing corner nodes + subtle electric pulse
   neon(ctx, st, t, part, k) {
     if (part !== 'front') return;
-    const step = Math.floor(t * 9);
-    ctx.lineWidth = 2.5;
+    const step = Math.floor(t * 7);
     ctx.lineCap = 'round';
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        const cx = sx * 42;
+        const cy = sy * 42;
+        circle(ctx, cx, cy, 4 * k);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = st.outline;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+      }
+    }
+    ctx.lineWidth = 2.2;
     ctx.strokeStyle = st.outline;
-    ctx.shadowColor = st.outline;
-    ctx.shadowBlur = 10;
     for (let c = 0; c < 4; c++) {
-      if (rnd(step * 7 + c) < 0.45) continue;
+      if (rnd(step * 7 + c) < 0.55) continue;
       const sx = c % 2 ? 1 : -1;
       const sy = c < 2 ? -1 : 1;
       ctx.beginPath();
       let x = sx * 48;
       let y = sy * 48;
       ctx.moveTo(x, y);
-      for (let i = 0; i < 3; i++) {
-        x += sx * (5 + 9 * rnd(step + c * 3 + i)) * k;
-        y += sy * (5 + 9 * rnd(step * 3 + c + i * 5)) * k;
-        ctx.lineTo(x + (rnd(step + i + c) - 0.5) * 8, y + (rnd(step * 2 + i + c) - 0.5) * 8);
+      for (let i = 0; i < 2; i++) {
+        x += sx * (5 + 6 * rnd(step + c * 3 + i)) * k;
+        y += sy * (5 + 6 * rnd(step * 3 + c + i * 5)) * k;
+        ctx.lineTo(x + (rnd(step + i + c) - 0.5) * 6, y + (rnd(step * 2 + i + c) - 0.5) * 6);
       }
       ctx.stroke();
     }
+    ctx.shadowBlur = 0;
   },
   // Gold: the crown jewels. Rays of light turn behind it, a jewelled crown sits on top, and a
   // gem is set in every corner.

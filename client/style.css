@@ -138,6 +138,23 @@ html, body {
   display: inline-block;
 }
 .coins.small .coin { width: 13px; height: 13px; }
+/* Painted HUD icons matching the coin & gem illustration style */
+.p-ico {
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+  background: center / contain no-repeat;
+  vertical-align: -0.24em;
+  margin-inline-end: 0.3em;
+}
+.p-ico.solo { width: 26px; height: 26px; margin-inline-end: 0; vertical-align: middle; }
+.quest-summary .today-icon .p-ico.solo { width: 24px; height: 24px; }
+.p-trophy { background-image: url('/icons/trophy.webp'); }
+.p-crown  { background-image: url('/icons/crown.webp'); }
+.p-gift   { background-image: url('/icons/gift.webp'); }
+.p-pass   { background-image: url('/icons/pass.webp'); }
+.p-scroll { background-image: url('/icons/scroll.webp'); }
 
 /* ---------- main menu: the hub ---------- */
 /* A top bar (you and your level, Gold Coins and VIP Gems, inbox and settings), the two ways to play
@@ -2549,16 +2566,23 @@ button, .btn { touch-action: manipulation; }
 }
 /* Image frames (Cyber Neon, the leaderboard's rank frames): a picture drawn around the avatar.
    --s: the picture's size against the avatar's, --dy: nudged up or down to centre its ring */
-[data-frame='frame-neon'], [data-frame^='frame-rank-'] { box-shadow: none; }
-[data-frame='frame-neon']::before, [data-frame^='frame-rank-']::before { inset: calc(-50% * (var(--s) - 1)); background: var(--img) center / 100% 100% no-repeat; transform: translateY(var(--dy, 0%)); }
+[data-frame='frame-neon'], [data-frame^='frame-rank-'], [data-frame^='frame-month-'], [data-frame^='frame-all-'],
+[data-pod-frame^='frame-rank-'], [data-pod-frame^='frame-month-'], [data-pod-frame^='frame-all-'] { box-shadow: none; }
+[data-frame='frame-neon']::before, [data-frame^='frame-rank-']::before, [data-frame^='frame-month-']::before, [data-frame^='frame-all-']::before { inset: calc(-50% * (var(--s) - 1)); background: var(--img) center / 100% 100% no-repeat; transform: translateY(var(--dy, 0%)); }
 [data-frame='frame-neon'] { --img: url('/frames/frame-cyber-neon.webp'); --s: 1.62; }
 [data-frame='frame-neon']::before { animation: pf-pulse 2.4s ease-in-out infinite; }
-[data-frame='frame-rank-1'] { --img: url('/frames/frame-rank-1.webp'); --s: 2.55; --dy: -4%; }
-[data-frame='frame-rank-2'] { --img: url('/frames/frame-rank-2.webp'); --s: 2.3; --dy: -6%; }
-[data-frame='frame-rank-3'] { --img: url('/frames/frame-rank-3.webp'); --s: 2; --dy: 2%; }
+[data-frame='frame-rank-1'], [data-pod-frame='frame-rank-1'] { --img: url('/frames/frame-rank-1.webp'); --s: 2.55; --dy: -4%; }
+[data-frame='frame-rank-2'], [data-pod-frame='frame-rank-2'] { --img: url('/frames/frame-rank-2.webp'); --s: 2.3; --dy: -6%; }
+[data-frame='frame-rank-3'], [data-pod-frame='frame-rank-3'] { --img: url('/frames/frame-rank-3.webp'); --s: 1.92; --dy: 7.4%; }
+[data-frame='frame-month-1'], [data-pod-frame='frame-month-1'] { --img: url('/frames/frame-month-1.webp'); --s: 2.31; --dy: -2.3%; }
+[data-frame='frame-month-2'], [data-pod-frame='frame-month-2'] { --img: url('/frames/frame-month-2.webp'); --s: 2.21; --dy: -2.5%; }
+[data-frame='frame-month-3'], [data-pod-frame='frame-month-3'] { --img: url('/frames/frame-month-3.webp'); --s: 2.24; --dy: -2.9%; }
+[data-frame='frame-all-1'], [data-pod-frame='frame-all-1'] { --img: url('/frames/frame-all-1.webp'); --s: 2.6; --dy: -0.4%; }
+[data-frame='frame-all-2'], [data-pod-frame='frame-all-2'] { --img: url('/frames/frame-all-2.webp'); --s: 2.56; --dy: -0.2%; }
+[data-frame='frame-all-3'], [data-pod-frame='frame-all-3'] { --img: url('/frames/frame-all-3.webp'); --s: 2.52; --dy: -1.4%; }
 @keyframes pf-pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25) saturate(1.2); } }
 /* on the small seat pictures the big rank frames would cover the name: a little more room */
-.seat-avatar[data-frame^='frame-rank-'] { margin: 0 8px; }
+.seat-avatar[data-frame^='frame-rank-'], .seat-avatar[data-frame^='frame-month-'] { margin: 0 8px; }
 .item .btn.won { background: var(--panel-2); color: var(--muted); font-size: 11.5px; }
 
 /* ---------- the menu's chat (Global / your language) and Translate ---------- */
@@ -2641,11 +2665,10 @@ button, .btn { touch-action: manipulation; }
 .lb-tabs button { flex: 1; }
 .lb-podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 8px; padding-top: 8px; }
 .pod { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
-.pod-pic { position: relative; width: 52px; height: 52px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--text); font-weight: 800; font-size: 20px; box-shadow: inset 0 0 0 1px var(--line); }
+.pod-pic { position: relative; width: 52px; height: 52px; margin: 24px 0 28px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); color: var(--text); font-weight: 800; font-size: 20px; box-shadow: inset 0 0 0 1px var(--line); }
 .pod-avatar { width: 100%; height: 100%; font-size: inherit; }
-.pod1 .pod-pic { width: 66px; height: 66px; font-size: 26px; }
-.pod-frame { position: absolute; inset: -34%; width: 168%; height: 168%; object-fit: contain; pointer-events: none; }
-.pod1 .pod-frame { inset: -38%; width: 176%; height: 176%; }
+.pod1 .pod-pic { width: 66px; height: 66px; font-size: 26px; margin: 34px 0 32px; }
+.pod-frame { position: absolute; inset: calc(-50% * (var(--s, 1.9) - 1)); width: calc(var(--s, 1.9) * 100%); height: calc(var(--s, 1.9) * 100%); transform: translateY(var(--dy, 0%)); object-fit: contain; pointer-events: none; z-index: 2; }
 .pod.empty .pod-pic { color: var(--muted); opacity: 0.6; }
 .pod-name { max-width: 100%; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pod-name small { color: var(--muted); font-weight: 500; }

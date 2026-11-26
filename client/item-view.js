@@ -202,7 +202,8 @@ function renderInfo() {
     main.onclick = () => ctx.onEquip(item);
   } else if (item.award) {
     // won on the leaderboard, never bought: say how
-    main.textContent = `🏆 ${t(item.award)}`;
+    main.innerHTML = `<span class="p-ico p-trophy" aria-hidden="true"></span><span></span>`;
+    main.querySelector('span:last-child').textContent = t(item.award);
     main.disabled = true;
     main.classList.add('done');
     priceBox.innerHTML = '';
@@ -236,12 +237,14 @@ function renderInfo() {
     } else {
       progress.classList.add('hidden');
     }
-    main.textContent = `🎟️ ${t('Open Battle Pass')}`;
+    main.innerHTML = `<span class="p-ico p-pass" aria-hidden="true"></span><span></span>`;
+    main.querySelector('span:last-child').textContent = t('Open Battle Pass');
     main.classList.add('equip');
     main.onclick = () => ctx.onOpenPass?.();
   } else if (item.starter) {
     // only in the Starter Pack: the button opens the gem store, where it is
-    main.textContent = `🎁 ${t('Only in the Starter Pack')}`;
+    main.innerHTML = `<span class="p-ico p-gift" aria-hidden="true"></span><span></span>`;
+    main.querySelector('span:last-child').textContent = t('Only in the Starter Pack');
     main.classList.add('equip');
     main.onclick = () => ctx.onGetGems?.();
     priceBox.innerHTML = '';

@@ -878,42 +878,296 @@ export const TAUNT_FX = {
 // Which marks fade with the victim's next turn (for whoever draws them)
 export const tauntHasMark = (id) => !!TAUNT_FX[id]?.mark;
 
-// One taunt for a shop card or close-up, looping: a little scene of a token taking another's
-// place, the taunt, and its mark for a moment after. `w`×`h`: the drawing area.
+// Rich comic preview backdrop for a taunt shop/item card.
+function cardBackdrop(ctx, id, w, h, s, color, vcolor, tm) {
+  const palettes = {
+    'taunt-none': ['#2d241c', '#1e1712', '#d4c3aa'],
+    'taunt-bonk': ['#3a1919', '#1d1216', '#ffd23f'],
+    'taunt-bye': ['#172b42', '#101a29', '#8fd3ff'],
+    'taunt-violin': ['#1c2136', '#111422', '#7fb6ff'],
+    'taunt-chicken': ['#362812', '#1c150c', '#ffd84a'],
+    'taunt-clown': ['#3b1623', '#1d0d16', '#ff6b81'],
+    'taunt-l': ['#332010', '#1a110b', '#ff9b2e'],
+    'taunt-ggez': ['#142e1b', '#0d1b12', '#b8f26a'],
+    'taunt-skill': ['#2b171b', '#160e12', '#ff4d5e'],
+    'taunt-cackle': ['#231538', '#120b1c', '#c5f04a'],
+    'taunt-fireworks': ['#111536', '#090a1d', '#ffd23f'],
+  };
+  const [c0, c1, accent] = palettes[id] || palettes['taunt-none'];
+  const bg = ctx.createRadialGradient(w * 0.55, h * 0.42, s * 0.4, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+  bg.addColorStop(0, c0);
+  bg.addColorStop(1, c1);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  if (id === 'taunt-bonk' || id === 'taunt-chicken' || id === 'taunt-clown' || id === 'taunt-l') {
+    // subtle rotating comic starburst rays
+    ctx.save();
+    ctx.translate(id === 'taunt-bonk' ? w * 0.34 : w * 0.62, h * 0.56);
+    ctx.rotate((tm / 9000) * TAU);
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.11;
+    const rays = 12;
+    for (let i = 0; i < rays; i++) {
+      const a0 = (i / rays) * TAU;
+      const a1 = ((i + 0.42) / rays) * TAU;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a0) * w, Math.sin(a0) * w);
+      ctx.lineTo(Math.cos(a1) * w, Math.sin(a1) * w);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (id === 'taunt-bye') {
+    // speed wind lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(143, 211, 255, 0.22)';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = s * 0.08;
+    for (let i = 0; i < 4; i++) {
+      const yy = h * (0.22 + i * 0.16);
+      const off = ((tm * 0.08 + i * 28) % (w * 0.45));
+      ctx.beginPath();
+      ctx.moveTo(w * 0.1 + off * 0.25, yy);
+      ctx.lineTo(w * 0.32 + off * 0.25, yy);
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (id === 'taunt-fireworks') {
+    // starry night sky + animated bursts right inside the card preview
+    for (let i = 0; i < 14; i++) {
+      ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(tm / 500 + i * 1.7));
+      ctx.fillStyle = '#fff3d0';
+      ctx.beginPath();
+      ctx.arc(((i * 37) % 88 + 6) * (w / 100), ((i * 23) % 52 + 8) * (h / 100), s * 0.055, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const shells = [
+      [0.2, 0.28, '#ffd23f', 0.0],
+      [0.82, 0.24, '#5cf2ff', 0.35],
+      [0.52, 0.2, '#ff5c8a', 0.68],
+    ];
+    for (const [fx, fy, col, ph0] of shells) {
+      const p = (tm / 1700 + ph0) % 1;
+      const al = Math.sin(p * Math.PI);
+      if (al <= 0.05) continue;
+      ctx.save();
+      ctx.translate(w * fx, h * fy);
+      ctx.globalAlpha = al * 0.95;
+      for (let r = 0; r < 10; r++) {
+        const a = (r / 10) * TAU + ph0 * 2;
+        const dist = s * (0.25 + p * 1.15);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = s * 0.09 * (1 - p * 0.5);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * dist * 0.45, Math.sin(a) * dist * 0.45);
+        ctx.lineTo(Math.cos(a) * dist, Math.sin(a) * dist);
+        ctx.stroke();
+      }
+      sparkle(ctx, 0, 0, s * 0.32 * (1 - p * 0.5), '#ffffff');
+      ctx.restore();
+    }
+  } else if (id === 'taunt-skill') {
+    // faint slanted dossier stripes in corner
+    ctx.save();
+    ctx.globalAlpha = 0.09;
+    ctx.fillStyle = '#ff4d5e';
+    for (let x = -h; x < w + h; x += s * 1.1) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + s * 0.45, 0);
+      ctx.lineTo(x - h + s * 0.45, h);
+      ctx.lineTo(x - h, h);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // beveled capture tile (left) & victim's home pad (right)
+  ctx.save();
+  const tx = w * 0.28, ty = h * 0.72;
+  roundRect(ctx, tx - s * 0.95, ty - s * 0.42, s * 1.9, s * 0.88, s * 0.24);
+  ctx.fillStyle = 'rgba(255, 245, 232, 0.14)';
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, s * 0.06);
+  ctx.strokeStyle = 'rgba(255, 245, 232, 0.22)';
+  ctx.stroke();
+
+  const hx = w * 0.72, hy = h * 0.68;
+  roundRect(ctx, hx - s * 1.05, hy - s * 0.68, s * 2.1, s * 1.36, s * 0.32);
+  ctx.fillStyle = vcolor;
+  ctx.globalAlpha = 0.28;
+  ctx.fill();
+  ctx.globalAlpha = 0.65;
+  ctx.strokeStyle = vcolor;
+  ctx.lineWidth = Math.max(1.2, s * 0.08);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// One taunt for a shop card or close-up, looping: a composed comic card of the capture tile,
+// the victim's base, and the taunt prop + caption so every frame reads clearly. `w`×`h`: drawing area.
 export function drawTauntPreview(ctx, id, w, h, now, { color = '#e8483f', vcolor = '#3b82f6', name = '' } = {}) {
   const fx = TAUNT_FX[id];
   const s = Math.min(w / 7.2, h / 4.6);
-  const g = { x: w * 0.3, y: h * 0.68, hx: w * 0.72, hy: h * 0.66, s, w, h, color, vcolor, name, px: null };
-  // the victim's base, and the capturer's token on the square
+  const g = { x: w * 0.28, y: h * 0.67, hx: w * 0.72, hy: h * 0.68, s, w, h, color, vcolor, name, px: null };
+
   ctx.save();
-  roundRect(ctx, g.hx - s * 1.0, g.hy - s * 0.75, s * 2.0, s * 1.5, s * 0.3);
-  ctx.fillStyle = vcolor;
-  ctx.globalAlpha *= 0.35;
+  roundRect(ctx, 0, 0, w, h, Math.min(10, s * 0.42));
+  ctx.clip();
+  cardBackdrop(ctx, id, w, h, s, color, vcolor, now);
+
+  // capturer pawn (glossy, shaded, with ground shadow)
+  const pawnSquash = id === 'taunt-bonk' && (now % 1800) / 1800 > 0.32 && (now % 1800) / 1800 < 0.56 ? 0.78 : 1;
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(g.x, g.y + s * 0.42, s * 0.46, s * 0.16, 0, 0, TAU);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fill();
+  ctx.translate(g.x, g.y + s * 0.16);
+  ctx.scale(1 / Math.sqrt(pawnSquash), pawnSquash);
+  pawn(ctx, 0, 0, s * 0.54, color);
   ctx.restore();
-  pawn(ctx, g.x, g.y + s * 0.2, s * 0.5, color);
-  if (!fx) return;
-  const loop = fx.ms + (fx.mark ? 1400 : 300);
-  const e = now % loop;
-  if (e < fx.ms) fx.draw(ctx, e / fx.ms, g);
-  else if (fx.mark) fx.mark(ctx, e - fx.ms, g);
+
+  if (id === 'taunt-bonk') {
+    // Dedicated rich preview card for Bonk!: orbiting dizzy stars on victim pad, swinging mallet slam, bold BONK! burst
+    const tm = now % 1800;
+    const k = tm / 1800;
+    // small dizzy victim shadow + stars always orbiting over home pad
+    for (let i = 0; i < 3; i++) {
+      const a = now / 360 + (i * TAU) / 3;
+      sparkle(ctx, g.hx + Math.cos(a) * s * 0.78, g.hy - s * 0.18 + Math.sin(a) * s * 0.26, s * 0.3, i % 2 ? '#ffd23f' : '#ffffff');
+    }
+    // mallet swings from poised backswing (-Math.PI*0.62) onto capture square (-Math.PI*0.92), holds, lifts
+    const L = s * 2.45;
+    const slamA = -Math.PI + 0.18;
+    const backA = -Math.PI * 0.52;
+    let a = slamA;
+    if (k < 0.2) a = lerp(slamA - 0.1, backA, easeOutCubic(k / 0.2));
+    else if (k < 0.36) a = lerp(backA, slamA, seg(k, 0.2, 0.36) ** 2.2);
+    else if (k < 0.54) a = slamA + 0.2 * Math.sin(seg(k, 0.36, 0.54) * Math.PI);
+    const P = { x: g.x - L * Math.cos(slamA), y: g.y - L * Math.sin(slamA) };
+    // impact shock lines on slam
+    if (k >= 0.35 && k < 0.78) {
+      const imp = seg(k, 0.35, 0.78);
+      ctx.save();
+      ctx.globalAlpha = 1 - imp;
+      ctx.strokeStyle = '#fff3b0';
+      ctx.lineWidth = s * 0.13;
+      ctx.lineCap = 'round';
+      for (let n = 0; n < 8; n++) {
+        const d = (n / 8) * TAU + 0.2;
+        ctx.beginPath();
+        ctx.moveTo(g.x + Math.cos(d) * s * (0.55 + imp * 0.4), g.y - s * 0.1 + Math.sin(d) * s * (0.45 + imp * 0.4));
+        ctx.lineTo(g.x + Math.cos(d) * s * (1.05 + imp * 0.9), g.y - s * 0.1 + Math.sin(d) * s * (0.85 + imp * 0.8));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.translate(P.x, P.y);
+    ctx.rotate(a);
+    hammer(ctx, L, s * 1.05);
+    ctx.restore();
+    const punch = k >= 0.34 && k < 0.54 ? 1 + 0.16 * Math.sin(seg(k, 0.34, 0.54) * Math.PI) : 1;
+    ctx.save();
+    ctx.translate(w * 0.62, h * 0.26);
+    ctx.scale(punch, punch);
+    word(ctx, up(t('Bonk!')), 0, 0, s * 1.02, '#ffd23f', { rot: -0.09, pop: 1, maxW: w - s });
+    ctx.restore();
+  } else if (id === 'taunt-chicken') {
+    const k = (now % 1900) / 1900;
+    const squeeze = k > 0.22 && k < 0.72 ? Math.sin(seg(k, 0.22, 0.72) * Math.PI) : 0.18;
+    const hop = Math.abs(Math.sin(k * Math.PI * 2)) * s * 0.18;
+    ctx.save();
+    ctx.translate(w * 0.65, h * 0.64 - hop);
+    ctx.rotate(Math.sin(k * 12) * 0.06);
+    chicken(ctx, s * 1.05, squeeze);
+    ctx.restore();
+    word(ctx, up(t('Squeak!')), w * 0.62, h * 0.24, s * 0.85, '#ffd84a', { rot: 0.1, pop: 1, maxW: w - s * 0.8 });
+  } else if (id === 'taunt-skill') {
+    const k = (now % 2000) / 2000;
+    // crisp red ink stamp mark always shown on pad, handle stamps down and lifts cleanly above
+    ctx.save();
+    ctx.translate(g.hx, g.hy);
+    stampMark(ctx, s * 0.96, up(t('Skill issue')));
+    ctx.restore();
+    const lift = k < 0.35 ? 1 - drop(seg(k, 0, 0.35)) : k < 0.6 ? 0 : easeOutCubic(seg(k, 0.6, 1));
+    ctx.save();
+    ctx.translate(g.x + s * 0.4, h * 0.44 - lift * s * 0.85);
+    ctx.rotate(-0.22);
+    stamp(ctx, s * 0.72);
+    ctx.restore();
+  } else if (id === 'taunt-violin') {
+    const tm = now;
+    ctx.save();
+    ctx.translate(g.hx, h * 0.24);
+    cloud(ctx, s * 0.88, tm);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(w * 0.56, h * 0.58 + Math.sin(tm / 190) * s * 0.05);
+    violin(ctx, s * 0.95, Math.sin(tm / 130));
+    ctx.restore();
+    for (let i = 0; i < 3; i++) {
+      const ph = ((tm / 1600 + i * 0.33) % 1);
+      ctx.save();
+      ctx.globalAlpha = 1 - ph;
+      ctx.translate(w * 0.74 + Math.sin(ph * 4 + i) * s * 0.25, h * 0.5 - ph * s * 1.4);
+      ctx.fillStyle = i % 2 ? '#a9c8ff' : '#ffffff';
+      note(ctx, s * 0.85);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.font = `italic 700 ${s * 0.42}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = s * 0.14;
+    ctx.strokeStyle = INK;
+    ctx.fillStyle = '#ffffff';
+    const cap = t('*sad violin noises*');
+    ctx.strokeText(cap, w * 0.54, h * 0.9, w - s * 0.4);
+    ctx.fillText(cap, w * 0.54, h * 0.9, w - s * 0.4);
+    ctx.restore();
+  } else if (id === 'taunt-fireworks') {
+    const sign = inside(g, w / 2, h * 0.54, s * 2);
+    ctx.save();
+    ctx.translate(sign.x, sign.y);
+    ctx.rotate(Math.sin(now / 520) * 0.03);
+    marquee(ctx, t('{name} got sent home!', { name: name || '' }), s * 0.98, now, w - s * 0.7);
+    ctx.restore();
+  } else if (fx) {
+    // Remaining taunts (bye, clown, l, ggez, cackle): hold inside the peak visible window [0.46..0.9]
+    const k = 0.46 + 0.44 * (0.5 + 0.5 * Math.sin(now / 650));
+    fx.draw(ctx, k, g);
+    if (fx.mark) fx.mark(ctx, now, g);
+  }
+  ctx.restore();
 }
 
 function pawn(ctx, x, y, r, color) {
   ctx.save();
   ctx.translate(x, y);
   ctx.beginPath();
-  ctx.moveTo(-r * 0.8, r * 0.6);
-  ctx.lineTo(-r * 0.35, -r * 0.4);
-  ctx.lineTo(r * 0.35, -r * 0.4);
-  ctx.lineTo(r * 0.8, r * 0.6);
+  ctx.moveTo(-r * 0.82, r * 0.56);
+  ctx.lineTo(-r * 0.35, -r * 0.42);
+  ctx.lineTo(r * 0.35, -r * 0.42);
+  ctx.lineTo(r * 0.82, r * 0.56);
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
   ink(ctx, r * 0.14);
   ctx.beginPath();
   ctx.arc(0, -r * 0.65, r * 0.42, 0, TAU);
+  ctx.fillStyle = color;
   ctx.fill();
   ink(ctx, r * 0.14);
+  ctx.beginPath();
+  ctx.arc(-r * 0.14, -r * 0.78, r * 0.12, 0, TAU);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fill();
   ctx.restore();
 }

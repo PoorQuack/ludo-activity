@@ -120,9 +120,9 @@ export const BOARD_THEMES = {
       pins: 'cookie', decor: 'candy', hub: 'swirl',
       shield: 'candy',
     },
-    bg: '#f6d7e5',
-    cell: '#fffafc',
-    safe: '#fde6b3',
+    bg: '#ebaac6',
+    cell: '#fff8fb',
+    safe: '#f9d48c',
     star: '#d97aa6',
     baseInner: '#fffafc',
     players: { red: '#ee7486', green: '#4fbf95', yellow: '#f2bf57', blue: '#6c98ee', purple: '#b087ec', orange: '#f3965f' },
@@ -205,9 +205,9 @@ export const BOARD_THEMES = {
       pins: 'crystal', decor: 'ice', hub: 'flake',
       shield: 'frost',
     },
-    bg: '#9ccfe8',
-    cell: '#ffffff',
-    safe: '#d4effa',
+    bg: '#78badf',
+    cell: '#f2faff',
+    safe: '#bfe7fb',
     star: '#4aa3cf',
     baseInner: '#fbfeff',
     players: { red: '#e2566a', green: '#25a585', yellow: '#e3ad1f', blue: '#3a74d8', purple: '#8a6be0', orange: '#ec8a46' },
@@ -291,9 +291,9 @@ export const BOARD_THEMES = {
       pins: 'blossom', decor: 'sakura', hub: 'blossom',
       shield: { kind: 'orbit', motif: 'heart', colors: ['#ff9ec0', '#ffffff'], glow: 'rgba(255, 170, 200, 0.45)' },
     },
-    bg: '#f3c4d3',
-    cell: '#fff8f3',
-    safe: '#ffd0de',
+    bg: '#e5a4ba',
+    cell: '#fff6f8',
+    safe: '#ffb9cf',
     star: '#d6497a',
     baseInner: '#fff3f6',
     players: { red: '#e0566e', green: '#4aa77d', yellow: '#e9b23c', blue: '#5a86dc', purple: '#a274dc', orange: '#ee8a52' },
@@ -537,7 +537,7 @@ export function playerColor(themeId, name) {
 // sparks: the Legendary dice's effect, sparkles in these colours (a few at rest, a swirl when rolled).
 // prop: what sticks out of it and moves (DICE_PROPS in renderer.js): ears, flames, a crown…
 export const DICE_STYLES = {
-  'dice-classic': { face: '#fbfaf6', edge: '#d3cdbf', pip: '#26262b' },
+  'dice-classic': { face: '#f2eee4', shine: '#ffffff', edge: '#c8c0af', pip: '#242429', pips: 'inset' },
   'dice-midnight': { face: '#151a3d', edge: '#3b4580', pip: '#ffe9a8', art: 'night', pips: 'glow', prop: 'moon' },
   'dice-wood': { face: '#c8935a', edge: '#7f5226', pip: '#3d2208', art: 'grain', pips: 'inset', prop: 'sprout' },
   // The Starter Pack's die: cut jade, the colour of Die Gems
@@ -547,7 +547,7 @@ export const DICE_STYLES = {
   'dice-neon': { face: '#0b0c14', edge: '#2ef29a', pip: '#2ef29a', outline: '#2ef29a', playerColor: true, pulse: true, art: 'grid', pips: 'glow', prop: 'neon' },
   // The crown jewels: ruby pips, a crown on top, gems in the corners, rays of light behind
   'dice-gold': { face: '#e2b44a', edge: '#8c6512', pip: '#e0284a', pipDark: '#7a0d22', art: 'metal', pips: 'pearl', prop: 'gold', sparks: ['#fff6cf', '#ffd766'] },
-  'dice-ice': { face: '#dff3fc', edge: '#7fb8d8', pip: '#2b78ad', pipDark: '#123f63', art: 'frost', pips: 'pearl', prop: 'ice' },
+  'dice-ice': { face: '#bfe6fb', edge: '#4f96c4', pip: '#1d669c', pipDark: '#0b2d4a', art: 'frost', pips: 'pearl', prop: 'ice' },
   'dice-candy': { face: '#ffffff', edge: '#e4577f', pip: '#ff4f7b', pipColors: ['#ff5ca8', '#3fd8a4', '#ffd23f', '#5aa8ff', '#b07bff', '#ff8a3d'], art: 'peppermint', pips: 'candy', prop: 'candy' },
   'dice-emerald': { face: '#0f7a4c', edge: '#064a2c', pip: '#ffd86a', pipDark: '#9a6b00', art: 'stepcut', facets: ['#6ff0b0', '#1fae6e', '#08502f'], pips: 'pearl', prop: 'flash' },
   // The four corners of a Ludo board, in the Classic board's colours
@@ -563,7 +563,7 @@ export const DICE_STYLES = {
   'dice-bubble': { face: '#58c8e8', edge: '#2a86b0', pip: '#ffffff', pipDark: '#a8dff0', art: 'water', pips: 'pearl', prop: 'bubbles' },
   'dice-slime': { face: '#7ed957', edge: '#2f8a26', pip: '#1f4a1a', pipDark: '#0d2a0b', art: 'goo', pips: 'pearl', prop: 'slime' },
   'dice-robot': { face: '#9aa6ba', edge: '#4a5466', pip: '#5cf2ff', art: 'steel', pips: 'glow', prop: 'robot' },
-  'dice-ghost': { face: '#f4f2ff', shine: '#ffffff', edge: '#a99fe0', pip: '#3a2f66', prop: 'ghost' },
+  'dice-ghost': { face: '#e7e2ff', shine: '#ffffff', edge: '#8b7ad6', pip: '#7a62e0', art: 'spirit', pips: 'glow', prop: 'ghost' },
   'dice-duck': { face: '#ffd84a', shine: '#fff5b8', edge: '#d99a1a', pip: '#7a4a00', prop: 'duck' },
   'dice-snowball': { face: '#eef7fd', shine: '#ffffff', edge: '#a9cfe6', pip: '#2b3350', art: 'frost', prop: 'bobble' },
   // Legendary: a lump of burning rock trailing fire

@@ -196,7 +196,7 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     btn.addEventListener('click', () => onEquip(item));
   } else if (item.award) {
     // won on the leaderboard, never bought
-    btn.textContent = `🏆 ${t('Win it')}`;
+    btn.innerHTML = `<span class="p-ico p-trophy" aria-hidden="true"></span>${t('Win it')}`;
     btn.classList.add('won');
     btn.title = t(item.award);
     btn.disabled = true;
@@ -204,7 +204,7 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     // earned on the Battle Pass, never sold: show which tier unlocks it and jump straight to the Pass
     const info = passItemInfo(item.id, profile?.pass?.month);
     const tier = info?.tier;
-    btn.textContent = tier ? `🎟️ ${t('Pass · Tier {n}', { n: tier })}` : `🎟️ ${t('Battle Pass')}`;
+    btn.innerHTML = `<span class="p-ico p-pass" aria-hidden="true"></span>${tier ? t('Pass · Tier {n}', { n: tier }) : t('Battle Pass')}`;
     btn.classList.add('won', 'starter-btn');
     btn.title = tier
       ? info.lane === 'free'
@@ -224,7 +224,7 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     return card;
   } else if (item.starter) {
     // only in the Starter Pack (real money, once): the button opens the gem store, where it is
-    btn.textContent = `🎁 ${t('Starter Pack')}`;
+    btn.innerHTML = `<span class="p-ico p-gift" aria-hidden="true"></span>${t('Starter Pack')}`;
     btn.classList.add('won', 'starter-btn');
     btn.title = t('Only in the Starter Pack');
     btn.addEventListener('click', () => cardOpts.onGetGems?.());
@@ -394,7 +394,8 @@ function preview(item, theme) {
   ctx.scale(dpr, dpr);
 
   if (item.type === 'token') {
-    const draw = (c, now) => ['red', 'green', 'yellow', 'blue'].forEach((col, i) => drawToken(c, 30 + i * 30, 68, 14, playerColor(theme, col), item.id, { sign: col, t: now }));
+    const wide = ['token-constellation', 'token-ufo', 'token-dragon', 'token-samurai'].includes(item.id);
+    const draw = (c, now) => ['red', 'green', 'yellow', 'blue'].forEach((col, i) => drawToken(c, (wide ? 25.5 + i * 33 : 30 + i * 30), 68, wide ? 12.5 : 14, playerColor(theme, col), item.id, { sign: col, t: now }));
     draw(ctx, performance.now());
     if (rarityOf(item).id === 'legendary') animated.push({ canvas, dpr, draw }); // their effects move
   } else if (item.type === 'dice') {
@@ -502,7 +503,7 @@ function renderFront(grid, opts) {
     card.appendChild(art);
     const info = document.createElement('div');
     info.className = 'front-starter-info';
-    info.innerHTML = `<span class="front-kicker">🎁 ${t('Once only')}</span><b></b><span class="front-starter-what"><span class="gem"></span>${STARTER.gems} · <span class="coin"></span>${STARTER.coins} · <i></i></span>`;
+    info.innerHTML = `<span class="front-kicker"><span class="p-ico p-gift" aria-hidden="true"></span>${t('Once only')}</span><b></b><span class="front-starter-what"><span class="gem"></span>${STARTER.gems} · <span class="coin"></span>${STARTER.coins} · <i></i></span>`;
     info.querySelector('b').textContent = t(STARTER.name);
     info.querySelector('i').textContent = t('{item} dice', { item: t(dice.name) });
     card.appendChild(info);

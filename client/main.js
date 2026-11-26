@@ -898,7 +898,7 @@ function renderChat() {
       const who = document.createElement('button');
       who.type = 'button';
       who.className = 'who who-btn';
-      who.textContent = (m.vip ? '👑 ' : '') + (seat >= 0 ? sym(board.colors[seat]) : '') + m.name;
+      who.innerHTML = `${m.vip ? '<span class="p-ico p-crown" aria-hidden="true"></span>' : ''}${escapeHtml((seat >= 0 ? sym(board.colors[seat]) : '') + m.name)}`;
       who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
       // their picture (in their frame) beside the name and bubble
       const av = document.createElement('button');
@@ -1396,19 +1396,22 @@ function renderLeaderboard() {
     return;
   }
   const week = lbTab === 'week';
+  const month = lbTab === 'month';
   const all = lbTab === 'all';
   const pointsMode = b.mode === 'points';
   const coin = '<span class="coin"></span>';
   const lang = document.documentElement.lang || undefined;
   const chips = (n) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString(lang)}`;
   const scoreHtml = (n) => (pointsMode ? `${Number(n).toLocaleString(lang)} <small>${t('pts')}</small>` : `${coin}${chips(n)}`);
+  const frameFor = (place) => `${all ? 'frame-all' : month ? 'frame-month' : 'frame-rank'}-${place}`;
   // The podium: 2nd, 1st, 3rd (1st in the middle, highest); empty places wait for someone
   const slot = (place) => {
     const e = b.top[place - 1];
     const prize = !all && b.prizes ? `<span class="pod-prize">${coin}${b.prizes[place - 1]}</span>` : '';
     if (!e) return `<div class="pod pod${place} empty"><div class="pod-pic"><span>?</span></div><b class="pod-name">—</b>${prize}<div class="pod-step"><span>${place}</span></div></div>`;
+    const fid = frameFor(place);
     return `<div class="pod pod${place}${e.you ? ' you' : ''}">
-        <div class="pod-pic"><span class="avatar pod-avatar" data-lb-avatar="${place}"></span><img src="/frames/frame-rank-${place}.webp" alt="" class="pod-frame"></div>
+        <div class="pod-pic"><span class="avatar pod-avatar" data-lb-avatar="${place}"></span><img src="/frames/${fid}.webp" alt="" class="pod-frame" data-pod-frame="${fid}"></div>
         <b class="pod-name">${escapeHtml(e.name)}${e.you ? ` <small>${t('(you)')}</small>` : ''}</b>
         <span class="pod-chips${!pointsMode && e.points < 0 ? ' neg' : ''}">${scoreHtml(e.points)}</span>
         ${prize}
@@ -3507,7 +3510,7 @@ function finishStats(seat) {
   const mine = all[seat] || {};
   const most = Math.max(0, ...Object.values(all).map((x) => x.capture || 0));
   const chip = (icon, n, label) => `<span class="stat-chip" title="${escapeHtml(t(label))}">${icon} ${n || 0}</span>`;
-  const mvp = most > 0 && (mine.capture || 0) === most ? `<span class="stat-chip mvp">👑 ${escapeHtml(t('Most captures'))}</span>` : '';
+  const mvp = most > 0 && (mine.capture || 0) === most ? `<span class="stat-chip mvp"><span class="p-ico p-crown" aria-hidden="true"></span>${escapeHtml(t('Most captures'))}</span>` : '';
   return `<div class="finish-stats">${chip('⚔️', mine.capture, 'Captures')}${chip('🎲', mine.six, 'Sixes')}${chip('🏠', mine.home, 'Tokens home')}${mvp}</div>`;
 }
 
@@ -5024,7 +5027,7 @@ function renderPlayerCardModal(u) {
       <div class="pcard-head">
         <span class="avatar pcard-av"></span>
         <div class="pcard-meta">
-          <div class="pcard-name-row"><b class="pcard-name${u.vip ? ' vip' : ''}">${u.vip ? '👑 ' : ''}${escapeHtml(u.name)}</b><span class="level-badge">${escapeHtml(t('Lv. {n}', { n: u.level || 1 }))}</span></div>
+          <div class="pcard-name-row"><b class="pcard-name${u.vip ? ' vip' : ''}">${u.vip ? '<span class="p-ico p-crown" aria-hidden="true"></span>' : ''}${escapeHtml(u.name)}</b><span class="level-badge">${escapeHtml(t('Lv. {n}', { n: u.level || 1 }))}</span></div>
           <small class="pcard-title">${escapeHtml(titleText)}</small>
           ${pinHtml}
         </div>
@@ -5187,7 +5190,7 @@ function renderLobbyChat() {
       meta.className = 'dm-row-meta';
       const b = document.createElement('b');
       if (r.vip) b.className = 'vip';
-      b.textContent = (r.vip ? '👑 ' : '') + r.name;
+      b.innerHTML = `${r.vip ? '<span class="p-ico p-crown" aria-hidden="true"></span>' : ''}${escapeHtml(r.name)}`;
       const small = document.createElement('small');
       small.dir = 'auto';
       small.textContent = r.last ? r.last.text : t('Tap to say hi');
@@ -5227,7 +5230,7 @@ function renderLobbyChat() {
     fillAvatar(av, { id: f.id, name: f.name, avatar: f.avatar });
     setFrame(av, f.frame);
     const label = document.createElement('span');
-    label.textContent = (f.vip ? '👑 ' : '') + f.name;
+    label.innerHTML = `${f.vip ? '<span class="p-ico p-crown" aria-hidden="true"></span>' : ''}${escapeHtml(f.name)}`;
     if (f.vip) label.style.color = 'var(--gold)';
     whoBtn.append(av, label);
     dmBar.append(back, whoBtn);
@@ -5301,7 +5304,7 @@ function renderLobbyChat() {
     const who = document.createElement('button');
     who.type = 'button';
     who.className = `who who-btn${m.vip ? ' vip' : ''}`;
-    who.textContent = (m.vip ? '👑 ' : '') + (m.name || '');
+    who.innerHTML = `${m.vip ? '<span class="p-ico p-crown" aria-hidden="true"></span>' : ''}${escapeHtml(m.name || '')}`;
     who.addEventListener('click', () => inspectPlayer(m.userId, m.name));
     col2.appendChild(who);
     const bubble = document.createElement('div');
@@ -5617,9 +5620,9 @@ function renderPass() {
     <p class="pass-earn">${t('Earn XP: daily login +{a} · each daily quest +{b} · each weekly quest +{c}', { a: PASS_XP.login, b: PASS_XP.daily, c: PASS_XP.weekly })}</p>
     ${
       p.active
-        ? `<div class="pass-status on">${ICONS.crown}<span>${t('Battle Pass active until {date}', { date: escapeHtml(new Date(p.until || p.endsAt).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short' })) })}</span></div>`
+        ? `<div class="pass-status on"><span class="p-ico p-crown" aria-hidden="true"></span><span>${t('Battle Pass active until {date}', { date: escapeHtml(new Date(p.until || p.endsAt).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short' })) })}</span></div>`
         : `<div class="pass-status buy">
-            <div><b>${ICONS.crown} ${t('Get the Battle Pass')}</b>
+            <div><b><span class="p-ico p-crown" aria-hidden="true"></span>${t('Get the Battle Pass')}</b>
             <ul>
               <li>${t('{n} Die Gems over the month', { n: gemsTotal })}</li>
               <li>${t('{n} exclusive items, never sold in the shop', { n: exclusive })}</li>
@@ -5630,7 +5633,7 @@ function renderPass() {
           </div>`
     }
     ${claimable ? `<button type="button" class="btn primary pass-claim-all" id="pass-claim-all">${t('Claim all ({n})', { n: claimable })}</button>` : ''}
-    <div class="pass-lanes-head"><span></span><b>${t('Free')}</b><b class="prem">${ICONS.crown} ${t('Battle Pass')}</b></div>
+    <div class="pass-lanes-head"><span></span><b>${t('Free')}</b><b class="prem"><span class="p-ico p-crown" aria-hidden="true"></span>${t('Battle Pass')}</b></div>
     <ol class="pass-track"></ol>`;
   const track = box.querySelector('.pass-track');
   for (const x of tiers) {

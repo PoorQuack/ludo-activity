@@ -238,6 +238,8 @@ test('November 2026 keeps v1 scores and pays monthly winners on Dec 1 before swi
   assert.equal(profiles.peek('ann').coins, 150 + PRIZES.week[0] + PRIZES.month[0]);
   assert.equal(profiles.peek('bob').coins, 150 + PRIZES.week[1] + PRIZES.month[1]);
   assert.ok(profiles.peek('ann').owned.includes('frame-rank-1'));
+  assert.ok(profiles.peek('ann').owned.includes('frame-month-1'));
+  assert.ok(profiles.peek('bob').owned.includes('frame-month-2'));
   const dec = lb.view('ann');
   assert.equal(dec.month.mode, 'stakes');
   assert.equal(dec.month.period, '2026-12');

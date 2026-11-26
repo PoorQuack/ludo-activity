@@ -337,9 +337,12 @@ export const SHOP_ITEMS = [
   { id: 'frame-crown', type: 'frame', name: 'Crown', rarity: 'legendary', price: 600, priceCurrency: 'gems', limited: true, img: '/frames/frame-crown.webp', perk: 'A royal gold crown sits on top of your picture, glinting.' },
   { id: 'frame-neon', type: 'frame', name: 'Cyber Neon', rarity: 'legendary', price: 560, priceCurrency: 'gems', limited: true, vip: true, img: '/frames/frame-cyber-neon.webp', perk: 'Neon circuits in cyan and magenta, softly pulsing.' },
   // Won, never bought: the top three of a weekly or monthly leaderboard get these (award: how to win)
-  { id: 'frame-rank-1', type: 'frame', name: 'Champion', rarity: 'legendary', price: 0, award: 'Finish 1st on a weekly or monthly leaderboard', img: '/frames/frame-rank-1.webp' },
-  { id: 'frame-rank-2', type: 'frame', name: 'Runner-up', rarity: 'epic', price: 0, award: 'Finish 2nd on a weekly or monthly leaderboard', img: '/frames/frame-rank-2.webp' },
-  { id: 'frame-rank-3', type: 'frame', name: 'Gladiator', rarity: 'rare', price: 0, award: 'Finish 3rd on a weekly or monthly leaderboard', img: '/frames/frame-rank-3.webp' },
+  { id: 'frame-rank-1', type: 'frame', name: 'Champion', rarity: 'legendary', price: 0, award: 'Finish 1st on a weekly leaderboard', img: '/frames/frame-rank-1.webp' },
+  { id: 'frame-rank-2', type: 'frame', name: 'Runner-up', rarity: 'epic', price: 0, award: 'Finish 2nd on a weekly leaderboard', img: '/frames/frame-rank-2.webp' },
+  { id: 'frame-rank-3', type: 'frame', name: 'Gladiator', rarity: 'rare', price: 0, award: 'Finish 3rd on a weekly leaderboard', img: '/frames/frame-rank-3.webp' },
+  { id: 'frame-month-1', type: 'frame', name: 'Monthly Champion', rarity: 'legendary', price: 0, award: 'Finish 1st on a monthly leaderboard', img: '/frames/frame-month-1.webp' },
+  { id: 'frame-month-2', type: 'frame', name: 'Monthly Runner-up', rarity: 'epic', price: 0, award: 'Finish 2nd on a monthly leaderboard', img: '/frames/frame-month-2.webp' },
+  { id: 'frame-month-3', type: 'frame', name: 'Monthly Contender', rarity: 'rare', price: 0, award: 'Finish 3rd on a monthly leaderboard', img: '/frames/frame-month-3.webp' },
 ];
 
 export const ITEMS = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]));
