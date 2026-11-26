@@ -139,6 +139,7 @@ export const SHOP_ITEMS = [
   { id: 'emote-cathello', type: 'emote', name: 'Hello cat', rarity: 'common', img: '/emotes/cats/cathello.webp', slug: 'cathello', price: 150 },
   { id: 'emote-cozykitten', type: 'emote', name: 'Cozy kitten', rarity: 'common', img: '/emotes/cats/cozykitten.png', slug: 'cozykitten', price: 150 },
   { id: 'emote-buffcat', type: 'emote', name: 'Buff cat', rarity: 'common', img: '/emotes/cats/buffcat.png', slug: 'buffcat', price: 150 },
+  { id: 'emote-groovingcat', type: 'emote', name: 'Grooving cat', rarity: 'common', img: '/emotes/cats/groovingcat.webp', slug: 'groovingcat', price: 150 },
   { id: 'emote-dontjoke', type: 'emote', name: "Don't even joke lad", rarity: 'common', img: '/emotes/meme/dontjoke.webp', slug: 'dontjoke', price: 150 },
   { id: 'emote-wadafak', type: 'emote', name: 'Wadafak', rarity: 'common', img: '/emotes/meme/wadafak.png', slug: 'wadafak', price: 150 },
   { id: 'emote-eatingchips', type: 'emote', name: 'Eating chips', rarity: 'common', img: '/emotes/meme/eating-chips.gif', slug: 'eatingchips', price: 150 },
