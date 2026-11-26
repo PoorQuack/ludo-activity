@@ -22,8 +22,9 @@ const seen = () => {
   }
 };
 
-export function maybeTour() {
-  if (shown || seen()) return;
+export function maybeTour({ force = false } = {}) {
+  if (!force && (shown || seen())) return;
+  if (document.querySelector('.modal-wrap.tour')) return;
   shown = true;
   let i = 0;
   const el = document.createElement('div');
@@ -41,7 +42,9 @@ export function maybeTour() {
         <button type="button" class="btn primary tour-next"></button>
       </div>
     </div>`;
+  const onKey = (e) => e.key === 'Escape' && close();
   const close = () => {
+    window.removeEventListener('keydown', onKey);
     try {
       localStorage.setItem(KEY, '1');
     } catch {
@@ -61,6 +64,10 @@ export function maybeTour() {
   };
   el.querySelector('.tour-skip').addEventListener('click', close);
   el.querySelector('.tour-next').addEventListener('click', () => (++i < STEPS.length ? show() : close()));
+  el.addEventListener('click', (e) => e.target === el && close());
+  window.addEventListener('keydown', onKey);
   document.body.appendChild(el);
   show();
 }
+
+export const openTour = () => maybeTour({ force: true });

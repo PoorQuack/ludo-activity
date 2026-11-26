@@ -54,7 +54,7 @@
 
           <main class="hub-stage">
             <!-- Live: how many people are on right now, plus a quick link to guides -->
-            <div id="online-strip" class="online-strip hidden">
+            <div id="online-strip" class="online-strip">
               <span id="online-text" aria-live="polite"></span>
               <button type="button" class="link-btn guide-link" data-go="howto" data-i18n>How to play &amp; Guides</button>
             </div>
@@ -324,7 +324,7 @@
         <header class="screen-head">
           <button data-i18n class="btn small" data-go="menu">← Back</button>
           <h2 data-i18n>How to play</h2>
-          <span></span>
+          <button type="button" class="btn small" id="replay-tour" data-i18n>Replay tutorial</button>
         </header>
         <nav id="howto-tabs" class="tabs howto-tabs" role="tablist"></nav>
         <div class="howto-body">

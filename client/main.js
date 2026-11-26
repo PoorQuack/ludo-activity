@@ -15,7 +15,7 @@ import { REACTION_EMOJIS } from '../shared/chat.js';
 import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
 import { setFrame } from './frames.js';
 import { signatureHome } from './signatures.js';
-import { maybeTour } from './tour.js';
+import { maybeTour, openTour } from './tour.js';
 import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, TOKEN_SIGNATURES } from './skins.js';
 import { t, translateServer, setLanguage, languagePref, setAutoLocale, LANGUAGES, applyI18n, currentLanguage as currentLang, chatLanguage, chatLanguagePref, setChatLanguage } from './i18n.js';
 import { CHAT_LANGUAGES, CHAT_LANG } from '../shared/chatlangs.js';
@@ -1718,6 +1718,7 @@ function renderHowtoTabs() {
 }
 renderHowtoTabs();
 window.addEventListener('ludo-lang', renderHowtoTabs);
+$('replay-tour')?.addEventListener('click', openTour);
 
 // ---------------- settings popup ----------------
 
@@ -2748,7 +2749,8 @@ function drawShop() {
 }
 
 function renderUI() {
-  for (const el of els.coins) el.querySelector('b').textContent = profile ? coinText(profile.coins, el.classList.contains('menu-coins')) : '…';
+  const narrow = matchMedia('(max-width: 480px)').matches;
+  for (const el of els.coins) el.querySelector('b').textContent = profile ? coinText(profile.coins, el.classList.contains('menu-coins') || (narrow && !!el.closest('.head-wallet'))) : '…';
   for (const el of els.gems) el.querySelector('b').textContent = profile ? coinText(profile.gems ?? 0, el.classList.contains('menu-gems')) : '…';
   renderMenu();
   if (!state) return;

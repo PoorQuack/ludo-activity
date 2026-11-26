@@ -1640,7 +1640,7 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 
 /* ---------- settings: sections on the left, the page on the right ---------- */
 .settings-card { width: min(820px, 100%); height: min(600px, 100%); padding: 0; gap: 0; flex-direction: row; overflow: hidden; background: #241e19; }
-.set-nav { flex: none; width: 200px; display: flex; flex-direction: column; gap: 4px; padding: 20px 12px; background: #2c2620; border-right: 1px solid var(--line); }
+.set-nav { flex: none; width: 200px; display: flex; flex-direction: column; gap: 4px; padding: 20px 12px; background: #2c2620; border-inline-end: 1px solid var(--line); }
 .set-nav-title { font-family: var(--display); font-size: 21px; font-weight: 600; padding: 0 8px 14px; }
 .set-nav button { display: flex; align-items: center; gap: 11px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14.5px; font-weight: 600; text-align: start; padding: 10px 10px; border-radius: 10px; cursor: pointer; }
 .set-nav button .ico { width: 18px; height: 18px; }
@@ -2130,9 +2130,11 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 @media (hover: hover) and (pointer: fine) { .link-btn:hover { color: #f4b1a7; } }
 .lb-empty { margin: 4px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 
-/* Phones: How to play is in Settings → Help, to leave room in the top bar */
-@media (max-width: 899px) {
+/* Small screens: How to play is in Settings → Help and the guide link in the hub bar */
+@media (max-width: 480px) {
   .hub-icons [data-go='howto'] { display: none; }
+}
+@media (max-width: 899px) {
   .menu-tools { gap: 6px; }
 }
 
@@ -2783,10 +2785,10 @@ button, .btn { touch-action: manipulation; }
 .store-need { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; background: rgba(255, 196, 58, 0.12); border: 1px solid rgba(255, 196, 58, 0.4); color: #ffe39a; }
 .store-first { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; font-weight: 700; background: rgba(47, 212, 160, 0.12); border: 1px solid rgba(47, 212, 160, 0.4); color: #a8f5da; }
 .pack.suggest { border-color: #ffd76a; box-shadow: 0 0 0 2px #ffd76a, 0 0 18px rgba(255, 215, 106, 0.3); }
-.pack-suggest { position: absolute; top: -9px; right: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #2a1b00; background: #ffd76a; }
-.pack-coins s { opacity: 0.55; font-weight: 600; margin-right: 2px; }
+.pack-suggest { position: absolute; top: -9px; inset-inline-end: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #2a1b00; background: #ffd76a; }
+.pack-coins s { opacity: 0.55; font-weight: 600; margin-inline-end: 2px; }
 .starter-card { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: linear-gradient(135deg, rgba(31, 158, 140, 0.3), rgba(31, 158, 140, 0.08)); border: 1px solid rgba(78, 226, 212, 0.5); }
-.starter-ribbon { position: absolute; top: -9px; left: 12px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #062b27; background: #7df0e3; }
+.starter-ribbon { position: absolute; top: -9px; inset-inline-start: 12px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; color: #062b27; background: #7df0e3; }
 .starter-art { flex: none; width: 96px; }
 .starter-art .preview { width: 100%; height: auto; aspect-ratio: 3 / 2; border-radius: 10px; background: rgba(0, 0, 0, 0.2); }
 .starter-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -2814,9 +2816,17 @@ button, .btn { touch-action: manipulation; }
 [dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line-content > .tr-btn { right: auto; left: calc(100% + 15px); }
 [dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .line-acts { right: auto; left: 2px; }
 [dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .line-acts { left: auto; right: 2px; }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only .chat-line-content > .tr-btn { left: auto; right: calc(100% + 4px); }
 [dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-bubble { border-radius: 12px 4px 12px 12px; }
 [dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-bubble { border-radius: 4px 12px 12px 12px; }
 [dir='rtl'] .dm-row-meta { text-align: right; }
+[dir='rtl'] .hub-soon .soon-art { transform-origin: right center; }
+[dir='rtl'] .front-hero { background: radial-gradient(120% 140% at 100% 0%, rgba(255, 196, 58, 0.18), transparent 55%), linear-gradient(225deg, #2f2419, #1f1812); }
+@media (hover: none) and (pointer: coarse) {
+  .line-act { width: 28px; height: 28px; }
+  .reply-cancel { width: 28px; height: 28px; }
+  .set-close { padding: 8px; }
+}
 .shop-grid { padding: 4px 4px 8px; }
 
 /* ---------- chats, laid out like a messaging app ----------
