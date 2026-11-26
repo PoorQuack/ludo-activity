@@ -23,10 +23,10 @@ const DETECT_PROMPT =
   'You identify the language of a chat message from an online board game. Reply with ONLY one code from this list: ' +
   `${[...CHAT_CODES].join(', ')}. Players write casually: slang, typos, no accents, gamer words (gg, lol, wp, ez). ` +
   'If the message mixes English with another language, even one word of it (callate, bhai, kurwa), reply with the other language. ' +
-  'Portuguese from Portugal (pá, estás a, fixe) is pt-PT; from Brazil is pt. Serbian or Bosnian counts as hr. ' +
+  'Portuguese from Portugal (pá, estás a, fixe) is pt-PT; from Brazil is pt. Serbian or Bosnian counts as hr; Malay counts as id. ' +
   'If it is only laughter, emoji or a word used in every language (ok, haha, gg), reply: und';
 // what the detector might say that isn't one of ours
-const DETECT_ALIAS = { sr: 'hr', bs: 'hr', sh: 'hr', mk: 'bg', be: 'ru', nb: 'no', nn: 'no', 'pt-br': 'pt', 'zh-cn': 'zh', 'zh-hans': 'zh', 'zh-hant': 'zh-TW', 'zh-tw': 'zh-TW', 'es-es': 'es', 'es-us': 'es-419', 'es-mx': 'es-419', 'pt-pt': 'pt-PT' };
+const DETECT_ALIAS = { ms: 'id', sr: 'hr', bs: 'hr', sh: 'hr', mk: 'bg', be: 'ru', nb: 'no', nn: 'no', 'pt-br': 'pt', 'zh-cn': 'zh', 'zh-hans': 'zh', 'zh-hant': 'zh-TW', 'zh-tw': 'zh-TW', 'es-es': 'es', 'es-us': 'es-419', 'es-mx': 'es-419', 'pt-pt': 'pt-PT' };
 // languages close enough that the writer's own setting is the better pick between them
 const FAMILY = [['es', 'es-419'], ['pt', 'pt-PT'], ['zh', 'zh-TW'], ['no', 'da', 'sv'], ['cs', 'sk']];
 const sameFamily = (a, b) => a === b || FAMILY.some((f) => f.includes(a) && f.includes(b));
@@ -89,13 +89,33 @@ export class Translator {
     const pieces = sendable.map((p) => p.replace(/\s+/g, ' ').trim());
     let got = null;
     const source = this.nvidiaKey ? await this.sourceOf(pieces.join(' '), hint) : null;
+    let skipRiva = false;
     if (source === to) {
-      // already in their language: nothing to send
-      const result = { text, from: to };
-      this.cache.set(key, result);
-      return result;
+      // Looks like it's already in their language. The check can be wrong on short lines ("Maghrib
+      // woy" came back as English), so Google, which detects too, gets a say before "Already in".
+      try {
+        const g = await this.google(pieces, to);
+        if (normalizeDetected(g.from) !== to && g.texts.join('') !== pieces.join('')) got = g;
+      } catch (err) {
+        console.error(`Translation (Google check) failed: ${err.message}`);
+      }
+      if (!got) {
+        const result = { text, from: to };
+        this.cache.set(key, result);
+        return result;
+      }
+      skipRiva = true;
+      // Google knows what it really is: Riva translates it better, when it's one of the 37
+      const real = normalizeDetected(got.from);
+      if (CHAT_CODES.has(real)) {
+        try {
+          got = await this.riva(pieces, real, to);
+        } catch (err) {
+          console.error(`Translation (Riva) failed: ${err.message}`);
+        }
+      }
     }
-    if (source) {
+    if (source && !skipRiva) {
       try {
         got = await this.riva(pieces, source, to);
       } catch (err) {
@@ -178,6 +198,9 @@ export class Translator {
         d = null; // not cached: next time it may work
       }
     }
+    // a language written in another alphabet than the message can't be it ("Maghrib" is an Arabic
+    // word, but "Maghrib woy" in Latin letters isn't Arabic)
+    if (d && d !== 'und' && CHAT_LANG[d] && CHAT_LANG[d].script !== scriptOf(text)) d = null;
     if (d && d !== 'und') return CHAT_CODES.has(hint) && sameFamily(d, hint) ? hint : d;
     return guessSource(text, hint);
   }

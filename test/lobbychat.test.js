@@ -127,7 +127,8 @@ function fakeNvidia(calls, { fail = false, langs = {} } = {}) {
     }
     calls.push({ google: true });
     const qs = new URL(url).searchParams.getAll('q');
-    return { ok: true, json: async () => qs.map((q) => [q.toUpperCase(), 'es']) };
+    // (English lines come back as they are, detected as English; anything else as Spanish)
+    return { ok: true, json: async () => qs.map((q) => (langs[q] === 'en' ? [q, 'en'] : [q.toUpperCase(), 'es'])) };
   };
 }
 const quiet = async (fn) => {
@@ -157,7 +158,7 @@ test('with a key, the language check tells Riva Translate the pair', async () =>
   // already in their language: nothing translated, nothing more asked
   const before = calls.length;
   assert.deepEqual(await tr.translate('ann', 'hello there', 'en', 'es'), { text: 'hello there', from: 'en' });
-  assert.equal(calls.length, before + 1); // just the check
+  assert.equal(calls.length, before + 2); // the check, and Google's second opinion
   // the check said "und" and nothing else gives a clue: Google detects it
   await tr.translate('ann', 'ok', 'fr', '');
   assert.ok(calls.at(-1).google);
@@ -181,4 +182,29 @@ test('chat languages: locales map onto the 37, each with its Ludo examples', asy
   for (const l of CHAT_LANGUAGES) assert.equal(LUDO_PHRASES[l.code]?.length, 4, l.code);
   for (const [loc, code] of [['sv-SE', 'sv'], ['pt-PT', 'pt-PT'], ['pt-BR', 'pt'], ['es-ES', 'es'], ['es-419', 'es-419'], ['zh-TW', 'zh-TW'], ['zh-CN', 'zh'], ['nb', 'no'], ['xx', null]])
     assert.equal(matchChatLanguage(loc), code, loc);
+});
+
+test('"Already in English" gets a second opinion: a wrong language check ("Maghrib woy" as English) is caught', async () => {
+  const calls = [];
+  // the check says English; Google knows better (Indonesian), so Riva translates from Indonesian
+  const base = fakeNvidia(calls, { langs: { 'Maghrib woy': 'en', 'hello there': 'en' } });
+  const fetch = async (url, init) => {
+    if (url.includes('translate')) {
+      calls.push({ google: true });
+      const q = new URL(url).searchParams.getAll('q');
+      return { ok: true, json: async () => q.map((t) => (t === 'hello there' ? [t, 'en'] : [`(${t})`, 'id'])) };
+    }
+    return base(url, init);
+  };
+  const tr = new Translator({ fetch, nvidiaKey: 'k' });
+  assert.deepEqual(await tr.translate('ann', 'Maghrib woy', 'en', 'en'), { text: 'id-en: Maghrib woy', from: 'id' });
+  // really English: Google agrees, so it's "already in English"
+  assert.deepEqual(await tr.translate('ann', 'hello there', 'en', 'en'), { text: 'hello there', from: 'en' });
+});
+
+test('a language check in the wrong alphabet is ignored ("Maghrib woy" is not Arabic)', async () => {
+  const calls = [];
+  const tr = new Translator({ fetch: fakeNvidia(calls, { langs: { 'Maghrib woy': 'ar' } }), nvidiaKey: 'k' });
+  await tr.translate('ann', 'Maghrib woy', 'en', '');
+  assert.ok(!calls.some((c) => c.pair?.startsWith('ar-')));
 });
