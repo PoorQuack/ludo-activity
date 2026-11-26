@@ -225,3 +225,61 @@ test('Riva sees the Ludo lines most like the message', async () => {
   // nothing alike: the four Ludo basics
   assert.deepEqual(closestLines('xyzzy', 'en'), [0, 1, 2, 3]);
 });
+
+// A stand-in for DeepL and Azure. `detect`: text -> [language, score] (Azure's detector);
+// DeepL answers "<SOURCE>><TARGET>: text", or "fails" with `deeplDown` (e.g. out of characters).
+function fakeDeeplAzure(calls, { detect = {}, deeplDown = false } = {}) {
+  return async (url, init = {}) => {
+    const body = init.body ? JSON.parse(init.body) : null;
+    if (url.includes('/detect')) {
+      calls.push({ detect: body[0].Text });
+      const [language, score] = detect[body[0].Text] || ['en', 0.3];
+      return { ok: true, json: async () => [{ language, score }] };
+    }
+    if (url.includes('deepl.com')) {
+      calls.push({ deepl: body, key: init.headers.authorization, host: new URL(url).host });
+      if (deeplDown) return { ok: false, status: 456 };
+      const src = body.source_lang || 'EN';
+      return { ok: true, json: async () => ({ translations: body.text.map((t) => ({ text: body.source_lang ? `${src}>${body.target_lang}: ${t}` : t, detected_source_language: src })) }) };
+    }
+    if (url.includes('microsofttranslator')) {
+      calls.push({ azure: url, region: init.headers['Ocp-Apim-Subscription-Region'] });
+      const to = new URL(url).searchParams.get('to');
+      return { ok: true, json: async () => body.map((x) => ({ translations: [{ text: `azure>${to}: ${x.Text}` }] })) };
+    }
+    calls.push({ other: url });
+    return { ok: false, status: 500 };
+  };
+}
+
+test('DeepL translates first, told the language Azure found and that it is Ludo chat', async () => {
+  const calls = [];
+  const detect = { 'hola amigo': ['es', 0.99], 'Callate ik u aint': ['en', 1], 'bhai mera internet lag kar raha hai': ['hi-Latn', 1] };
+  const tr = new Translator({ fetch: fakeDeeplAzure(calls, { detect }), deeplKey: 'k:fx', azureKey: 'a', azureRegion: 'uksouth' });
+  assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'ES>EN-GB: hola amigo', from: 'es' });
+  const d = calls.find((c) => c.deepl);
+  assert.equal(d.host, 'api-free.deepl.com');
+  assert.match(d.deepl.context, /Ludo/);
+  assert.equal(calls.find((c) => c.detect) && calls.find((c) => c.azure), undefined); // Azure only detected
+  // gamer English isn't sent to Azure's detector ("gg ez" reads as Hungarian there)
+  await tr.translate('ann', 'gg ez, revenge?', 'es', 'en');
+  assert.equal(calls.at(-1).deepl.source_lang, 'EN');
+  assert.ok(!calls.some((c) => c.detect === 'gg ez, revenge?'));
+  // mixed Spanish and English from a Spanish player: Spanish
+  await tr.translate('ann', 'Callate ik u aint', 'en', 'es');
+  assert.equal(calls.at(-1).deepl.source_lang, 'ES');
+  // Hindi in Latin letters
+  await tr.translate('ann', 'bhai mera internet lag kar raha hai', 'en', 'en');
+  assert.equal(calls.at(-1).deepl.source_lang, 'HI');
+  // already in their language: DeepL's own check agrees, so nothing changes
+  assert.deepEqual(await tr.translate('ann', 'hello there my friend', 'en', 'en'), { text: 'hello there my friend', from: 'en' });
+});
+
+test('when DeepL is out of characters, Azure translates', async () => {
+  const calls = [];
+  const tr = new Translator({ fetch: fakeDeeplAzure(calls, { deeplDown: true, detect: { 'hola amigo': ['es', 0.99] } }), deeplKey: 'k:fx', azureKey: 'a', azureRegion: 'uksouth' });
+  const r = await quiet(() => tr.translate('ann', 'hola amigo', 'zh-TW', ''));
+  assert.deepEqual(r, { text: 'azure>zh-Hant: hola amigo', from: 'es' });
+  assert.equal(calls.at(-1).region, 'uksouth');
+  assert.match(calls.at(-1).azure, /from=es/);
+});

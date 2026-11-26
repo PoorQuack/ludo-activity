@@ -1,8 +1,14 @@
 // Chat translation: a player taps "Translate" under a message and gets it in their chat language
-// (one of the 37 in shared/chatlangs.js). With NVIDIA_API_KEY set, NVIDIA's Riva Translate model
-// does it (built for translation, and better with chat-speak); otherwise, or when it's slow, busy
-// or down, Google's free web endpoint (no key, unofficial, so it could be limited at any time),
-// then MyMemory's free API. The server asks, never the client, so
+// (one of the 37 in shared/chatlangs.js). In order, with whichever keys are set:
+//  1. what it's written in: Azure's language detector (AZURE_TRANSLATOR_KEY), checked against the
+//     alphabet, common English/gamer words and the writer's chat language; NVIDIA's Lightning model
+//     when Azure isn't sure (NVIDIA_API_KEY)
+//  2. DeepL (DEEPL_API_KEY; the free plan's monthly characters), told the language and that it's
+//     Ludo chat: the most natural translations in tests
+//  3. Azure Translator, when DeepL is out of characters or down
+//  4. NVIDIA's Riva Translate, with Ludo example lines (shared/ludo-phrases.js)
+//  5. Google's free web endpoint (no key, unofficial, so it could be limited at any time), then
+//     MyMemory's free API. The server asks, never the client, so
 // the Discord sandbox doesn't need them allowed. (Google's usual translate_a/single address
 // refuses cloud servers like ours; this one, used by its browser extension, doesn't.)
 // Answers are cached, and there's a cap per player and for the whole server, so a busy chat
@@ -14,6 +20,9 @@ import { LUDO_PHRASES, closestLines } from '../shared/ludo-phrases.js';
 const GOOGLE = 'https://clients5.google.com/translate_a/t';
 const MYMEMORY = 'https://api.mymemory.translated.net/get';
 const NVIDIA = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const AZURE = 'https://api.cognitive.microsofttranslator.com';
+// what DeepL is told about every message (not counted as characters)
+const DEEPL_CONTEXT = 'Casual chat between players of an online Ludo board game: dice, sixes, tokens, captures, gamer slang.';
 const RIVA_MODEL = 'nvidia/riva-translate-4b-instruct-v2';
 // Riva has to be told what it's translating from, so a fast general model reads the message first
 // (tested on chat lines: 20 of 23 right in about 0.2s; its misses were Danish/Norwegian-type
@@ -43,11 +52,15 @@ export class Translator {
    * @param {object} options
    *  fetch: injectable for tests
    *  perUser: requests a player may make per minute; perServer: for everyone together
-   *  nvidiaKey: NVIDIA's API key (build.nvidia.com); without one, Google and MyMemory only
+   *  nvidiaKey: NVIDIA's API key (build.nvidia.com); deeplKey: DeepL's (free keys end in ":fx");
+   *  azureKey / azureRegion: Azure Translator's. Without any, Google and MyMemory only.
    */
-  constructor({ fetch: f = globalThis.fetch, now = Date.now, perUser = 20, perServer = 400, nvidiaKey = '' } = {}) {
+  constructor({ fetch: f = globalThis.fetch, now = Date.now, perUser = 20, perServer = 400, nvidiaKey = '', deeplKey = '', azureKey = '', azureRegion = '' } = {}) {
     this.fetch = f;
     this.nvidiaKey = String(nvidiaKey || '').trim();
+    this.deeplKey = String(deeplKey || '').trim();
+    this.azureKey = String(azureKey || '').trim();
+    this.azureRegion = String(azureRegion || '').trim();
     this.now = now;
     this.perUser = perUser;
     this.perServer = perServer;
@@ -88,52 +101,51 @@ export class Translator {
     this.allowed(userId);
     const pieces = sendable.map((p) => p.replace(/\s+/g, ' ').trim());
     let got = null;
-    const source = this.nvidiaKey ? await this.sourceOf(pieces.join(' '), hint) : null;
-    let skipRiva = false;
+    const joined = pieces.join(' ');
+    const smart = this.nvidiaKey || this.azureKey;
+    const source = smart ? await this.sourceOf(joined, hint) : null;
     if (source === to) {
       // Looks like it's already in their language. The check can be wrong on short lines ("Maghrib
-      // woy" came back as English), so Google, which detects too, gets a say before "Already in".
+      // woy" came back as English), so a translator that detects for itself gets a say first.
       try {
-        const g = await this.google(pieces, to);
-        if (normalizeDetected(g.from) !== to && g.texts.join('') !== pieces.join('')) got = g;
+        const g = this.deeplKey ? await this.deepl(pieces, null, to) : await this.google(pieces, to);
+        const said = normalizeDetected(g.from);
+        if (!sameFamily(said, to) && g.texts.join('') !== pieces.join('')) got = g;
       } catch (err) {
-        console.error(`Translation (Google check) failed: ${err.message}`);
+        console.error(`Translation (second opinion) failed: ${err.message}`);
       }
       if (!got) {
         const result = { text, from: to };
         this.cache.set(key, result);
         return result;
       }
-      skipRiva = true;
-      // Google knows what it really is: Riva translates it better, when it's one of the 37
-      const real = normalizeDetected(got.from);
-      if (CHAT_CODES.has(real)) {
+    }
+    // the translators, best first; each one skipped without its key, or when it fails
+    const lang = got ? normalizeDetected(got.from) : source;
+    const chain = [
+      ['DeepL', () => this.deeplKey && this.deepl(pieces, lang, to)],
+      ['Azure', () => this.azureKey && this.azure(pieces, lang, to)],
+      ['Riva', () => this.nvidiaKey && lang && CHAT_CODES.has(lang) && this.riva(pieces, lang, to)],
+      ['Google', () => this.google(pieces, to)],
+      ['MyMemory', () => this.myMemory(pieces, to)],
+    ];
+    // (DeepL's own second opinion already is a DeepL translation; Google's gets redone by the best)
+    if (!(got && this.deeplKey)) {
+      got = null;
+      for (const [name, run] of chain) {
         try {
-          got = await this.riva(pieces, real, to);
+          const r = await run();
+          if (r) {
+            got = r;
+            break;
+          }
         } catch (err) {
-          console.error(`Translation (Riva) failed: ${err.message}`);
+          console.error(`Translation (${name}) failed: ${err.message}`);
         }
       }
     }
-    if (source && !skipRiva) {
-      try {
-        got = await this.riva(pieces, source, to);
-      } catch (err) {
-        console.error(`Translation (Riva) failed: ${err.message}`);
-      }
-    }
-    if (!got) try {
-      got = await this.google(pieces, to);
-    } catch (err) {
-      console.error(`Translation (Google) failed: ${err.message}`);
-      try {
-        got = await this.myMemory(pieces, to);
-      } catch (err2) {
-        console.error(`Translation (MyMemory) failed: ${err2.message}`);
-        throw new Error("Couldn't translate that right now");
-      }
-    }
-    const from = normalizeDetected(got.from);
+    if (!got) throw new Error("Couldn't translate that right now");
+    const from = normalizeDetected(got.from) || lang || '';
     let n = 0;
     const rebuilt = parts
       .map((p, i) => {
@@ -187,15 +199,73 @@ export class Translator {
    *  choose between near neighbours and the alphabet checks when the detector can't help (busy,
    *  down, or "und"). null: no good guess (Google, which detects, does it). */
   async sourceOf(text, hint) {
-    let d = this.detected.get(text);
-    if (d === undefined) {
+    const key = `${hint}|${text}`;
+    if (this.detected.has(key)) return this.detected.get(key);
+    const found = this.azureKey ? await this.sourceByAzure(text, hint) : await this.sourceByModel(text, hint);
+    this.detected.set(key, found);
+    if (this.detected.size > CACHE_MAX) this.detected.delete(this.detected.keys().next().value);
+    return found;
+  }
+
+  /** With Azure's detector: the alphabet first, then common English and gamer words, then Azure
+   *  (when sure), then NVIDIA's model, then the writer's own chat language. */
+  async sourceByAzure(text, hint) {
+    const script = scriptOf(text);
+    if (!script) return null;
+    const h = CHAT_LANG[hint] ? hint : '';
+    const ask = async () => {
+      try {
+        return await this.azureDetect(text);
+      } catch (err) {
+        console.error(`Language check (Azure) failed: ${err.message}`);
+        return null;
+      }
+    };
+    if (script !== 'latin') {
+      const az = await ask();
+      const code = az && CHAT_LANG[az.code]?.script === script ? az.code : guessSource(text, hint);
+      return code && h && sameFamily(code, h) ? h : code;
+    }
+    if (looksEnglish(text)) return 'en';
+    const az = await ask();
+    // Azure reads romanised Hindi as "hi-Latn": that's Hindi, in Latin letters
+    if (az && az.score >= 0.8 && (CHAT_LANG[az.code]?.script === 'latin' || az.latn)) {
+      // "Callate ik u aint…" reads as English to Azure; a Spanish player wrote it, so it's Spanish
+      if (az.code === 'en' && h && h !== 'en' && CHAT_LANG[h].script === 'latin') return h;
+      return h && sameFamily(az.code, h) ? h : az.code;
+    }
+    if (this.nvidiaKey) {
+      const d = await this.sourceByModel(text, '');
+      if (d) return h && sameFamily(d, h) ? h : d;
+    }
+    return h && CHAT_LANG[h].script === 'latin' ? h : null;
+  }
+
+  async azureDetect(text) {
+    const body = await this.get(
+      `${AZURE}/detect?api-version=3.0`,
+      { method: 'POST', headers: this.azureHeaders(), body: JSON.stringify([{ Text: text.slice(0, 500) }]) },
+      2500,
+    );
+    const d = Array.isArray(body) ? body[0] : null;
+    if (!d?.language) return null;
+    const raw = String(d.language).toLowerCase();
+    const code = DETECT_ALIAS[raw] || DETECT_ALIAS[raw.split('-')[0]] || normalizeDetected(raw.replace(/-latn$/, ''));
+    return CHAT_CODES.has(code) ? { code, score: Number(d.score) || 0, latn: raw.endsWith('-latn') } : null;
+  }
+
+  azureHeaders() {
+    return { 'content-type': 'application/json', 'Ocp-Apim-Subscription-Key': this.azureKey, ...(this.azureRegion ? { 'Ocp-Apim-Subscription-Region': this.azureRegion } : {}) };
+  }
+
+  /** NVIDIA's model reading the message, with the alphabet checks when it can't help. */
+  async sourceByModel(text, hint) {
+    let d = null;
+    if (this.nvidiaKey) {
       try {
         d = await this.detect(text);
-        this.detected.set(text, d);
-        if (this.detected.size > CACHE_MAX) this.detected.delete(this.detected.keys().next().value);
       } catch (err) {
         console.error(`Language check failed: ${err.message}`);
-        d = null; // not cached: next time it may work
       }
     }
     // a language written in another alphabet than the message can't be it ("Maghrib" is an Arabic
@@ -228,6 +298,43 @@ export class Translator {
     const raw = String(body?.choices?.[0]?.message?.content ?? '').trim().toLowerCase().replace(/[^a-z-]/g, '');
     const code = DETECT_ALIAS[raw] || [...CHAT_CODES].find((c) => c.toLowerCase() === raw) || 'und';
     return code;
+  }
+
+  // DeepL: told the language when we know it (its own guess goes wrong on short slang: "gg ez" read
+  // as Hungarian), and that this is Ludo chat. Free keys (ending ":fx") use the free address.
+  async deepl(pieces, from, to) {
+    const host = this.deeplKey.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com';
+    const body = await this.get(
+      `${host}/v2/translate`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `DeepL-Auth-Key ${this.deeplKey}` },
+        body: JSON.stringify({
+          text: pieces,
+          target_lang: DEEPL_TARGET[to] || to.toUpperCase(),
+          ...(from ? { source_lang: deeplSource(from) } : {}),
+          context: DEEPL_CONTEXT,
+        }),
+      },
+      4000,
+    );
+    const tr = body?.translations;
+    if (!Array.isArray(tr) || tr.length !== pieces.length) throw new Error('Unexpected answer');
+    return { texts: tr.map((x) => String(x.text ?? '')), from: from || String(tr[0].detected_source_language || '').toLowerCase() };
+  }
+
+  // Azure Translator: also detects for itself when we don't know the language
+  async azure(pieces, from, to) {
+    const tgt = AZURE_CODE[to] || to;
+    // (romanised Hindi and the like: let Azure work out the "-Latn" itself)
+    const src = from && CHAT_LANG[from]?.script === scriptOf(pieces.join(' ')) ? `&from=${AZURE_CODE[from] || from}` : '';
+    const body = await this.get(
+      `${AZURE}/translate?api-version=3.0&to=${tgt}${src}`,
+      { method: 'POST', headers: this.azureHeaders(), body: JSON.stringify(pieces.map((p) => ({ Text: p }))) },
+      4000,
+    );
+    if (!Array.isArray(body) || body.length !== pieces.length) throw new Error('Unexpected answer');
+    return { texts: body.map((x) => String(x?.translations?.[0]?.text ?? '')), from: from || String(body[0]?.detectedLanguage?.language || '').toLowerCase() };
   }
 
   // NVIDIA Riva Translate: the language pair goes in the system message ("fr-de"). It's documented
@@ -287,7 +394,18 @@ const SCRIPTS = [
   ['cyrillic', /[\u0400-\u04ff]/g],
   ['latin', /[a-zA-Z\u00c0-\u024f]/g],
 ];
-const ENGLISH = new Set('the you your are is was and not but this that what why how have just its it\'s i\'m im dont don\'t cant can\'t lol gg wp nice good game play win lost lose my me we they hi hello thanks thank please yes no anyone who'.split(' '));
+const ENGLISH = new Set('the you your are is was and not but this that what why how have just its it\'s i\'m im dont don\'t cant can\'t lol gg wp nice good game play win lost lose my me we they hi hello thanks thank please yes no anyone who ez revenge bro lucky so with again one more'.split(' '));
+
+// DeepL's and Azure's names for our languages, where they differ
+const DEEPL_TARGET = { en: 'EN-GB', pt: 'PT-BR', 'pt-PT': 'PT-PT', es: 'ES-ES', 'es-419': 'ES-419', zh: 'ZH-HANS', 'zh-TW': 'ZH-HANT', no: 'NB' };
+const deeplSource = (code) => ({ no: 'NB' })[code] || code.split('-')[0].toUpperCase();
+const AZURE_CODE = { zh: 'zh-Hans', 'zh-TW': 'zh-Hant', 'pt-PT': 'pt-pt', no: 'nb', 'es-419': 'es' };
+
+// Mostly common English and gamer words ("gg nice game", "lol you are so lucky")
+export function looksEnglish(text) {
+  const words = text.toLowerCase().match(/[a-z']+/g) || [];
+  return words.length > 0 && words.filter((w) => ENGLISH.has(w)).length / words.length >= 0.3;
+}
 
 export function scriptOf(text) {
   let best = null;

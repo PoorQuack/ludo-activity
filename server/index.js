@@ -487,7 +487,12 @@ const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward
 
 // The menu's chat (Global, and one channel per language) and chat translation
 const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
-const translator = new Translator({ nvidiaKey: process.env.NVIDIA_API_KEY });
+const translator = new Translator({
+  nvidiaKey: process.env.NVIDIA_API_KEY,
+  deeplKey: process.env.DEEPL_API_KEY,
+  azureKey: process.env.AZURE_TRANSLATOR_KEY,
+  azureRegion: process.env.AZURE_TRANSLATOR_REGION,
+});
 const lobbyListeners = new Set(); // sockets with the menu chat open; ws.ctx.lobbyLang says which language
 
 function handleLobbyChat(ws, msg) {
