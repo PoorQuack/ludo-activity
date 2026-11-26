@@ -472,7 +472,7 @@ export function paintPawn(ctx, r, hex, style, sign) {
     const glow = bundleTokenPic(style.bundle, 'token_glow');
     const img = bundleTokenPic(style.bundle, `token_${col}`);
     if (img) {
-      const h = r * 2.75;
+      const h = r * 2.75 * bundleScale(style.bundle, img);
       const w = (h * img.naturalWidth) / img.naturalHeight;
       if (glow) {
         ctx.save();
@@ -681,7 +681,7 @@ export function drawBundleShield(ctx, x, y, r, skin, part, { lift = 0, grow = 1,
   const dir = bundleOf(skin);
   const img = dir && bundleTokenPic(dir, part === 'back' ? 'token_shield_back' : 'token_shield_front');
   if (!img || grow <= 0) return;
-  const h = r * 2.75 * (0.85 + 0.15 * grow);
+  const h = r * 2.75 * bundleScale(dir) * (0.85 + 0.15 * grow);
   const w = (h * img.naturalWidth) / img.naturalHeight;
   ctx.save();
   ctx.translate(x, y + r * 0.2 - lift);
@@ -709,6 +709,40 @@ export function drawBundleAura(ctx, x, y, r, skin, t = 0) {
 export function bundleCaptureArt(skin) {
   const dir = bundleOf(skin);
   return dir ? bundleTokenPic(dir, 'vfx_capture') : null;
+}
+
+// Bundle token pictures share one frame (156×220) but some fill little of it (a turtle, a
+// bottle cap): scale those up so every token stands about as tall as the rest, but never wider
+// than its square allows. Measured once from the red token's visible pixels; anchored at the foot.
+const bundleScales = new Map();
+function bundleScale(dir, img = null) {
+  if (bundleScales.has(dir)) return bundleScales.get(dir);
+  const pic = img || bundleTokenPic(dir, 'token_red');
+  if (!pic || typeof document === 'undefined') return 1;
+  let k = 1;
+  try {
+    const c = document.createElement('canvas');
+    c.width = pic.naturalWidth;
+    c.height = pic.naturalHeight;
+    const x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(pic, 0, 0);
+    const a = x.getImageData(0, 0, c.width, c.height).data;
+    let top = c.height, left = c.width, right = 0;
+    for (let y = 0; y < c.height; y++)
+      for (let i = 0; i < c.width; i++)
+        if (a[(y * c.width + i) * 4 + 3] > 40) {
+          if (y < top) top = y;
+          if (i < left) left = i;
+          if (i > right) right = i;
+        }
+    const tall = (c.height - top) / c.height;
+    const wide = (right - left + 1) / c.width;
+    if (tall > 0 && wide > 0) k = Math.max(1, Math.min(1.45, 0.86 / tall, 1.3 / wide));
+  } catch {
+    k = 1;
+  }
+  bundleScales.set(dir, k);
+  return k;
 }
 
 function bundleTokenPic(dir, file) {
