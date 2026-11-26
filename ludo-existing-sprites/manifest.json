@@ -1,0 +1,775 @@
+{
+  "description": "All existing Ludo Activity sprites & rendered references prior to Carbon reworks.",
+  "pipelineSpecs": {
+    "tokenSpec": {
+      "width": 156,
+      "height": 220,
+      "format": "webp",
+      "anchorX": 78,
+      "plinthBaselineY": 212
+    },
+    "tileSpec": {
+      "width": 156,
+      "height": 156,
+      "format": "webp"
+    },
+    "boardBgSpec": {
+      "width": 512,
+      "height": 512,
+      "format": "jpg",
+      "seamless": true
+    },
+    "dieFaceSpec": {
+      "width": 128,
+      "height": 128,
+      "format": "webp"
+    },
+    "dieIsoSpec": {
+      "width": 156,
+      "height": 156,
+      "format": "webp"
+    },
+    "dieGlowSpec": {
+      "width": 192,
+      "height": 192,
+      "format": "webp"
+    },
+    "tokenGlowSpec": {
+      "width": 156,
+      "height": 220,
+      "format": "webp"
+    },
+    "frameSpec": {
+      "width": 256,
+      "height": 256,
+      "format": "webp"
+    },
+    "iconSpec": {
+      "width": 128,
+      "height": 128,
+      "format": "webp"
+    }
+  },
+  "tokens": [
+    {
+      "id": "token-classic",
+      "type": "token",
+      "name": "Classic",
+      "rarity": "common",
+      "price": 0
+    },
+    {
+      "id": "token-star",
+      "type": "token",
+      "name": "Star",
+      "rarity": "rare",
+      "price": 200
+    },
+    {
+      "id": "token-gem",
+      "type": "token",
+      "name": "Gem",
+      "rarity": "rare",
+      "price": 250
+    },
+    {
+      "id": "token-neon",
+      "type": "token",
+      "name": "Neon",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-candy",
+      "type": "token",
+      "name": "Candy",
+      "rarity": "rare",
+      "price": 350
+    },
+    {
+      "id": "token-checker",
+      "type": "token",
+      "name": "Checker",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-ghost",
+      "type": "token",
+      "name": "Ghost",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-slime",
+      "type": "token",
+      "name": "Slime",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-duck",
+      "type": "token",
+      "name": "Rubber Duck",
+      "rarity": "epic",
+      "price": 220,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-cat",
+      "type": "token",
+      "name": "Cat",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-robot",
+      "type": "token",
+      "name": "Robot",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-penguin",
+      "type": "token",
+      "name": "Penguin",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-sakura",
+      "type": "token",
+      "name": "Sakura",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-crown",
+      "type": "token",
+      "name": "Royal",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems",
+      "perk": "When captured, it bursts into gold and re-forms on its base."
+    },
+    {
+      "id": "token-rocket",
+      "type": "token",
+      "name": "Rocket",
+      "rarity": "legendary",
+      "price": 400,
+      "priceCurrency": "gems",
+      "perk": "When captured, it blasts off and lands back on its base."
+    },
+    {
+      "id": "token-ufo",
+      "type": "token",
+      "name": "UFO",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems",
+      "perk": "When captured, a beam of light carries it back to its base."
+    },
+    {
+      "id": "token-constellation",
+      "type": "token",
+      "name": "Constellation",
+      "rarity": "legendary",
+      "price": 400,
+      "priceCurrency": "gems",
+      "perk": "When captured, it folds into starlight and reappears on its base."
+    },
+    {
+      "id": "token-dino",
+      "type": "token",
+      "name": "Dino",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "token-dragon",
+      "type": "token",
+      "name": "Dragon",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems",
+      "perk": "When captured, it flies home on its own wings."
+    },
+    {
+      "id": "token-samurai",
+      "type": "token",
+      "name": "Samurai",
+      "rarity": "legendary",
+      "price": 0,
+      "pass": 1,
+      "perk": "An armoured samurai helmet in your colour, on a steel pedestal. Battle Pass Season 1 only."
+    },
+    {
+      "id": "token-football",
+      "type": "token",
+      "name": "Football",
+      "rarity": "epic",
+      "price": 0,
+      "pass": 1,
+      "desc": "Gloves, boots, a whistle, the flag and the cup: each colour its own piece of the match. Battle Pass Season 1 only."
+    }
+  ],
+  "dice": [
+    {
+      "id": "dice-classic",
+      "type": "dice",
+      "name": "Classic",
+      "rarity": "common",
+      "price": 0
+    },
+    {
+      "id": "dice-midnight",
+      "type": "dice",
+      "name": "Midnight",
+      "rarity": "rare",
+      "price": 200
+    },
+    {
+      "id": "dice-wood",
+      "type": "dice",
+      "name": "Wood",
+      "rarity": "rare",
+      "price": 200
+    },
+    {
+      "id": "dice-jade",
+      "type": "dice",
+      "name": "Jade",
+      "rarity": "epic",
+      "price": 0,
+      "starter": true,
+      "desc": "Cut jade with pearl pips, the colour of Die Gems. Only in the Starter Pack."
+    },
+    {
+      "id": "dice-ruby",
+      "type": "dice",
+      "name": "Ruby",
+      "rarity": "rare",
+      "price": 250
+    },
+    {
+      "id": "dice-neon",
+      "type": "dice",
+      "name": "Neon",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-gold",
+      "type": "dice",
+      "name": "Gold",
+      "rarity": "legendary",
+      "price": 400,
+      "priceCurrency": "gems",
+      "perk": "Crowned and jewelled, with rays of light turning behind it."
+    },
+    {
+      "id": "dice-ice",
+      "type": "dice",
+      "name": "Ice",
+      "rarity": "rare",
+      "price": 250
+    },
+    {
+      "id": "dice-candy",
+      "type": "dice",
+      "name": "Candy",
+      "rarity": "rare",
+      "price": 250
+    },
+    {
+      "id": "dice-emerald",
+      "type": "dice",
+      "name": "Emerald",
+      "rarity": "rare",
+      "price": 300
+    },
+    {
+      "id": "dice-ludo",
+      "type": "dice",
+      "name": "Ludo",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-lava",
+      "type": "dice",
+      "name": "Lava",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-galaxy",
+      "type": "dice",
+      "name": "Galaxy",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-constellation",
+      "type": "dice",
+      "name": "Constellation",
+      "rarity": "legendary",
+      "price": 400,
+      "priceCurrency": "gems",
+      "perk": "A ring of stars circles it, and sparks fly when it rolls."
+    },
+    {
+      "id": "dice-cat",
+      "type": "dice",
+      "name": "Cat",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-sakura",
+      "type": "dice",
+      "name": "Sakura",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-bubble",
+      "type": "dice",
+      "name": "Bubble",
+      "rarity": "rare",
+      "price": 300
+    },
+    {
+      "id": "dice-slime",
+      "type": "dice",
+      "name": "Slime",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-robot",
+      "type": "dice",
+      "name": "Robot",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-ghost",
+      "type": "dice",
+      "name": "Ghost",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-duck",
+      "type": "dice",
+      "name": "Rubber Duck",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-snowball",
+      "type": "dice",
+      "name": "Snowball",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "dice-comet",
+      "type": "dice",
+      "name": "Comet",
+      "rarity": "legendary",
+      "price": 400,
+      "priceCurrency": "gems",
+      "perk": "A lump of burning rock, a tail of fire streaming behind it."
+    },
+    {
+      "id": "dice-alien",
+      "type": "dice",
+      "name": "Alien",
+      "rarity": "legendary",
+      "price": 400,
+      "priceCurrency": "gems",
+      "perk": "Eyes on stalks that look about and blink, rings of light beneath it."
+    },
+    {
+      "id": "dice-dragon",
+      "type": "dice",
+      "name": "Dragon",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems",
+      "perk": "Horns, beating wings, and sparks on every roll."
+    }
+  ],
+  "boards": [
+    {
+      "id": "board-classic",
+      "type": "board",
+      "name": "Classic",
+      "rarity": "common",
+      "price": 0
+    },
+    {
+      "id": "board-midnight",
+      "type": "board",
+      "name": "Midnight",
+      "rarity": "rare",
+      "price": 300
+    },
+    {
+      "id": "board-dojo",
+      "type": "board",
+      "name": "Cyber Dojo",
+      "rarity": "legendary",
+      "price": 0,
+      "pass": 1,
+      "perk": "Woven carbon and glowing circuit tiles. Battle Pass Season 1 only."
+    },
+    {
+      "id": "board-pitch",
+      "type": "board",
+      "name": "Pitch",
+      "rarity": "epic",
+      "price": 0,
+      "pass": 1,
+      "desc": "A striped football pitch with chalk lines. Battle Pass Season 1 only."
+    },
+    {
+      "id": "board-wood",
+      "type": "board",
+      "name": "Wood",
+      "rarity": "rare",
+      "price": 350
+    },
+    {
+      "id": "board-candy",
+      "type": "board",
+      "name": "Candy",
+      "rarity": "rare",
+      "price": 350
+    },
+    {
+      "id": "board-neon",
+      "type": "board",
+      "name": "Neon",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-ocean",
+      "type": "board",
+      "name": "Ocean",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-forest",
+      "type": "board",
+      "name": "Forest",
+      "rarity": "epic",
+      "price": 160,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-ice",
+      "type": "board",
+      "name": "Ice",
+      "rarity": "rare",
+      "price": 350
+    },
+    {
+      "id": "board-lava",
+      "type": "board",
+      "name": "Lava",
+      "rarity": "epic",
+      "price": 220,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-cat",
+      "type": "board",
+      "name": "Cat",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-desert",
+      "type": "board",
+      "name": "Desert",
+      "rarity": "rare",
+      "price": 350
+    },
+    {
+      "id": "board-sakura",
+      "type": "board",
+      "name": "Sakura",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-arcade",
+      "type": "board",
+      "name": "Arcade",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-haunted",
+      "type": "board",
+      "name": "Haunted",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-swamp",
+      "type": "board",
+      "name": "Swamp",
+      "rarity": "epic",
+      "price": 190,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-factory",
+      "type": "board",
+      "name": "Factory",
+      "rarity": "epic",
+      "price": 210,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-space",
+      "type": "board",
+      "name": "Space",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-lair",
+      "type": "board",
+      "name": "Dragon's lair",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-royal",
+      "type": "board",
+      "name": "Royal",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems"
+    },
+    {
+      "id": "board-constellation",
+      "type": "board",
+      "name": "Constellation",
+      "rarity": "legendary",
+      "price": 500,
+      "priceCurrency": "gems"
+    }
+  ],
+  "sets": [
+    {
+      "id": "set-constellation",
+      "name": "Constellation set",
+      "items": [
+        "token-constellation",
+        "dice-constellation",
+        "board-constellation"
+      ]
+    },
+    {
+      "id": "set-royal",
+      "name": "Royal set",
+      "items": [
+        "token-crown",
+        "dice-gold",
+        "board-royal"
+      ]
+    },
+    {
+      "id": "set-dragon",
+      "name": "Dragon set",
+      "items": [
+        "token-dragon",
+        "dice-dragon",
+        "board-lair"
+      ]
+    },
+    {
+      "id": "set-rocket",
+      "name": "Rocket set",
+      "items": [
+        "token-rocket",
+        "dice-comet",
+        "board-space"
+      ]
+    },
+    {
+      "id": "set-ufo",
+      "name": "UFO set",
+      "items": [
+        "token-ufo",
+        "dice-alien",
+        "board-space"
+      ]
+    },
+    {
+      "id": "set-neon",
+      "name": "Neon set",
+      "items": [
+        "token-neon",
+        "dice-neon",
+        "board-neon"
+      ]
+    },
+    {
+      "id": "set-cat",
+      "name": "Cat set",
+      "items": [
+        "token-cat",
+        "dice-cat",
+        "board-cat"
+      ]
+    },
+    {
+      "id": "set-ghost",
+      "name": "Ghost set",
+      "items": [
+        "token-ghost",
+        "dice-ghost",
+        "board-haunted"
+      ]
+    },
+    {
+      "id": "set-robot",
+      "name": "Robot set",
+      "items": [
+        "token-robot",
+        "dice-robot",
+        "board-factory"
+      ]
+    },
+    {
+      "id": "set-slime",
+      "name": "Slime set",
+      "items": [
+        "token-slime",
+        "dice-slime",
+        "board-swamp"
+      ]
+    },
+    {
+      "id": "set-duck",
+      "name": "Rubber Duck set",
+      "items": [
+        "token-duck",
+        "dice-duck",
+        "board-ocean"
+      ]
+    },
+    {
+      "id": "set-penguin",
+      "name": "Penguin set",
+      "items": [
+        "token-penguin",
+        "dice-snowball"
+      ]
+    },
+    {
+      "id": "set-checker",
+      "name": "Checker set",
+      "items": [
+        "token-checker",
+        "dice-ludo"
+      ]
+    },
+    {
+      "id": "set-candy",
+      "name": "Candy set",
+      "items": [
+        "token-candy",
+        "dice-candy",
+        "board-candy"
+      ]
+    },
+    {
+      "id": "set-sakura",
+      "name": "Sakura set",
+      "items": [
+        "token-sakura",
+        "dice-sakura",
+        "board-sakura"
+      ]
+    },
+    {
+      "id": "set-crystal",
+      "name": "Crystal set",
+      "items": [
+        "token-dino",
+        "board-crystal"
+      ]
+    },
+    {
+      "id": "set-lava",
+      "name": "Lava set",
+      "items": [
+        "dice-lava",
+        "board-lava"
+      ]
+    },
+    {
+      "id": "set-ice",
+      "name": "Ice set",
+      "items": [
+        "dice-ice",
+        "board-ice"
+      ]
+    },
+    {
+      "id": "set-wood",
+      "name": "Wood set",
+      "items": [
+        "dice-wood",
+        "board-wood"
+      ]
+    },
+    {
+      "id": "set-midnight",
+      "name": "Midnight set",
+      "items": [
+        "dice-midnight",
+        "board-midnight"
+      ]
+    }
+  ]
+}
