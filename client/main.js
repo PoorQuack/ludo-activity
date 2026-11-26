@@ -4390,7 +4390,8 @@ function updateTurnNudge() {
 // 12,480 everywhere; on the menu's little counter, 12.5K / 1B once it gets long
 function coinText(n, short = false) {
   try {
-    return new Intl.NumberFormat(currentLang(), short && n >= 100_000 ? { notation: 'compact', maximumFractionDigits: 1 } : {}).format(n);
+    // short: the menu's pills, which share one line with everything else on a phone (94K, 941.3K)
+    return new Intl.NumberFormat(currentLang(), short && n >= 10_000 ? { notation: 'compact', maximumFractionDigits: n >= 100_000 ? 1 : 0 } : {}).format(n);
   } catch {
     return String(n);
   }

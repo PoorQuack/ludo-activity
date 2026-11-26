@@ -1650,6 +1650,18 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
   .hub-wallet { gap: 4px; }
   .hub-wallet .coins, .hub-wallet .gems { font-size: 12.5px; padding: 4px 8px 4px 5px; padding-inline: 5px 8px; }
   .hub-wallet .gems { padding-inline-end: 3px; }
+  /* everything stays in its own space: the pills never slide over you or the buttons */
+  .hub-top { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .hub-wallet { justify-self: stretch; justify-content: center; overflow: hidden; }
+  .hub-wallet .coins, .hub-wallet .gems { white-space: nowrap; min-width: 0; }
+}
+/* Narrow phones: the level sits on the corner of your picture instead of beside it */
+@media (max-width: 400px) {
+  .hub-me { position: relative; padding: 2px; padding-inline: 2px; gap: 0; }
+  .hub-me .level-badge { position: absolute; inset-inline-end: -5px; bottom: -3px; min-width: 0; height: 15px; padding: 0 4px; font-size: 9px; box-shadow: 0 0 0 2px var(--bg, #18130f); }
+  .hub-wallet .coin-plus { width: 20px; height: 20px; font-size: 15px; margin-inline-start: 3px; }
+  .menu-tools { gap: 4px; }
+  .menu-tools .icon-btn { width: 32px; height: 32px; }
 }
 .daily-text .btn { width: auto; padding-left: 16px; padding-right: 16px; }
 .friend-list li .btn { width: auto; flex: none; min-height: 0; padding: 6px 12px; font-size: 12.5px; }
@@ -3037,3 +3049,5 @@ button, .btn { touch-action: manipulation; }
 :root:has(#game:not(.hidden)) .modal-wrap.tour .tour-card { width: min(100%, 420px); padding: 16px 18px; gap: 8px; }
 :root:has(#game:not(.hidden)) .modal-wrap.tour .tour-icon { font-size: 30px; }
 :root:has(#game:not(.hidden)) .modal-wrap.tour .tour-text { min-height: 0; font-size: 15px; }
+/* The smallest phones (320px): the music button steps aside (music on/off is in Settings) */
+@media (max-width: 340px) { .menu-tools [data-player-btn] { display: none; } }
