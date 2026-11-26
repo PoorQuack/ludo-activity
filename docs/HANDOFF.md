@@ -1,4 +1,30 @@
-# Where things stand (25 November 2026, evening)
+# Handover notes
+
+Newest entry first. Whoever finishes a piece of work adds an entry: date, who, branch, what
+changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
+
+## 26 Nov 2026, Claude: state of `main` (live on ludo.commontern.com)
+- Translation: DeepL → Azure → NVIDIA Riva → Google → MyMemory, with Indonesian slang rewriting
+  and player ratings ("Rate" on a translation; 3 matching suggestions become the translation).
+  Keys live only in the VM's `.env`.
+- Every purchase goes through the Stripe checkout link (web store); Discord's own purchase
+  window is only a fallback if Stripe is switched off. Gifting is removed.
+- All In rooms show in the main room list with an ALL IN tag.
+- Design pass: crown Pass icon, line icons in buttons (`client/icons.js`), rarity rings on shop
+  cards, calmer chat, toasts clear of buttons, phone game screen with a player strip under the
+  board and the tutorial docked at the bottom.
+- Antigravity (merged): redrawn taunt cards, painted icons (crown/gift/pass/scroll/trophy),
+  monthly leaderboard frames (`frame-month-1..3`), 10 new bundles (token/dice/board/set each:
+  woodland-grove, street-playground, space-odyssey, pharaohs-oasis, mystic-alchemy,
+  christmas-holiday, turtle-lotus, pirates-cove, celestial-olympus, steampunk-workshop).
+- To do (art): the shop previews for the Woodland Grove, Street Playground, Space Odyssey and
+  Pharaoh's Oasis tokens are small and dark; redraw them bigger and brighter.
+- To do (owner): Starter Pack needs a Discord Durable SKU (`starter:<id>` in `SHOP_SKUS`) and a
+  Stripe price (`starter:price_…` in `STRIPE_PRICES`).
+
+---
+
+## Older notes (25 Nov 2026)
 
 ## Live on ludo.commontern.com (branch `main`)
 - Chat translation: NVIDIA Nemotron 3.5 Lightning checks the language, Riva Translate translates
