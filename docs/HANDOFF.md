@@ -15,6 +15,7 @@ changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
   - `client/renderer.js` & `client/skins.js`: added ambient board `fx` across all 10 Carbon boards (`fireflies`, `chalk`, `radar`, `sand`, `alchemy`, `snow`, `pond`, `ocean`, `olympus`, `steampunk`) plus breathing `safeGlow` rims on custom safe tiles.
   - `client/main.js`: colored roll-landing rings & bursts by equipped `DICE_STYLES` (stronger on `6`) and added 2-particle hop sparkle trails for Epic `TOKEN_SIGNATURES`.
 - **Checks**: `npm run build`, `npm test` (275/275), `npm run smoke`, desktop & 390px mobile headless Shop/Item/Try-it/Game screenshots with zero console errors.
+- **Weekly #3 frame cache-bust**: added `?v=3` / `?v=2` query params to leaderboard frame URLs in `client/style.css` and `client/main.js` (`frame-rank-3.webp?v=3`, etc.) so browsers/Discord WebView stop serving the cached Spartan helmet image.
 
 ## 26 Nov 2026, Claude: state of `main` (live on ludo.commontern.com)
 - Translation: DeepL → Azure → NVIDIA Riva → Google → MyMemory, with Indonesian slang rewriting
