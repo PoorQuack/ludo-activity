@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 Tu e {name} ora siete amici",
   "🧭 Getting started": "🧭 Per iniziare",
   "🪙 Coins": "🪙 Monete",
-  "A better translation…": "Una traduzione migliore…",
-  "Bad translation": "Traduzione sbagliata",
-  "Good translation": "Buona traduzione",
-  "Suggest a better one": "Suggerisci una migliore",
   "Thanks! It replaces the translation once {n} players agree.": "Grazie! Sostituisce la traduzione quando {n} giocatori sono d’accordo.",
   "Thanks! Players agreed: everyone sees your translation now.": "Grazie! I giocatori sono d’accordo: ora tutti vedono la tua traduzione.",
   "Thanks! That is enough feedback for now": "Grazie! Per ora basta così",
   "That's the same as the message": "È uguale al messaggio",
   "Translated by players": "Tradotto dai giocatori",
-  "Write the better translation first": "Scrivi prima la traduzione migliore"
+  "Write the better translation first": "Scrivi prima la traduzione migliore",
+  "Bad": "Sbagliata",
+  "Good": "Buona",
+  "Know a better one? Edit it (optional)": "Ne conosci una migliore? Modificala (facoltativo)",
+  "Rate": "Valuta",
+  "Rate this translation": "Valuta questa traduzione",
+  "Rated": "Valutata",
+  "Thanks for rating!": "Grazie per la valutazione!"
 }

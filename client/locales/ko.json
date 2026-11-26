@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 이제 {name}님과 친구예요",
   "🧭 Getting started": "🧭 시작 가이드",
   "🪙 Coins": "🪙 코인",
-  "A better translation…": "더 나은 번역…",
-  "Bad translation": "나쁜 번역",
-  "Good translation": "좋은 번역",
-  "Suggest a better one": "더 나은 번역 제안",
   "Thanks! It replaces the translation once {n} players agree.": "고마워요! {n}명이 동의하면 번역이 바뀌어요.",
   "Thanks! Players agreed: everyone sees your translation now.": "고마워요! 플레이어들이 동의했어요: 이제 모두에게 당신의 번역이 보여요.",
   "Thanks! That is enough feedback for now": "고마워요! 지금은 이 정도면 충분해요",
   "That's the same as the message": "메시지와 같아요",
   "Translated by players": "플레이어 번역",
-  "Write the better translation first": "먼저 더 나은 번역을 써 주세요"
+  "Write the better translation first": "먼저 더 나은 번역을 써 주세요",
+  "Bad": "나빠요",
+  "Good": "좋아요",
+  "Know a better one? Edit it (optional)": "더 나은 번역을 알아요? 수정해 주세요 (선택)",
+  "Rate": "평가",
+  "Rate this translation": "이 번역 평가하기",
+  "Rated": "평가함",
+  "Thanks for rating!": "평가해 줘서 고마워요!"
 }

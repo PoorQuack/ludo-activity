@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 Тепер ви з {name} друзі",
   "🧭 Getting started": "🧭 Початок гри",
   "🪙 Coins": "🪙 Монети",
-  "A better translation…": "Кращий переклад…",
-  "Bad translation": "Поганий переклад",
-  "Good translation": "Гарний переклад",
-  "Suggest a better one": "Запропонувати кращий",
   "Thanks! It replaces the translation once {n} players agree.": "Дякуємо! Він замінить переклад, коли погодяться {n} гравці.",
   "Thanks! Players agreed: everyone sees your translation now.": "Дякуємо! Гравці погодилися: тепер усі бачать твій переклад.",
   "Thanks! That is enough feedback for now": "Дякуємо! Поки що досить",
   "That's the same as the message": "Це те саме, що й повідомлення",
   "Translated by players": "Переклали гравці",
-  "Write the better translation first": "Спершу напиши кращий переклад"
+  "Write the better translation first": "Спершу напиши кращий переклад",
+  "Bad": "Погано",
+  "Good": "Добре",
+  "Know a better one? Edit it (optional)": "Знаєш кращий? Виправ (необов’язково)",
+  "Rate": "Оцінити",
+  "Rate this translation": "Оціни цей переклад",
+  "Rated": "Оцінено",
+  "Thanks for rating!": "Дякуємо за оцінку!"
 }

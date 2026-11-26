@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 {name}さんとフレンドになりました",
   "🧭 Getting started": "🧭 はじめに",
   "🪙 Coins": "🪙 コイン",
-  "A better translation…": "もっと良い訳…",
-  "Bad translation": "悪い翻訳",
-  "Good translation": "良い翻訳",
-  "Suggest a better one": "より良い訳を提案",
   "Thanks! It replaces the translation once {n} players agree.": "ありがとう！{n}人のプレイヤーが同意すると翻訳が置き換わります。",
   "Thanks! Players agreed: everyone sees your translation now.": "ありがとう！プレイヤーが同意しました。みんなにあなたの訳が表示されます。",
   "Thanks! That is enough feedback for now": "ありがとう！今はこれで十分です",
   "That's the same as the message": "メッセージと同じです",
   "Translated by players": "プレイヤーによる翻訳",
-  "Write the better translation first": "先により良い訳を書いてください"
+  "Write the better translation first": "先により良い訳を書いてください",
+  "Bad": "悪い",
+  "Good": "良い",
+  "Know a better one? Edit it (optional)": "もっと良い訳がある？編集してね（任意）",
+  "Rate": "評価",
+  "Rate this translation": "この翻訳を評価",
+  "Rated": "評価済み",
+  "Thanks for rating!": "評価ありがとう！"
 }

@@ -1242,6 +1242,24 @@ function catchUp(away) {
 }
 window.addEventListener('pageshow', redrawBoard);
 
+// Tapping in a chat log (a message, Reply, React, the AI chip) while typing mustn't take focus from
+// the chat box: that closes the phone keyboard and the whole chat jumps down and back up. The tap
+// itself still works (it's the click that does things, not the focus).
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    const typing = document.activeElement?.matches?.('.chat-form input');
+    if (!typing || e.pointerType === 'mouse') return;
+    const inLog = e.target.closest?.('.chat-log');
+    if (inLog && !e.target.closest('input, textarea, select, .tr-rate-link')) e.preventDefault();
+  },
+  true,
+);
+// a tap anywhere else hides the Reply / React a tap showed
+document.addEventListener('click', (e) => {
+  if (!e.target.closest?.('.chat-line')) for (const l of document.querySelectorAll('.chat-line.acts-on')) l.classList.remove('acts-on');
+});
+
 // ---------------- phones: the on-screen keyboard ----------------
 // While someone types on a phone, the game is pinned to the part of the screen above the
 // keyboard (the visual viewport): the board shrinks and the chat box sits right on top of the
@@ -4847,7 +4865,14 @@ function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onRe
   const line = document.createElement('div');
   line.className = 'chat-line';
   line.dataset.msgId = m.id;
-  line.tabIndex = -1; // a tap focuses it, which shows its Reply / React on phones
+  // a tap shows its Reply / React (on phones there's no hover); it doesn't take the focus, so the
+  // keyboard stays up while you type
+  line.addEventListener('click', (e) => {
+    if (e.target.closest('button, a, input, textarea, form')) return;
+    const on = !line.classList.contains('acts-on');
+    for (const l of document.querySelectorAll('.chat-line.acts-on')) l.classList.remove('acts-on');
+    line.classList.toggle('acts-on', on);
+  });
   // a few emoji on their own: shown big, without a bubble
   if (!stickerOnly && isJumbo(m.text)) line.classList.add('jumbo');
   const row = document.createElement('div');
@@ -5253,7 +5278,6 @@ function renderLobbyChat() {
     const li = document.createElement('li');
     // Like the game's chat: their picture, the name on top, a bubble under it in their own colour
     li.className = `chat-msg lchat-msg${isMe ? ' me' : ''}${m.vip ? ' vip' : ''}${stickerOnly ? ' sticker-only' : ''}`;
-    if (!isMe) li.style.setProperty('--seat-col', `hsl(${[...String(m.userId)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 0)} 55% 48%)`);
     const av = document.createElement('button');
     av.type = 'button';
     av.className = 'avatar chat-av';
@@ -5367,72 +5391,93 @@ function showTranslation(li, r) {
   const list = li.closest('.chat-log');
   if (list) keepAtBottom(list);
 }
-// 👍 / 👎 under a translation, and "a better one" for players who speak both languages
+// "Rate" under a translation: a small pop-up with the message, the translation, Good / Bad, and
+// a box to write a better one (for players who speak both languages)
 function rateRow(li, r) {
-  const row = document.createElement('span');
-  row.className = 'tr-rate';
-  const key = li.dataset.tr;
-  const [scope, id] = key.split(':');
-  const send = (extra) => {
-    if (ws?.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'trFeedback', scope, id: Number(id), to: chatLanguage(), from: r.from || '', shown: r.text, ...extra }));
-  };
-  const btn = (label, title, cls, on) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = `tr-rate-btn ${cls}`;
-    b.textContent = label;
-    b.title = title;
-    b.setAttribute('aria-label', title);
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      on(b);
-    });
-    row.appendChild(b);
-    return b;
-  };
-  const mark = (which) => {
-    r.voted = which;
-    for (const b of row.querySelectorAll('.tr-rate-btn')) b.classList.toggle('on', b.classList.contains(which));
-  };
-  btn('👍', t('Good translation'), 'up', () => {
-    mark('up');
-    send({ op: 'vote', up: true });
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `tr-rate-link${r.voted ? ' rated' : ''}`;
+  b.textContent = r.voted ? t('Rated') : t('Rate');
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openRatePop(li, r, b);
   });
-  btn('👎', t('Bad translation'), 'down', () => {
-    mark('down');
-    send({ op: 'vote', up: false });
-    openBetter();
-  });
-  btn('✎', t('Suggest a better one'), 'better', () => openBetter());
-  if (r.voted) mark(r.voted);
-  const openBetter = () => {
-    if (li.querySelector('.tr-better')) return li.querySelector('.tr-better input').focus();
-    const form = document.createElement('form');
-    form.className = 'tr-better';
-    form.innerHTML = '<input type="text" maxlength="300" autocomplete="off" /><button type="submit" class="btn small"></button>';
-    const input = form.querySelector('input');
-    input.placeholder = t('A better translation…');
-    input.value = r.text;
-    form.querySelector('button').textContent = t('Send');
-    form.addEventListener('click', (e) => e.stopPropagation());
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const text = input.value.trim();
-      if (!text || text === r.text) return form.remove();
-      send({ op: 'suggest', text });
-      form.remove();
-    });
-    row.after(form);
-    input.focus();
-    input.select();
+  return b;
+}
+function openRatePop(li, r, link) {
+  document.querySelector('.tr-rate-pop')?.remove();
+  const [scope, id] = li.dataset.tr.split(':');
+  const original = li.querySelector('.msg-text')?.textContent || '';
+  const wrap = document.createElement('div');
+  wrap.className = 'tr-rate-pop';
+  wrap.setAttribute('role', 'dialog');
+  wrap.setAttribute('aria-modal', 'true');
+  wrap.innerHTML = `
+    <form class="tr-rate-card">
+      <b class="tr-rate-title"></b>
+      <p class="tr-rate-orig" dir="auto"></p>
+      <p class="tr-rate-shown" dir="auto"></p>
+      <div class="tr-rate-choice" role="radiogroup">
+        <button type="button" class="tr-choice" data-v="up">👍 <span></span></button>
+        <button type="button" class="tr-choice" data-v="down">👎 <span></span></button>
+      </div>
+      <label class="tr-rate-edit"><span></span><textarea rows="2" maxlength="300" dir="auto"></textarea></label>
+      <div class="tr-rate-actions"><button type="button" class="btn small tr-cancel"></button><button type="submit" class="btn small primary tr-send"></button></div>
+    </form>`;
+  const $q = (sel) => wrap.querySelector(sel);
+  $q('.tr-rate-title').textContent = t('Rate this translation');
+  $q('.tr-rate-orig').textContent = original;
+  $q('.tr-rate-shown').textContent = r.text;
+  $q('[data-v="up"] span').textContent = t('Good');
+  $q('[data-v="down"] span').textContent = t('Bad');
+  $q('.tr-rate-edit span').textContent = t('Know a better one? Edit it (optional)');
+  const box = $q('textarea');
+  box.value = r.text;
+  $q('.tr-cancel').textContent = t('Cancel');
+  $q('.tr-send').textContent = t('Send');
+  let choice = r.voted || '';
+  const paint = () => {
+    for (const c of wrap.querySelectorAll('.tr-choice')) c.classList.toggle('on', c.dataset.v === choice);
+    $q('.tr-send').disabled = !choice && box.value.trim() === r.text;
   };
-  return row;
+  for (const c of wrap.querySelectorAll('.tr-choice'))
+    c.addEventListener('click', () => {
+      choice = c.dataset.v;
+      if (choice === 'down') box.focus();
+      paint();
+    });
+  box.addEventListener('input', () => {
+    if (box.value.trim() !== r.text && !choice) choice = 'down'; // an edit says this one wasn't right
+    paint();
+  });
+  const close = () => {
+    wrap.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e) => e.key === 'Escape' && close();
+  document.addEventListener('keydown', onKey);
+  wrap.addEventListener('click', (e) => e.target === wrap && close());
+  $q('.tr-cancel').addEventListener('click', close);
+  $q('form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (ws?.readyState !== WebSocket.OPEN) return close();
+    const base = { type: 'trFeedback', scope, id: Number(id), to: chatLanguage(), from: r.from || '', shown: r.text };
+    const better = box.value.trim();
+    if (better && better !== r.text) ws.send(JSON.stringify({ ...base, op: 'suggest', text: better }));
+    else if (choice) ws.send(JSON.stringify({ ...base, op: 'vote', up: choice === 'up' }));
+    r.voted = choice || 'down';
+    link.textContent = t('Rated');
+    link.classList.add('rated');
+    close();
+  });
+  paint();
+  document.body.appendChild(wrap);
+  $q('[data-v="up"]').focus();
 }
 function onTrFeedback(msg) {
   if (msg.error) return toast(translateServer(msg.error));
   if (msg.op === 'suggest') toast(msg.approved ? t('Thanks! Players agreed: everyone sees your translation now.') : t('Thanks! It replaces the translation once {n} players agree.', { n: 3 }));
-  // (a vote just lights its button up)
+  else toast(t('Thanks for rating!'));
 }
 function onTranslated(msg) {
   const key = `${msg.scope}:${msg.id}`;

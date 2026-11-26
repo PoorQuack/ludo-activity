@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了",
   "🧭 Getting started": "🧭 新手导航",
   "🪙 Coins": "🪙 金币",
-  "A better translation…": "更好的翻译…",
-  "Bad translation": "翻译不好",
-  "Good translation": "翻译很好",
-  "Suggest a better one": "建议更好的翻译",
   "Thanks! It replaces the translation once {n} players agree.": "谢谢！{n} 名玩家同意后就会替换这条翻译。",
   "Thanks! Players agreed: everyone sees your translation now.": "谢谢！玩家们同意了：现在大家都能看到你的翻译。",
   "Thanks! That is enough feedback for now": "谢谢！暂时够了",
   "That's the same as the message": "和原消息一样",
   "Translated by players": "玩家翻译",
-  "Write the better translation first": "请先写出更好的翻译"
+  "Write the better translation first": "请先写出更好的翻译",
+  "Bad": "不好",
+  "Good": "好",
+  "Know a better one? Edit it (optional)": "知道更好的？改一改（可选）",
+  "Rate": "评分",
+  "Rate this translation": "给这条翻译评分",
+  "Rated": "已评分",
+  "Thanks for rating!": "谢谢你的评分！"
 }

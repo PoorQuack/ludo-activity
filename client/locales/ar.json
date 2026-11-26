@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 أنت و{name} صديقان الآن",
   "🧭 Getting started": "🧭 البداية السريعة",
   "🪙 Coins": "🪙 العملات",
-  "A better translation…": "ترجمة أفضل…",
-  "Bad translation": "ترجمة سيئة",
-  "Good translation": "ترجمة جيدة",
-  "Suggest a better one": "اقترح ترجمة أفضل",
   "Thanks! It replaces the translation once {n} players agree.": "شكرًا! ستحلّ محل الترجمة عندما يوافق {n} لاعبين.",
   "Thanks! Players agreed: everyone sees your translation now.": "شكرًا! وافق اللاعبون: الجميع يرى ترجمتك الآن.",
   "Thanks! That is enough feedback for now": "شكرًا! هذا يكفي الآن",
   "That's the same as the message": "هذه نفس الرسالة",
   "Translated by players": "ترجمة اللاعبين",
-  "Write the better translation first": "اكتب الترجمة الأفضل أولًا"
+  "Write the better translation first": "اكتب الترجمة الأفضل أولًا",
+  "Bad": "سيئة",
+  "Good": "جيدة",
+  "Know a better one? Edit it (optional)": "تعرف ترجمة أفضل؟ عدّلها (اختياري)",
+  "Rate": "قيّم",
+  "Rate this translation": "قيّم هذه الترجمة",
+  "Rated": "تم التقييم",
+  "Thanks for rating!": "شكرًا على التقييم!"
 }

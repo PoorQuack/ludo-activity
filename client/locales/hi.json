@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 आप और {name} अब दोस्त हैं",
   "🧭 Getting started": "🧭 शुरुआत करें",
   "🪙 Coins": "🪙 सिक्के",
-  "A better translation…": "बेहतर अनुवाद…",
-  "Bad translation": "ख़राब अनुवाद",
-  "Good translation": "अच्छा अनुवाद",
-  "Suggest a better one": "बेहतर सुझाएँ",
   "Thanks! It replaces the translation once {n} players agree.": "धन्यवाद! {n} खिलाड़ियों के सहमत होने पर यह अनुवाद की जगह ले लेगा।",
   "Thanks! Players agreed: everyone sees your translation now.": "धन्यवाद! खिलाड़ी सहमत हैं: अब सबको आपका अनुवाद दिखता है।",
   "Thanks! That is enough feedback for now": "धन्यवाद! अभी के लिए इतना काफ़ी है",
   "That's the same as the message": "यह संदेश जैसा ही है",
   "Translated by players": "खिलाड़ियों द्वारा अनुवादित",
-  "Write the better translation first": "पहले बेहतर अनुवाद लिखें"
+  "Write the better translation first": "पहले बेहतर अनुवाद लिखें",
+  "Bad": "ख़राब",
+  "Good": "अच्छा",
+  "Know a better one? Edit it (optional)": "बेहतर पता है? बदलें (वैकल्पिक)",
+  "Rate": "रेट करें",
+  "Rate this translation": "इस अनुवाद को रेट करें",
+  "Rated": "रेट किया",
+  "Thanks for rating!": "रेट करने के लिए धन्यवाद!"
 }

@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 {name} ile artık arkadaşsınız",
   "🧭 Getting started": "🧭 Başlangıç",
   "🪙 Coins": "🪙 Jetonlar",
-  "A better translation…": "Daha iyi bir çeviri…",
-  "Bad translation": "Kötü çeviri",
-  "Good translation": "İyi çeviri",
-  "Suggest a better one": "Daha iyisini öner",
   "Thanks! It replaces the translation once {n} players agree.": "Teşekkürler! {n} oyuncu onaylayınca çevirinin yerine geçer.",
   "Thanks! Players agreed: everyone sees your translation now.": "Teşekkürler! Oyuncular onayladı: artık herkes senin çevirini görüyor.",
   "Thanks! That is enough feedback for now": "Teşekkürler! Şimdilik bu kadarı yeterli",
   "That's the same as the message": "Mesajla aynı",
   "Translated by players": "Oyuncular tarafından çevrildi",
-  "Write the better translation first": "Önce daha iyi çeviriyi yaz"
+  "Write the better translation first": "Önce daha iyi çeviriyi yaz",
+  "Bad": "Kötü",
+  "Good": "İyi",
+  "Know a better one? Edit it (optional)": "Daha iyisini mi biliyorsun? Düzenle (isteğe bağlı)",
+  "Rate": "Puanla",
+  "Rate this translation": "Bu çeviriyi puanla",
+  "Rated": "Puanlandı",
+  "Thanks for rating!": "Puanladığın için teşekkürler!"
 }

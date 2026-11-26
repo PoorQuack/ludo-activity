@@ -1049,14 +1049,17 @@
   "🤝 You and {name} are friends now": "🤝 Теперь вы с {name} друзья",
   "🧭 Getting started": "🧭 Начало игры",
   "🪙 Coins": "🪙 Монеты",
-  "A better translation…": "Перевод получше…",
-  "Bad translation": "Плохой перевод",
-  "Good translation": "Хороший перевод",
-  "Suggest a better one": "Предложить лучше",
   "Thanks! It replaces the translation once {n} players agree.": "Спасибо! Он заменит перевод, когда согласятся {n} игрока.",
   "Thanks! Players agreed: everyone sees your translation now.": "Спасибо! Игроки согласились: теперь все видят твой перевод.",
   "Thanks! That is enough feedback for now": "Спасибо! Пока достаточно",
   "That's the same as the message": "Это то же самое, что сообщение",
   "Translated by players": "Перевели игроки",
-  "Write the better translation first": "Сначала напиши перевод получше"
+  "Write the better translation first": "Сначала напиши перевод получше",
+  "Bad": "Плохо",
+  "Good": "Хорошо",
+  "Know a better one? Edit it (optional)": "Знаешь лучше? Исправь (необязательно)",
+  "Rate": "Оценить",
+  "Rate this translation": "Оцени этот перевод",
+  "Rated": "Оценено",
+  "Thanks for rating!": "Спасибо за оценку!"
 }
