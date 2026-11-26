@@ -283,3 +283,16 @@ test('when DeepL is out of characters, Azure translates', async () => {
   assert.equal(calls.at(-1).region, 'uksouth');
   assert.match(calls.at(-1).azure, /from=es/);
 });
+
+test("DeepL's guess outside our languages (\"gg wp\" as Wolof) doesn't count", async () => {
+  const calls = [];
+  const base = fakeDeeplAzure(calls);
+  const fetch = async (url, init) => {
+    if (url.includes('deepl.com') && !JSON.parse(init.body).source_lang)
+      return { ok: true, json: async () => ({ translations: [{ text: 'Good game, well played', detected_source_language: 'WO' }] }) };
+    if (url.includes('translate_a')) return { ok: true, json: async () => [['gg wp', 'en']] };
+    return base(url, init);
+  };
+  const tr = new Translator({ fetch, deeplKey: 'k:fx', azureKey: 'a' });
+  assert.deepEqual(await tr.translate('ann', 'gg wp', 'en', 'en'), { text: 'gg wp', from: 'en' });
+});

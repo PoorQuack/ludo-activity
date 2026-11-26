@@ -107,13 +107,20 @@ export class Translator {
     if (source === to) {
       // Looks like it's already in their language. The check can be wrong on short lines ("Maghrib
       // woy" came back as English), so a translator that detects for itself gets a say first.
-      try {
-        const g = this.deeplKey ? await this.deepl(pieces, null, to) : await this.google(pieces, to);
-        const said = normalizeDetected(g.from);
-        if (!sameFamily(said, to) && g.texts.join('') !== pieces.join('')) got = g;
-      } catch (err) {
-        console.error(`Translation (second opinion) failed: ${err.message}`);
-      }
+      // (Only an answer in one of our languages counts: DeepL calls "gg wp" Wolof.)
+      const opinion = async (ask) => {
+        try {
+          const g = await ask();
+          const said = normalizeDetected(g.from);
+          return CHAT_CODES.has(said) && !sameFamily(said, to) && g.texts.join('') !== pieces.join('') ? g : null;
+        } catch (err) {
+          console.error(`Translation (second opinion) failed: ${err.message}`);
+          return null;
+        }
+      };
+      const byDeepl = this.deeplKey && (await opinion(() => this.deepl(pieces, null, to)));
+      got = byDeepl || (await opinion(() => this.google(pieces, to)));
+      if (got) got.done = !!byDeepl; // DeepL's is a finished translation; Google only found the language
       if (!got) {
         const result = { text, from: to };
         this.cache.set(key, result);
@@ -130,7 +137,7 @@ export class Translator {
       ['MyMemory', () => this.myMemory(pieces, to)],
     ];
     // (DeepL's own second opinion already is a DeepL translation; Google's gets redone by the best)
-    if (!(got && this.deeplKey)) {
+    if (!got?.done) {
       got = null;
       for (const [name, run] of chain) {
         try {
