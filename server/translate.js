@@ -23,6 +23,18 @@ const NVIDIA = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const AZURE = 'https://api.cognitive.microsofttranslator.com';
 // what DeepL is told about every message (not counted as characters)
 const DEEPL_CONTEXT = 'Casual chat between players of an online Ludo board game: dice, sixes, tokens, captures, gamer slang.';
+// What chat slang means, per language, added to DeepL's note when the message is in it. DeepL
+// reads Indonesian chat well once told ("bocil nub" was "novice", "mampus" was "I'm done for").
+const DEEPL_SLANG = {
+  id:
+    'Indonesian chat slang: gw/gue = I; lu/lo = you; gak/ga/gk/kagak = not; bgt = very; mulu = all the time; udh = already; ' +
+    "blm = not yet; jgn = don't; yg = that/who; bntr/bentar = a moment; anjir/anjay/jir/anjim = damn (mild swear); " +
+    'wkwk/aowkwk = laughing (lol); mabar = play together; kuy = come on, let us; cuy/ngab/bang/bro = bro; gaskeun/gas = let us go; ' +
+    'mampus = serves you right; makan/dimakan/kena = capture/get captured (a token); bagi = give (bagi enam = give me a six); ' +
+    'settingan = rigged; bocil = little kid; nub = noob; ez = easy; kocak = hilarious; hoki = lucky; cabut = leave; afk = away; ' +
+    'males = cannot be bothered; mantap/mantap jiwa = awesome; kasian deh lu = too bad for you; santuy = chill; baper = get emotional; ' +
+    'ampas = trash; mager = too lazy to move; otw = on the way.',
+};
 const RIVA_MODEL = 'nvidia/riva-translate-4b-instruct-v2';
 // Riva has to be told what it's translating from, so a fast general model reads the message first
 // (tested on chat lines: 20 of 23 right in about 0.2s; its misses were Danish/Norwegian-type
@@ -324,7 +336,7 @@ export class Translator {
           text: pieces,
           target_lang: DEEPL_TARGET[to] || to.toUpperCase(),
           ...(from ? { source_lang: deeplSource(from) } : {}),
-          context: DEEPL_CONTEXT,
+          context: from && DEEPL_SLANG[from] ? `${DEEPL_CONTEXT} ${DEEPL_SLANG[from]}` : DEEPL_CONTEXT,
         }),
       },
       4000,
@@ -413,7 +425,7 @@ const SCRIPTS = [
 const ENGLISH = new Set('the you your are is was and not but this that what why how have just its it\'s i\'m im dont don\'t cant can\'t lol gg wp nice good game play win lost lose my me we they hi hello thanks thank please yes no anyone who ez revenge bro lucky so with again one more'.split(' '));
 
 // DeepL's and Azure's names for our languages, where they differ
-const DEEPL_TARGET = { en: 'EN-GB', pt: 'PT-BR', 'pt-PT': 'PT-PT', es: 'ES-ES', 'es-419': 'ES-419', zh: 'ZH-HANS', 'zh-TW': 'ZH-HANT', no: 'NB' };
+const DEEPL_TARGET = { en: 'EN-US', pt: 'PT-BR', 'pt-PT': 'PT-PT', es: 'ES-ES', 'es-419': 'ES-419', zh: 'ZH-HANS', 'zh-TW': 'ZH-HANT', no: 'NB' };
 const deeplSource = (code) => ({ no: 'NB' })[code] || code.split('-')[0].toUpperCase();
 const AZURE_CODE = { zh: 'zh-Hans', 'zh-TW': 'zh-Hant', 'pt-PT': 'pt-pt', no: 'nb', 'es-419': 'es' };
 

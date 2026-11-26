@@ -256,7 +256,7 @@ test('DeepL translates first, told the language Azure found and that it is Ludo 
   const calls = [];
   const detect = { 'hola amigo': ['es', 0.99], 'Callate ik u aint': ['en', 1], 'bhai mera internet lag kar raha hai': ['hi-Latn', 1] };
   const tr = new Translator({ fetch: fakeDeeplAzure(calls, { detect }), deeplKey: 'k:fx', azureKey: 'a', azureRegion: 'uksouth' });
-  assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'ES>EN-GB: hola amigo', from: 'es' });
+  assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'ES>EN-US: hola amigo', from: 'es' });
   const d = calls.find((c) => c.deepl);
   assert.equal(d.host, 'api-free.deepl.com');
   assert.match(d.deepl.context, /Ludo/);
@@ -295,4 +295,13 @@ test("DeepL's guess outside our languages (\"gg wp\" as Wolof) doesn't count", a
   };
   const tr = new Translator({ fetch, deeplKey: 'k:fx', azureKey: 'a' });
   assert.deepEqual(await tr.translate('ann', 'gg wp', 'en', 'en'), { text: 'gg wp', from: 'en' });
+});
+
+test('DeepL is told what Indonesian chat slang means when the message is Indonesian', async () => {
+  const calls = [];
+  const tr = new Translator({ fetch: fakeDeeplAzure(calls, { detect: { 'bocil nub, ez bgt': ['id', 1], 'hola amigo': ['es', 1] } }), deeplKey: 'k:fx', azureKey: 'a' });
+  await tr.translate('ann', 'bocil nub, ez bgt', 'en', 'id');
+  assert.match(calls.at(-1).deepl.context, /bocil = little kid/);
+  await tr.translate('ann', 'hola amigo', 'en', 'es');
+  assert.doesNotMatch(calls.at(-1).deepl.context, /bocil/);
 });
