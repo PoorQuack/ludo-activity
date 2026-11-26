@@ -438,7 +438,7 @@ const ID_SLANG = {
   emg: 'memang', emang: 'memang', bener: 'benar', banget: 'banget', kuy: 'ayo', yuk: 'ayo', gaskeun: 'ayo gas', cuy: 'bro', ngab: 'bro',
   bocil: 'anak kecil', nub: 'noob', ez: 'gampang', hoki: 'beruntung', settingan: 'dicurangi', mager: 'malas gerak', santuy: 'santai',
   baper: 'terbawa perasaan', ampas: 'sampah', mampus: 'rasain', males: 'malas', cabut: 'pergi', kocak: 'lucu banget',
-  dimakan: 'ditangkap', anjir: 'astaga', anjay: 'wah', jir: 'astaga', anjim: 'astaga', sumpah: 'serius',
+  dimakan: 'ditangkap', anjir: 'sial', anjay: 'wah', jir: 'sial', anjim: 'sial', sumpah: 'serius',
 };
 // phrases first (makan = capturing a token in Ludo)
 const ID_PHRASES = [
