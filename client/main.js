@@ -5503,9 +5503,11 @@ async function loadPassPrice() {
     }
   } catch {}
 }
+// The web checkout's price when that's how they'll pay, else Discord's
+const passLabel = () => (paidConfig.webStore && paidConfig.webPrices?.pass) || passPrice;
 async function buyPass(btn) {
   if (!discordSdk) return toast(t('The Battle Pass can be bought in the Discord app.'));
-  if (discordSdk.platform === 'mobile' && paidConfig.webStore && (paidConfig.webPrices?.pass || passSku())) {
+  if (paidConfig.webStore && (paidConfig.webPrices?.pass || passSku())) { // every purchase: the web checkout link
     btn.disabled = true;
     try {
       await openWebCheckout(PASS_SKU_ID);
@@ -5602,7 +5604,7 @@ function renderPass() {
               <li>${t('A gold name with a crown in chat')}</li>
               <li>${t('Joining late? Every tier you reached unlocks at once')}</li>
             </ul></div>
-            <button type="button" class="btn primary" id="pass-buy">${passPrice ? t('{price} / month', { price: escapeHtml(passPrice) }) : t('Get it')}</button>
+            <button type="button" class="btn primary" id="pass-buy">${passLabel() ? t('{price} / month', { price: escapeHtml(passLabel()) }) : t('Get it')}</button>
           </div>`
     }
     ${claimable ? `<button type="button" class="btn primary pass-claim-all" id="pass-claim-all">${t('Claim all ({n})', { n: claimable })}</button>` : ''}

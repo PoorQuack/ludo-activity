@@ -14,6 +14,9 @@ let mobileUnavailable = false;
 const skuOf = (id) => ctx?.paid?.skus.find((s) => s.id === id)?.sku || null;
 const webPriceOf = (id) => ctx?.paid?.webPrices?.[id] || '';
 const canWebBuy = (id) => !!(ctx?.paid?.webStore && (webPriceOf(id) || skuOf(id)));
+// Every purchase goes through the web checkout link; Discord's own window only if the web store is off
+const canBuy = (id) => !!ctx?.sdk && (canWebBuy(id) || !!skuOf(id));
+const priceOf = (id) => (canWebBuy(id) ? webPriceOf(id) || prices?.[id] : prices?.[id] || webPriceOf(id)) || '';
 
 function build() {
   el = document.createElement('div');
@@ -47,7 +50,7 @@ export function preloadPrices(context) {
 
 // The price label of a paid item (Discord's, or the web store's), or ''
 export function paidPrice(id) {
-  return prices?.[id] || webPriceOf(id) || '';
+  return priceOf(id);
 }
 
 // Roughly what `gems` cost in real money, at the smallest pack's rate (formatted, or '')
@@ -121,14 +124,14 @@ function render() {
     ? t('Purchases work in the Discord app.')
     : !anySku
       ? t('Die Gems packs are coming soon.')
-      : mobileUnavailable
+      : mobileUnavailable && !webReady
           ? t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.")
           : '';
   el.innerHTML = `
     <div class="modal-card coin-card">
       <button type="button" class="set-close store-close" aria-label="${t('Close')}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
       <h2 class="store-title">${t('Get Die Gems')}</h2>
-      <p class="store-sub">${t('Paid securely through Discord. Gems arrive as soon as Discord confirms the payment.')}</p>
+      <p class="store-sub">${webReady ? t('Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.') : t('Paid securely through Discord. Gems arrive as soon as Discord confirms the payment.')}</p>
       ${note ? `<p class="store-note">${note}</p>` : ''}
       ${need ? `<p class="store-need">${t('You need {n} more gems: the highlighted pack covers it.', { n: need })}</p>` : ''}
       ${starterHtml(inDiscord, isMobile)}
@@ -141,7 +144,7 @@ function render() {
             ${pile(i + 2)}
             <b class="pack-coins"><span class="gem"></span>${firstPack ? `<s>${p.gems.toLocaleString(getLanguage())}</s> ${(p.gems * FIRST_PACK_BONUS).toLocaleString(getLanguage())}` : p.gems.toLocaleString(getLanguage())}</b>
             <small>${t(p.name)}</small>
-            <button type="button" class="btn primary small" data-buy="${p.id}" ${inDiscord && (skuOf(p.id) || (isMobile && canWebBuy(p.id))) ? '' : 'disabled'}>${buyLabel(p.id)}</button>
+            <button type="button" class="btn primary small" data-buy="${p.id}" ${canBuy(p.id) ? '' : 'disabled'}>${buyLabel(p.id)}</button>
           </div>`,
         ).join('')}
       </div>
@@ -150,8 +153,8 @@ function render() {
       <div class="tip-row">
         ${TIPS.map(
           (tip) => `
-          <button type="button" class="tip" data-buy="${tip.id}" ${inDiscord && (skuOf(tip.id) || (isMobile && canWebBuy(tip.id))) ? '' : 'disabled'}>
-            <span class="tip-icon">${tip.icon}</span><b>${t(tip.name)}</b><small>${prices?.[tip.id] || (isMobile ? webPriceOf(tip.id) : '') || (skuOf(tip.id) || (isMobile && canWebBuy(tip.id)) ? t('Buy') : t('Soon'))}</small>
+          <button type="button" class="tip" data-buy="${tip.id}" ${canBuy(tip.id) ? '' : 'disabled'}>
+            <span class="tip-icon">${tip.icon}</span><b>${t(tip.name)}</b><small>${buyLabel(tip.id)}</small>
           </button>`,
         ).join('')}
         ${
@@ -176,7 +179,7 @@ function render() {
 function starterHtml(inDiscord, isMobile) {
   const profile = ctx.profile;
   if (!profile || profile.starter) return '';
-  const can = inDiscord && (skuOf(STARTER.id) || (isMobile && canWebBuy(STARTER.id)));
+  const can = canBuy(STARTER.id);
   if (!can && !skuOf(STARTER.id) && !webPriceOf(STARTER.id)) return ''; // not on sale yet
   const dice = ITEMS[STARTER.item];
   return `
@@ -193,16 +196,14 @@ function starterHtml(inDiscord, isMobile) {
 }
 
 function buyLabel(id) {
-  if (prices?.[id]) return prices[id];
-  if (ctx?.sdk?.platform === 'mobile' && webPriceOf(id)) return webPriceOf(id);
-  if (!skuOf(id) && !(ctx?.sdk?.platform === 'mobile' && canWebBuy(id))) return t('Soon');
-  return t('Buy');
+  if (priceOf(id)) return priceOf(id);
+  return canBuy(id) ? t('Buy') : t('Soon');
 }
 
 async function buy(id, btn) {
   const sku = skuOf(id);
   if (!ctx.sdk) return;
-  if (ctx.sdk.platform === 'mobile' && canWebBuy(id) && ctx.onWebCheckout) {
+  if (canWebBuy(id) && ctx.onWebCheckout) {
     btn.disabled = true;
     try {
       await ctx.onWebCheckout(id);
