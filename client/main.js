@@ -231,6 +231,16 @@ function clearWsHeartbeat() {
   wsPongTimer = null;
 }
 
+function pingWs(timeoutMs = 5000) {
+  const sock = ws;
+  if (!sock || sock.readyState !== WebSocket.OPEN) return;
+  sock.send(JSON.stringify({ type: 'ping', t: Date.now() }));
+  clearTimeout(wsPongTimer);
+  wsPongTimer = setTimeout(() => {
+    if (ws === sock && sock.readyState === WebSocket.OPEN) sock.close();
+  }, timeoutMs);
+}
+
 function connect() {
   clearWsHeartbeat();
   setLoading(updating ? t('🔧 Updating the game… back in a few seconds') : state ? t('Reconnecting…') : t('Joining game…'));
@@ -242,14 +252,7 @@ function connect() {
     reconnectDelay = 500;
     // After a refresh or a dropped connection, go back to the room we were in
     sock.send(JSON.stringify({ ...hello, rejoin: savedRoom() }));
-    wsPingTimer = setInterval(() => {
-      if (ws !== sock || sock.readyState !== WebSocket.OPEN) return;
-      sock.send(JSON.stringify({ type: 'ping', t: Date.now() }));
-      clearTimeout(wsPongTimer);
-      wsPongTimer = setTimeout(() => {
-        if (ws === sock && sock.readyState === WebSocket.OPEN) sock.close();
-      }, 5000);
-    }, 12_000);
+    wsPingTimer = setInterval(() => pingWs(5000), 12_000);
   };
   sock.onmessage = (e) => {
     if (ws !== sock) return;
@@ -1220,7 +1223,9 @@ document.addEventListener('visibilitychange', () => {
   }
   catchUp(performance.now() - hiddenAt);
   redrawBoard();
+  pingWs(3500);
 });
+window.addEventListener('online', () => pingWs(3500));
 function catchUp(away) {
   lastFrame = 0; // the next frame counts as a normal one, not one huge step
   if (away < 1000 || !state) return;
@@ -3589,10 +3594,18 @@ function stepAnimations(now, dt) {
   const holding =
     events[0]?.type === 'move' && dice.mode === 'shown' && now - dice.t0 < HOLD_MS && events.length < 3;
   if (!current && events.length && !holding) startEvent(events.shift(), now);
-  if (current?.predicted && now - current.sentAt > 3000) {
-    // No answer to a move: put the pin back where the server has it
-    current = null;
-    shownTokens = latestTokens;
+  if (current?.predicted) {
+    if (!current.retried && now - current.sentAt > 1400 && ws?.readyState === WebSocket.OPEN) {
+      current.retried = true;
+      send('move', { token: current.move.token, roll: current.roll, seq: current.seq });
+    } else if (now - current.sentAt > 3500) {
+      // No answer to a move: put the pin back where the server has it
+      current = null;
+      shownTokens = latestTokens;
+      if (state?.phase === 'playing' && myGo() && state.rolled && state.movable.length) {
+        toast(t('Connection hiccup — tap to move again'), 'notice', 3000);
+      }
+    }
   }
   if (dice.mode === 'spin' && dice.waiting) {
     if (pendingRoll && !pendingRoll.retried && now - dice.t0 > 1400 && state?.phase === 'playing' && myGo() && !state.rolled && ws?.readyState === WebSocket.OPEN) {
@@ -3965,14 +3978,19 @@ function canMove() {
 // answer (captures, reaching home) joins in on the way. It waits on its last hop if the answer is
 // slow, and snaps to the server's board if no answer comes.
 function sendMove(token, roll) {
-  send('move', { token, roll });
+  if (ws?.readyState !== WebSocket.OPEN) {
+    toast(t('Reconnecting…'), 'notice', 2000);
+    return;
+  }
+  const seq = state?.seq ?? null;
+  send('move', { token, roll, seq });
   const seat = playSeat();
   const from = latestTokens?.[seat]?.[token];
   const value = state.rolls?.[roll];
   if (!idle() || from === undefined || !value) return;
   const to = from < 0 ? 0 : from + value;
   const final = latestTokens.map((t, s) => (s === seat ? t.map((p, i) => (i === token ? to : p)) : t));
-  const ev = { type: 'move', predicted: true, sentAt: performance.now(), move: { seat, token, from, to, captured: [] }, start: latestTokens, final };
+  const ev = { type: 'move', predicted: true, sentAt: performance.now(), roll, seq, retried: false, move: { seat, token, from, to, captured: [] }, start: latestTokens, final };
   startEvent(ev, performance.now());
 }
 

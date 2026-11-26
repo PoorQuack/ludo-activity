@@ -244,7 +244,7 @@ export class Room {
       case 'setMode': return this.setMode(user, msg.mode);
       case 'start': return this.start(user);
       case 'roll': return this.roll(user, msg.seq);
-      case 'move': return this.move(user, msg.token, msg.roll);
+      case 'move': return this.move(user, msg.token, msg.roll, msg.seq);
       case 'emote': return this.emote(user, msg.item, msg.idx);
       case 'typing': return this.typing(user, msg.on !== false);
       case 'chat': return this.say(user, msg.text, msg.replyId);
@@ -426,8 +426,10 @@ export class Room {
   }
 
   // `roll` is which of the turn's rolls to use; without it, the first one that can move the token.
-  move(user, token, roll) {
+  move(user, token, roll, expectedSeq) {
     this.requireTurn(user);
+    // Ignore a stale retry whose move already went through on the server.
+    if (expectedSeq !== undefined && expectedSeq !== null && this.seq !== expectedSeq) return;
     if (!this.rolled) throw new Error('Roll first');
     const idx = Number.isInteger(roll) ? roll : this.options.findIndex((o) => o.includes(token));
     if (!this.options[idx]?.includes(token)) throw new Error("That token can't move");

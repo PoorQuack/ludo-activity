@@ -155,6 +155,12 @@ test('roll retries with a stale seq are ignored safely even when the roll was a 
   // Fresh roll with current seq proceeds normally
   room.handle(roller, { action: 'roll', seq: room.seq });
   assert.deepEqual(room.rolls, [6, 3]);
+  // Move and stale move retry are also idempotent by seq
+  const moveSeq = room.seq;
+  room.handle(roller, { action: 'move', token: 0, roll: 0, seq: moveSeq });
+  assert.equal(room.tokens[room.turn][0], 0);
+  room.handle(roller, { action: 'move', token: 0, roll: 0, seq: moveSeq });
+  assert.equal(room.tokens[room.turn][0], 0);
   dir.destroy();
 });
 
