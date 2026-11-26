@@ -148,6 +148,9 @@ let rollKey = ''; // changes with every roll and move: an open roll chooser is t
 let lastEmoteId = 0;
 let floaters = []; // emotes rising over the board
 let dice = { mode: 'hidden' };
+let pendingRoll = null; // { seq, seat, t0, retried } while waiting for a roll response
+let wsPingTimer = null;
+let wsPongTimer = null;
 let celebrated = false;
 let finishTimer = null;
 let lastFrame = 0;
@@ -221,17 +224,39 @@ function guestLogin() {
   return { type: 'hello', guestId: id, guestName: name, instanceId: params.get('room') || 'local' };
 }
 
+function clearWsHeartbeat() {
+  clearInterval(wsPingTimer);
+  clearTimeout(wsPongTimer);
+  wsPingTimer = null;
+  wsPongTimer = null;
+}
+
 function connect() {
+  clearWsHeartbeat();
   setLoading(updating ? t('🔧 Updating the game… back in a few seconds') : state ? t('Reconnecting…') : t('Joining game…'));
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}${BASE}/ws`);
-  ws.onopen = () => {
+  const sock = new WebSocket(`${proto}://${location.host}${BASE}/ws`);
+  ws = sock;
+  sock.onopen = () => {
+    if (ws !== sock) return;
     reconnectDelay = 500;
     // After a refresh or a dropped connection, go back to the room we were in
-    ws.send(JSON.stringify({ ...hello, rejoin: savedRoom() }));
+    sock.send(JSON.stringify({ ...hello, rejoin: savedRoom() }));
+    wsPingTimer = setInterval(() => {
+      if (ws !== sock || sock.readyState !== WebSocket.OPEN) return;
+      sock.send(JSON.stringify({ type: 'ping', t: Date.now() }));
+      clearTimeout(wsPongTimer);
+      wsPongTimer = setTimeout(() => {
+        if (ws === sock && sock.readyState === WebSocket.OPEN) sock.close();
+      }, 5000);
+    }, 12_000);
   };
-  ws.onmessage = (e) => {
+  sock.onmessage = (e) => {
+    if (ws !== sock) return;
+    clearTimeout(wsPongTimer);
+    wsPongTimer = null;
     const msg = JSON.parse(e.data);
+    if (msg.type === 'pong') return;
     if (msg.type === 'welcome') {
       me = msg.you;
       chatLangSent = null; // a new connection: tell this one
@@ -359,6 +384,8 @@ function connect() {
         current = null;
         shownTokens = latestTokens;
       }
+      rollPending = null;
+      pendingRoll = null;
       if (dice.mode === 'spin' && dice.waiting) dice = { mode: 'ready', seat: dice.seat, t0: performance.now() };
       if (dailyAnim) {
         dailyAnim = null;
@@ -376,7 +403,12 @@ function connect() {
       toast(msg.text, msg.kind === 'info' ? 'ok' : 'notice', msg.kind === 'soon' ? 9000 : 6000);
     }
   };
-  ws.onclose = (e) => {
+  sock.onclose = (e) => {
+    if (ws !== sock) return;
+    clearWsHeartbeat();
+    rollPending = null;
+    pendingRoll = null;
+    if (dice.mode === 'spin' && dice.waiting) dice = { mode: 'ready', seat: dice.seat, t0: performance.now() };
     if (dailyAnim) {
       dailyAnim = null;
       if (pendingDailyProfile) {
@@ -573,6 +605,8 @@ function onState(next) {
     shownTokens = latestTokens = next.tokens;
     lastMoveSeq = next.lastMove?.seq ?? 0;
     lastRollSeq = next.lastRoll?.seq ?? 0;
+    rollPending = null;
+    pendingRoll = null;
     dice = { mode: 'hidden' };
     celebrated = false;
     if (finishTimer) {
@@ -584,6 +618,7 @@ function onState(next) {
       showFinish();
     }
   } else {
+    const queued = [];
     if (next.lastMove && next.lastMove.seq > lastMoveSeq) {
       const m = next.lastMove;
       const guess = current?.predicted ? current.move : null;
@@ -599,16 +634,27 @@ function onState(next) {
           current = null;
           shownTokens = latestTokens;
         }
-        events.push({ type: 'move', move: m, start: latestTokens, final: next.tokens });
+        queued.push({ seq: m.seq, ev: { type: 'move', move: m, start: latestTokens, final: next.tokens } });
       }
       lastMoveSeq = m.seq;
     }
     if (next.lastRoll && next.lastRoll.seq > lastRollSeq) {
+      rollPending = null;
+      pendingRoll = null;
       // 6s already kept this turn stay on show while the next roll tumbles
       const bank = prev.turn === next.turn && !prev.rolled ? prev.rolls || [] : [];
-      events.push({ type: 'roll', seat: next.lastRoll.seat, value: next.lastRoll.value, values: next.lastRoll.values || [next.lastRoll.value], bank });
+      queued.push({
+        seq: next.lastRoll.seq,
+        ev: { type: 'roll', seat: next.lastRoll.seat, value: next.lastRoll.value, values: next.lastRoll.values || [next.lastRoll.value], bank },
+      });
       lastRollSeq = next.lastRoll.seq;
     }
+    if (next.phase !== 'playing' || next.turn !== prev.turn || next.rolled) {
+      rollPending = null;
+      pendingRoll = null;
+    }
+    queued.sort((a, b) => a.seq - b.seq);
+    for (const q of queued) events.push(q.ev);
     latestTokens = next.tokens;
   }
   const key = `${next.phase}:${next.lastRoll?.seq}:${next.lastMove?.seq}`;
@@ -737,6 +783,7 @@ function renderChatPeek(msgs, flash) {
     const peek = box.querySelector('[data-chat-peek]');
     if (!peek) continue;
     const text = peek.querySelector('.peek-text');
+    text.dir = 'auto';
     text.replaceChildren();
     if (!last) text.textContent = t('Chat');
     else {
@@ -1645,7 +1692,7 @@ renderPlayer();
 
 // ---------------- how to play: one section at a time ----------------
 
-let howtoTab = 'rooms';
+let howtoTab = 'start';
 function renderHowtoTabs() {
   const nav = $('howto-tabs');
   nav.innerHTML = '';
@@ -1929,7 +1976,7 @@ function renderProfileCard() {
     setFrame(av, profile?.equipped?.frame);
   }
   const level = playerLevel(profile);
-  $('level-badge').textContent = level;
+  $('level-badge').textContent = t('Lv. {n}', { n: level });
   $('level-badge').title = t('Level {n}: one level for every badge medal you earn', { n: level });
   renderHubDots();
   $('profile-card').title = t('Signed in as {name}', { name: me.name });
@@ -2654,6 +2701,11 @@ function shopContext() {
       if (!target || ws?.readyState !== WebSocket.OPEN) return;
       ws.send(JSON.stringify({ type: 'pass', op: 'claim', lane: target.lane, tier: target.tier }));
     },
+    onOpenPass: () => {
+      closeItemView();
+      showScreen('menu');
+      setPanel('pass');
+    },
   };
 }
 
@@ -3375,6 +3427,7 @@ function renderPanel() {
       const side = mate ? ` · ${t("your teammate's go")}` : team >= 0 && !myTurn && seat >= 0 ? ` · ${teamOfSeat(seat) === team ? t('your team') : t('other team')}` : '';
       els.turnText.textContent = sym(board.colors[state.turn]) + text + side + extra;
     }
+    els.turnText.dir = 'auto';
     els.turnText.style.color = col(board.colors[state.turn]);
   }
   const racing =
@@ -3531,7 +3584,26 @@ function stepAnimations(now, dt) {
     current = null;
     shownTokens = latestTokens;
   }
-  if (dice.mode === 'spin' && dice.waiting && now - dice.t0 > 3000) dice = { mode: 'ready', seat: dice.seat, t0: now }; // no roll came back
+  if (dice.mode === 'spin' && dice.waiting) {
+    if (pendingRoll && !pendingRoll.retried && now - dice.t0 > 1400 && state?.phase === 'playing' && myGo() && !state.rolled && ws?.readyState === WebSocket.OPEN) {
+      // One safe idempotent retry if the roll answer is slow through the proxy
+      pendingRoll.retried = true;
+      send('roll', { seq: pendingRoll.seq });
+    } else if (now - dice.t0 > 3500) {
+      rollPending = null;
+      pendingRoll = null;
+      if (state?.phase === 'playing' && myGo() && !state.rolled) {
+        dice = { mode: 'ready', seat: state.turn, t0: now };
+        toast(t('Connection hiccup — tap the dice to roll again'), 'notice', 3000);
+      } else {
+        dice = { mode: 'hidden' };
+      }
+    }
+  }
+  // Failsafe: a non-waiting spin whose animation already cleared must never keep spinning endlessly
+  if (dice.mode === 'spin' && !dice.waiting && (!current || current.type !== 'roll') && now - dice.t0 > 1500) {
+    dice = state?.phase === 'playing' && state.rolled ? { mode: 'shown', seat: state.turn, value: state.dice, values: state.diceValues, t0: now } : { mode: 'hidden' };
+  }
   if (current) {
     current.elapsed += dt * (events.length >= 2 ? 2 : 1); // hurry when falling behind
     if (current.predicted) current.elapsed = Math.min(current.elapsed, current.moveMs - 1); // land once confirmed
@@ -3577,6 +3649,8 @@ function startEvent(ev, now) {
   current = ev;
   ev.elapsed = 0;
   if (ev.type === 'roll') {
+    rollPending = null;
+    pendingRoll = null;
     ev.duration = SPIN_MS;
     if (dice.mode === 'spin' && dice.waiting && dice.seat === ev.seat) {
       // Already tumbling since the tap: keep the same turn and speed, now heading for the real value.
@@ -3806,8 +3880,18 @@ function updateDice(now) {
   const leave = () => (dice = { ...dice, mode: 'leave', t0: now });
 
   if (state.phase !== 'playing') {
+    if (dice.mode === 'spin' && dice.waiting) {
+      rollPending = null;
+      pendingRoll = null;
+    }
     if (dice.mode !== 'hidden' && dice.mode !== 'leave') leave();
     return;
+  }
+  if (dice.mode === 'spin' && dice.waiting && (dice.seat !== state.turn || state.rolled)) {
+    // Turn already moved on or rolled on the server while we waited: stop spinning immediately
+    rollPending = null;
+    pendingRoll = null;
+    dice = state.rolled ? { mode: 'shown', seat: state.turn, value: state.dice, values: state.diceValues, t0: now } : { mode: 'hidden' };
   }
   if (state.rolled) {
     // Back after a move with rolls still to play, or joined mid-turn: show the roll to use
@@ -3816,6 +3900,8 @@ function updateDice(now) {
   }
   // A 6 that was kept stays readable for a moment before the dice comes back for the next roll
   if (dice.mode === 'shown' && state.rolls?.length && now - dice.t0 < SIX_HOLD_MS) return;
+  // Let everyone see a non-moving roll briefly before shrinking the dice for the next turn
+  if (dice.mode === 'shown' && dice.seat !== state.turn && now - dice.t0 < Math.max(HOLD_MS, 500)) return;
   if (dice.mode === 'shown' || (dice.mode === 'ready' && dice.seat !== state.turn)) leave();
   else if (dice.mode === 'hidden') {
     dice = { mode: 'ready', seat: state.turn, t0: now };
@@ -3828,9 +3914,14 @@ function updateDice(now) {
 let rollPending = null; // { seq, at }
 
 function sendRoll() {
+  if (ws?.readyState !== WebSocket.OPEN) {
+    toast(t('Reconnecting…'), 'notice', 2000);
+    return;
+  }
   const now = performance.now();
   rollPending = { seq: state.lastRoll?.seq ?? null, at: now };
-  send('roll');
+  pendingRoll = { seq: state.seq ?? null, seat: dice.seat, t0: now, retried: false };
+  send('roll', { seq: pendingRoll.seq });
   // Start tumbling right away instead of waiting for the server's answer (in Discord that goes
   // through their proxy, and a dice that sat still for that moment felt laggy). The tumble
   // carries on smoothly into the real roll once it arrives (startEvent).
@@ -4884,9 +4975,9 @@ function renderPlayerCardModal(u) {
         ${u.friendState !== 'self' ? `<div class="pcard-more-wrap"><button type="button" class="set-close pcard-more" aria-label="${t('More options')}" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.75" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.75" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.75" fill="currentColor" stroke="none"/></svg></button><div class="pcard-menu hidden" role="menu"></div></div>` : ''}
       </div>
       <div class="pcard-head">
-        <span class="avatar pcard-av"><span class="level-badge">${u.level || 1}</span></span>
+        <span class="avatar pcard-av"></span>
         <div class="pcard-meta">
-          <b class="pcard-name${u.vip ? ' vip' : ''}">${u.vip ? '👑 ' : ''}${escapeHtml(u.name)}</b>
+          <div class="pcard-name-row"><b class="pcard-name${u.vip ? ' vip' : ''}">${u.vip ? '👑 ' : ''}${escapeHtml(u.name)}</b><span class="level-badge">${escapeHtml(t('Lv. {n}', { n: u.level || 1 }))}</span></div>
           <small class="pcard-title">${escapeHtml(titleText)}</small>
           ${pinHtml}
         </div>
@@ -5051,6 +5142,7 @@ function renderLobbyChat() {
       if (r.vip) b.className = 'vip';
       b.textContent = (r.vip ? '👑 ' : '') + r.name;
       const small = document.createElement('small');
+      small.dir = 'auto';
       small.textContent = r.last ? r.last.text : t('Tap to say hi');
       meta.append(b, small);
       btn.append(av, meta);

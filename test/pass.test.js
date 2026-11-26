@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ProfileStore } from '../server/store.js';
 import { Purchases, parseSkus } from '../server/purchases.js';
-import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, SEASONS } from '../shared/pass.js';
+import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, passItemInfo, SEASONS } from '../shared/pass.js';
 import { ITEMS, ownsItem } from '../shared/shop.js';
 
 const clock = (iso) => {
@@ -91,4 +91,16 @@ test('a test subscription without ends_at only notifies once across logins', asy
   assert.equal(first[0].kind, 'pass');
   c.t += 60_000; // reopen the game a minute later
   assert.deepEqual(await p.claim('123456789'), []);
+});
+
+test('passItemInfo locates each Battle Pass item tier and lane', () => {
+  assert.deepEqual(
+    { tier: passItemInfo('token-samurai', '2026-11').tier, lane: passItemInfo('token-samurai', '2026-11').lane },
+    { tier: 8, lane: 'premium' },
+  );
+  assert.deepEqual(
+    { tier: passItemInfo('emote-pack-mascot', '2026-11').tier, lane: passItemInfo('emote-pack-mascot', '2026-11').lane },
+    { tier: 30, lane: 'free' },
+  );
+  assert.equal(passItemInfo('token-classic', '2026-11'), null);
 });

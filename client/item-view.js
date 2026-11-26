@@ -4,6 +4,7 @@
 import { openDemo } from './demo.js';
 import { BOARDS } from '../shared/board.js';
 import { ownsItem, rarityOf, setRarity, ITEMS, setPrice, SET_DISCOUNT, priceOf, currencyOf, inShop } from '../shared/shop.js';
+import { passItemInfo } from '../shared/pass.js';
 import { moneyIcon } from './shop-ui.js';
 export { rarityOf };
 import { BoardRenderer, drawToken, drawDice, drawTumblingDice } from './renderer.js';
@@ -238,12 +239,30 @@ function renderInfo() {
     priceBox.innerHTML = '';
     progress.classList.add('hidden');
   } else if (item.pass) {
-    // a Battle Pass exclusive: earned on the track, never sold
-    main.textContent = `🎟️ ${t('Earn it on the Battle Pass')}`;
-    main.disabled = true;
-    main.classList.add('done');
-    priceBox.innerHTML = '';
-    progress.classList.add('hidden');
+    // a Battle Pass exclusive: explain the tier, how XP works, and let the player open the Battle Pass
+    const info = passItemInfo(item.id, profile?.pass?.month);
+    const curTier = profile?.pass?.tier || 0;
+    const tier = info?.tier;
+    const noteEl = document.createElement('span');
+    noteEl.className = 'pass-view-note';
+    noteEl.textContent = tier
+      ? info.lane === 'free'
+        ? t('Free reward at Battle Pass Tier {n}. Earn XP from daily logins and quests to reach Tier {n}.', { n: tier })
+        : t('Earned at Battle Pass Tier {n}. Unlock the Battle Pass and earn XP from daily logins & quests (your current progress carries over).', { n: tier })
+      : t('Earned on the Battle Pass track by logging in daily and finishing quests.');
+    priceBox.replaceChildren(noteEl);
+    if (tier) {
+      progress.classList.remove('hidden');
+      progress.querySelector('i').style.width = `${Math.min(100, Math.round((100 * curTier) / tier))}%`;
+      progress.querySelector('small').textContent = curTier >= tier
+        ? t('Tier {n} reached — unlock Battle Pass to claim!', { n: tier })
+        : t('Your Pass progress: Tier {cur} / {n}', { cur: curTier, n: tier });
+    } else {
+      progress.classList.add('hidden');
+    }
+    main.textContent = `🎟️ ${t('Open Battle Pass')}`;
+    main.classList.add('equip');
+    main.onclick = () => ctx.onOpenPass?.();
   } else if (item.starter) {
     // only in the Starter Pack: the button opens the gem store, where it is
     main.textContent = `🎁 ${t('Only in the Starter Pack')}`;

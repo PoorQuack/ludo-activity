@@ -7,6 +7,8 @@ const STEPS = [
   ['🎲', 'Roll the dice when it is your turn. A 6 brings a token out of base, and gives you another roll.'],
   ['⚔️', "Land on another player's token to send it back to its base. Tokens on star squares are safe."],
   ['🏠', 'Bring all your tokens round the board and home to win.'],
+  ['⭐', 'Your Level rises as you earn Badge medals (tap your name on the menu to view badges & titles).'],
+  ['🎟️', 'Earn Battle Pass XP every day from logins and quests to unlock coins, gems and exclusive Pass items.'],
   ['🛍️', 'Playing earns coins. Spend them in the Shop, and tap "Try it" on anything to see it in action first.'],
 ];
 

@@ -1,5 +1,6 @@
 // The shop screen: tabs plus a grid of item cards with drawn previews.
 import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeals, priceOf, DEAL_DISCOUNT, NEW_ITEMS, currencyOf, setCurrency, featured, featuredEnds, limitedNow, limitedEnds, inShop, dayKeyOf, STARTER } from '../shared/shop.js';
+import { passItemInfo } from '../shared/pass.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
 import { drawTauntPreview } from './taunts.js';
@@ -199,11 +200,27 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     btn.title = t(item.award);
     btn.disabled = true;
   } else if (item.pass) {
-    // earned on the Battle Pass, never sold
-    btn.textContent = `🎟️ ${t('Battle Pass')}`;
-    btn.classList.add('won');
-    btn.title = t('Earn it on the Battle Pass');
-    btn.disabled = true;
+    // earned on the Battle Pass, never sold: show which tier unlocks it and jump straight to the Pass
+    const info = passItemInfo(item.id, profile?.pass?.month);
+    const tier = info?.tier;
+    btn.textContent = tier ? `🎟️ ${t('Pass · Tier {n}', { n: tier })}` : `🎟️ ${t('Battle Pass')}`;
+    btn.classList.add('won', 'starter-btn');
+    btn.title = tier
+      ? info.lane === 'free'
+        ? t('Unlocked free at Battle Pass Tier {n} — earn XP from logins & quests', { n: tier })
+        : t('Unlocked at Battle Pass Tier {n} — get the Battle Pass & earn XP from logins & quests', { n: tier })
+      : t('Earn it on the Battle Pass');
+    btn.addEventListener('click', () => cardOpts.onOpenPass?.());
+    const sub = document.createElement('small');
+    sub.className = 'item-money item-pass-sub';
+    sub.textContent = tier
+      ? info.lane === 'free'
+        ? t('Free at Tier {n}', { n: tier })
+        : t('Battle Pass reward')
+      : t('Earned on Battle Pass');
+    card.appendChild(btn);
+    card.appendChild(sub);
+    return card;
   } else if (item.starter) {
     // only in the Starter Pack (real money, once): the button opens the gem store, where it is
     btn.textContent = `🎁 ${t('Starter Pack')}`;

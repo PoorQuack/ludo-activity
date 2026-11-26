@@ -1,5 +1,5 @@
 // The profile page: your badges (shared/badges.js), the title you wear, and the badges you pin.
-import { BADGES, BADGES_BY_ID, LEVELS, MAX_PINS, badgeValue, levelFor } from '../shared/badges.js';
+import { BADGES, BADGES_BY_ID, LEVELS, MAX_PINS, badgeValue, levelFor, playerLevel } from '../shared/badges.js';
 import { t } from './i18n.js';
 
 const LEVEL_NAMES = ['Bronze', 'Silver', 'Gold'];
@@ -46,7 +46,7 @@ export function renderProfile(el, ctx) {
     </section>
     <section class="prof-sec">
       <h3>${esc(t('Badges'))}</h3>
-      <p class="prof-note">${esc(t('Every level pays coins once. Pin up to {n} badges to show them beside your name.', { n: MAX_PINS }))}</p>
+      <p class="prof-note">${esc(t('Level {n}: starts at 1 and increases by +1 for every Bronze, Silver or Gold badge medal you earn.', { n: playerLevel(p) }))} ${esc(t('Every level pays coins once. Pin up to {n} badges to show them beside your name.', { n: MAX_PINS }))}</p>
       <div class="badge-grid">${BADGES.map((b) => badgeCard(b, p, levels[b.id] || 0, pins.includes(b.id), ctx.fresh?.includes(b.id))).join('')}</div>
     </section>`;
 

@@ -53,3 +53,14 @@ export function passRewards(month) {
   }
   return { season, tiers };
 }
+
+// Where a seasonal exclusive item lives on the Battle Pass track (or null).
+export function passItemInfo(itemId, month = seasonMonth(Date.now())) {
+  if (!itemId) return null;
+  const { season, tiers } = passRewards(month);
+  for (const t of tiers) {
+    if (t.free?.item === itemId) return { tier: t.tier, lane: 'free', season };
+    if (t.premium?.item === itemId) return { tier: t.tier, lane: 'premium', season };
+  }
+  return null;
+}

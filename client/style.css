@@ -175,16 +175,16 @@ html, body {
 .hub-me { justify-self: start; }
 .hub-avatar { position: relative; display: inline-flex; flex: none; }
 .level-badge {
-  position: absolute; right: -6px; bottom: -4px;
-  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px;
-  display: grid; place-items: center;
-  font-size: 10.5px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums;
-  color: #2b1d05; background: var(--gold); box-shadow: 0 0 0 2px var(--bg);
+  flex: none;
+  min-width: 18px; height: 18px; padding: 0 7px; border-radius: 99px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;
+  color: #2b1d05; background: var(--gold); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .hub-wallet { justify-self: center; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .hub-wallet .coins, .hub-wallet .gems { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.hub-wallet .coins { border: 0; color: inherit; font-family: inherit; cursor: pointer; padding: 5px 10px 5px 6px; }
-.hub-wallet .coin-plus { width: 22px; height: 22px; font-size: 17px; margin-left: 4px; }
+.hub-wallet .coins { border: 0; color: inherit; font-family: inherit; cursor: pointer; padding: 5px 10px 5px 6px; padding-inline: 6px 10px; }
+.hub-wallet .coin-plus { width: 22px; height: 22px; font-size: 17px; margin-inline-start: 4px; }
 .hub-icons { justify-self: end; display: flex; align-items: center; gap: 6px; }
 .wordmark { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .wordmark h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1; letter-spacing: -0.01em; }
@@ -199,7 +199,7 @@ html, body {
 .menu-name { margin: 0; min-width: 0; font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* You: picture, level, name */
-.profile-card { display: flex; align-items: center; gap: 10px; padding: 4px 12px 4px 4px; border-radius: 999px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); min-width: 0; max-width: 220px; cursor: pointer; }
+.profile-card { display: flex; align-items: center; gap: 7px; padding-block: 4px; padding-inline: 4px 12px; border-radius: 999px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); min-width: 0; max-width: 245px; cursor: pointer; }
 .profile-card .avatar { width: 32px; height: 32px; }
 .profile-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .profile-text small { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -588,7 +588,7 @@ html, body {
 .player-list { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
 .player-pop > * { flex-shrink: 0; }
 .player-list button {
-  text-align: left;
+  text-align: start;
   padding: 7px 10px;
   border: 0;
   border-radius: 8px;
@@ -659,9 +659,9 @@ html, body {
 @media (hover: hover) and (pointer: fine) { .item .btn.buy:hover:not(.cant) { background: #e65c49; } }
 .item .btn.buy.cant { opacity: 0.55; }
 
-.howto-body { background: var(--panel); border-radius: 14px; padding: 6px 20px 16px; overflow-y: auto; line-height: 1.55; font-size: 14px; }
+.howto-body { background: var(--panel); border-radius: 14px; padding: 6px 20px 16px; overflow-y: auto; line-height: 1.55; font-size: 14px; text-align: start; }
 .howto-body h3 { margin: 16px 0 6px; }
-.howto-body ul { margin: 0; padding-left: 20px; }
+.howto-body ul { margin: 0; padding-inline-start: 20px; }
 .howto-body p { margin: 8px 0 0; color: var(--muted); }
 
 /* ---------- game layout ---------- */
@@ -1136,7 +1136,7 @@ html, body {
 :is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only .chat-bubble { background: transparent; border: 0; box-shadow: none; padding: 0; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-body { align-items: flex-end; }
 :is([data-chat], #lobby-chat) .chat-log .chat-time { align-self: center; font-size: 11px; color: #8a7d70; font-variant-numeric: tabular-nums; padding: 2px 0; }
-:is([data-chat], #lobby-chat) .chat-log .chat-line { position: relative; width: auto; outline: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line { position: relative; width: 100%; outline: none; }
 :is([data-chat], #lobby-chat) .chat-log .chat-line-row { display: block; }
 :is([data-chat], #lobby-chat) .chat-log .chat-line + .chat-line { margin-top: 3px; padding-top: 4px; border-top: 1px solid #eee5da; }
 /* Translate: a small chip just outside the bubble, by the line it's for */
@@ -1214,6 +1214,7 @@ html, body {
 .pcard-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .pcard-av { width: 74px; height: 74px; font-size: 26px; flex: none; }
 .pcard-meta { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 3px; }
+.pcard-name-row { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .pcard-name { font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pcard-name.vip { color: var(--gold); }
 .pcard-title { color: var(--muted); font-size: 13px; }
@@ -1259,7 +1260,7 @@ html, body {
 .chat-count {
   align-self: center;
   min-width: 46px;
-  text-align: right;
+  text-align: end;
   font-size: 11px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -1269,7 +1270,7 @@ html, body {
 
 .audio { display: flex; flex-direction: column; gap: 8px; }
 .volume { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
-.volume b { width: 36px; text-align: right; color: var(--text); font-weight: 600; }
+.volume b { width: 36px; text-align: end; color: var(--text); font-weight: 600; }
 .volume input {
   flex: 1;
   min-width: 0;
@@ -1453,7 +1454,7 @@ html, body {
 .lb-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-avatar { width: 24px; height: 24px; font-size: 11px; }
 .lb-name small { color: var(--muted); font-weight: 500; }
-.lb-pts { text-align: right; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lb-pts { text-align: end; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lb-pts small { color: var(--muted); font-weight: 500; }
 .lb-gap { text-align: center; color: var(--muted); list-style: none; line-height: 1; }
 .lb-you { margin: 0; text-align: center; font-size: 14px; }
@@ -1475,7 +1476,7 @@ html, body {
 .quest-pts { color: var(--gold); font-weight: 700; white-space: nowrap; font-size: 12.5px; }
 .quest-bar { height: 7px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
 .quest-bar i { display: block; height: 100%; border-radius: 99px; background: var(--tier); box-shadow: 0 0 8px var(--tier); transition: width 0.4s ease-out; }
-.quest-count { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+.quest-count { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 34px; text-align: end; }
 .quest.done .quest-title { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.35); }
 .quest.done .quest-bar i { background: var(--ludo-green); box-shadow: 0 0 8px var(--ludo-green); }
 .quest-bonus { margin: 0; font-size: 12px; color: var(--muted); }
@@ -1560,7 +1561,7 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .settings-card .set-group:first-of-type { border-top: none; padding-top: 0; }
 .settings-card .volume { color: var(--text); font-size: 14px; }
 .cb-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.cb-option { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.cb-option { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .cb-option b { font-size: 14px; }
 .cb-option small { color: var(--muted); font-size: 12px; }
 .cb-option.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
@@ -1627,11 +1628,11 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 @media (max-width: 480px) {
   .hub-top { gap: 6px; }
   .hub-me .profile-text { display: none; }
-  .hub-me { padding: 3px; }
+  .hub-me { padding: 3px 8px 3px 3px; padding-inline: 3px 8px; gap: 5px; }
   .menu-tools .icon-btn { width: 34px; height: 34px; }
   .hub-wallet { gap: 4px; }
-  .hub-wallet .coins, .hub-wallet .gems { font-size: 12.5px; padding: 4px 8px 4px 5px; }
-  .hub-wallet .gems { padding-right: 3px; }
+  .hub-wallet .coins, .hub-wallet .gems { font-size: 12.5px; padding: 4px 8px 4px 5px; padding-inline: 5px 8px; }
+  .hub-wallet .gems { padding-inline-end: 3px; }
 }
 .daily-text .btn { width: auto; padding-left: 16px; padding-right: 16px; }
 .friend-list li .btn { width: auto; flex: none; min-height: 0; padding: 6px 12px; font-size: 12.5px; }
@@ -1936,7 +1937,7 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .howto-sec.active { display: block; animation: fade-in 0.15s ease-out; }
 .howto-sec h3 { margin: 4px 0 14px; font-family: var(--display); font-size: 22px; font-weight: 600; }
 .howto-sec ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.howto-sec li { padding: 12px 14px 12px 16px; border-radius: 12px; background: var(--panel-2); border-inline-start: 3px solid var(--accent); line-height: 1.55; color: var(--text); }
+.howto-sec li { padding-block: 12px; padding-inline: 16px 14px; border-radius: 12px; background: var(--panel-2); border-inline-start: 3px solid var(--accent); line-height: 1.55; color: var(--text); text-align: start; }
 .howto-sec li b { color: var(--gold); font-weight: 700; }
 .howto-sec > p { margin: 12px 0 0; color: var(--muted); line-height: 1.55; }
 
@@ -2802,4 +2803,19 @@ button, .btn { touch-action: manipulation; }
 /* the featured picture: drawn small, so not blown up past what stays sharp */
 .front-hero-art { width: 100%; max-width: 300px; justify-self: center; }
 /* room for the glow around today's deals at the grid's edges */
+/* guides link in online bar + pass reward note in shop item view + RTL text alignment polish */
+.online-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.guide-link { font-size: 12px; }
+.pass-view-note { display: block; font-size: 13px; line-height: 1.45; color: var(--text); font-weight: 500; text-align: start; }
+.item-pass-sub { color: var(--gold); opacity: 0.9; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line-content[dir='rtl'],
+:is([data-chat], #lobby-chat) .chat-log .chat-line-content[dir='rtl'] .msg-text { direction: rtl; text-align: right; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line-content .tr-out[dir='auto'] { text-align: start; unicode-bidi: plaintext; }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-line-content > .tr-btn { left: auto; right: calc(100% + 15px); }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line-content > .tr-btn { right: auto; left: calc(100% + 15px); }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .line-acts { right: auto; left: 2px; }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .line-acts { left: auto; right: 2px; }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-bubble { border-radius: 12px 4px 12px 12px; }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-bubble { border-radius: 4px 12px 12px 12px; }
+[dir='rtl'] .dm-row-meta { text-align: right; }
 .shop-grid { padding: 4px 4px 8px; }

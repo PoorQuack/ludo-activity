@@ -8,8 +8,8 @@ import { cleanText } from './filter.js';
 import { isRigged } from './rig.js';
 
 const BOT_DELAY_MS = 900;
-const NO_MOVE_DELAY_MS = 1400;
-const AUTO_MOVE_MS = 950; // the dice spins, then stays readable, before a bot or forced move
+const NO_MOVE_DELAY_MS = 1800;
+const AUTO_MOVE_MS = 1150; // the dice spins, then stays readable, before a bot or forced move
 const TURN_TIMEOUT_MS = 30_000;
 // A player whose connection drops gets this long to come back (phone blip, refresh) before
 // their turns are played for them. Their turn clock keeps running meanwhile.
@@ -243,7 +243,7 @@ export class Room {
       case 'removeSeat': return this.removeSeat(user, msg.seat);
       case 'setMode': return this.setMode(user, msg.mode);
       case 'start': return this.start(user);
-      case 'roll': return this.roll(user);
+      case 'roll': return this.roll(user, msg.seq);
       case 'move': return this.move(user, msg.token, msg.roll);
       case 'emote': return this.emote(user, msg.item, msg.idx);
       case 'typing': return this.typing(user, msg.on !== false);
@@ -414,8 +414,10 @@ export class Room {
     if (humans.length > 1) this.onGameStart(humans);
   }
 
-  roll(user) {
+  roll(user, expectedSeq) {
     this.requireTurn(user);
+    // Ignore a stale retry whose state has already moved on (even after a 6, where rolled stays false).
+    if (expectedSeq !== undefined && expectedSeq !== null && this.seq !== expectedSeq) return;
     // A second tap that crossed the first in flight (or the timer rolling for them at the
     // same moment): the roll already happened, so there's nothing to complain about.
     if (this.rolled) return;
@@ -930,8 +932,10 @@ export class Room {
       this.extraTurns += earned;
       this.addLog(`${name} earned ${earned === 1 ? 'an extra turn' : `${earned} extra turns`}`);
     }
-    if (this.rolls.length) this.playRolls();
-    else this.endRolls();
+    if (this.rolls.length) {
+      if (this.turnDeadline) this.turnDeadline = Math.max(this.turnDeadline, Date.now() + 10_000);
+      this.playRolls();
+    } else this.endRolls();
   }
 
   // Seats still racing: not finished and not surrendered.

@@ -36,7 +36,8 @@
 
           <header class="hub-top menu-bar">
             <div id="profile-card" class="profile-card hub-me" title="" role="button" tabindex="0">
-              <span class="hub-avatar"><span class="avatar" data-avatar></span><span id="level-badge" class="level-badge" title="Level">1</span></span>
+              <span class="hub-avatar"><span class="avatar" data-avatar></span></span>
+              <span id="level-badge" class="level-badge" title="Level">1</span>
               <span class="profile-text"><b id="menu-name" class="menu-name"></b><small id="profile-sub">Ludo player</small></span>
             </div>
             <div class="hub-wallet">
@@ -52,9 +53,10 @@
           </header>
 
           <main class="hub-stage">
-            <!-- Live: how many people are on right now -->
+            <!-- Live: how many people are on right now, plus a quick link to guides -->
             <div id="online-strip" class="online-strip hidden">
               <span id="online-text" aria-live="polite"></span>
+              <button type="button" class="link-btn guide-link" data-go="howto" data-i18n>How to play &amp; Guides</button>
             </div>
             <!-- "Join our Discord server", until they join or tick "Don't ask again" -->
             <section id="invite-card" class="invite-card hidden" aria-labelledby="invite-title">
@@ -235,7 +237,7 @@
                   <button data-i18n-attr="aria-label" type="button" class="emoji-btn" data-emoji-btn aria-label="Emoji">
                     <svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.4" /><circle cx="5.8" cy="6.4" r="1" fill="currentColor" stroke="none" /><circle cx="10.2" cy="6.4" r="1" fill="currentColor" stroke="none" /><path d="M5.3 9.7a3.6 3.6 0 0 0 5.4 0" /></svg>
                   </button>
-                  <input id="lobby-chat-input" type="text" maxlength="200" autocomplete="off" enterkeyhint="send" placeholder="Say something to everyone…" data-i18n-attr="placeholder" />
+                  <input id="lobby-chat-input" dir="auto" type="text" maxlength="200" autocomplete="off" enterkeyhint="send" placeholder="Say something to everyone…" data-i18n-attr="placeholder" />
                   <button data-i18n type="submit" class="btn small primary">Send</button>
                 </form>
               </section>
@@ -326,7 +328,16 @@
         </header>
         <nav id="howto-tabs" class="tabs howto-tabs" role="tablist"></nav>
         <div class="howto-body">
-          <section class="howto-sec active" data-howto="rooms">
+          <section class="howto-sec active" data-howto="start">
+            <h3 data-i18n>🧭 Getting started</h3>
+            <ul>
+              <li data-i18n><b>Bottom bar (left side on wide screens):</b> switch between <b>Friends</b>, <b>Ranking</b> (leaderboards), <b>Chat</b> (Global, language channels, and DM <b>Inbox</b>), <b>Pass</b> (Battle Pass), <b>Quests</b> (daily roll &amp; missions), and <b>Shop</b>.</li>
+              <li data-i18n><b>Home screen:</b> tap <b>CLASSIC</b> for an open game, <b>ALL IN</b> for winner-takes-all stakes rooms, or scroll down to <b>create your own room</b> or join by 4-letter code.</li>
+              <li data-i18n><b>Top bar icons:</b> tap your <b>profile picture or name</b> to open your Badges &amp; Level page, tap <b>Coins / +</b> for the Gem Store, or use the top-right buttons for <b>Music</b>, <b>Inbox</b> (friend requests &amp; news), and <b>⚙ Settings</b>.</li>
+              <li data-i18n><b>Need this guide anytime?</b> Tap <b>How to play &amp; Guides</b> near the top of the menu, or open <b>⚙ Settings → Help</b>.</li>
+            </ul>
+          </section>
+          <section class="howto-sec" data-howto="rooms">
             <h3 data-i18n>🚪 Rooms</h3>
             <ul>
               <li data-i18n><b>Play now</b> on the menu puts you straight into an open game, or starts a new public one if there isn't one.</li>
@@ -378,10 +389,20 @@
               <li data-i18n><b>Daily chest:</b> once a day, roll the d20 on the menu for 5 coins a pip (5 to 100). It resets at midnight UTC.</li>
             </ul>
           </section>
+          <section class="howto-sec" data-howto="levels">
+            <h3 data-i18n>⭐ Levels &amp; Battle Pass</h3>
+            <ul>
+              <li data-i18n><b>Player Level:</b> everyone starts at <b>Level 1</b>. Your level increases by <b>+1</b> for every <b>Badge medal</b> you earn (Bronze, Silver, or Gold across all 12 badges = up to Level 37).</li>
+              <li data-i18n><b>Badges &amp; Titles:</b> tap your name at the top of the menu to view every badge's goal. Each medal pays Gold Coins once, Gold unlocks a Title to show under your name, and you can pin up to 3 badges beside your name.</li>
+              <li data-i18n><b>Battle Pass XP:</b> climb 30 tiers every month (resets monthly, 120 XP per tier). Earn XP from <b>Daily login (+60 XP)</b>, <b>Daily quests (+40 XP each)</b>, and <b>Weekly quests (+100 XP each)</b>.</li>
+              <li data-i18n><b>Free vs. Battle Pass rewards:</b> the <b>Free</b> track rewards Gold Coins and the Tier 30 sticker pack as you level up. Unlocking the monthly <b>Battle Pass</b> awards Die Gems, exclusive boards &amp; tokens at specific tiers (marked with their tier in the Shop), and a gold crown name in chat — including every tier you already reached.</li>
+            </ul>
+          </section>
           <section class="howto-sec" data-howto="shop">
             <h3 data-i18n>🛍️ Shop</h3>
             <ul>
               <li data-i18n>Spend coins on tokens, dice, boards, taunts and emotes. Your board theme is just for you: everyone plays on the board they picked.</li>
+              <li data-i18n><b>Battle Pass exclusives:</b> items labelled <b>Pass Tier</b> are never sold for coins or gems — unlock the Battle Pass and earn XP to reach that tier (even mid-month, past tiers unlock right away). Tap any Battle Pass item in the Shop to see its exact tier or jump straight to the Pass.</li>
               <li data-i18n>Tap <b>Try it</b> on anything to see it in action before you buy it: rolls, moves, captures and wins.</li>
               <li data-i18n><b>Today's deal:</b> one item a day is 30% off, the same for everyone. It's on the menu and at the top of its tab in the shop.</li>
               <li data-i18n><b>Taunts</b> play on the board whenever you capture someone, and everyone in the room sees them.</li>
@@ -485,7 +506,7 @@
                 </button>
                 <!-- Phones, during a game: the chat folds into this one line (the newest message); tap to open -->
                 <button type="button" class="chat-peek" data-chat-peek aria-label="Open the chat" data-i18n-attr="aria-label"><span class="peek-text"></span><b class="peek-count hidden"></b></button>
-                <input data-i18n-attr="placeholder" type="text" maxlength="100" placeholder="Say something…" autocomplete="off" />
+                <input data-i18n-attr="placeholder" dir="auto" type="text" maxlength="100" placeholder="Say something…" autocomplete="off" />
                 <button data-i18n class="btn small" type="submit">Send</button>
                 <button type="button" class="chat-close" data-chat-close aria-label="Hide the chat" data-i18n-attr="aria-label,title" title="Hide the chat"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button>
               </form>
@@ -527,8 +548,8 @@
           </div>
           <form id="inbox-compose" class="inbox-compose hidden" autocomplete="off">
             <div class="set-label" data-i18n>Post an announcement</div>
-            <input id="announce-title" name="title" maxlength="80" required placeholder="Title…" aria-label="Title" data-i18n-attr="placeholder,aria-label" />
-            <textarea id="announce-body" name="body" maxlength="600" rows="3" placeholder="Message to every player (optional)…" aria-label="Message" data-i18n-attr="placeholder,aria-label"></textarea>
+            <input id="announce-title" name="title" dir="auto" maxlength="80" required placeholder="Title…" aria-label="Title" data-i18n-attr="placeholder,aria-label" />
+            <textarea id="announce-body" name="body" dir="auto" maxlength="600" rows="3" placeholder="Message to every player (optional)…" aria-label="Message" data-i18n-attr="placeholder,aria-label"></textarea>
             <button type="submit" class="btn small primary" data-i18n>Post to everyone</button>
           </form>
           <section id="inbox-requests" class="inbox-section hidden">

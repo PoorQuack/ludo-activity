@@ -136,6 +136,28 @@ test('when the host leaves, someone else takes over; an empty room closes', asyn
   assert.equal(dir.get(room.id), null);
 });
 
+test('roll retries with a stale seq are ignored safely even when the roll was a 6', () => {
+  const dir = new RoomDirectory();
+  let nextRoll = 6;
+  const room = dir.create(ann, { visibility: 'public', mode: '2p' });
+  room.rng = () => nextRoll;
+  dir.join(room, bob, {});
+  room.start(ann);
+  const roller = room.turn === 0 ? ann : bob;
+  const seqBefore = room.seq;
+  room.handle(roller, { action: 'roll', seq: seqBefore });
+  assert.deepEqual(room.rolls, [6]);
+  assert.equal(room.rolled, false); // still same player's roll after a 6
+  nextRoll = 3;
+  // Duplicate retry carrying the old seq must not roll again
+  room.handle(roller, { action: 'roll', seq: seqBefore });
+  assert.deepEqual(room.rolls, [6]);
+  // Fresh roll with current seq proceeds normally
+  room.handle(roller, { action: 'roll', seq: room.seq });
+  assert.deepEqual(room.rolls, [6, 3]);
+  dir.destroy();
+});
+
 test('play now: the fullest open lobby (your call first), never a full, private, started or banned one', () => {
   const dir = new RoomDirectory();
   const dan = { id: 'dan', name: 'Dan' };

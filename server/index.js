@@ -924,6 +924,7 @@ wss.on('connection', (ws, req) => {
   const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
 
   ws.on('message', async (raw) => {
+    ws.isAlive = true;
     if (!bucket.take()) {
       drops += 1;
       const now = Date.now();
@@ -940,6 +941,7 @@ wss.on('connection', (ws, req) => {
     } catch {
       return;
     }
+    if (msg.type === 'ping') return send({ type: 'pong', t: msg.t });
     try {
       const { ctx } = ws;
       if (msg.type === 'hello') {
@@ -1201,7 +1203,7 @@ setInterval(() => {
     ws.isAlive = false;
     ws.ping();
   }
-}, 30_000);
+}, 15_000);
 
 // Save coins and open rooms before exiting (pm2 restart sends SIGINT).
 let stopping = false;
