@@ -8,7 +8,8 @@
     "build": "vite build",
     "start": "node server/index.js",
     "dev": "vite build && node --watch server/index.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "smoke": "node scripts/smoke-browser.mjs"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

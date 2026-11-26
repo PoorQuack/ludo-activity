@@ -56,6 +56,16 @@ const ROOM_IDLE_MS = 2 * 60_000; // an empty room waits this long (for a refresh
 const LIST_EVERY_MS = 1000; // the room list in everyone's menu refreshes at most this often
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+app.use((_req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Permitted-Cross-Domain-Policies': 'none',
+  });
+  next();
+});
 // Stripe webhooks must see the unparsed request body for HMAC signature verification.
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json', limit: '256kb' }), async (req, res) => {
   try {
@@ -678,6 +688,7 @@ function friendsChanged(userId) {
 }
 // DM invites to people who weren't online: if one opens the game for the first time, whoever
 // invited them gets the referral. Kept in memory for a week (a restart forgets them).
+const MAX_DM_INVITES = 5000;
 const dmInvites = new Map();
 setInterval(() => {
   for (const [id, v] of dmInvites) if (Date.now() - v.at > 7 * 86_400_000) dmInvites.delete(id);
@@ -703,7 +714,7 @@ async function inviteFriend(ws, toId) {
       toId,
       `🎲 **${user.name.replace(/[*_~`|>]/g, '')}** invited you to play Ludo! Open the Ludo activity in Discord and join with the code **${room.code}**.`,
     );
-    if (!dmInvites.has(toId)) dmInvites.set(toId, { from: user.id, at: Date.now() });
+    if (!dmInvites.has(toId) && dmInvites.size < MAX_DM_INVITES) dmInvites.set(toId, { from: user.id, at: Date.now() });
     send({ type: 'friendInvited', name, how: 'dm' });
   } catch (err) {
     send({ type: 'error', message: err.message });
