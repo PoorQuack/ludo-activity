@@ -145,10 +145,12 @@ export class Translator {
     }
     // the translators, best first; each one skipped without its key, or when it fails
     const lang = got ? normalizeDetected(got.from) : source;
+    // Indonesian chat slang, rewritten into the Indonesian translators know
+    const plain = lang === 'id' ? pieces.map(plainIndonesian) : pieces;
     const chain = [
-      ['DeepL', () => this.deeplKey && this.deepl(pieces, lang, to)],
-      ['Azure', () => this.azureKey && this.azure(pieces, lang, to)],
-      ['Riva', () => this.nvidiaKey && lang && CHAT_CODES.has(lang) && this.riva(pieces, lang, to)],
+      ['DeepL', () => this.deeplKey && this.deepl(plain, lang, to)],
+      ['Azure', () => this.azureKey && this.azure(plain, lang, to)],
+      ['Riva', () => this.nvidiaKey && lang && CHAT_CODES.has(lang) && this.riva(plain, lang, to)],
       ['Google', () => this.google(pieces, to)],
       ['MyMemory', () => this.myMemory(pieces, to)],
     ];
@@ -249,6 +251,7 @@ export class Translator {
       const code = az && CHAT_LANG[az.code]?.script === script ? az.code : guessSource(text, hint);
       return code && h && sameFamily(code, h) ? h : code;
     }
+    if (looksIndonesian(text) && !looksEnglish(text)) return h && sameFamily('id', h) ? h : 'id';
     if (looksEnglish(text)) return 'en';
     const az = await ask();
     // Azure reads romanised Hindi as "hi-Latn": that's Hindi, in Latin letters
@@ -423,6 +426,46 @@ const SCRIPTS = [
   ['latin', /[a-zA-Z\u00c0-\u024f]/g],
 ];
 const ENGLISH = new Set('the you your are is was and not but this that what why how have just its it\'s i\'m im dont don\'t cant can\'t lol gg wp nice good game play win lost lose my me we they hi hello thanks thank please yes no anyone who ez revenge bro lucky so with again one more'.split(' '));
+
+// ---- Indonesian chat slang ----
+// Translators read standard Indonesian well and chat slang badly, so slang is rewritten first
+// ("gw udh nunggu lama bgt" -> "aku sudah nunggu lama banget"). Whole words only.
+const ID_SLANG = {
+  gw: 'aku', gue: 'aku', gua: 'aku', w: 'aku', lu: 'kamu', lo: 'kamu', elu: 'kamu', loe: 'kamu',
+  bgt: 'banget', bngt: 'banget', gak: 'tidak', ga: 'tidak', gk: 'tidak', kagak: 'tidak', nggak: 'tidak', engga: 'tidak', enggak: 'tidak',
+  mulu: 'terus', udh: 'sudah', udah: 'sudah', dah: 'sudah', blm: 'belum', jgn: 'jangan', yg: 'yang', bntr: 'sebentar', bentar: 'sebentar',
+  lg: 'lagi', tp: 'tapi', krn: 'karena', sm: 'sama', dgn: 'dengan', aja: 'saja', gmn: 'bagaimana', gimana: 'bagaimana', knp: 'kenapa',
+  emg: 'memang', emang: 'memang', bener: 'benar', banget: 'banget', kuy: 'ayo', yuk: 'ayo', gaskeun: 'ayo gas', cuy: 'bro', ngab: 'bro',
+  bocil: 'anak kecil', nub: 'noob', ez: 'gampang', hoki: 'beruntung', settingan: 'dicurangi', mager: 'malas gerak', santuy: 'santai',
+  baper: 'terbawa perasaan', ampas: 'sampah', mampus: 'rasain', males: 'malas', cabut: 'pergi', kocak: 'lucu banget',
+  dimakan: 'ditangkap', anjir: 'astaga', anjay: 'wah', jir: 'astaga', anjim: 'astaga', sumpah: 'serius',
+};
+// phrases first (makan = capturing a token in Ludo)
+const ID_PHRASES = [
+  [/\bkena makan\b/gi, 'kena tangkap'],
+  [/\bmakan (bidak|pion|biji)/gi, 'tangkap $1'],
+  [/\bbagi (enam|6)\b/gi, 'kasih angka enam'],
+  [/\bkasian deh (lu|lo|loe|elu)\b/gi, 'kasihan kamu'],
+  [/\bmantap jiwa\b/gi, 'keren sekali'],
+  [/\b[ao]*w*k(wk)+w?k*\b|\bwk(wk)*\b|\baowk\w*/gi, 'haha'],
+];
+export function plainIndonesian(text) {
+  let out = String(text);
+  for (const [re, to] of ID_PHRASES) out = out.replace(re, to);
+  return out.replace(/[A-Za-z]+/g, (w) => {
+    const to = ID_SLANG[w.toLowerCase()];
+    if (!to) return w;
+    return w[0] === w[0].toUpperCase() && w[0] !== w[0].toLowerCase() ? to[0].toUpperCase() + to.slice(1) : to;
+  });
+}
+// words only Indonesian chat uses: any one of these, or two of the common short ones, means Indonesian
+const ID_STRONG = new Set('gw gue bgt wkwk wkwkwk aowkwk anjir anjay mabar gaskeun ngab cuy kuy bocil mulu santuy mager baper udh jgn yg kagak nggak'.split(' '));
+const ID_WEAK = new Set('lu lo gak ga aja udah dong sih deh nih tuh kok lagi enam main sama banget'.split(' '));
+export function looksIndonesian(text) {
+  const words = String(text).toLowerCase().match(/[a-z]+/g) || [];
+  if (words.some((w) => ID_STRONG.has(w) || /^w?k(wk)+w?k*$/.test(w))) return true;
+  return words.filter((w) => ID_WEAK.has(w)).length >= 2;
+}
 
 // DeepL's and Azure's names for our languages, where they differ
 const DEEPL_TARGET = { en: 'EN-US', pt: 'PT-BR', 'pt-PT': 'PT-PT', es: 'ES-ES', 'es-419': 'ES-419', zh: 'ZH-HANS', 'zh-TW': 'ZH-HANT', no: 'NB' };

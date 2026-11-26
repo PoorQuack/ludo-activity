@@ -305,3 +305,20 @@ test('DeepL is told what Indonesian chat slang means when the message is Indones
   await tr.translate('ann', 'hola amigo', 'en', 'es');
   assert.doesNotMatch(calls.at(-1).deepl.context, /bocil/);
 });
+
+test('Indonesian chat slang is spotted, and rewritten into standard Indonesian before translating', async () => {
+  const { plainIndonesian, looksIndonesian } = await import('../server/translate.js');
+  assert.equal(plainIndonesian('bocil nub, ez bgt'), 'anak kecil noob, gampang banget');
+  assert.equal(plainIndonesian('wkwk lu kena makan lagi'), 'haha kamu kena tangkap lagi');
+  assert.equal(plainIndonesian('Gw udh menang'), 'Aku sudah menang');
+  assert.ok(looksIndonesian('bocil nub, ez bgt'));
+  assert.ok(!looksIndonesian('gg ez, revenge?'));
+  assert.ok(!looksIndonesian('lo que sea, amigo'));
+  // a player set to English writing Indonesian slang: Indonesian (Azure isn't asked), and DeepL gets the plain version
+  const calls = [];
+  const tr = new Translator({ fetch: fakeDeeplAzure(calls, { detect: { 'bocil nub, ez bgt': ['hu', 0.95] } }), deeplKey: 'k:fx', azureKey: 'a' });
+  const r = await tr.translate('ann', 'bocil nub, ez bgt', 'en', 'en');
+  assert.equal(r.from, 'id');
+  assert.ok(!calls.some((c) => c.detect));
+  assert.deepEqual(calls.at(-1).deepl.text, ['anak kecil noob, gampang banget']);
+});
