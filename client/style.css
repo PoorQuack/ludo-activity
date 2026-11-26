@@ -2291,7 +2291,8 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .shop-empty { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 13.5px; margin: 24px 0; }
 .item { position: relative; }
 .new-tag { position: absolute; top: 6px; inset-inline-start: 6px; z-index: 2; padding: 1px 7px; border-radius: 99px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); pointer-events: none; }
-#shop-tabs .tab { position: relative; }
+#shop-tabs { flex-wrap: wrap; flex: none; }
+#shop-tabs .tab { position: relative; flex: 1 1 auto; padding: 8px 10px; white-space: nowrap; }
 #shop-tabs .tab.has-new::after { content: ''; position: absolute; top: 5px; inset-inline-end: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 
 /* Settings: time of day for lit boards, under Board lighting */
@@ -2539,7 +2540,8 @@ button, .btn { touch-action: manipulation; }
   .head-wallet .coins, .head-wallet .gems { font-size: 12.5px; padding: 4px 8px 4px 5px; }
   .head-wallet .gems { padding-right: 3px; }
   .head-wallet .coin-plus { width: 22px; height: 22px; font-size: 16px; margin-left: 3px; }
-  #shop .screen-head h2 { font-size: 18px; }
+  #shop .screen-head { grid-template-columns: auto 1fr auto; gap: 8px; }
+  #shop .screen-head h2 { font-size: 18px; text-align: center; }
 }
 /* Image frames (Cyber Neon, the leaderboard's rank frames): a picture drawn around the avatar.
    --s: the picture's size against the avatar's, --dy: nudged up or down to centre its ring */

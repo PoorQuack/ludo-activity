@@ -24,6 +24,7 @@ test('every season item exists, is never sold, and only its earner owns it', () 
   const { tiers } = passRewards('2026-11');
   assert.equal(tiers.length, PASS_TIERS);
   assert.ok(tiers.every((x) => x.free && x.premium));
+  assert.equal(tiers.reduce((n, x) => n + (x.premium.gems || 0), 0), 220);
 });
 
 test('login XP once a day; tiers by XP; a new month starts a new track', () => {
@@ -59,7 +60,7 @@ test('claiming: free for everyone, premium for holders, each tier once, only onc
   assert.equal(all.filter((g) => g.lane === 'free').length, 7);
   assert.equal(all.filter((g) => g.lane === 'premium').length, 7);
   assert.ok(p.coins > coins);
-  assert.ok(p.gems >= 100);
+  assert.equal(p.gems, 80); // Tier 1 (35) + Tier 5 (20) + Tiers 2..4,6..7 (25)
   assert.deepEqual(store.claimAllPass('1'), []); // nothing left
   c.t += 11 * 86_400_000;
   assert.equal(store.view('1').pass.active, false); // the subscription ran out

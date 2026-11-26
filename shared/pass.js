@@ -46,9 +46,9 @@ export function passRewards(month) {
     const free = season.freeItems?.[n] ? { item: season.freeItems[n] } : { coins: n % 5 === 0 ? 75 : 30 };
     let premium;
     if (season.items[n]) premium = { item: season.items[n] };
-    else if (n === 1) premium = { gems: 50 };
-    else if (n % 5 === 0) premium = { gems: 30 };
-    else premium = { gems: 10 };
+    else if (n === 1) premium = { gems: 35 };
+    else if (n % 5 === 0) premium = { gems: 20 };
+    else premium = { gems: 5 };
     tiers.push({ tier: n, free, premium });
   }
   return { season, tiers };
