@@ -2786,8 +2786,8 @@ function renderMenu() {
       ? t('Anyone can find it in the room list and join.')
       : t('Only people in your Discord call see it. Others join with its code.');
 
-  // The room list: Classic rooms only (Stakes Rooms live in the Stakes Rooms sheet)
-  const others = roomList.filter((r) => !r.winnerTakeAll && r.id !== state?.roomId);
+  // The room list: every open room. All In rooms are tagged (they're also in the All In sheet).
+  const others = roomList.filter((r) => r.id !== state?.roomId);
   els.roomsCount.textContent = t('{n} open', { n: others.length });
   els.roomList.innerHTML = '';
   if (!others.length) {
@@ -2828,6 +2828,14 @@ function renderMenu() {
       st.title = t('Stake {n} coins', { n: r.stake });
       name.appendChild(st);
       li.classList.add('stakes');
+      if (r.winnerTakeAll) {
+        const tag = document.createElement('span');
+        tag.className = 'room-allin';
+        tag.textContent = t('All In');
+        tag.title = t('Winner takes all · 1.5× points');
+        name.appendChild(tag);
+        li.classList.add('allin');
+      }
     }
     if (r.sameCall) {
       const call = document.createElement('span');

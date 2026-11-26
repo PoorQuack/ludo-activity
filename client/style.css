@@ -2459,6 +2459,7 @@ button, .btn { touch-action: manipulation; }
 .seat.broke { box-shadow: inset 0 0 0 1.5px rgba(236, 154, 100, 0.55); }
 .room-stake { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: rgba(242, 191, 63, 0.16); color: var(--gold); font-size: 11.5px; font-weight: 800; vertical-align: 1px; }
 .room-stake .coin { width: 10px; height: 10px; }
+.room-allin { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 7px; border-radius: 99px; background: #d9573b; color: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; vertical-align: 1px; }
 .reward.pot { color: var(--gold); }
 
 /* ---------- hub sheets: POWER and Stakes Rooms ---------- */
