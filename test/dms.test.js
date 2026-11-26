@@ -106,3 +106,24 @@ test('DirectMessages: allows non-friend DMs, enforces block, tracks unread count
   assert.deepEqual(room.chat.at(-1).reactions, { '🔥': [bob.id] });
   room.destroy();
 });
+
+test('DirectMessages: only real players, and a few new chats with strangers a day', async () => {
+  const { DM_NEW_PER_DAY, DM_COOLDOWN_MS } = await import('../server/dms.js');
+  let clock = Date.parse('2026-11-25T10:00Z');
+  const social = new SocialBook(null, { now: () => clock });
+  const spammer = { id: '200000000000000001', name: 'Spam' };
+  social.seen(spammer.id, spammer.name, 's');
+  const ids = Array.from({ length: DM_NEW_PER_DAY + 2 }, (_, i) => String(300000000000000000n + BigInt(i)));
+  for (const id of ids) social.seen(id, `P${id.slice(-2)}`, '');
+  const dms = new DirectMessages(null, { social, now: () => clock });
+  assert.throws(() => dms.send(spammer, '999999999999999999', 'hi'), /Pick someone/); // never played
+  for (let i = 0; i < DM_NEW_PER_DAY; i++) {
+    dms.send(spammer, ids[i], 'hi');
+    clock += DM_COOLDOWN_MS;
+  }
+  assert.throws(() => dms.send(spammer, ids[DM_NEW_PER_DAY], 'hi'), /enough new chats/);
+  clock += DM_COOLDOWN_MS;
+  dms.send(spammer, ids[0], 'still fine in an existing chat');
+  clock += 86_400_000;
+  dms.send(spammer, ids[DM_NEW_PER_DAY], 'a new day'); // tomorrow: allowed again
+});

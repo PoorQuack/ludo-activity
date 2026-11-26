@@ -10,6 +10,9 @@ export const DM_KEEP = 50;
 export const DM_MAX_LEN = 200;
 export const DM_COOLDOWN_MS = 1200;
 export const DM_MAX_THREADS = 2000;
+// New conversations a player can start in a UTC day with people who aren't their friends: stops
+// one account spamming strangers or filling the server's DM space to push real chats out.
+export const DM_NEW_PER_DAY = 10;
 const SAVE_DELAY_MS = 3000;
 
 export const pairKey = (a, b) => (String(a) < String(b) ? `${a}:${b}` : `${b}:${a}`);
@@ -27,6 +30,7 @@ export class DirectMessages {
     this.now = now;
     this.threads = {}; // pairKey -> { seq, users: [a, b], msgs: [...], read: { [id]: lastReadId }, updatedAt }
     this.last = new Map(); // userId -> last send timestamp
+    this.started = new Map(); // userId -> { day, count }: new chats with non-friends today
     this.saveTimer = null;
     if (file) this.load();
   }
@@ -56,6 +60,8 @@ export class DirectMessages {
     if (fromId.startsWith('guest-') || targetId.startsWith('guest-')) throw new Error('Sign in with Discord to send DMs');
     if (this.social?.isBlocked?.(fromId, targetId)) throw new Error('Unblock this player to message them');
     if (this.social?.isBlocked?.(targetId, fromId)) throw new Error('You cannot message this player');
+    // Only someone who has actually played the game (the server has seen them)
+    if (this.social?.names && !this.social.names.has(targetId)) throw new Error('Pick someone to message');
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -73,6 +79,14 @@ export class DirectMessages {
     if (this.last.size > 10_000) this.last.clear();
 
     const key = pairKey(fromId, targetId);
+    if (!this.threads[key] && !this.social?.isFriend?.(fromId, targetId)) {
+      const day = new Date(t).toISOString().slice(0, 10);
+      const n = this.started.get(fromId);
+      const count = n?.day === day ? n.count : 0;
+      if (count >= DM_NEW_PER_DAY) throw new Error('You have started enough new chats today: add them as a friend, or try tomorrow');
+      this.started.set(fromId, { day, count: count + 1 });
+      if (this.started.size > 10_000) this.started.clear();
+    }
     const th = (this.threads[key] ||= { seq: 0, users: [fromId, targetId].sort(), msgs: [], read: {}, updatedAt: t });
     const prof = this.profiles?.peek?.(fromId);
     const msg = {

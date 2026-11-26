@@ -1,5 +1,5 @@
 // The shop screen: tabs plus a grid of item cards with drawn previews.
-import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeal, priceOf, DEAL_DISCOUNT, NEW_ITEMS, currencyOf, setCurrency } from '../shared/shop.js';
+import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeals, priceOf, DEAL_DISCOUNT, NEW_ITEMS, currencyOf, setCurrency, featured, featuredEnds, limitedNow, limitedEnds, inShop, dayKeyOf, STARTER } from '../shared/shop.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
 import { drawTauntPreview } from './taunts.js';
@@ -10,6 +10,7 @@ import { framedAvatar } from './frames.js';
 const IN_BASE = [0, 1, 2, 3].map(() => [-1, -1, -1, -1]);
 
 export const SHOP_TABS = [
+  { type: 'featured', label: 'Featured' },
   { type: 'set', label: 'Sets' },
   { type: 'token', label: 'Tokens' },
   { type: 'dice', label: 'Dice' },
@@ -60,7 +61,8 @@ const FILTERS = [
   ['owned', 'Owned'],
 ];
 
-export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onTab, onBuy, onBuySet, onEquip, onView, onGetGems }) {
+export function renderShop({ tabs, grid }, opts) {
+  const { tab, profile, freeShop = false, onTab, onBuy, onBuySet, onEquip, onView } = opts;
   if (tab !== shownTab) commitShopSeen();
   shownTab = tab;
   tabs.innerHTML = '';
@@ -77,6 +79,12 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
 
   grid.innerHTML = '';
   animated.length = 0;
+  cardOpts = opts;
+  if (tab === 'featured') {
+    renderFront(grid, opts);
+    shownIds = [];
+    return;
+  }
   const bar = document.createElement('div');
   bar.className = 'shop-filter';
   bar.setAttribute('role', 'group');
@@ -113,13 +121,13 @@ export function renderShop({ tabs, grid }, { tab, profile, freeShop = false, onT
   // Grouped by rarity, cheapest first (Common up to Legendary), each group under its own heading
   const items = SHOP_ITEMS.filter((i) => i.type === tab || (tab === 'emote' && i.type === 'emote-pack'));
   // Today's deal, on top of its own tab (until you own it)
-  const deal = dailyDeal();
-  if (deal.type === tab && !owns(profile, deal.id) && !freeShop && filter !== 'owned') {
+  const deals = dailyDeals(opts.day || dayKeyOf()).filter((d) => d.type === tab && !owns(profile, d.id));
+  if (deals.length && !freeShop && filter !== 'owned') {
     const head = document.createElement('h3');
     head.className = 'rarity-head deal-head';
     head.innerHTML = `<span>★ ${t("Today's deal")}</span><small>−${Math.round(DEAL_DISCOUNT * 100)}%</small>`;
     grid.appendChild(head);
-    grid.appendChild(itemCard(deal, { profile, freeShop, onBuy, onEquip, onView }));
+    for (const deal of deals) grid.appendChild(itemCard(deal, { profile, freeShop, onBuy, onEquip, onView }));
   }
   for (const rarity of [...RARITIES].reverse()) {
     const all = items.filter((i) => rarityOf(i) === rarity).sort((a, b) => a.price - b.price);
@@ -148,12 +156,17 @@ function clickable(card, label, open) {
   card.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && e.target === card && (e.preventDefault(), open()));
 }
 
+// Extra things cards need from the shop (day, gem prices in money, the gem store): set per render
+let cardOpts = {};
+
 function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
   const owned = ownsItem(profile, item.id);
+  const day = cardOpts.day || dayKeyOf();
   const equipped = profile?.equipped[item.type] === item.id;
   const card = document.createElement('div');
   card.className = `item${equipped ? ' equipped' : ''}`;
   card.dataset.rarity = rarityOf(item).id;
+  if (item.limited) card.classList.add('limited');
   clickable(card, t(item.name), () => onView?.(item));
   if (isNew(item.id)) {
     const tag = document.createElement('span');
@@ -191,12 +204,24 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     btn.classList.add('won');
     btn.title = t('Earn it on the Battle Pass');
     btn.disabled = true;
+  } else if (item.starter) {
+    // only in the Starter Pack (real money, once): the button opens the gem store, where it is
+    btn.textContent = `🎁 ${t('Starter Pack')}`;
+    btn.classList.add('won', 'starter-btn');
+    btn.title = t('Only in the Starter Pack');
+    btn.addEventListener('click', () => cardOpts.onGetGems?.());
+  } else if (item.limited && !inShop(item, day)) {
+    // a limited item between its weeks in the shop
+    btn.textContent = `⏳ ${t('Back soon')}`;
+    btn.classList.add('won');
+    btn.title = t('Limited: in the shop one week at a time');
+    btn.disabled = true;
   } else if (freeShop) {
     btn.innerHTML = `${t('Get free')} <s>${item.price}</s>`;
     btn.classList.add('buy');
     btn.addEventListener('click', () => onBuy(item));
   } else {
-    const price = priceOf(item);
+    const price = priceOf(item, day);
     const cur = currencyOf(item);
     btn.innerHTML = price < item.price ? `${moneyIcon(cur)}${price} <s>${item.price}</s>` : `${moneyIcon(cur)}${price}`;
     btn.classList.add('buy');
@@ -204,7 +229,18 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     if (price < item.price) card.classList.add('on-deal');
     if ((profile?.[cur] ?? 0) < price) btn.classList.add('cant');
     btn.addEventListener('click', () => onBuy(item));
+    // roughly what that is in real money (from Discord's prices, once they're known)
+    const money = cur === 'gems' ? cardOpts.gemsInMoney?.(price) : '';
+    if (money) {
+      const approx = document.createElement('small');
+      approx.className = 'item-money';
+      approx.textContent = `≈ ${money}`;
+      card.appendChild(btn);
+      card.appendChild(approx);
+      return card;
+    }
   }
+  if (owned && !equipped) card.classList.add('owned');
   card.appendChild(btn);
   return card;
 }
@@ -235,6 +271,10 @@ function setCard(set, { profile, freeShop, onBuySet, onView }) {
   btn.className = 'btn small';
   if (!missing.length) {
     btn.textContent = `${t('Owned')} ✓`;
+    btn.disabled = true;
+  } else if (missing.some((id) => !inShop(ITEMS[id], cardOpts.day || dayKeyOf()))) {
+    btn.textContent = `⏳ ${t('Back soon')}`;
+    btn.classList.add('won');
     btn.disabled = true;
   } else {
     btn.classList.add('buy');
@@ -362,4 +402,126 @@ function preview(item, theme) {
     animated.push({ canvas, dpr, draw });
   }
   return canvas;
+}
+
+
+// ---------------- the shop's front page (the Featured tab) ----------------
+// What's special right now, all in one place: the featured Legendary (changes every few days),
+// the Starter Pack until you have it, today's three deals, this week's limited items, and a few
+// sets. Everything comes from the date (shared/shop.js), so it's the same for everyone.
+
+// "2d 5h", "5h 12m", "12m"
+function left(ms) {
+  const m = Math.max(1, Math.round(ms / 60_000));
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  if (d) return t('{d}d {h}h', { d, h });
+  if (h) return t('{h}h {m}m', { h, m: m % 60 });
+  return t('{m}m', { m });
+}
+
+function section(grid, title, note, cls = '') {
+  const head = document.createElement('h3');
+  head.className = `rarity-head front-head ${cls}`;
+  head.innerHTML = '<span></span><small></small>';
+  head.querySelector('span').textContent = title;
+  head.querySelector('small').textContent = note || '';
+  if (!note) head.querySelector('small').remove();
+  grid.appendChild(head);
+  return head;
+}
+
+function renderFront(grid, opts) {
+  const { profile, freeShop, onBuy, onBuySet, onEquip, onView, onTab } = opts;
+  const day = opts.day || dayKeyOf();
+  const now = opts.now || Date.now();
+  const cardCtx = { profile, freeShop, onBuy, onEquip, onView };
+  const theme = profile?.equipped?.board || 'board-classic';
+
+  // 1. the featured Legendary: big, with what it is and when it changes
+  const star = featured(day);
+  if (star) {
+    const hero = document.createElement('div');
+    hero.className = 'front-hero';
+    hero.dataset.rarity = rarityOf(star).id;
+    clickable(hero, t(star.name), () => onView?.(star));
+    const art = document.createElement('div');
+    art.className = 'front-hero-art';
+    art.appendChild(preview(star, star.type === 'board' ? star.id : theme));
+    hero.appendChild(art);
+    const info = document.createElement('div');
+    info.className = 'front-hero-info';
+    const KIND = { token: 'Token', dice: 'Dice', board: 'Board', taunt: 'Taunt', frame: 'Frame' };
+    info.innerHTML = `<span class="front-kicker">★ ${t('Featured')}</span><b class="front-hero-name"></b><small class="front-hero-meta"></small><p class="front-hero-desc"></p>`;
+    info.querySelector('.front-hero-name').textContent = t(star.name);
+    info.querySelector('.front-hero-meta').textContent = `${t(rarityOf(star).label)} · ${t(KIND[star.type] || star.type)} · ${t('changes in {time}', { time: left(featuredEnds(day) - now) })}`;
+    if (star.desc) info.querySelector('.front-hero-desc').textContent = t(star.desc);
+    else info.querySelector('.front-hero-desc').remove();
+    // its buy / equip button: the same as on its card
+    const btn = itemCard(star, cardCtx).querySelector('.btn');
+    btn.classList.add('front-hero-btn');
+    info.appendChild(btn);
+    const money = currencyOf(star) === 'gems' && !owns(profile, star.id) ? opts.gemsInMoney?.(priceOf(star, day)) : '';
+    if (money) {
+      const approx = document.createElement('small');
+      approx.className = 'item-money';
+      approx.textContent = `≈ ${money}`;
+      info.appendChild(approx);
+    }
+    hero.appendChild(info);
+    grid.appendChild(hero);
+  }
+
+  // 2. the Starter Pack, until you have it (and only when it's on sale)
+  if (profile && !profile.starter && opts.starterOnSale && !freeShop) {
+    const dice = ITEMS[STARTER.item];
+    const card = document.createElement('div');
+    card.className = 'front-starter';
+    clickable(card, t(STARTER.name), () => opts.onGetGems?.());
+    const art = document.createElement('div');
+    art.className = 'front-starter-art';
+    art.appendChild(preview(dice, theme));
+    card.appendChild(art);
+    const info = document.createElement('div');
+    info.className = 'front-starter-info';
+    info.innerHTML = `<span class="front-kicker">🎁 ${t('Once only')}</span><b></b><span class="front-starter-what"><span class="gem"></span>${STARTER.gems} · <span class="coin"></span>${STARTER.coins} · <i></i></span>`;
+    info.querySelector('b').textContent = t(STARTER.name);
+    info.querySelector('i').textContent = t('{item} dice', { item: t(dice.name) });
+    card.appendChild(info);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn small buy front-starter-btn';
+    btn.textContent = opts.starterPrice || t('Get it');
+    btn.addEventListener('click', () => opts.onGetGems?.());
+    card.appendChild(btn);
+    grid.appendChild(card);
+  }
+
+  // 3. today's deals: three items, 30% off, until midnight (UTC)
+  const deals = dailyDeals(day);
+  const midnight = Date.parse(`${day}T00:00:00Z`) + 86_400_000;
+  section(grid, `★ ${t("Today's deals")}`, `−${Math.round(DEAL_DISCOUNT * 100)}% · ${t('ends in {time}', { time: left(midnight - now) })}`, 'deal-head');
+  for (const d of deals) grid.appendChild(itemCard(d, cardCtx));
+
+  // 4. this week's limited items
+  const limited = limitedNow(day);
+  if (limited.length) {
+    section(grid, `⏳ ${t('Limited this week')}`, t('leaves in {time}', { time: left(limitedEnds(day) - now) }), 'limited-head');
+    for (const item of limited) grid.appendChild(itemCard(item, cardCtx));
+  }
+
+  // 5. a few sets you don't have yet (cheapest first), and the way to the rest
+  const sets = SETS.filter((set) => setPrice(set, profile).missing.length)
+    .sort((a, b) => setPrice(a, profile).price - setPrice(b, profile).price)
+    .slice(0, 2);
+  if (sets.length) {
+    section(grid, `✦ ${t('Bundles')}`, t('{n}% off as a set', { n: Math.round(SET_DISCOUNT * 100) }));
+    for (const set of sets) grid.appendChild(setCard(set, { profile, freeShop, onBuySet, onView }));
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'btn front-more';
+    more.textContent = t('See all sets');
+    more.addEventListener('click', () => onTab('set'));
+    grid.appendChild(more);
+  }
 }

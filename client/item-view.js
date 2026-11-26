@@ -3,7 +3,7 @@
 // with how close you are to it. Opened by tapping an item in the shop.
 import { openDemo } from './demo.js';
 import { BOARDS } from '../shared/board.js';
-import { ownsItem, rarityOf, setRarity, ITEMS, setPrice, SET_DISCOUNT, priceOf, currencyOf } from '../shared/shop.js';
+import { ownsItem, rarityOf, setRarity, ITEMS, setPrice, SET_DISCOUNT, priceOf, currencyOf, inShop } from '../shared/shop.js';
 import { moneyIcon } from './shop-ui.js';
 export { rarityOf };
 import { BoardRenderer, drawToken, drawDice, drawTumblingDice } from './renderer.js';
@@ -154,7 +154,7 @@ export function refreshItemView(ctx) {
 // "Gift to": one button per other person in your room (a single item with a price; not sets)
 function giftRow(item, ctx) {
   const box = el.querySelector('.item-gift');
-  const friends = item && item.price > 0 ? ctx.friends || [] : [];
+  const friends = item && inShop(item) ? ctx.friends || [] : []; // (only what's in the shop today can be bought as a gift)
   box.classList.toggle('hidden', !friends.length);
   if (!friends.length) return;
   box.querySelector('.item-gift-label').textContent = `🎁 ${t('Gift to')}`;
@@ -243,6 +243,19 @@ function renderInfo() {
     main.disabled = true;
     main.classList.add('done');
     priceBox.innerHTML = '';
+    progress.classList.add('hidden');
+  } else if (item.starter) {
+    // only in the Starter Pack: the button opens the gem store, where it is
+    main.textContent = `🎁 ${t('Only in the Starter Pack')}`;
+    main.classList.add('equip');
+    main.onclick = () => ctx.onGetGems?.();
+    priceBox.innerHTML = '';
+    progress.classList.add('hidden');
+  } else if (item.limited && !inShop(item)) {
+    // limited, and not its week in the shop
+    main.textContent = `⏳ ${t('Back soon')}`;
+    main.disabled = true;
+    main.classList.add('done');
     progress.classList.add('hidden');
   } else {
     main.innerHTML = `${ico('shop')}<span></span>`;

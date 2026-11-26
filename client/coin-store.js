@@ -2,12 +2,13 @@
 // Discord's own checkout (consumable SKUs; the server checks each purchase with Discord before
 // paying it out). A Ko-fi / Buy Me a Coffee link takes tips of any amount.
 import { PriceUtils } from '@discord/embedded-app-sdk';
-import { COIN_PACKS, TIPS } from '../shared/shop.js';
+import { COIN_PACKS, TIPS, STARTER, FIRST_PACK_BONUS, ITEMS } from '../shared/shop.js';
 import { t, currentLanguage as getLanguage } from './i18n.js';
 
 let el = null;
-let ctx = null; // { sdk, paid: { skus: [{ id, sku }], tipUrl }, onBought, toast }
+let ctx = null; // { sdk, paid: { skus: [{ id, sku }], tipUrl }, onBought, toast, profile, need, starterArt }
 let prices = null; // item id -> formatted price, from Discord
+let rawPrices = null; // item id -> { amount, currency }, from Discord (for "≈ £1.20" under gem prices)
 let mobileUnavailable = false;
 
 const skuOf = (id) => ctx?.paid?.skus.find((s) => s.id === id)?.sku || null;
@@ -38,6 +39,39 @@ export function openCoinStore(context) {
   loadPrices();
 }
 
+// The shop asks for Discord's prices early (without opening anything), for "≈ £…" under gem prices
+export function preloadPrices(context) {
+  if (!ctx) ctx = context;
+  loadPrices();
+}
+
+// The price label of a paid item (Discord's, or the web store's), or ''
+export function paidPrice(id) {
+  return prices?.[id] || webPriceOf(id) || '';
+}
+
+// Roughly what `gems` cost in real money, at the smallest pack's rate (formatted, or '')
+export function gemsInMoney(gems) {
+  const base = rawPrices?.['pack-1'];
+  const pack = COIN_PACKS[0];
+  if (!base || !gems || !pack) return '';
+  // whole units of the smallest currency step, so ¥ and £ both come out right
+  const amount = Math.max(1, Math.round((base.amount * gems) / pack.gems));
+  try {
+    return PriceUtils.formatPrice({ ...base, amount }, getLanguage());
+  } catch {
+    return '';
+  }
+}
+
+// The profile changed (bought something, or the Starter Pack arrived): draw it again if open
+export function refreshCoinStore(profile) {
+  if (!ctx || !el || el.classList.contains('hidden')) return;
+  ctx.profile = profile;
+  if (ctx.need && (profile?.gems ?? 0) >= ctx.needTotal) ctx.need = 0;
+  render();
+}
+
 export function closeCoinStore() {
   el?.classList.add('hidden');
 }
@@ -48,10 +82,15 @@ async function loadPrices() {
   try {
     const { skus } = await ctx.sdk.commands.getSkus();
     prices = {};
+    rawPrices = {};
     for (const { id, sku } of ctx.paid.skus) {
       const s = skus.find((k) => k.id === sku);
-      if (s?.price) prices[id] = PriceUtils.formatPrice(s.price, getLanguage());
+      if (s?.price) {
+        prices[id] = PriceUtils.formatPrice(s.price, getLanguage());
+        rawPrices[id] = s.price;
+      }
     }
+    window.dispatchEvent(new Event('ludo-prices')); // the shop can now show "≈ £…" under gem prices
     if (ctx.sdk.platform === 'mobile' && !skus?.length) mobileUnavailable = true;
     render();
   } catch {
@@ -73,6 +112,11 @@ function render() {
   const webReady = !!ctx.paid?.webStore;
   const isMobile = ctx.sdk?.platform === 'mobile';
   const anySku = !!ctx.paid?.skus.length || webReady;
+  const profile = ctx.profile || null;
+  const firstPack = !!profile?.firstPack;
+  const need = Math.max(0, ctx.need || 0);
+  // the smallest pack that covers what's missing (with the first-purchase double)
+  const suggest = need ? (COIN_PACKS.find((p) => p.gems * (firstPack ? FIRST_PACK_BONUS : 1) >= need) || COIN_PACKS.at(-1)).id : '';
   const note = !inDiscord
     ? t('Purchases work in the Discord app.')
     : !anySku
@@ -88,13 +132,16 @@ function render() {
       <h2 class="store-title">${t('Get Die Gems')}</h2>
       <p class="store-sub">${t('Paid securely through Discord. Gems arrive as soon as Discord confirms the payment.')}</p>
       ${note ? `<p class="store-note">${note}</p>` : ''}
+      ${need ? `<p class="store-need">${t('You need {n} more gems: the highlighted pack covers it.', { n: need })}</p>` : ''}
+      ${starterHtml(inDiscord, isMobile)}
+      ${firstPack ? `<p class="store-first">✨ ${t('First purchase: your first gem pack gives ×{n} the gems!', { n: FIRST_PACK_BONUS })}</p>` : ''}
       <div class="pack-grid">
         ${COIN_PACKS.map(
           (p, i) => `
-          <div class="pack" data-tier="${i + 1}">
-            ${p.bonus ? `<span class="pack-bonus">${t('+{n}% extra', { n: p.bonus })}</span>` : ''}
+          <div class="pack${p.id === suggest ? ' suggest' : ''}" data-tier="${i + 1}">
+            ${p.id === suggest ? `<span class="pack-suggest">${t('Covers it')}</span>` : p.bonus ? `<span class="pack-bonus">${t('+{n}% extra', { n: p.bonus })}</span>` : ''}
             ${pile(i + 2)}
-            <b class="pack-coins"><span class="gem"></span>${p.gems.toLocaleString(getLanguage())}</b>
+            <b class="pack-coins"><span class="gem"></span>${firstPack ? `<s>${p.gems.toLocaleString(getLanguage())}</s> ${(p.gems * FIRST_PACK_BONUS).toLocaleString(getLanguage())}` : p.gems.toLocaleString(getLanguage())}</b>
             <small>${t(p.name)}</small>
             <button type="button" class="btn primary small" data-buy="${p.id}" ${inDiscord && (skuOf(p.id) || (isMobile && canWebBuy(p.id))) ? '' : 'disabled'}>${buyLabel(p.id)}</button>
           </div>`,
@@ -117,12 +164,34 @@ function render() {
       </div>
     </div>`;
   el.querySelector('.store-close').addEventListener('click', closeCoinStore);
+  const art = el.querySelector('.starter-art');
+  if (art && ctx.starterArt) art.replaceChildren(ctx.starterArt());
   for (const b of el.querySelectorAll('[data-buy]')) b.addEventListener('click', () => buy(b.dataset.buy, b));
   el.querySelector('[data-tip-link]')?.addEventListener('click', () => {
     const url = ctx.paid.tipUrl;
     if (ctx.sdk) ctx.sdk.commands.openExternalLink({ url }).catch(() => {});
     else window.open(url, '_blank', 'noopener');
   });
+}
+
+// The Starter Pack: once per player, at the top until they have it
+function starterHtml(inDiscord, isMobile) {
+  const profile = ctx.profile;
+  if (!profile || profile.starter) return '';
+  const can = inDiscord && (skuOf(STARTER.id) || (isMobile && canWebBuy(STARTER.id)));
+  if (!can && !skuOf(STARTER.id) && !webPriceOf(STARTER.id)) return ''; // not on sale yet
+  const dice = ITEMS[STARTER.item];
+  return `
+    <div class="starter-card">
+      <span class="starter-ribbon">${t('Once only')}</span>
+      <div class="starter-art"></div>
+      <div class="starter-text">
+        <b>🎁 ${t(STARTER.name)}</b>
+        <span><span class="gem"></span>${STARTER.gems} · <span class="coin"></span>${STARTER.coins} · ${t('{item} dice', { item: t(dice?.name || '') })}</span>
+        <small>${t('The {item} dice are only in this pack.', { item: t(dice?.name || '') })}</small>
+      </div>
+      <button type="button" class="btn primary small starter-buy" data-buy="${STARTER.id}" ${can ? '' : 'disabled'}>${buyLabel(STARTER.id)}</button>
+    </div>`;
 }
 
 function buyLabel(id) {

@@ -1,7 +1,7 @@
 // One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor, teamsOf } from '../shared/board.js';
-import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, POT_SPLIT, REWARDS, STAKES, ownsItem } from '../shared/shop.js';
+import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, POT_SPLIT, REWARDS, STAKES, ownsItem, potFee } from '../shared/shop.js';
 import { newTokens, legalMoves, applyMove, chooseBotMove, bestBotScore, progressShare, BOT_LEVELS } from './rules.js';
 import { makeReplySnapshot, toggleReaction } from '../shared/chat.js';
 import { cleanText } from './filter.js';
@@ -53,9 +53,10 @@ const SAVED_FIELDS = [
 export class Room {
   constructor(
     id,
-    { onChange, onKick, onGameEnd, onGameStart, onStat, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null } = {},
+    { onChange, onKick, onGameEnd, onGameStart, onStat, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null, fee = potFee } = {},
   ) {
     this.id = id;
+    this.fee = fee; // the house's cut of a pot (shared/shop.js potFee; tests can turn it off)
     this.code = code; // short code anyone can join with, e.g. "K7QX"
     this.visibility = visibility; // 'public': listed for everyone; 'private': your Discord call or the code
     this.quick = false; // quick game: two tokens each instead of four (the host's choice, in the lobby)
@@ -636,8 +637,11 @@ export class Room {
     } else {
       cuts[first] += 100 - cuts.reduce((a, b) => a + b, 0); // surrendered places' cuts go to 1st
     }
-    const shares = places.map((g, i) => Math.floor((pot.total * cuts[i]) / 100));
-    shares[first] += pot.total - shares.reduce((a, b) => a + b, 0); // rounding: to 1st
+    // the house's small cut first (shared/shop.js potFee), then the rest by place
+    const fee = this.fee(pot.total);
+    const prize = pot.total - fee;
+    const shares = places.map((g, i) => Math.floor((prize * cuts[i]) / 100));
+    shares[first] += prize - shares.reduce((a, b) => a + b, 0); // rounding: to 1st
     const lines = [];
     places.forEach((g, i) => {
       if (!shares[i]) return;
@@ -652,9 +656,10 @@ export class Room {
       }
     });
     const winners = Object.keys(this.potWon);
-    if (winners.length === 1) this.addLog(`💰 ${this.seats[winners[0]].name} takes the pot: ${pot.total} coins!`);
-    else if (places.filter((g, i) => shares[i]).length === 1) this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${pot.total} coins!`);
+    if (winners.length === 1) this.addLog(`💰 ${this.seats[winners[0]].name} takes the pot: ${prize} coins!`);
+    else if (places.filter((g, i) => shares[i]).length === 1) this.addLog(`💰 ${winners.map((s) => this.seats[s].name).join(' & ')} split the pot: ${prize} coins!`);
     else this.addLog(`💰 The pot is shared by place: ${lines.join(' · ')}`);
+    if (fee) this.addLog(`🏦 House fee: ${fee} coins`);
     this.pot = null;
   }
 
@@ -1148,8 +1153,9 @@ export class Room {
       const net = won - pot.stake;
       r.won = won > 0;
       if (this.winnerTakeAll) {
-        // Stakes Rooms: only the winner wins, and wins earn 1.5x leaderboard points over Classic.
-        r.points = net > 0 ? Math.round(net * 1.5) : net;
+        // Stakes Rooms: bigger swings, 1.5x leaderboard points for winning *and* losing. (Wins only
+        // used to count 1.5x: two friends trading wins both climbed, losing nothing.)
+        r.points = Math.round(net * 1.5);
         r.placePoints = won > 0 ? (r.placePoints || 0) + Math.max(5, Math.round(pot.stake / 50)) : 0;
       } else {
         // Classic bet: shared pot across places, 1x profit in v2 and smaller bet bonus in v1.

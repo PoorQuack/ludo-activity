@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SETS, SETS_BY_ID, ITEMS, SHOP_ITEMS, RARITIES, rarityOf, setRarity, setPrice, currencyOf, dailyDeal } from '../shared/shop.js';
+import { SETS, SETS_BY_ID, ITEMS, SHOP_ITEMS, RARITIES, rarityOf, setRarity, setPrice, currencyOf, dailyDeal, priceOf, limitedNow } from '../shared/shop.js';
 import { ProfileStore } from '../server/store.js';
 
 test('every set is made of real, different kinds of items', () => {
@@ -20,9 +20,9 @@ test('a set costs 10% less than its items, and buying it owns and equips them al
   assert.deepEqual(setPrice(set, p), { full, price: Math.round(full * 0.9), missing: set.items, currency: 'gems' });
   p.coins = 10_000;
   assert.throws(() => store.buySet('1', 'set-constellation'), /Not enough gems/);
-  p.gems = 1_000;
+  p.gems = 5_000;
   store.buySet('1', 'set-constellation');
-  assert.equal(p.gems, 1_000 - Math.round(full * 0.9));
+  assert.equal(p.gems, 5_000 - Math.round(full * 0.9));
   assert.equal(p.coins, 10_000, 'coins untouched');
   assert.ok(set.items.every((id) => p.owned.includes(id)));
   assert.deepEqual([p.equipped.token, p.equipped.dice, p.equipped.board], set.items);
@@ -66,22 +66,23 @@ test('buying with gems, gifting with gems, and FREE_SHOP makes both free', () =>
   const p = store.get('1');
   p.coins = 5000;
   assert.throws(() => store.buy('1', 'frame-gold'), /Not enough gems/);
-  p.gems = ITEMS['frame-gold'].price;
+  p.gems = priceOf(ITEMS['frame-gold'], store.dayKey());
   store.buy('1', 'frame-gold');
   assert.equal(p.gems, 0);
   assert.equal(p.coins, 5000);
   assert.equal(p.equipped.frame, 'frame-gold');
   p.gems = 1000;
   store.gift('1', '2', 'token-dragon');
-  assert.equal(p.gems, 1000 - ITEMS['token-dragon'].price);
+  assert.equal(p.gems, 1000 - priceOf(ITEMS['token-dragon'], store.dayKey()));
   assert.ok(store.get('2').owned.includes('token-dragon'));
   const free = new ProfileStore(null, { freeShop: true });
   const q = free.get('3');
-  free.buy('3', 'frame-crown');
+  const limId = limitedNow(free.dayKey())[0]?.id || 'frame-gold';
+  free.buy('3', limId);
   free.buy('3', 'token-neon');
   free.buySet('3', 'set-royal');
   assert.equal(q.gems, 0);
-  assert.ok(['frame-crown', 'token-neon', 'board-royal'].every((id) => q.owned.includes(id)));
+  assert.ok([limId, 'token-neon', 'board-royal'].every((id) => q.owned.includes(id)));
 });
 
 test('every item has a rarity, and a price inside that rarity\'s band', () => {
@@ -89,12 +90,12 @@ test('every item has a rarity, and a price inside that rarity\'s band', () => {
   for (const item of SHOP_ITEMS) {
     assert.ok(ids.includes(item.rarity), `${item.id} has no rarity`);
     const r = rarityOf(item);
-    if (item.award || item.pass) continue; // (won on the leaderboard or earned on the Battle Pass, never bought)
+    if (item.award || item.pass || item.starter) continue; // (won, earned on the Battle Pass or in the Starter Pack: never bought)
     const [min, max] = currencyOf(item) === 'gems' ? [r.gemMin, r.gemMax] : [r.min, r.max];
     assert.ok(item.price >= min && item.price <= max, `${item.id}: ${item.price} is outside ${r.id} (${min}-${max} ${currencyOf(item)})`);
   }
   // only the default look of each kind is free
-  for (const item of SHOP_ITEMS) assert.equal(item.price === 0, /-classic$|^taunt-none$|^frame-none$/.test(item.id) || !!item.award || !!item.pass, item.id);
+  for (const item of SHOP_ITEMS) assert.equal(item.price === 0, /-classic$|^taunt-none$|^frame-none$/.test(item.id) || !!item.award || !!item.pass || !!item.starter, item.id);
 });
 
 test('everything in a set has the same rarity (a Legendary set is Legendary all through)', () => {

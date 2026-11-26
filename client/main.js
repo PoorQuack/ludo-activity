@@ -1,6 +1,6 @@
 import { DiscordSDK } from '@discord/embedded-app-sdk';
 import { MODES, boardFor } from '../shared/board.js';
-import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, dailyDeal, rarityOf, DEAL_DISCOUNT, dayKeyOf, currencyOf } from '../shared/shop.js';
+import { REWARDS, SHOP_ITEMS, ITEMS, ownsItem, EMOTE_SLUGS, setPrice, priceOf, dailyDeal, rarityOf, DEAL_DISCOUNT, dayKeyOf, currencyOf, STARTER, POT_FEE } from '../shared/shop.js';
 import { BoardRenderer, SPIN_MS, LEAVE_MS, EMOTE_MS, drawDice } from './renderer.js';
 import { renderShop, itemPreview, commitShopSeen } from './shop-ui.js';
 import { TAUNT_FX } from './taunts.js';
@@ -9,7 +9,7 @@ import { renderProfile, lookHtml, medalHtml } from './profile.js';
 import { playerLevel, BADGES, BADGES_BY_ID, LEVELS, levelFor } from '../shared/badges.js';
 import { openItemView, refreshItemView, closeItemView } from './item-view.js';
 import { D20 } from './d20.js';
-import { openCoinStore } from './coin-store.js';
+import { openCoinStore, preloadPrices, refreshCoinStore, gemsInMoney, paidPrice } from './coin-store.js';
 import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, seasonFor } from '../shared/pass.js';
 import { REACTION_EMOJIS } from '../shared/chat.js';
 import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
@@ -132,7 +132,7 @@ let clockOffset = 0;
 let reconnectDelay = 500;
 let updating = false; // the server said it's restarting for an update: reconnecting is expected
 let screen = 'loading';
-let shopTab = 'set'; // the shop opens on its sets
+let shopTab = 'featured'; // the shop opens on its front page
 let freeShop = false; // server is in testing mode: everything costs 0
 let paidConfig = { skus: [], tipUrl: '' }; // coin packs / coffees on sale through Discord (see coin-store.js)
 
@@ -333,7 +333,8 @@ function connect() {
       toast(t('📣 {title}', { title: msg.item.title }), 'notice', 5000);
     } else if (msg.type === 'purchased') {
       sfx('buy');
-      if (msg.kind === 'gems') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
+      if (msg.kind === 'starter' && msg.coins) toast(t('🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins', { gems: msg.gems, coins: msg.coins }), 'ok', 6000);
+      else if (msg.kind === 'gems' || msg.kind === 'starter') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
       else if (msg.kind === 'pass') toast(t('🎟️ Battle Pass unlocked! Claim your premium rewards.'), 'ok', 6000);
       else toast(t('☕ Thank you so much for the coffee!'), 'ok', 5000);
     } else if (msg.type === 'checkoutUrl') {
@@ -441,6 +442,7 @@ function onProfile(next) {
   }
   if (screen === 'shop') drawShop();
   else refreshItemView(shopContext());
+  refreshCoinStore(profile);
   if (screen === 'profile') drawProfile();
   if ($('menu').dataset.panel === 'pass' || wide.matches) renderPass();
   passDot();
@@ -1370,8 +1372,8 @@ function renderLeaderboard() {
     ? t("You're <b>{place}</b> of {players}.", { place: ordinal(b.me.rank), players: b.players })
     : b.top.length ? (all ? t("You're not on the board yet.") : week ? t("You're not on the board yet this week.") : t("You're not on the board yet this month.")) : '';
   const how = pointsMode
-    ? t("Every game against other people also scores leaderboard points: 10 for each player you finish ahead of, plus 10 for beating them all (bots don't count). Only games count for the leaderboards. The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.")
-    : t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.');
+    ? `${t("Every game against other people also scores leaderboard points: 10 for each player you finish ahead of, plus 10 for beating them all (bots don't count). Only games count for the leaderboards. The top 3 each week win 300 / 200 / 100 coins, and each month 1000 / 600 / 300.")} <b>${t('From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.')}</b>`
+    : `${t('Ranked by Gold Coins won in public stakes rooms: what you win minus your stake. Bots, private rooms and the shop never count.')} ${t('All In games count 1.5×, for wins and for losses.')}`;
   const when = all
     ? t('Never resets · counting since {date}', { date: escapeHtml(sinceLabel(b.since)) })
     : week
@@ -1833,6 +1835,8 @@ function renderLangList() {
 }
 
 // The language changed: everything drawn by code is drawn again in it.
+// Discord's prices arrived: gem prices can show what they are in money
+window.addEventListener('ludo-prices', () => screen === 'shop' && drawShop());
 window.addEventListener('ludo-lang', () => {
   sendChatLang();
   chatVersion++;
@@ -2596,6 +2600,7 @@ function showScreen(name) {
   if (name === 'shop') {
     store_.set(GIFT_KEY, '');
     drawShop();
+    if (discordSdk) preloadPrices(coinStoreContext()); // for "≈ £…" under gem prices
   }
   if (name === 'profile') drawProfile();
   renderNewDots();
@@ -2609,10 +2614,8 @@ function short(currency, price) {
   if (freeShop) return false;
   const have = profile?.[currency] ?? 0;
   if (have >= price) return false;
-  if (currency === 'gems') {
-    toast(t('You need {n} more gems', { n: price - have }));
-    openGemStore();
-  } else toast(t('You need {n} more coins', { n: price - have }));
+  if (currency === 'gems') openGemStore(price - have); // (the store says how many, and which pack covers it)
+  else toast(t('You need {n} more coins', { n: price - have }));
   return true;
 }
 
@@ -2639,7 +2642,7 @@ function shopContext() {
     },
     // The other people in your room, to give things to (none outside a room)
     friends: (state?.seats || []).filter((x) => x && !x.bot && x.userId && x.userId !== me?.id).map((x) => ({ id: x.userId, name: x.name })),
-    onGetGems: () => openGemStore(),
+    onGetGems: (need = 0) => openGemStore(need),
     avatar: me?.avatar || null,
     onGift: (item, friend) => {
       if (short(currencyOf(item), priceOf(item))) return;
@@ -2670,10 +2673,17 @@ function passClaimTarget(item) {
 
 function drawShop() {
   const ctx = shopContext();
+  const now = Date.now() + clockOffset;
   renderShop(
     { tabs: els.shopTabs, grid: els.shopGrid },
     {
       ...ctx,
+      day: dayKeyOf(now),
+      now,
+      gemsInMoney,
+      // the Starter Pack card: only when it can actually be bought here
+      starterOnSale: !!(paidConfig.skus.some((x) => x.id === STARTER.id) || paidConfig.webPrices?.[STARTER.id]),
+      starterPrice: paidPrice(STARTER.id),
       tab: shopTab,
       onTab: (tab) => {
         shopTab = tab;
@@ -3032,7 +3042,7 @@ function renderStakes() {
   const titleEl = box.querySelector('.stake-text b');
   const subEl = box.querySelector('.stake-text small');
   if (titleEl) titleEl.textContent = wta ? t('All In') : t('Cash pot');
-  if (subEl) subEl.textContent = wta ? t('Only 1st place wins the pot') : t('Everyone pays in; pot shared by all except last');
+  if (subEl) subEl.textContent = `${wta ? t('Only 1st place wins the pot') : t('Everyone pays in; pot shared by all except last')} · ${t('{n}% house fee', { n: Math.round(POT_FEE * 100) })}`;
   const opts = $('stake-options');
   const key = `${state.stake}|${wta}|${host}|${currentLang()}`;
   if (opts.dataset.key === key) return;
@@ -4413,10 +4423,23 @@ document.addEventListener('visibilitychange', () => {
     claimPurchases();
   }
 });
-function openGemStore() {
-  openCoinStore({ sdk: discordSdk, paid: paidConfig, onBought: claimPurchases, onWebCheckout: openWebCheckout, toast });
+function coinStoreContext() {
+  return {
+    sdk: discordSdk,
+    paid: paidConfig,
+    onBought: claimPurchases,
+    onWebCheckout: openWebCheckout,
+    toast,
+    profile,
+    starterArt: () => itemPreview(ITEMS[STARTER.item], profile?.equipped?.board || 'board-classic'),
+  };
 }
-for (const b of document.querySelectorAll('#get-coins, [data-get-gems]')) b.addEventListener('click', openGemStore);
+// `need`: gems short of something they tried to buy (the store points at the pack that covers it)
+function openGemStore(need = 0) {
+  const n = Number.isFinite(need) ? need : 0;
+  openCoinStore({ ...coinStoreContext(), need: n, needTotal: (profile?.gems ?? 0) + n });
+}
+for (const b of document.querySelectorAll('#get-coins, [data-get-gems]')) b.addEventListener('click', () => openGemStore());
 
 for (const b of $('quest-tabs').children)
   b.addEventListener('click', () => {
