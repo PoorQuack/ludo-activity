@@ -16,10 +16,23 @@ export function routeTurn(sq, home) {
 }
 
 // role: 'cell', 'safe', 'start' or 'home'; turn: the route's direction (see routeTurn)
-export function drawTile(ctx, sq, fill, style, theme, role = 'cell', turn = 0) {
+// colorName: the player's colour, for a start square ('red', 'green', …)
+export function drawTile(ctx, sq, fill, style, theme, role = 'cell', turn = 0, colorName = null) {
   ctx.save();
   ctx.translate(sq.x, sq.y);
   ctx.rotate(sq.angle);
+  // Cosmetic bundle boards: painted safe zones, a glow under them, and a start square per colour
+  const bundle = theme?.art?.bundle;
+  if (bundle && (role === 'safe' || (role === 'start' && colorName))) {
+    const zone = texture(`/bundles/${bundle}/safe_zone_${role === 'safe' ? 'neutral' : colorName}.webp`);
+    if (zone) {
+      const aura = texture(`/bundles/${bundle}/safe_zone_aura.webp`);
+      if (aura) ctx.drawImage(aura, -0.62, -0.62, 1.24, 1.24);
+      ctx.drawImage(zone, -0.47, -0.47, 0.94, 0.94);
+      ctx.restore();
+      return;
+    }
+  }
   const customTile = role === 'safe' ? theme?.art?.tileSafe : role === 'cell' ? theme?.art?.tilePath : null;
   const tileImg = customTile ? texture(customTile) : null;
   if (tileImg) {

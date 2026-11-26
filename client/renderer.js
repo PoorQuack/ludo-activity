@@ -2,7 +2,7 @@
 // Board positions come in board units (one square = 1, centre = 0,0); see shared/board.js.
 import { DECOR, HUBS, SPOTS, TOKEN_STARS, baseDecor, drawConstellation, drawShield, drawSpots, cutSpots, drawTile, gemYard, innerPanel, motif, paintBase, routeTurn, setDrawingFor, setTileK, texPattern, texture } from './draw-board.js';
 import { drawDice, drawDiceCube } from './draw-dice.js';
-import { PAWN_STYLES, TOKEN_MARKS, drawToken, glowSprite } from './draw-tokens.js';
+import { PAWN_STYLES, TOKEN_MARKS, bundleOf, drawBundleAura, drawBundleShield, drawToken, glowSprite } from './draw-tokens.js';
 import { IDENTITY, TAU, TEAM_COLORS, catDecor, circle, drawDents, drawPinSpots, drawShape, easeInOut, easeOutBack, easeOutCubic, emoteImg, hexA, inkOn, mix, mul, path, rnd, rotX, rotY, roundRect, sparkle, teamBadge } from './draw-util.js';
 import { BOARD_THEMES, SHAPES, TOKEN_SIGNATURES, cbColor, colorBlindMode } from './skins.js';
 import { currentLanguage, t } from './i18n.js';
@@ -278,13 +278,13 @@ export class BoardRenderer {
     board.track.forEach((sq, i) => {
       const startSeat = board.startIndex.indexOf(i);
       const safe = board.safe.has(i);
-      drawTile(ctx, sq, startSeat >= 0 ? color(startSeat) : safe ? theme.safe : theme.cell, art.tile, theme, startSeat >= 0 ? 'start' : safe ? 'safe' : 'cell', routeTurn(sq, false));
+      drawTile(ctx, sq, startSeat >= 0 ? color(startSeat) : safe ? theme.safe : theme.cell, art.tile, theme, startSeat >= 0 ? 'start' : safe ? 'safe' : 'cell', routeTurn(sq, false), startSeat >= 0 ? this.board.colors[startSeat] : null);
       // (in colour-blind mode the start square shows its player's shape instead of the star)
       if (startSeat >= 0 && cb) {
         const ink = inkOn(color(startSeat));
         drawShape(ctx, this.seatShape(startSeat), sq.x, sq.y, 0.27, ink.fill, ink.edge, 0.05);
       }
-      else if (startSeat >= 0) motif(ctx, art.mark || 'star', sq.x, sq.y, 0.27, 'rgba(255,255,255,0.92)');
+      else if (startSeat >= 0 && !art.bundle) motif(ctx, art.mark || 'star', sq.x, sq.y, 0.27, 'rgba(255,255,255,0.92)'); // (bundle start squares carry their own crest)
       else if (safe && !art.tileSafe) {
         // Safe squares: optionally a ring round the tile and an outlined mark, so they stand out
         if (art.safeRing) {
@@ -718,6 +718,7 @@ export class BoardRenderer {
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#111';
       ctx.stroke();
+      if (bundleOf(p.skin) && !this.lite) drawBundleAura(ctx, x, y, r, p.skin, now); // bundle tokens: their own glow round a token you can move
     }
     const hex = this.seatColor(p.seat);
     // A coloured ring on the square under a pawn on the track, so you can see whose it is and where it stands.
@@ -736,10 +737,13 @@ export class BoardRenderer {
       ctx.strokeStyle = hex;
       ctx.stroke();
     }
-    const shield = p.safe && this.theme.art?.shield;
-    const grow = shield ? easeOutBack(Math.min(1, p.shieldAge / 450)) : 0;
-    if (p.moving || (shield && p.shieldAge < 450)) this.fast = true;
+    // On a safe square: a bundle token brings its own shield; any other gets the board's
+    const own = p.safe && !!bundleOf(p.skin);
+    const shield = p.safe && !own && this.theme.art?.shield;
+    const grow = shield || own ? easeOutBack(Math.min(1, p.shieldAge / 450)) : 0;
+    if (p.moving || ((shield || own) && p.shieldAge < 450)) this.fast = true;
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'back');
+    if (own) drawBundleShield(ctx, x, y, r, p.skin, 'back', { lift: p.lift * s, grow, t: now });
     if (p.fade < 1) ctx.globalAlpha = p.fade;
     if (this.lit && this.theme.art?.scene && sceneSwitch.on) pieceShadow(ctx, x, y - p.lift * s * 0.3, r); // lit boards: a long shadow, like the trees'
     drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash, sign: this.board.colors[p.seat], t: this.lite ? null : now });
@@ -751,6 +755,7 @@ export class BoardRenderer {
       drawShape(ctx, this.seatShape(p.seat), x + r * mark.x, by, r * 0.36 * mark.size, '#ffffff', '#111111', Math.max(1.2, r * 0.08));
     }
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'front');
+    if (own) drawBundleShield(ctx, x, y, r, p.skin, 'front', { lift: p.lift * s, grow, t: now });
     // Team games: a small A/B badge at the foot of pins out on the board, so you can tell
     // a teammate's pin from a rival's at a glance
     const team = this.teamOf?.[p.seat];
@@ -1315,6 +1320,11 @@ export class BoardRenderer {
 
   // ---------- effects ----------
 
+  // A picture that pops up, grows and fades on a square (a bundle token's capture burst)
+  picture(x, y, img, { size = 2.2, life = 1000, spin = 0.6 } = {}) {
+    if (img) this.particles.push({ kind: 'img', x, y, img, size, spin, born: performance.now(), life });
+  }
+
   ring(x, y, color, size = 0.7) {
     this.particles.push({ kind: 'ring', x, y, color, size, born: performance.now(), life: 420 });
   }
@@ -1525,6 +1535,16 @@ export class BoardRenderer {
     this.particles = this.particles.filter((p) => now - p.born < p.life);
     for (const p of this.particles) {
       const k = Math.max(0, (now - p.born) / p.life);
+      if (p.kind === 'img') {
+        const sc = p.size * s * (0.55 + 0.6 * easeOutCubic(Math.min(1, k * 1.6)));
+        ctx.save();
+        ctx.translate(this.px(p.x), this.px(p.y));
+        ctx.rotate(p.spin * k);
+        ctx.globalAlpha = k < 0.55 ? 1 : (1 - k) / 0.45;
+        ctx.drawImage(p.img, -sc / 2, -sc / 2, sc, sc);
+        ctx.restore();
+        continue;
+      }
       if (p.kind === 'ring') {
         circle(ctx, this.px(p.x), this.px(p.y), (0.3 + k * p.size) * s);
         ctx.globalAlpha = 1 - k;

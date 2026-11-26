@@ -22,6 +22,17 @@ changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
 - To do (owner): Starter Pack needs a Discord Durable SKU (`starter:<id>` in `SHOP_SKUS`) and a
   Stripe price (`starter:price_…` in `STRIPE_PRICES`).
 
+## 26 Nov 2026, Claude: bundle VFX remake (live)
+- New art for all 10 bundles from Antigravity (VFX + safe zones + shields). Prices unchanged
+  (its notes said 1,500 coins; the price bands in AGENTS.md win).
+- Board (bundle boards): star squares use `safe_zone_neutral` with `safe_zone_aura` glow; start
+  squares use `safe_zone_<colour>` (orange/purple made from yellow/blue). `art.bundle` in skins.js.
+- Tokens (bundle tokens): own shield on safe squares (`token_shield_back/front`, pops up), turning
+  `vfx_aura` round a token you can move, `vfx_capture` burst when it captures (game and Try it).
+  Code: `drawBundleShield`, `drawBundleAura`, `bundleCaptureArt` in client/draw-tokens.js.
+- Not used: `token_<colour>_shielded.webp` and `token_shield.webp` (the layered shield covers all
+  six colours and animates). Shop previews of bundle tokens drawn bigger.
+
 ---
 
 ## Older notes (25 Nov 2026)

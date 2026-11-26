@@ -467,6 +467,8 @@ export function paintPawn(ctx, r, hex, style, sign) {
   if (style.bundle) {
     // six colours, like the other picture tokens (6-player games need orange and purple too)
     const col = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(sign) ? sign : 'red';
+    // first time this bundle shows: start loading its effects too, so they're ready when needed
+    for (const f of ['token_shield_back', 'token_shield_front', 'vfx_aura', 'vfx_capture']) bundleTokenPic(style.bundle, f);
     const glow = bundleTokenPic(style.bundle, 'token_glow');
     const img = bundleTokenPic(style.bundle, `token_${col}`);
     if (img) {
@@ -668,6 +670,47 @@ function tokenPicture(name, sign) {
   }
   return img.complete && img.naturalWidth ? img : null;
 }
+// ---- Cosmetic bundles: their own shield, aura and capture burst (pictures in /bundles/<dir>/) ----
+// The bundle folder of a token skin, or null
+export const bundleOf = (skin) => PAWN_STYLES[skin]?.bundle || null;
+
+// The token's own shield while it sits on a safe square: `part` 'back' goes before the token,
+// 'front' after it. Same frame as the token picture (156×220), so it wraps it exactly. `grow`
+// 0..1 pops it up when the token arrives.
+export function drawBundleShield(ctx, x, y, r, skin, part, { lift = 0, grow = 1, t = 0 } = {}) {
+  const dir = bundleOf(skin);
+  const img = dir && bundleTokenPic(dir, part === 'back' ? 'token_shield_back' : 'token_shield_front');
+  if (!img || grow <= 0) return;
+  const h = r * 2.75 * (0.85 + 0.15 * grow);
+  const w = (h * img.naturalWidth) / img.naturalHeight;
+  ctx.save();
+  ctx.translate(x, y + r * 0.2 - lift);
+  ctx.globalAlpha *= Math.min(1, grow) * (part === 'front' ? 0.82 + 0.1 * Math.sin(t / 420) : 1);
+  ctx.drawImage(img, -w / 2, -h + r * 0.14, w, h);
+  ctx.restore();
+}
+
+// A glowing ring under a token you can move, turning slowly (flattened onto the board)
+export function drawBundleAura(ctx, x, y, r, skin, t = 0) {
+  const dir = bundleOf(skin);
+  const img = dir && bundleTokenPic(dir, 'vfx_aura');
+  if (!img) return;
+  const size = r * 3.1 * (1 + 0.05 * Math.sin(t / 300));
+  ctx.save();
+  ctx.translate(x, y + r * 0.2);
+  ctx.scale(1, 0.48);
+  ctx.rotate(t / 1600);
+  ctx.globalAlpha *= 0.85;
+  ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
+// The capture burst's picture (renderer.picture plays it), or null while it loads
+export function bundleCaptureArt(skin) {
+  const dir = bundleOf(skin);
+  return dir ? bundleTokenPic(dir, 'vfx_capture') : null;
+}
+
 function bundleTokenPic(dir, file) {
   const key = `bundle/${dir}/${file}`;
   let img = pictureArt[key];

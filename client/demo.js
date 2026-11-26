@@ -4,6 +4,7 @@
 // being captured in turn (the token's own way home), then winning.
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer } from './renderer.js';
+import { bundleCaptureArt } from './draw-tokens.js';
 import { playerColor, TOKEN_SIGNATURES } from './skins.js';
 import { signatureHome } from './signatures.js';
 import { t } from './i18n.js';
@@ -156,6 +157,7 @@ function frame(now) {
     if (once('hit')) {
       renderer.burst(end.x, end.y, sig?.legend ? sig.colors : [mine, '#ffffff', '#ffd23f'], { count: sig?.legend ? 40 : 22, speed: sig?.legend ? 6.5 : 5, life: sig?.legend ? 900 : 700 });
       if (sig?.legend) renderer.ring(end.x, end.y, sig.colors[0], 1.6);
+      renderer.picture(end.x, end.y, bundleCaptureArt(look.token)); // a bundle token's own burst
       const foeColor = playerColor(look.board, board.colors[FOE]);
       renderer.taunt(end.x, end.y, look.taunt, mine, { seat: FOE, color: foeColor, name: t(board.colors[FOE][0].toUpperCase() + board.colors[FOE].slice(1)) });
       if (TAUNT_FX[look.taunt]) sfx(look.taunt);

@@ -15,6 +15,7 @@ import { REACTION_EMOJIS } from '../shared/chat.js';
 import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
 import { setFrame } from './frames.js';
 import { ICONS, withIcon } from './icons.js';
+import { bundleCaptureArt } from './draw-tokens.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour, openTour } from './tour.js';
 import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, TOKEN_SIGNATURES } from './skins.js';
@@ -3782,6 +3783,8 @@ function moveOverrides(ev) {
       const sig = signatureOf(seat)?.legend ? signatureOf(seat) : null;
       renderer.burst(end.x, end.y, sig ? sig.colors : [color, '#ffffff', '#ffd23f'], { count: sig ? 40 : 22, speed: sig ? 6.5 : 5, life: sig ? 900 : 700 });
       if (sig) renderer.ring(end.x, end.y, sig.colors[0], 1.6);
+      // a cosmetic bundle token: its own painted burst on the square
+      renderer.picture(end.x, end.y, bundleCaptureArt(state.seats[seat]?.skins?.token));
       // Revenge, and capture streaks: called out big for everyone in the room
       const who = state.seats[seat]?.name || '';
       let announcerMs = 0;
