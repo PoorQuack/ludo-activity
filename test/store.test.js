@@ -182,21 +182,6 @@ test("today's deal: one item a day at 30% off, the same for everyone, and the se
   assert.equal(before - store.get('u').coins, priceOf(deal, day));
 });
 
-test('a gift: the giver pays, the friend owns it, and nothing they already have can be given', () => {
-  const store = new ProfileStore(null, { now: () => Date.parse('2026-11-16T12:00:00Z') });
-  store.adminCoins('ann', 5000);
-  const before = store.get('ann').coins;
-  store.gift('ann', 'bob', 'token-star');
-  assert.ok(store.get('bob').owned.includes('token-star'));
-  assert.ok(!store.get('ann').owned.includes('token-star'), 'the giver does not get one too');
-  assert.notEqual(store.get('bob').equipped.token, 'token-star', 'it is theirs to put on');
-  assert.ok(before - store.get('ann').coins >= 140);
-  assert.throws(() => store.gift('ann', 'bob', 'token-star'), /already own/);
-  assert.throws(() => store.gift('ann', 'ann', 'token-gem'), /yourself/);
-  assert.throws(() => store.gift('ann', 'bob', 'token-classic'), /Unknown item/);
-  assert.throws(() => store.gift('cat', 'bob', 'token-gem'), /Not enough coins/);
-});
-
 test('badges: lifetime stats reach levels that pay once; gold unlocks the title; pins need the badge', async () => {
   const { BADGES_BY_ID } = await import('../shared/badges.js');
   const told = [];
@@ -221,10 +206,9 @@ test('badges: lifetime stats reach levels that pay once; gold unlocks the title;
   store.setPins('ann', ['menace']);
   assert.deepEqual(store.badgeLook('ann').pins, [{ id: 'menace', level: 3 }]);
   assert.equal(BADGES_BY_ID.menace.goals[2], 500);
-  // a gift counts for Generous
-  store.adminCoins('ann', 5000);
-  store.gift('ann', 'bob', 'token-star');
-  assert.ok(told.some((r) => r.badge === 'generous' && r.level === 1));
+  // gifting is gone, and its Generous badge with it
+  assert.equal(typeof store.gift, 'undefined');
+  assert.equal(BADGES_BY_ID.generous, undefined);
   // and survives a save/load round trip
   const copy = new ProfileStore(null);
   copy.applySave(JSON.stringify({ version: 2, profiles: { ann: store.get('ann') } }));

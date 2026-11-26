@@ -13,7 +13,7 @@ export const LEVELS = [
 ];
 
 // The stats a profile keeps lifetime totals of (everything else a room reports is ignored here)
-export const BADGE_STATS = ['capture', 'win', 'six', 'home', 'revenge', 'rampage', 'clean', 'comeback', 'gift', 'week', 'quickwin'];
+export const BADGE_STATS = ['capture', 'win', 'six', 'home', 'revenge', 'rampage', 'clean', 'comeback', 'week', 'quickwin'];
 
 // Shop tiers you can complete: every priced item of one type and one rarity
 const TIER_TYPES = ['token', 'dice', 'board', 'taunt'];
@@ -39,7 +39,6 @@ export const BADGES = [
   { id: 'untouchable', img: '/badges/untouchable.webp', name: 'Untouchable', title: 'Untouchable', icon: '🛡️', stat: 'clean', goals: [1, 5, 20], desc: 'Wins without being captured: {n}' },
   { id: 'comeback', name: 'Comeback', title: 'Comeback Kid', icon: '📈', stat: 'comeback', goals: [1, 5, 15], desc: 'Wins after being last: {n}' },
   { id: 'collector', img: '/badges/collector.webp', name: 'Collector', title: 'Collector', icon: '💎', value: (p) => completedTiers(p.owned || []), goals: [1, 3, 6], desc: 'Shop rarity tiers completed: {n}' },
-  { id: 'generous', name: 'Generous', title: 'Big Spender', icon: '🎁', stat: 'gift', goals: [1, 10, 30], desc: 'Gifts given: {n}' },
   { id: 'regular', name: 'Regular', title: 'Regular', icon: '📅', stat: 'week', goals: [1, 4, 12], desc: '7-day daily-roll streaks: {n}' },
   { id: 'speedster', name: 'Speedster', title: 'Speedster', icon: '⚡', stat: 'quickwin', goals: [3, 15, 50], desc: 'Quick games won: {n}' },
 ];

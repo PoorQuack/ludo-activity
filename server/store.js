@@ -470,25 +470,6 @@ export class ProfileStore {
     this.checkBadges(id); // (Collector)
   }
 
-  // A gift: `id` pays today's price and `toId` gets the item (not put on: that's theirs to do).
-  // Free items and things they already own can't be given.
-  gift(id, toId, itemId) {
-    const item = ITEMS[itemId];
-    if (!item || !item.price || item.award) throw new Error('Unknown item');
-    if (!inShop(item, this.dayKey())) throw new Error("That isn't in the shop right now");
-    if (!toId || toId === id) throw new Error("You can't gift that to yourself");
-    const to = this.get(toId);
-    if (ownsItem(to, itemId)) throw new Error('They already own that');
-    const p = this.get(id);
-    this.charge(p, currencyOf(item), priceOf(item, this.dayKey()));
-    to.owned.push(itemId);
-    p.stats.gift = (p.stats.gift || 0) + 1;
-    this.changed(id);
-    this.changed(toId);
-    this.checkBadges(id);
-    this.checkBadges(toId);
-  }
-
   // A whole set: the missing items at 10% off, and the whole look put on.
   buySet(id, setId) {
     const set = SETS_BY_ID[setId];

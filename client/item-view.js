@@ -52,10 +52,6 @@ function build() {
       <button type="button" class="set-close item-close" aria-label="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
       <div class="item-left">
         <div class="item-stage"></div>
-        <div class="item-gift hidden">
-          <span class="item-gift-label"></span>
-          <div class="item-gift-to"></div>
-        </div>
         <div class="item-actions">
           <button type="button" class="item-action btn small"></button>
           <button type="button" class="item-try btn small"></button>
@@ -152,25 +148,6 @@ export function refreshItemView(ctx) {
   renderInfo();
 }
 
-// "Gift to": one button per other person in your room (a single item with a price; not sets)
-function giftRow(item, ctx) {
-  const box = el.querySelector('.item-gift');
-  const friends = item && inShop(item) ? ctx.friends || [] : []; // (only what's in the shop today can be bought as a gift)
-  box.classList.toggle('hidden', !friends.length);
-  if (!friends.length) return;
-  box.querySelector('.item-gift-label').textContent = `🎁 ${t('Gift to')}`;
-  const row = box.querySelector('.item-gift-to');
-  row.innerHTML = '';
-  for (const f of friends) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn small';
-    b.textContent = f.name;
-    b.addEventListener('click', () => ctx.onGift(item, f));
-    row.appendChild(b);
-  }
-}
-
 function renderInfo() {
   const { item, ctx } = open;
   if (item.items) return renderSetInfo();
@@ -180,7 +157,6 @@ function renderInfo() {
   const rarity = rarityOf(item);
   const iconFor = { dice: 'dice', token: 'token', board: 'board', taunt: 'token' }[type] || 'emote';
   el.querySelector('.item-card').dataset.rarity = rarity.id;
-  giftRow(item, ctx);
   sceneRow(item.type === 'board' ? item.id : null);
   el.querySelector('.rarity').textContent = `✦ ${t(rarity.label)}`;
   el.querySelector('.item-type').innerHTML = `${ico(iconFor)}<span></span>`;
@@ -287,7 +263,6 @@ function renderInfo() {
 
 // A set: what's in it, what it would cost apart, and 10% off that.
 function renderSetInfo() {
-  giftRow(null, open.ctx); // (sets aren't gifted whole: give the pieces)
   sceneRow(open.item.items.find((id) => id.startsWith('board-')));
   const { item: set, ctx } = open;
   const { profile, freeShop } = ctx;

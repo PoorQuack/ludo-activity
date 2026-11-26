@@ -1183,15 +1183,6 @@ wss.on('connection', (ws, req) => {
         if (msg.op === 'buy') store.buy(ctx.user.id, msg.item);
         else if (msg.op === 'buySet') store.buySet(ctx.user.id, msg.item);
         else if (msg.op === 'equip') store.equip(ctx.user.id, msg.item);
-        else if (msg.op === 'gift') {
-          // only to a person sitting in your room (not a bot, not yourself)
-          const seat = ctx.room?.seats.find((x) => x && !x.bot && x.userId === msg.to && x.userId !== ctx.user.id);
-          if (!seat) throw new Error('You can only gift to someone in your room');
-          store.gift(ctx.user.id, seat.userId, msg.item);
-          const note = JSON.stringify({ type: 'gift', from: ctx.user.name, item: msg.item });
-          for (const sock of userSockets.get(seat.userId) || []) if (sock.readyState === 1) sock.send(note);
-          send({ type: 'gifted', to: seat.name, item: msg.item });
-        }
         // badges: the title under your name, and the badges pinned beside it
         else if (msg.op === 'title') store.setTitle(ctx.user.id, typeof msg.badge === 'string' ? msg.badge : '');
         else if (msg.op === 'pins') store.setPins(ctx.user.id, msg.pins);

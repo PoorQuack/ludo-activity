@@ -2055,9 +2055,6 @@ img[src*="/emotes/aliaa/"] { image-rendering: pixelated; }
 .tour-dots i.on { background: #ffd76a; }
 .tour-row { display: flex; gap: 10px; justify-content: center; }
 
-/* Gift to someone in your room (item view) */
-.item-gift { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
-.item-gift-to { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ---------- the menu, reworked ---------- */
 /* Coins by the Shop button: tap them for the Shop */

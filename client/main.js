@@ -271,12 +271,6 @@ function connect() {
       fetchLeaderboard();
       if (lchat.open) lobbyChatJoin(); // back after a reconnect with the chat open
     } else if (msg.type === 'profile') onProfile(msg.profile);
-    else if (msg.type === 'gift') {
-      store_.set(GIFT_KEY, '1');
-      renderNewDots();
-      sfx('buy');
-      toast(`🎁 ${t('{name} gave you {item}!', { name: msg.from, item: t(ITEMS[msg.item]?.name || '') })}`, 'ok');
-    }
     else if (msg.type === 'playNew') {
       toast(t('No open games right now, so here is a new one. Add bots or wait for people to join.'), 'ok', 6000);
       loneSince = Date.now();
@@ -294,10 +288,6 @@ function connect() {
         const lv = t(['Bronze', 'Silver', 'Gold'][r.level - 1]);
         toast(`${b.icon} ${t('Badge: {badge} ({level})! +{n} coins', { badge: t(b.name), level: lv, n: r.coins })}${r.level === 3 ? ` · ${t('New title unlocked')}` : ''}`, 'ok', 6000);
       }
-    }
-    else if (msg.type === 'gifted') {
-      sfx('buy');
-      toast(`🎁 ${t('Sent {item} to {name}!', { item: t(ITEMS[msg.item]?.name || ''), name: msg.to })}`, 'ok');
     }
     else if (msg.type === 'rooms') {
       roomList = msg.rooms;
@@ -487,9 +477,7 @@ function onProfile(next) {
 
 // ---------------- "something new" dots ----------------
 // On your name: a badge level you haven't looked at yet (opening the profile marks them seen).
-// On the Shop button: a gift someone gave you (opening the shop clears it).
 const SEEN_KEY = 'ludo-badges-seen';
-const GIFT_KEY = 'ludo-gift-new';
 const store_ = {
   get: (k) => {
     try {
@@ -524,7 +512,6 @@ function newBadges() {
 }
 function renderNewDots() {
   $('profile-card').classList.toggle('has-new', !!profile && newBadges().length > 0);
-  for (const b of document.querySelectorAll('.shop-btn, .dock-shop')) b.classList.toggle('has-new', store_.get(GIFT_KEY) === '1');
 }
 
 // ---------------- profile: badges, title, pins ----------------
@@ -2665,7 +2652,6 @@ function showScreen(name) {
   if (chatShown || lchat.open) lobbyChatPanel(chatShown);
   for (const [id, el] of Object.entries(els.screens)) el.classList.toggle('hidden', id !== name);
   if (name === 'shop') {
-    store_.set(GIFT_KEY, '');
     drawShop();
     if (discordSdk) preloadPrices(coinStoreContext()); // for "≈ £…" under gem prices
   }
@@ -2707,14 +2693,8 @@ function shopContext() {
       sendShop('equip', item.id);
       sfx('equip');
     },
-    // The other people in your room, to give things to (none outside a room)
-    friends: (state?.seats || []).filter((x) => x && !x.bot && x.userId && x.userId !== me?.id).map((x) => ({ id: x.userId, name: x.name })),
     onGetGems: (need = 0) => openGemStore(need),
     avatar: me?.avatar || null,
-    onGift: (item, friend) => {
-      if (short(currencyOf(item), priceOf(item))) return;
-      sendShop('gift', item.id, friend.id); // (the server says 'gifted' back once it has gone through)
-    },
     canClaim: (item) => !!passClaimTarget(item),
     onClaim: (item) => {
       const target = passClaimTarget(item);

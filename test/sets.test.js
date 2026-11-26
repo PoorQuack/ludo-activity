@@ -61,7 +61,7 @@ test('two currencies: Common and Rare cost coins, Epic and Legendary cost gems; 
   assert.equal(currencyOf(dailyDeal('2026-11-23')), 'coins', 'the daily deal is never a gem item');
 });
 
-test('buying with gems, gifting with gems, and FREE_SHOP makes both free', () => {
+test('buying with gems, and FREE_SHOP makes it free', () => {
   const store = new ProfileStore(null);
   const p = store.get('1');
   p.coins = 5000;
@@ -71,10 +71,6 @@ test('buying with gems, gifting with gems, and FREE_SHOP makes both free', () =>
   assert.equal(p.gems, 0);
   assert.equal(p.coins, 5000);
   assert.equal(p.equipped.frame, 'frame-gold');
-  p.gems = 1000;
-  store.gift('1', '2', 'token-dragon');
-  assert.equal(p.gems, 1000 - priceOf(ITEMS['token-dragon'], store.dayKey()));
-  assert.ok(store.get('2').owned.includes('token-dragon'));
   const free = new ProfileStore(null, { freeShop: true });
   const q = free.get('3');
   const limId = limitedNow(free.dayKey())[0]?.id || 'frame-gold';
@@ -114,7 +110,6 @@ test('rank frames are won on the leaderboard, never bought or given', () => {
   p.gems = 10_000;
   assert.ok(!p.owned.includes('frame-rank-1'));
   assert.throws(() => store.buy('1', 'frame-rank-1'), /won on the leaderboard/);
-  assert.throws(() => store.gift('1', '2', 'frame-rank-2'), /Unknown item/);
   assert.throws(() => store.equip('1', 'frame-rank-1'), /don't own/);
   assert.equal(store.grantItem('1', 'frame-rank-1'), true);
   assert.equal(p.equipped.frame, 'frame-rank-1', 'put on, as nothing else was');
