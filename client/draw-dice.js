@@ -93,6 +93,8 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
   ctx.clip();
   if (facePic) {
     ctx.drawImage(facePic, -50, -50, 100, 100);
+    if (st.twinkle) twinkles(ctx, t, st.twinkle, st.pip || '#ffffff', 17);
+    if (st.glint) glint(ctx, t, st.glint, 0.45);
   } else {
     if (st.art) DICE_ART[st.art](ctx, st, t);
     if (pips) {
@@ -777,6 +779,16 @@ export function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTIT
   ctx.globalAlpha *= alpha;
   ctx.translate(cx, cy);
   ctx.lineJoin = 'round';
+  if (st.bundle) {
+    const gl = bundleDieImg(st.bundle, 'die_glow');
+    if (gl) {
+      const s = (size * 1.48) / 2;
+      ctx.save();
+      ctx.globalAlpha *= (0.52 + 0.16 * Math.sin(t / 320)) * (1 - tilt * 0.25);
+      ctx.drawImage(gl, -s, -s, s * 2, s * 2);
+      ctx.restore();
+    }
+  }
   // One solid cube. The body is drawn first, in the dice's own colour: a rounded cube is a
   // smaller cube grown by a ball, and its outline on screen is the smaller cube's outline grown by
   // a disc, so fill that and stroke it thick and round. The faces then sit on it and meet at the
@@ -1533,6 +1545,169 @@ export const DICE_PROPS = {
       ctx.stroke();
       ctx.fillStyle = '#ffffff';
       circle(ctx, x - r * 0.35, y - r * 0.35, r * 0.25);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+  // Bundle dice props: lightweight themed details around & behind Carbon dice
+  woodland(ctx, st, t, part, k) {
+    if (part === 'back') return;
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 0.3 + i / 3) % 1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.85;
+      ctx.fillStyle = i % 2 ? '#8BC34A' : '#cde88a';
+      circle(ctx, -34 + i * 34 + Math.sin(t * 2 + i) * 6, -42 - ph * 30 * k, 3.2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+  playground(ctx, st, t, part, k) {
+    if (part === 'front') twinkles(ctx, t * 1000, 3, '#90CAF9', 23);
+    else if (k > 0.2) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(144, 202, 249, 0.35)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 56 * k, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+  },
+  odyssey(ctx, st, t, part, k) {
+    const a = t * 2.2;
+    const front = Math.sin(a) > 0;
+    if ((part === 'front') === front) {
+      const sx = Math.cos(a) * 64 * k;
+      const sy = Math.sin(a) * 18 * k - 10;
+      ctx.fillStyle = '#00E5FF';
+      circle(ctx, sx, sy, 5);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      circle(ctx, sx, sy, 2.2);
+      ctx.fill();
+    }
+    if (part === 'back') {
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, -10, 64 * k, 18 * k, 0, 0, TAU);
+      ctx.stroke();
+    }
+  },
+  pharaoh(ctx, st, t, part, k) {
+    if (part === 'back') {
+      ctx.save();
+      ctx.rotate(t * 0.35);
+      ctx.strokeStyle = 'rgba(255, 213, 79, 0.45)';
+      ctx.lineWidth = 2.5;
+      circle(ctx, 0, 0, 64 * k);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+    sparkle(ctx, Math.cos(t * 1.8) * 44 * k, -48 * k, 9 * k, '#FFD54F');
+  },
+  alchemy(ctx, st, t, part, k) {
+    if (part === 'back') {
+      const g = ctx.createRadialGradient(0, 0, 28, 0, 0, 74 * k);
+      g.addColorStop(0, 'rgba(206, 147, 216, 0.42)');
+      g.addColorStop(1, 'rgba(206, 147, 216, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-76, -76, 152, 152);
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 0.45 + i * 0.25) % 1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.9;
+      ctx.fillStyle = i % 2 ? '#CE93D8' : '#80DEEA';
+      circle(ctx, -30 + i * 20 + Math.sin(t * 2.5 + i) * 5, 20 - ph * 86 * k, 4.2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+  holiday(ctx, st, t, part, k) {
+    if (part !== 'front') return;
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 0.32 + i * 0.25) % 1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.95;
+      ctx.fillStyle = '#ffffff';
+      circle(ctx, -36 + i * 24 + Math.sin(t * 1.8 + i) * 6, -54 + ph * 108 * k, 3.6);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+  lotus(ctx, st, t, part, k) {
+    if (part === 'back') {
+      const ph = (t * 0.55) % 1;
+      ctx.strokeStyle = `rgba(38, 166, 154, ${(1 - ph) * 0.55})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(0, 38, (48 + ph * 34) * k, (16 + ph * 12) * k, 0, 0, TAU);
+      ctx.stroke();
+      return;
+    }
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 0.35 + i * 0.5) % 1;
+      ctx.save();
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.9;
+      ctx.translate(-26 + i * 52 + Math.sin(t + i) * 6, -50 + ph * 90);
+      ctx.rotate(t * 1.5 + i);
+      petal(ctx, 11 * k, '#f8bbd0');
+      ctx.restore();
+    }
+  },
+  pirate(ctx, st, t, part, k) {
+    if (part === 'back') return;
+    twinkles(ctx, t * 1000, 4, '#FFB300', 29);
+  },
+  olympus(ctx, st, t, part, k) {
+    if (part === 'back') {
+      ctx.save();
+      ctx.rotate(t * 0.35);
+      ctx.fillStyle = `rgba(255, 224, 130, ${(0.28 + 0.14 * Math.sin(t * 3)).toFixed(3)})`;
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(TAU / 8);
+        path(ctx, [[-6, -42], [0, -76 * k], [6, -42]]);
+        ctx.fill();
+      }
+      ctx.restore();
+      return;
+    }
+    const g = 0.5 + 0.5 * Math.sin(t * 2.8);
+    sparkle(ctx, -40, -40, (9 + 4 * g) * k, '#ffffff');
+    sparkle(ctx, 40, 40, (8 + 4 * g) * k, '#FFE082');
+  },
+  steampunk(ctx, st, t, part, k) {
+    if (part === 'back') {
+      // interlocking rotating brass cogwheels at top-left & bottom-right corners
+      for (const [gx, gy, dir] of [[-42, -40, 1], [42, 40, -1]]) {
+        ctx.save();
+        ctx.translate(gx, gy);
+        ctx.rotate(t * 1.1 * dir);
+        ctx.scale(k, k);
+        ctx.fillStyle = '#c97b42';
+        ctx.strokeStyle = '#4a2a14';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+          ctx.rotate(TAU / 8);
+          ctx.fillRect(-3.5, -24, 7, 8);
+        }
+        circle(ctx, 0, 0, 18);
+        ctx.fill();
+        ctx.stroke();
+        circle(ctx, 0, 0, 7);
+        ctx.fillStyle = '#ffab40';
+        ctx.fill();
+        ctx.restore();
+      }
+      return;
+    }
+    // steam puff rising off top edge
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 0.6 + i * 0.5) % 1;
+      ctx.globalAlpha = (1 - ph) * 0.5;
+      ctx.fillStyle = '#efe6dc';
+      circle(ctx, 26 + ph * 16, -48 - ph * 34 * k, (4 + ph * 6) * k);
       ctx.fill();
     }
     ctx.globalAlpha = 1;

@@ -954,6 +954,94 @@ export class BoardRenderer {
       this.drawCosmos(ctx, t, half);
       kind = 'twinkle';
     }
+    if (kind === 'radar') {
+      // Space Odyssey: rotating cyan lunar radar sweep around center hub + twinkling stars
+      const rad = this.board.hub * 1.15;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.rotate(t * 0.85);
+      const sw = ctx.createRadialGradient(0, 0, 0, 0, 0, rad);
+      sw.addColorStop(0, 'rgba(0, 229, 255, 0)');
+      sw.addColorStop(1, 'rgba(0, 229, 255, 0.22)');
+      ctx.fillStyle = sw;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, rad, -0.55, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.42)';
+      ctx.lineWidth = 0.04;
+      circle(ctx, 0, 0, rad * 0.92);
+      ctx.stroke();
+      ctx.restore();
+      kind = 'twinkle';
+    } else if (kind === 'alchemy') {
+      // Mystic Alchemy: slow-turning amethyst transmutation rune ring + rising arcane wisps
+      const rad = this.board.hub * 1.05;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.rotate(-t * 0.16);
+      ctx.strokeStyle = 'rgba(206, 147, 216, 0.34)';
+      ctx.lineWidth = 0.045;
+      circle(ctx, 0, 0, rad);
+      ctx.stroke();
+      circle(ctx, 0, 0, rad * 0.72);
+      ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * TAU;
+        circle(ctx, Math.cos(a) * rad * 0.86, Math.sin(a) * rad * 0.86, 0.06);
+        ctx.fillStyle = 'rgba(243, 209, 255, 0.65)';
+        ctx.fill();
+      }
+      ctx.restore();
+      kind = 'wisps';
+    } else if (kind === 'olympus') {
+      // Celestial Olympus: rotating golden solar rays at center + warm sheen + sparkles
+      const rad = this.board.hub * 1.18;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.rotate(t * 0.14);
+      ctx.fillStyle = 'rgba(255, 224, 130, 0.2)';
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(TAU / 8);
+        path(ctx, [[-0.08, -rad * 0.45], [0, -rad * 1.15], [0.08, -rad * 0.45]]);
+        ctx.fill();
+      }
+      ctx.restore();
+      kind = 'sparkle';
+    } else if (kind === 'steampunk') {
+      // Steampunk Workshop: counter-rotating brass gear outlines round the hub + rising embers
+      const rad = this.board.hub * 1.05;
+      ctx.save();
+      ctx.rotate(t * 0.28);
+      ctx.strokeStyle = 'rgba(255, 138, 101, 0.26)';
+      ctx.lineWidth = 0.05;
+      circle(ctx, 0, 0, rad);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 168, 100, 0.24)';
+      for (let i = 0; i < 12; i++) {
+        ctx.rotate(TAU / 12);
+        ctx.fillRect(-0.07, -rad - 0.12, 0.14, 0.16);
+      }
+      ctx.restore();
+      kind = 'embers';
+    } else if (kind === 'pond') {
+      // Turtle & Lotus Pond: subtle ripples on safe tiles + drifting pink lotus petals
+      ctx.save();
+      for (const idx of this.board.safe) {
+        const sq = this.board.track[idx];
+        const ph = (t * 0.4 + idx * 0.13) % 1;
+        ctx.globalAlpha = (1 - ph) * 0.38;
+        ctx.strokeStyle = '#9ff3e9';
+        ctx.lineWidth = 0.035;
+        circle(ctx, sq.x, sq.y, 0.2 + ph * 0.42);
+        ctx.stroke();
+      }
+      ctx.restore();
+      kind = 'petals';
+    } else if (kind === 'ocean') {
+      kind = 'bubbles';
+    }
     if (['embers', 'fireflies', 'twinkle', 'sparkle'].includes(kind)) ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < n; i++) {
       const a = rnd(i * 4 + 1);
@@ -1086,13 +1174,29 @@ export class BoardRenderer {
         ctx.globalAlpha = 0.3 + 0.25 * c;
         ctx.fillStyle = ['#2ef2ff', '#ff2fd1', '#ffe04a', '#5cff8a'][i % 4];
         ctx.fillRect(x + 0.05, y + 0.05, 0.4, 0.4);
-      } else if (kind === 'dust') {
-        const x = x0 + Math.sin(t * 0.2 + i) * 0.6;
-        const y = y0 + Math.cos(t * 0.17 + i * 3) * 0.6;
-        ctx.globalAlpha = 0.25 + 0.2 * Math.sin(t + i);
-        ctx.fillStyle = '#fff2d0';
-        circle(ctx, x, y, 0.04);
+      } else if (kind === 'dust' || kind === 'chalk') {
+        const x = x0 + Math.sin(t * 0.25 + i) * 0.6;
+        const y = y0 + Math.cos(t * 0.2 + i * 3) * 0.6;
+        ctx.globalAlpha = 0.26 + 0.24 * Math.sin(t * 1.4 + i);
+        ctx.fillStyle = kind === 'chalk' ? ['#90CAF9', '#ffffff', '#ffd54f'][i % 3] : '#fff2d0';
+        circle(ctx, x, y, kind === 'chalk' ? 0.055 : 0.04);
         ctx.fill();
+      }
+    }
+    if (art.safeGlow && art.tileSafe) {
+      // Subtle breathing highlight around custom safe tile artwork so safe squares shimmer cleanly
+      const p = 0.5 + 0.5 * Math.sin(t * 2.1);
+      ctx.strokeStyle = hexA(art.safeGlow, 0.2 + 0.22 * p);
+      ctx.lineWidth = 0.045;
+      for (const idx of this.board.safe) {
+        const sq = this.board.track[idx];
+        if (!sq) continue;
+        ctx.save();
+        ctx.translate(sq.x, sq.y);
+        ctx.rotate(sq.angle);
+        roundRect(ctx, -0.42, -0.42, 0.84, 0.84, 0.09);
+        ctx.stroke();
+        ctx.restore();
       }
     }
     ctx.restore();

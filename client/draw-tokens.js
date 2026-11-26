@@ -344,6 +344,270 @@ export const TOKEN_FX = {
       ctx.globalAlpha = 1;
     });
   },
+  // Bundle tokens: curated layered effects behind & in front of painted token art
+  woodland(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2);
+      const gr = r * (1.35 + 0.12 * p);
+      ctx.globalAlpha = 0.28 + 0.14 * p;
+      ctx.drawImage(glowSprite('woodland-halo', [[0, 'rgba(139, 195, 74, 0.7)'], [0.6, 'rgba(139, 195, 74, 0.2)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.15 - gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 0.45 + i / 3) % 1;
+      const sx = Math.sin(i * 7 + t * 1.8) * r * 0.72;
+      const sy = -r * 0.25 - ph * r * 2.1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.75;
+      circle(ctx, sx, sy, r * 0.055);
+      ctx.fillStyle = i % 2 ? '#cde88a' : '#8BC34A';
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+  playground(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.4);
+      const gr = r * (1.28 + 0.1 * p);
+      ctx.globalAlpha = 0.26 + 0.14 * p;
+      ctx.drawImage(glowSprite('playground-halo', [[0, 'rgba(144, 202, 249, 0.7)'], [0.6, 'rgba(144, 202, 249, 0.18)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 0.85 - gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    for (let i = 0; i < 2; i++) {
+      const a = Math.max(0, Math.sin(t * 2.4 - i * 2.2)) ** 5;
+      if (a < 0.05) continue;
+      ctx.globalAlpha = a * 0.85;
+      sparkle(ctx, (i ? 0.58 : -0.58) * r, (-1.1 - i * 0.35) * r, r * 0.18 * (0.7 + 0.3 * a), '#ffffff');
+    }
+    ctx.globalAlpha = 1;
+  },
+  odyssey(ctx, r, hex, t, part) {
+    const a = t * 1.9;
+    const depth = Math.sin(a);
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.8);
+      const gr = r * (1.4 + 0.14 * p);
+      ctx.globalAlpha = 0.32 + 0.18 * p;
+      ctx.drawImage(glowSprite('odyssey-halo', [[0, 'rgba(0, 229, 255, 0.7)'], [0.5, 'rgba(0, 229, 255, 0.2)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.25 - gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+      if (depth <= 0) {
+        const sx = Math.cos(a) * r * 1.05;
+        const sy = -r * 1.4 + depth * r * 0.24;
+        circle(ctx, sx, sy, r * 0.09);
+        ctx.fillStyle = '#00E5FF';
+        ctx.fill();
+      }
+      return;
+    }
+    if (depth > 0) {
+      const sx = Math.cos(a) * r * 1.05;
+      const sy = -r * 1.4 + depth * r * 0.24;
+      circle(ctx, sx, sy, r * 0.11);
+      ctx.fillStyle = '#e0fcff';
+      ctx.fill();
+    }
+    const g = 0.4 + 0.6 * Math.max(0, Math.sin(t * 3.5)) ** 4;
+    sparkle(ctx, -r * 0.12, -r * 1.92, r * 0.16 * g, '#00E5FF');
+  },
+  pharaoh(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.1);
+      const gr = r * (1.42 + 0.14 * p);
+      ctx.globalAlpha = 0.34 + 0.2 * p;
+      ctx.drawImage(glowSprite('pharaoh-halo', [[0, 'rgba(255, 213, 79, 0.75)'], [0.55, 'rgba(255, 179, 0, 0.22)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.28 - gr, gr * 2, gr * 2);
+      ctx.save();
+      ctx.translate(0, -r * 1.32);
+      ctx.rotate(t * 0.35);
+      ctx.strokeStyle = 'rgba(255, 213, 79, 0.42)';
+      ctx.lineWidth = Math.max(1, r * 0.045);
+      circle(ctx, 0, 0, r * 0.92);
+      ctx.stroke();
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      return;
+    }
+    for (const [sx, sy, ph] of [[-0.36, -1.65, 0], [0.38, -1.25, 1.8]]) {
+      const a = Math.max(0, Math.sin(t * 2.5 - ph)) ** 6;
+      if (a < 0.05) continue;
+      ctx.globalAlpha = a;
+      sparkle(ctx, sx * r, sy * r, r * 0.22, '#fff5b8');
+    }
+    ctx.globalAlpha = 1;
+  },
+  alchemy(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.5);
+      const gr = r * (1.45 + 0.16 * p);
+      ctx.globalAlpha = 0.36 + 0.22 * p;
+      ctx.drawImage(glowSprite('alchemy-halo', [[0, 'rgba(206, 147, 216, 0.75)'], [0.5, 'rgba(156, 39, 176, 0.25)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.22 - gr, gr * 2, gr * 2);
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.14, r * (0.95 + 0.05 * p), r * 0.32, 0, 0, TAU);
+      ctx.lineWidth = Math.max(1, r * 0.045);
+      ctx.strokeStyle = `rgba(225, 190, 231, ${0.4 + 0.3 * p})`;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 0.7 + i * 0.25) % 1;
+      const bx = Math.sin(i * 11 + t * 2.2) * r * 0.58;
+      const by = -r * 0.3 - ph * r * 2.05;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.85;
+      circle(ctx, bx, by, r * (0.045 + 0.03 * (1 - ph)));
+      ctx.fillStyle = i % 2 ? '#e1bee7' : '#80deea';
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+  holiday(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.2);
+      const gr = r * (1.45 + 0.15 * p);
+      ctx.globalAlpha = 0.34 + 0.2 * p;
+      ctx.drawImage(glowSprite('holiday-halo', [[0, 'rgba(255, 202, 40, 0.75)'], [0.55, 'rgba(229, 57, 53, 0.2)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.3 - gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 0.55 + i * 0.25) % 1;
+      const fx = Math.sin(i * 9 + t * 1.5) * r * 0.8;
+      const fy = -r * 2.45 + ph * r * 2.25;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.88;
+      circle(ctx, fx, fy, r * 0.055);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    }
+    const g = Math.max(0, Math.sin(t * 2.8)) ** 5;
+    if (g > 0.05) {
+      ctx.globalAlpha = g;
+      sparkle(ctx, r * 0.35, -r * 2.1, r * 0.24, '#FFCA28');
+    }
+    ctx.globalAlpha = 1;
+  },
+  lotus(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const ph = (t * 0.65) % 1;
+      ctx.beginPath();
+      ctx.ellipse(0, -r * 0.08, r * (0.72 + ph * 0.68), r * (0.24 + ph * 0.22), 0, 0, TAU);
+      ctx.lineWidth = Math.max(1, r * 0.045 * (1 - ph));
+      ctx.strokeStyle = `rgba(128, 232, 218, ${(1 - ph) * 0.65})`;
+      ctx.stroke();
+      const gr = r * 1.35;
+      ctx.globalAlpha = 0.32;
+      ctx.drawImage(glowSprite('lotus-halo', [[0, 'rgba(38, 166, 154, 0.7)'], [0.55, 'rgba(244, 179, 200, 0.22)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.15 - gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 0.45 + i * 0.5) % 1;
+      const px = Math.cos(t * 1.2 + i * 3) * r * 0.72;
+      const py = -r * 1.9 + ph * r * 1.65;
+      ctx.save();
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.85;
+      ctx.translate(px, py);
+      ctx.rotate(t * 1.5 + i);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.11, r * 0.06, 0, 0, TAU);
+      ctx.fillStyle = '#f8bbd0';
+      ctx.fill();
+      ctx.restore();
+    }
+  },
+  pirate(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.2);
+      const gr = r * (1.42 + 0.14 * p);
+      ctx.globalAlpha = 0.35 + 0.18 * p;
+      ctx.drawImage(glowSprite('pirate-halo', [[0, 'rgba(255, 179, 0, 0.75)'], [0.55, 'rgba(255, 179, 0, 0.2)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.25 - gr, gr * 2, gr * 2);
+      ctx.globalAlpha = 1;
+      return;
+    }
+    const spots = [[-0.38, -2.05], [0.42, -1.72], [-0.28, -0.75], [0.36, -0.45]];
+    spots.forEach(([sx, sy], i) => {
+      const a = Math.max(0, Math.sin(t * 2.6 - i * 1.55)) ** 6;
+      if (a < 0.05) return;
+      ctx.globalAlpha = a;
+      sparkle(ctx, sx * r, sy * r, r * 0.24 * (0.6 + 0.4 * a), '#ffe082');
+    });
+    ctx.globalAlpha = 1;
+  },
+  olympus(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 2.1);
+      const gr = r * (1.62 + 0.18 * p);
+      ctx.globalAlpha = 0.45 + 0.25 * p;
+      ctx.drawImage(glowSprite('olympus-halo', [[0, 'rgba(255, 224, 130, 0.85)'], [0.45, 'rgba(255, 193, 7, 0.3)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.32 - gr, gr * 2, gr * 2);
+      ctx.save();
+      ctx.translate(0, -r * 1.45);
+      ctx.rotate(t * 0.45);
+      ctx.globalAlpha = 0.32 + 0.15 * p;
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(TAU / 8);
+        ctx.fillStyle = '#FFE082';
+        path(ctx, [[-r * 0.06, -r * 0.72], [0, -r * 1.38], [r * 0.06, -r * 0.72]]);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+      return;
+    }
+    const spots = [[0, -2.35, 1], [-0.55, -1.75, 0.75], [0.55, -1.6, 0.75], [0, -0.55, 0.65]];
+    spots.forEach(([sx, sy, sz], i) => {
+      const a = Math.max(0, Math.sin(t * 2.4 - i * 1.4)) ** 5;
+      if (a < 0.04) return;
+      ctx.globalAlpha = a;
+      sparkle(ctx, sx * r, sy * r, r * 0.28 * sz * (0.7 + 0.3 * a), '#fffde7');
+    });
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 0.65 + i / 3) % 1;
+      ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.85;
+      sparkle(ctx, Math.sin(i * 5 + t * 1.8) * r * 0.7, -r * 0.25 - ph * r * 2.2, r * 0.12, '#FFE082');
+    }
+    ctx.globalAlpha = 1;
+  },
+  steampunk(ctx, r, hex, t, part) {
+    if (part === 'back') {
+      const p = 0.5 + 0.5 * Math.sin(t * 3.2);
+      const gr = r * (1.55 + 0.16 * p);
+      ctx.globalAlpha = 0.42 + 0.22 * p;
+      ctx.drawImage(glowSprite('steampunk-halo', [[0, 'rgba(255, 138, 101, 0.8)'], [0.45, 'rgba(255, 183, 77, 0.28)'], [1, 'rgba(0,0,0,0)']]), -gr, -r * 1.15 - gr, gr * 2, gr * 2);
+      // rotating bronze cog behind bot shoulders
+      ctx.save();
+      ctx.translate(0, -r * 1.25);
+      ctx.rotate(t * 0.7);
+      ctx.globalAlpha = 0.42;
+      ctx.fillStyle = '#c97b42';
+      for (let i = 0; i < 8; i++) {
+        ctx.rotate(TAU / 8);
+        ctx.fillRect(-r * 0.1, -r * 1.18, r * 0.2, r * 0.24);
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.98, 0, TAU);
+      ctx.lineWidth = Math.max(1.2, r * 0.12);
+      ctx.strokeStyle = '#d98a4e';
+      ctx.stroke();
+      ctx.restore();
+      // rising furnace embers
+      for (let i = 0; i < 4; i++) {
+        const ph = (t * 0.9 + i * 0.25) % 1;
+        ctx.globalAlpha = Math.sin(ph * Math.PI) * 0.9;
+        sparkle(ctx, Math.sin(i * 11 + t * 2) * r * 0.78, -r * 0.25 - ph * r * 2.2, r * 0.11, i % 2 ? '#FF8A65' : '#ffd54f');
+      }
+      ctx.globalAlpha = 1;
+      return;
+    }
+    // rhythmic furnace core pulse & top steam puff
+    const p = 0.5 + 0.5 * Math.sin(t * 4);
+    ctx.globalAlpha = 0.32 + 0.38 * p;
+    ctx.drawImage(glowSprite('steampunk-core', [[0, '#fff9c4'], [0.45, 'rgba(255, 138, 101, 0.7)'], [1, 'rgba(255, 87, 34, 0)']]), -r * 0.45, -r * 1.35, r * 0.9, r * 0.9);
+    const puff = (t * 0.8) % 1;
+    ctx.globalAlpha = (1 - puff) * 0.42;
+    circle(ctx, r * 0.22 + puff * r * 0.2, -r * 2.25 - puff * r * 0.65, r * (0.08 + puff * 0.14));
+    ctx.fillStyle = '#ede7e1';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  },
 };
 
 // A soft round glow (a radial gradient), painted once and stamped: making gradients for every
@@ -375,6 +639,12 @@ export const pawnSprites = new Map();
 export const pawnCache = { on: true }; // (tests compare against painting directly)
 export function pawnSprite(ctx, r, hex, skin, sign) {
   if (!pawnCache.on) return null;
+  const style = PAWN_STYLES[skin] || PAWN_STYLES['token-classic'];
+  const map = { red: 'red', green: 'green', yellow: 'yellow', blue: 'blue', orange: 'yellow', purple: 'blue' };
+  if (style.bundle && !bundleTokenPic(style.bundle, `token_${map[sign] || 'red'}`)) return null;
+  if (style.shape === 'dino' && !dinoPicture(sign)) return null;
+  if (style.shape === 'dragon' && !dragonPicture(sign)) return null;
+  if ((style.shape === 'samurai' || style.shape === 'football') && !tokenPicture(style.shape, sign)) return null;
   const m = ctx.getTransform();
   const scale = Math.hypot(m.a, m.b); // CSS → device pixels where it will be stamped
   const px = Math.round(r * scale * 2) / 2; // radius in device pixels (half-pixel steps)
@@ -388,7 +658,7 @@ export function pawnSprite(ctx, r, hex, skin, sign) {
     canvas.height = Math.ceil((SPRITE_T + SPRITE_B) * px);
     const g = canvas.getContext('2d');
     g.setTransform(canvas.width / (SPRITE_L * 2 * r), 0, 0, canvas.height / ((SPRITE_T + SPRITE_B) * r), SPRITE_L * r * (canvas.width / (SPRITE_L * 2 * r)), SPRITE_T * r * (canvas.height / ((SPRITE_T + SPRITE_B) * r)));
-    paintPawn(g, r, hex, PAWN_STYLES[skin] || PAWN_STYLES['token-classic'], sign);
+    paintPawn(g, r, hex, style, sign);
     sp = { canvas };
     pawnSprites.set(key, sp);
   }
@@ -414,16 +684,16 @@ export const PAWN_STYLES = {
   'token-sakura': { shape: 'sakura' },
   'token-dino': { shape: 'dino' },
   // Cosmetic bundle tokens: /bundles/<tier>/<dir>/token_<col>.webp + token_glow.webp
-  'token-woodland-grove': { bundle: 'common/woodland_grove' },
-  'token-street-playground': { bundle: 'common/street_playground' },
-  'token-space-odyssey': { bundle: 'rare/space_odyssey' },
-  'token-pharaohs-oasis': { bundle: 'rare/pharaohs_oasis' },
-  'token-mystic-alchemy': { bundle: 'epic/mystic_alchemy' },
-  'token-christmas-holiday': { bundle: 'epic/christmas_holiday' },
-  'token-turtle-lotus': { bundle: 'epic/turtle_lotus' },
-  'token-pirates-cove': { bundle: 'epic/pirates_cove' },
-  'token-celestial-olympus': { bundle: 'legendary/celestial_olympus', fx: 'glitter' },
-  'token-steampunk-workshop': { bundle: 'legendary/steampunk_workshop', fx: 'glitter' },
+  'token-woodland-grove': { bundle: 'common/woodland_grove', fx: 'woodland' },
+  'token-street-playground': { bundle: 'common/street_playground', fx: 'playground' },
+  'token-space-odyssey': { bundle: 'rare/space_odyssey', fx: 'odyssey', hover: 0.08 },
+  'token-pharaohs-oasis': { bundle: 'rare/pharaohs_oasis', fx: 'pharaoh' },
+  'token-mystic-alchemy': { bundle: 'epic/mystic_alchemy', fx: 'alchemy' },
+  'token-christmas-holiday': { bundle: 'epic/christmas_holiday', fx: 'holiday' },
+  'token-turtle-lotus': { bundle: 'epic/turtle_lotus', fx: 'lotus' },
+  'token-pirates-cove': { bundle: 'epic/pirates_cove', fx: 'pirate' },
+  'token-celestial-olympus': { bundle: 'legendary/celestial_olympus', fx: 'olympus', hover: 0.1 },
+  'token-steampunk-workshop': { bundle: 'legendary/steampunk_workshop', fx: 'steampunk' },
   // Battle Pass Season 1: painted pictures, one per colour
   'token-samurai': { shape: 'samurai' },
   'token-football': { shape: 'football' },
@@ -473,9 +743,10 @@ export function paintPawn(ctx, r, hex, style, sign) {
       const h = r * 2.75;
       const w = (h * img.naturalWidth) / img.naturalHeight;
       if (glow) {
+        const gw = (h * glow.naturalWidth) / glow.naturalHeight;
         ctx.save();
-        ctx.globalAlpha *= 0.65;
-        ctx.drawImage(glow, -w / 2, -h + r * 0.14, w, h);
+        ctx.globalAlpha *= 0.68;
+        ctx.drawImage(glow, -gw / 2, -h + r * 0.14, gw, h);
         ctx.restore();
       }
       ctx.drawImage(img, -w / 2, -h + r * 0.14, w, h);
@@ -631,7 +902,10 @@ function dinoPicture(name) {
   if (!img) {
     if (typeof Image === 'undefined') return null;
     img = dinoArt[file] = new Image();
-    img.onload = () => pawnSprites.clear();
+    img.onload = () => {
+      pawnSprites.clear();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('ludo-textures'));
+    };
     img.src = `/tokens/dino-${file}.webp`;
   }
   return img.complete && img.naturalWidth ? img : null;
@@ -645,7 +919,10 @@ function dragonPicture(name) {
   if (!img) {
     if (typeof Image === 'undefined') return null;
     img = dragonArt[file] = new Image();
-    img.onload = () => pawnSprites.clear();
+    img.onload = () => {
+      pawnSprites.clear();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('ludo-textures'));
+    };
     img.src = `/tokens/dragon-${file}.webp`;
   }
   return img.complete && img.naturalWidth ? img : null;

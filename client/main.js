@@ -17,7 +17,7 @@ import { setFrame } from './frames.js';
 import { ICONS, withIcon } from './icons.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour, openTour } from './tour.js';
-import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, TOKEN_SIGNATURES } from './skins.js';
+import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, DICE_STYLES, TOKEN_SIGNATURES } from './skins.js';
 import { t, translateServer, setLanguage, languagePref, setAutoLocale, LANGUAGES, applyI18n, currentLanguage as currentLang, chatLanguage, chatLanguagePref, setChatLanguage } from './i18n.js';
 import { CHAT_LANGUAGES, CHAT_LANG } from '../shared/chatlangs.js';
 import { unlockAudio, playedJustNow, sfx, setMusic, setSound, setVolume, nextTrack, prevTrack, playTrack, audioSettings } from './audio.js';
@@ -3710,7 +3710,10 @@ function startEvent(ev, now) {
 function endEvent(ev, now) {
   if (ev.type === 'roll') {
     dice = { ...dice, mode: 'shown', t0: now };
-    renderer.ring(0, 0, '#ffffff', 1.2);
+    const st = DICE_STYLES[state?.seats?.[ev.seat]?.skins?.dice];
+    const rc = st?.sparks?.[0] || st?.outline || (ev.value === 6 ? '#ffd23f' : '#ffffff');
+    renderer.ring(0, 0, rc, ev.value === 6 ? 1.55 : 1.2);
+    renderer.burst(0, 0, st?.sparks || [rc, '#ffffff', '#ffd23f'], { count: ev.value === 6 ? 18 : 9, speed: ev.value === 6 ? 4.2 : 2.8, life: 580, size: 0.11 });
     sfx('land');
   } else {
     shownTokens = ev.final;
@@ -3757,9 +3760,9 @@ function moveOverrides(ev) {
     if (i !== ev.lastStep) {
       ev.lastStep = i;
       renderer.ring(a.x, a.y, color, 0.45); // little dust ring on each landing
-      // a Legendary token leaves a little of itself behind at every hop
+      // Epic & Legendary tokens leave themed sparkles behind at every hop
       const trail = signatureOf(seat);
-      if (trail?.legend && i > 0) renderer.burst(a.x, a.y, trail.colors, { count: 5, speed: 1.4, life: 480, size: 0.09 });
+      if (trail && i > 0) renderer.burst(a.x, a.y, trail.colors, { count: trail.legend ? 5 : 2, speed: trail.legend ? 1.4 : 1.0, life: trail.legend ? 480 : 340, size: 0.085 });
       sfx('step');
     }
     const k = easeInOut(t);

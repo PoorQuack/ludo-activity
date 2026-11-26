@@ -3,6 +3,7 @@ import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, ra
 import { passItemInfo } from '../shared/pass.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
+import { PAWN_STYLES } from './draw-tokens.js';
 import { drawTauntPreview } from './taunts.js';
 import { playerColor } from './skins.js';
 import { t } from './i18n.js';
@@ -330,7 +331,6 @@ function animate(now) {
   for (const a of animated) {
     if (!a.canvas.isConnected) continue;
     if (a.once && !a.dirty) continue;
-    a.dirty = false;
     if (watcher) {
       if (!watched.has(a.canvas)) {
         watched.add(a.canvas);
@@ -339,6 +339,7 @@ function animate(now) {
       }
       if (!onScreen.has(a.canvas)) continue;
     } else if (a.canvas.offsetParent === null) continue;
+    a.dirty = false;
     const ctx = a.canvas.getContext('2d');
     ctx.setTransform(a.dpr, 0, 0, a.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -402,7 +403,8 @@ function preview(item, theme) {
     const wide = ['token-constellation', 'token-ufo', 'token-dragon', 'token-samurai', 'token-woodland-grove', 'token-street-playground', 'token-space-odyssey', 'token-pharaohs-oasis', 'token-mystic-alchemy', 'token-christmas-holiday', 'token-turtle-lotus', 'token-pirates-cove', 'token-celestial-olympus', 'token-steampunk-workshop'].includes(item.id);
     const draw = (c, now) => ['red', 'green', 'yellow', 'blue'].forEach((col, i) => drawToken(c, (wide ? 25.5 + i * 33 : 30 + i * 30), 68, wide ? 12.5 : 14, playerColor(theme, col), item.id, { sign: col, t: now }));
     draw(ctx, performance.now());
-    animated.push({ canvas, dpr, draw, once: rarityOf(item).id !== 'legendary', dirty: false });
+    const st = PAWN_STYLES[item.id];
+    animated.push({ canvas, dpr, draw, once: !st?.fx && !st?.hover, dirty: true });
   } else if (item.type === 'dice') {
     const draw = (c, now) => drawDice(c, W / 2, H / 2, 56, 5, item.id, { t: now });
     draw(ctx, performance.now());
@@ -423,7 +425,7 @@ function preview(item, theme) {
       c.drawImage(off, (W - size) / 2, 4, size, size);
     };
     draw(ctx, performance.now());
-    animated.push({ canvas, dpr, draw, once: !r.theme?.art?.fx && !r.theme?.art?.under?.speed, dirty: false });
+    animated.push({ canvas, dpr, draw, once: !r.theme?.art?.fx && !r.theme?.art?.under?.speed, dirty: true });
   }
   return canvas;
 }

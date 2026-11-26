@@ -1010,140 +1010,220 @@ function cardBackdrop(ctx, id, w, h, s, color, vcolor, tm) {
 }
 
 // One taunt for a shop card or close-up, looping: a composed comic card of the capture tile,
-// the victim's base, and the taunt prop + caption so every frame reads clearly. `w`×`h`: drawing area.
+// the victim's base with Blue reacting, and the taunt prop + caption so every frame reads clearly.
 export function drawTauntPreview(ctx, id, w, h, now, { color = '#e8483f', vcolor = '#3b82f6', name = '' } = {}) {
-  const fx = TAUNT_FX[id];
   const s = Math.min(w / 7.2, h / 4.6);
-  const g = { x: w * 0.28, y: h * 0.67, hx: w * 0.72, hy: h * 0.68, s, w, h, color, vcolor, name, px: null };
+  const g = { x: w * 0.28, y: h * 0.69, hx: w * 0.72, hy: h * 0.67, s, w, h, color, vcolor, name, px: null };
+
+  const drawPawnAt = (px, py, size, col, squash = 1, alpha = 1) => {
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.beginPath();
+    ctx.ellipse(px, py + size * 0.65, size * 0.78, size * 0.28, 0, 0, TAU);
+    ctx.fillStyle = 'rgba(0,0,0,0.42)';
+    ctx.fill();
+    ctx.translate(px, py + size * 0.12);
+    ctx.scale(1 / Math.sqrt(squash), squash);
+    pawn(ctx, 0, 0, size, col);
+    ctx.restore();
+  };
 
   ctx.save();
   roundRect(ctx, 0, 0, w, h, Math.min(10, s * 0.42));
   ctx.clip();
   cardBackdrop(ctx, id, w, h, s, color, vcolor, now);
 
-  // capturer pawn (glossy, shaded, with ground shadow)
-  const pawnSquash = id === 'taunt-bonk' && (now % 1800) / 1800 > 0.32 && (now % 1800) / 1800 < 0.56 ? 0.78 : 1;
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(g.x, g.y + s * 0.42, s * 0.46, s * 0.16, 0, 0, TAU);
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fill();
-  ctx.translate(g.x, g.y + s * 0.16);
-  ctx.scale(1 / Math.sqrt(pawnSquash), pawnSquash);
-  pawn(ctx, 0, 0, s * 0.54, color);
-  ctx.restore();
+  // Victim pawn visibility / state per taunt so the scene tells the whole joke
+  const pr = s * 0.52;
+  if (id === 'taunt-none') {
+    // Simple knockback arc showing Red bumping Blue home
+    drawPawnAt(g.hx, g.hy - s * 0.04, pr * 0.9, vcolor, 1, 0.85);
+    ctx.save();
+    ctx.setLineDash([s * 0.16, s * 0.14]);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1.4, s * 0.08);
+    ctx.strokeStyle = 'rgba(255, 240, 215, 0.5)';
+    ctx.beginPath();
+    ctx.moveTo(g.x + s * 0.35, g.y - s * 0.45);
+    ctx.quadraticCurveTo(w * 0.5, h * 0.28, g.hx - s * 0.25, g.hy - s * 0.42);
+    ctx.stroke();
+    ctx.restore();
+    drawPawnAt(g.x, g.y, pr, color);
+    ctx.restore();
+    return;
+  }
+
+  // Red capturer stands left (squashed cleanly on bonk recovery)
+  const kBonk = (now % 1800) / 1800;
+  drawPawnAt(g.x, g.y, pr, color);
 
   if (id === 'taunt-bonk') {
-    // Dedicated rich preview card for Bonk!: orbiting dizzy stars on victim pad, swinging mallet slam, bold BONK! burst
-    const tm = now % 1800;
-    const k = tm / 1800;
-    // small dizzy victim shadow + stars always orbiting over home pad
+    const k = kBonk;
+    const victimSquash = k >= 0.35 && k < 0.6 ? 0.62 + 0.38 * seg(k, 0.35, 0.6) : 1;
+    drawPawnAt(g.hx, g.hy + s * 0.04, pr * 0.94, vcolor, victimSquash);
+    // Dizzy stars orbiting cleanly above Blue's head
     for (let i = 0; i < 3; i++) {
       const a = now / 360 + (i * TAU) / 3;
-      sparkle(ctx, g.hx + Math.cos(a) * s * 0.78, g.hy - s * 0.18 + Math.sin(a) * s * 0.26, s * 0.3, i % 2 ? '#ffd23f' : '#ffffff');
+      sparkle(ctx, g.hx + Math.cos(a) * s * 0.68, g.hy - s * 0.72 + Math.sin(a) * s * 0.18, s * 0.25, i % 2 ? '#ffd23f' : '#ffffff');
     }
-    // mallet swings from poised backswing (-Math.PI*0.62) onto capture square (-Math.PI*0.92), holds, lifts
-    const L = s * 2.45;
-    const slamA = -Math.PI + 0.18;
-    const backA = -Math.PI * 0.52;
+    // Pivot bottom-center so the hammer swings strictly inside the frame and slams Blue on the right!
+    const pivotX = w * 0.48;
+    const pivotY = h * 0.92;
+    const L = s * 1.95;
+    const backA = -Math.PI * 0.68;
+    const slamA = -0.22;
     let a = slamA;
-    if (k < 0.2) a = lerp(slamA - 0.1, backA, easeOutCubic(k / 0.2));
-    else if (k < 0.36) a = lerp(backA, slamA, seg(k, 0.2, 0.36) ** 2.2);
-    else if (k < 0.54) a = slamA + 0.2 * Math.sin(seg(k, 0.36, 0.54) * Math.PI);
-    const P = { x: g.x - L * Math.cos(slamA), y: g.y - L * Math.sin(slamA) };
-    // impact shock lines on slam
-    if (k >= 0.35 && k < 0.78) {
-      const imp = seg(k, 0.35, 0.78);
+    if (k < 0.22) a = lerp(slamA, backA, easeOutCubic(k / 0.22));
+    else if (k < 0.38) a = lerp(backA, slamA, seg(k, 0.22, 0.38) ** 2.2);
+    else if (k < 0.56) a = slamA - 0.18 * Math.sin(seg(k, 0.38, 0.56) * Math.PI);
+    else a = lerp(slamA, backA * 0.65, seg(k, 0.56, 1) * 0.5);
+    if (k >= 0.36 && k < 0.78) {
+      const imp = seg(k, 0.36, 0.78);
       ctx.save();
       ctx.globalAlpha = 1 - imp;
       ctx.strokeStyle = '#fff3b0';
-      ctx.lineWidth = s * 0.13;
+      ctx.lineWidth = s * 0.12;
       ctx.lineCap = 'round';
       for (let n = 0; n < 8; n++) {
         const d = (n / 8) * TAU + 0.2;
         ctx.beginPath();
-        ctx.moveTo(g.x + Math.cos(d) * s * (0.55 + imp * 0.4), g.y - s * 0.1 + Math.sin(d) * s * (0.45 + imp * 0.4));
-        ctx.lineTo(g.x + Math.cos(d) * s * (1.05 + imp * 0.9), g.y - s * 0.1 + Math.sin(d) * s * (0.85 + imp * 0.8));
+        ctx.moveTo(g.hx + Math.cos(d) * s * (0.42 + imp * 0.3), g.hy - s * 0.2 + Math.sin(d) * s * (0.32 + imp * 0.3));
+        ctx.lineTo(g.hx + Math.cos(d) * s * (0.88 + imp * 0.6), g.hy - s * 0.2 + Math.sin(d) * s * (0.68 + imp * 0.6));
         ctx.stroke();
       }
       ctx.restore();
     }
     ctx.save();
-    ctx.translate(P.x, P.y);
+    ctx.translate(pivotX, pivotY);
     ctx.rotate(a);
-    hammer(ctx, L, s * 1.05);
+    hammer(ctx, L, s * 0.86);
     ctx.restore();
-    const punch = k >= 0.34 && k < 0.54 ? 1 + 0.16 * Math.sin(seg(k, 0.34, 0.54) * Math.PI) : 1;
+    const punch = k >= 0.36 && k < 0.56 ? 1 + 0.14 * Math.sin(seg(k, 0.36, 0.56) * Math.PI) : 1;
     ctx.save();
-    ctx.translate(w * 0.62, h * 0.26);
+    ctx.translate(w * 0.54, h * 0.24);
     ctx.scale(punch, punch);
-    word(ctx, up(t('Bonk!')), 0, 0, s * 1.02, '#ffd23f', { rot: -0.09, pop: 1, maxW: w - s });
+    word(ctx, up(t('Bonk!')), 0, 0, s * 0.92, '#ffd23f', { rot: -0.09, pop: 1, maxW: w - s * 0.9 });
     ctx.restore();
+  } else if (id === 'taunt-bye') {
+    const k = (now % 2200) / 2200;
+    const tr = easeOutCubic(seg(k, 0.1, 0.85));
+    const vScale = lerp(0.95, 0.58, tr);
+    const vx = lerp(w * 0.44, g.hx, tr);
+    const vy = lerp(g.y - s * 0.35, g.hy, tr) - Math.sin(tr * Math.PI) * s * 0.65;
+    drawPawnAt(vx, vy, pr * vScale, vcolor, 1, 1 - tr * 0.3);
+    ctx.save();
+    ctx.translate(w * 0.52, h * 0.46);
+    ctx.rotate(Math.sin(k * 22) * 0.32);
+    glove(ctx, s * 0.72, color);
+    ctx.restore();
+    word(ctx, up(t('Bye!')), w * 0.72, h * 0.24, s * 0.82, '#8fd3ff', { rot: 0.1, pop: 1, maxW: w * 0.44 });
   } else if (id === 'taunt-chicken') {
     const k = (now % 1900) / 1900;
     const squeeze = k > 0.22 && k < 0.72 ? Math.sin(seg(k, 0.22, 0.72) * Math.PI) : 0.18;
-    const hop = Math.abs(Math.sin(k * Math.PI * 2)) * s * 0.18;
+    const hop = Math.abs(Math.sin(k * Math.PI * 2)) * s * 0.15;
+    drawPawnAt(g.hx, g.hy + s * 0.02, pr * 0.86, vcolor, 0.76);
     ctx.save();
-    ctx.translate(w * 0.65, h * 0.64 - hop);
-    ctx.rotate(Math.sin(k * 12) * 0.06);
-    chicken(ctx, s * 1.05, squeeze);
+    ctx.translate(w * 0.56, h * 0.64 - hop);
+    ctx.rotate(Math.sin(k * 12) * 0.05);
+    chicken(ctx, s * 0.88, squeeze);
     ctx.restore();
-    word(ctx, up(t('Squeak!')), w * 0.62, h * 0.24, s * 0.85, '#ffd84a', { rot: 0.1, pop: 1, maxW: w - s * 0.8 });
-  } else if (id === 'taunt-skill') {
-    const k = (now % 2000) / 2000;
-    // crisp red ink stamp mark always shown on pad, handle stamps down and lifts cleanly above
-    ctx.save();
-    ctx.translate(g.hx, g.hy);
-    stampMark(ctx, s * 0.96, up(t('Skill issue')));
-    ctx.restore();
-    const lift = k < 0.35 ? 1 - drop(seg(k, 0, 0.35)) : k < 0.6 ? 0 : easeOutCubic(seg(k, 0.6, 1));
-    ctx.save();
-    ctx.translate(g.x + s * 0.4, h * 0.44 - lift * s * 0.85);
-    ctx.rotate(-0.22);
-    stamp(ctx, s * 0.72);
-    ctx.restore();
+    word(ctx, up(t('Squeak!')), w * 0.64, h * 0.23, s * 0.8, '#ffd84a', { rot: 0.1, pop: 1, maxW: w - s });
   } else if (id === 'taunt-violin') {
     const tm = now;
+    drawPawnAt(g.hx + s * 0.32, g.hy - s * 0.04, pr * 0.86, vcolor, 0.92);
     ctx.save();
-    ctx.translate(g.hx, h * 0.24);
-    cloud(ctx, s * 0.88, tm);
+    ctx.translate(g.hx + s * 0.15, h * 0.22);
+    cloud(ctx, s * 0.78, tm);
     ctx.restore();
     ctx.save();
-    ctx.translate(w * 0.56, h * 0.58 + Math.sin(tm / 190) * s * 0.05);
-    violin(ctx, s * 0.95, Math.sin(tm / 130));
+    ctx.translate(w * 0.48, h * 0.52 + Math.sin(tm / 190) * s * 0.04);
+    violin(ctx, s * 0.82, Math.sin(tm / 130));
     ctx.restore();
     for (let i = 0; i < 3; i++) {
-      const ph = ((tm / 1600 + i * 0.33) % 1);
+      const ph = (tm / 1600 + i * 0.33) % 1;
       ctx.save();
       ctx.globalAlpha = 1 - ph;
-      ctx.translate(w * 0.74 + Math.sin(ph * 4 + i) * s * 0.25, h * 0.5 - ph * s * 1.4);
+      ctx.translate(w * 0.62 + Math.sin(ph * 4 + i) * s * 0.2, h * 0.48 - ph * s * 1.15);
       ctx.fillStyle = i % 2 ? '#a9c8ff' : '#ffffff';
-      note(ctx, s * 0.85);
+      note(ctx, s * 0.75);
       ctx.restore();
     }
     ctx.save();
-    ctx.font = `italic 700 ${s * 0.42}px system-ui, sans-serif`;
+    ctx.font = `italic 700 ${s * 0.38}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = s * 0.14;
+    ctx.lineWidth = s * 0.13;
     ctx.strokeStyle = INK;
     ctx.fillStyle = '#ffffff';
     const cap = t('*sad violin noises*');
-    ctx.strokeText(cap, w * 0.54, h * 0.9, w - s * 0.4);
-    ctx.fillText(cap, w * 0.54, h * 0.9, w - s * 0.4);
+    ctx.strokeText(cap, w * 0.5, h * 0.92, w - s * 0.4);
+    ctx.fillText(cap, w * 0.5, h * 0.92, w - s * 0.4);
     ctx.restore();
+  } else if (id === 'taunt-clown') {
+    const k = (now % 2200) / 2200;
+    drawPawnAt(g.hx, g.hy - s * 0.02, pr * 0.94, vcolor);
+    const squish = k < 0.18 ? 0.75 + 0.25 * (k / 0.18) : k > 0.55 && k < 0.72 ? 0.75 + 0.25 * seg(k, 0.55, 0.72) : 1;
+    ctx.save();
+    ctx.translate(g.hx, g.hy - pr * 0.66);
+    nose(ctx, s * 0.44, squish);
+    ctx.restore();
+    word(ctx, up(t('Honk!')), w * 0.46, h * 0.24, s * 0.72, '#ff6b81', { rot: -0.15, pop: 1, maxW: w * 0.42 });
+    word(ctx, up(t('Honk!')), w * 0.78, h * 0.35, s * 0.58, '#ffd23f', { rot: 0.16, pop: 0.92, maxW: w * 0.36 });
+  } else if (id === 'taunt-l') {
+    const k = (now % 2100) / 2100;
+    const bounce = k < 0.22 ? 1 - 0.14 * Math.sin(seg(k, 0, 0.22) * Math.PI) : 1;
+    drawPawnAt(g.hx + s * 0.36, g.hy - s * 0.02, pr * 0.84, vcolor);
+    ctx.save();
+    ctx.translate(g.hx - s * 0.25, h * 0.48);
+    ctx.scale(1 / bounce, bounce);
+    bigL(ctx, s * 0.76);
+    ctx.restore();
+  } else if (id === 'taunt-ggez') {
+    const k = (now % 2400) / 2400;
+    drawPawnAt(g.hx, g.hy + s * 0.05, pr * 0.85, vcolor, 0.78, 0.75);
+    // Crisp cool shades scaled properly onto Red capturer's head
+    ctx.save();
+    ctx.translate(g.x, g.y - pr * 0.62);
+    shades(ctx, s * 0.48, (k * 1.8) % 1);
+    ctx.restore();
+    const wy = h * 0.28;
+    word(ctx, 'GG EZ', w * 0.62, wy, s * 0.94, '#b8f26a', { rot: -0.06, pop: 1, maxW: w * 0.6 });
+    for (let i = 0; i < 4; i++) {
+      const a = now / 380 + (i * TAU) / 4;
+      sparkle(ctx, w * 0.62 + Math.cos(a) * s * 1.55, wy + Math.sin(a) * s * 0.55, s * 0.22, i % 2 ? '#ffffff' : '#ffd23f');
+    }
+  } else if (id === 'taunt-skill') {
+    const k = (now % 2000) / 2000;
+    drawPawnAt(g.hx, g.hy - s * 0.02, pr * 0.88, vcolor, 0.84, 0.8);
+    ctx.save();
+    ctx.translate(g.hx, g.hy + s * 0.04);
+    stampMark(ctx, s * 0.88, up(t('Skill issue')));
+    ctx.restore();
+    const lift = k < 0.35 ? 1 - drop(seg(k, 0, 0.35)) : k < 0.6 ? 0 : easeOutCubic(seg(k, 0.6, 1));
+    ctx.save();
+    ctx.translate(g.x + s * 0.45, h * 0.4 - lift * s * 0.75);
+    ctx.rotate(-0.22);
+    stamp(ctx, s * 0.66);
+    ctx.restore();
+  } else if (id === 'taunt-cackle') {
+    const k = (now % 2100) / 2100;
+    drawPawnAt(g.hx, g.hy + s * 0.02, pr * 0.85, vcolor, 0.86);
+    const bounce = Math.abs(Math.sin(k * Math.PI * 2)) * s * 0.22;
+    ctx.save();
+    ctx.translate(g.hx - s * 0.28, h * 0.44 - bounce);
+    ctx.rotate(Math.sin(k * 16) * 0.1);
+    skull(ctx, s * 0.56, Math.abs(Math.sin(k * 26)));
+    ctx.restore();
+    word(ctx, up(t('Ha!')), w * 0.45, h * 0.24, s * 0.66, '#c5f04a', { rot: -0.18, pop: 1 });
+    word(ctx, up(t('Ha!')), w * 0.82, h * 0.28, s * 0.52, '#a3e635', { rot: 0.18, pop: 0.9 });
   } else if (id === 'taunt-fireworks') {
-    const sign = inside(g, w / 2, h * 0.54, s * 2);
+    drawPawnAt(g.hx, g.hy + s * 0.04, pr * 0.85, vcolor, 0.82, 0.85);
+    const sign = inside(g, w / 2, h * 0.44, s * 2);
     ctx.save();
     ctx.translate(sign.x, sign.y);
     ctx.rotate(Math.sin(now / 520) * 0.03);
-    marquee(ctx, t('{name} got sent home!', { name: name || '' }), s * 0.98, now, w - s * 0.7);
+    marquee(ctx, t('{name} got sent home!', { name: name || '' }), s * 0.92, now, w - s * 0.6);
     ctx.restore();
-  } else if (fx) {
-    // Remaining taunts (bye, clown, l, ggez, cackle): hold inside the peak visible window [0.46..0.9]
-    const k = 0.46 + 0.44 * (0.5 + 0.5 * Math.sin(now / 650));
-    fx.draw(ctx, k, g);
-    if (fx.mark) fx.mark(ctx, now, g);
   }
   ctx.restore();
 }
