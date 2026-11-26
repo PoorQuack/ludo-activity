@@ -1019,5 +1019,6 @@
   "All In games count 1.5×, for wins and for losses.": "All In 对局输赢都按 1.5 倍计算。",
   "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "从 12 月 1 日起，排行榜按公开下注房间赢得的金币排名。",
   "{n}% house fee": "{n}% 抽成",
-  "🏦 House fee: {n} coins": "🏦 抽成：{n} 金币"
+  "🏦 House fee: {n} coins": "🏦 抽成：{n} 金币",
+  "🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins": "🎁 新手礼包已解锁！+{gems} 宝石和 +{coins} 金币"
 }

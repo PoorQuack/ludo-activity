@@ -1019,5 +1019,6 @@
   "All In games count 1.5×, for wins and for losses.": "All In-spellen tellen 1,5×, bij winst en bij verlies.",
   "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "Vanaf 1 december tellen de ranglijsten gouden munten gewonnen in openbare inzetkamers.",
   "{n}% house fee": "{n}% huiskosten",
-  "🏦 House fee: {n} coins": "🏦 Huiskosten: {n} munten"
+  "🏦 House fee: {n} coins": "🏦 Huiskosten: {n} munten",
+  "🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins": "🎁 Starterpakket ontgrendeld! +{gems} edelstenen & +{coins} munten"
 }

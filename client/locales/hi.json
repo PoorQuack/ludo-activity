@@ -1019,5 +1019,6 @@
   "All In games count 1.5×, for wins and for losses.": "All In गेम जीत और हार दोनों में 1.5× गिने जाते हैं।",
   "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "1 दिसंबर से लीडरबोर्ड सार्वजनिक दांव वाले कमरों में जीते गए गोल्ड कॉइन गिनेंगे।",
   "{n}% house fee": "{n}% हाउस फ़ीस",
-  "🏦 House fee: {n} coins": "🏦 हाउस फ़ीस: {n} सिक्के"
+  "🏦 House fee: {n} coins": "🏦 हाउस फ़ीस: {n} सिक्के",
+  "🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins": "🎁 स्टार्टर पैक अनलॉक हुआ! +{gems} जेम्स और +{coins} सिक्के"
 }

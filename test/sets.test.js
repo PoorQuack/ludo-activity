@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SETS, SETS_BY_ID, ITEMS, SHOP_ITEMS, RARITIES, rarityOf, setRarity, setPrice, currencyOf, dailyDeal } from '../shared/shop.js';
+import { SETS, SETS_BY_ID, ITEMS, SHOP_ITEMS, RARITIES, rarityOf, setRarity, setPrice, currencyOf, dailyDeal, priceOf, limitedNow } from '../shared/shop.js';
 import { ProfileStore } from '../server/store.js';
 
 test('every set is made of real, different kinds of items', () => {
@@ -66,22 +66,23 @@ test('buying with gems, gifting with gems, and FREE_SHOP makes both free', () =>
   const p = store.get('1');
   p.coins = 5000;
   assert.throws(() => store.buy('1', 'frame-gold'), /Not enough gems/);
-  p.gems = ITEMS['frame-gold'].price;
+  p.gems = priceOf(ITEMS['frame-gold'], store.dayKey());
   store.buy('1', 'frame-gold');
   assert.equal(p.gems, 0);
   assert.equal(p.coins, 5000);
   assert.equal(p.equipped.frame, 'frame-gold');
   p.gems = 1000;
   store.gift('1', '2', 'token-dragon');
-  assert.equal(p.gems, 1000 - ITEMS['token-dragon'].price);
+  assert.equal(p.gems, 1000 - priceOf(ITEMS['token-dragon'], store.dayKey()));
   assert.ok(store.get('2').owned.includes('token-dragon'));
   const free = new ProfileStore(null, { freeShop: true });
   const q = free.get('3');
-  free.buy('3', 'frame-crown');
+  const limId = limitedNow(free.dayKey())[0]?.id || 'frame-gold';
+  free.buy('3', limId);
   free.buy('3', 'token-neon');
   free.buySet('3', 'set-royal');
   assert.equal(q.gems, 0);
-  assert.ok(['frame-crown', 'token-neon', 'board-royal'].every((id) => q.owned.includes(id)));
+  assert.ok([limId, 'token-neon', 'board-royal'].every((id) => q.owned.includes(id)));
 });
 
 test('every item has a rarity, and a price inside that rarity\'s band', () => {

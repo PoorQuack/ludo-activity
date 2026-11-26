@@ -1019,5 +1019,6 @@
   "All In games count 1.5×, for wins and for losses.": "All In の試合は勝ちも負けも1.5倍で数えます。",
   "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "12月1日からランキングは公開ステークス部屋で獲得したゴールドコインで決まります。",
   "{n}% house fee": "{n}%の手数料",
-  "🏦 House fee: {n} coins": "🏦 手数料：{n}コイン"
+  "🏦 House fee: {n} coins": "🏦 手数料：{n}コイン",
+  "🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins": "🎁 スターターパックを開放！+{gems}ジェム＆+{coins}コイン"
 }

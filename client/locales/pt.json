@@ -1019,5 +1019,6 @@
   "All In games count 1.5×, for wins and for losses.": "Partidas All In contam ×1,5, ao ganhar e ao perder.",
   "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "A partir de 1º de dezembro, os rankings contam as moedas de ouro ganhas em salas públicas com aposta.",
   "{n}% house fee": "{n}% de taxa da casa",
-  "🏦 House fee: {n} coins": "🏦 Taxa da casa: {n} moedas"
+  "🏦 House fee: {n} coins": "🏦 Taxa da casa: {n} moedas",
+  "🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins": "🎁 Pacote Inicial desbloqueado! +{gems} gemas e +{coins} moedas"
 }

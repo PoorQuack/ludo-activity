@@ -333,7 +333,8 @@ function connect() {
       toast(t('📣 {title}', { title: msg.item.title }), 'notice', 5000);
     } else if (msg.type === 'purchased') {
       sfx('buy');
-      if (msg.kind === 'gems') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
+      if (msg.kind === 'starter' && msg.coins) toast(t('🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins', { gems: msg.gems, coins: msg.coins }), 'ok', 6000);
+      else if (msg.kind === 'gems' || msg.kind === 'starter') toast(t('💎 +{gems} gems! Thank you for your support', { gems: msg.gems }), 'ok', 5000);
       else if (msg.kind === 'pass') toast(t('🎟️ Battle Pass unlocked! Claim your premium rewards.'), 'ok', 6000);
       else toast(t('☕ Thank you so much for the coffee!'), 'ok', 5000);
     } else if (msg.type === 'checkoutUrl') {
@@ -2613,7 +2614,8 @@ function short(currency, price) {
   if (freeShop) return false;
   const have = profile?.[currency] ?? 0;
   if (have >= price) return false;
-  if (currency === 'gems') openGemStore(price - have); // (the store says how many, and which pack covers it) else toast(t('You need {n} more coins', { n: price - have }));
+  if (currency === 'gems') openGemStore(price - have); // (the store says how many, and which pack covers it)
+  else toast(t('You need {n} more coins', { n: price - have }));
   return true;
 }
 

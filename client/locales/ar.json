@@ -1019,5 +1019,6 @@
   "All In games count 1.5×, for wins and for losses.": "ألعاب All In تُحسب ×1.5، في الفوز والخسارة.",
   "From 1 December, the leaderboards rank Gold Coins won in public stakes rooms instead.": "من 1 ديسمبر، ترتّب لوحات الصدارة العملات الذهبية المكسوبة في غرف الرهان العامة.",
   "{n}% house fee": "رسوم {n}%",
-  "🏦 House fee: {n} coins": "🏦 رسوم البيت: {n} عملة"
+  "🏦 House fee: {n} coins": "🏦 رسوم البيت: {n} عملة",
+  "🎁 Starter Pack unlocked! +{gems} gems & +{coins} coins": "🎁 تم فتح حزمة البداية! +{gems} جوهرة و+{coins} عملة"
 }
