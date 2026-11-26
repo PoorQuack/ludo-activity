@@ -47,6 +47,16 @@ changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
 - To do (owner): Starter Pack needs a Discord Durable SKU (`starter:<id>` in `SHOP_SKUS`) and a
   Stripe price (`starter:price_…` in `STRIPE_PRICES`).
 
+## 26 Nov 2026 (evening), Claude: reviewed and shipped Antigravity's reworked existing VFX pack
+- Antigravity's commit 4ec7d39 (made in the owner's local copy, not pushed) was brought over, reviewed and deployed.
+- Classic (everyone's default), Neon, Dino, Samurai, Football, Crown, Dragon, Constellation tokens, dice
+  and boards now use painted 6-colour bundles with safe zones, shielded tokens and glow.
+  Legendary dice lost their animated props (dragon wings, crown) for painted faces.
+- New dice: dice-football, dice-crystal (Crystal set now has 3 items), dice-samurai. Prices in band.
+- Fixed: the die gem icon had been replaced by a pink crystal; restored the jade die gem.
+- Fixed: wide bundle tokens (bottle caps) overlapped in shop cards; now sized to fit.
+- Note: icons/pass.webp has "VIP" baked in (AGENTS.md says no words in images).
+
 ## 26 Nov 2026, Claude: bundle VFX remake (live)
 - New art for all 10 bundles from Antigravity (VFX + safe zones + shields). Prices unchanged
   (its notes said 1,500 coins; the price bands in AGENTS.md win).

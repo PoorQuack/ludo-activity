@@ -682,6 +682,8 @@ function tokenPicture(name, sign) {
 // ---- Cosmetic bundles: their own shield, aura and capture burst (pictures in /bundles/<dir>/) ----
 // The bundle folder of a token skin, or null
 export const bundleOf = (skin) => PAWN_STYLES[skin]?.bundle || null;
+// How much a bundle token's picture is scaled up (1 until its picture has loaded)
+export const bundleTokenScale = (skin) => (bundleOf(skin) ? bundleScale(bundleOf(skin)) : 1);
 
 // True once this bundle's dedicated tokensShielded[color] sprite is loaded
 export function bundleHasShielded(skin, sign = 'red') {
