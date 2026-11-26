@@ -147,7 +147,7 @@ test('with a key, the language check tells Riva Translate the pair', async () =>
   const tr = new Translator({ fetch: fakeNvidia(calls, { langs }), nvidiaKey: 'k' });
   assert.deepEqual(await tr.translate('ann', 'hola amigo', 'en', 'fr'), { text: 'es-es-en: hola amigo', from: 'es' });
   assert.equal(calls.find((c) => c.pair).auth, 'Bearer k');
-  assert.equal(calls.find((c) => c.pair).shots, 8); // four worked examples, Spanish -> English
+  assert.ok(calls.find((c) => c.pair).shots >= 8); // at least four worked examples, Spanish -> English
   // the writer's setting picks between neighbours (Spain / Latin America, Danish / Norwegian)
   assert.equal((await tr.translate('ann', 'hola amigo', 'fr', 'es-419')).text, 'en-fr: es-us-en: hola amigo');
   assert.equal((await tr.translate('ann', 'jeg vil spille igen', 'en', 'da')).from, 'da');
@@ -179,7 +179,14 @@ test('chat languages: locales map onto the 37, each with its Ludo examples', asy
   const { matchChatLanguage, CHAT_LANGUAGES } = await import('../shared/chatlangs.js');
   const { LUDO_PHRASES } = await import('../shared/ludo-phrases.js');
   assert.equal(CHAT_LANGUAGES.length, 37);
-  for (const l of CHAT_LANGUAGES) assert.equal(LUDO_PHRASES[l.code]?.length, 4, l.code);
+  for (const l of CHAT_LANGUAGES) assert.equal(LUDO_PHRASES[l.code]?.length, LUDO_PHRASES.en.length, l.code);
+  // every line is written in the language's own alphabet (no English left in by mistake, beyond "gg")
+  const { scriptOf } = await import('../server/translate.js');
+  for (const l of CHAT_LANGUAGES)
+    for (const line of LUDO_PHRASES[l.code]) {
+      const s = scriptOf(line.replace(/\b(gg|Maghrib|xD|lol|brb|lag)\b/gi, ''));
+      if (s) assert.ok(s === l.script || (l.script === 'japanese' && s === 'han'), `${l.code}: ${line}`); // (Japanese can be all kanji)
+    }
   for (const [loc, code] of [['sv-SE', 'sv'], ['pt-PT', 'pt-PT'], ['pt-BR', 'pt'], ['es-ES', 'es'], ['es-419', 'es-419'], ['zh-TW', 'zh-TW'], ['zh-CN', 'zh'], ['nb', 'no'], ['xx', null]])
     assert.equal(matchChatLanguage(loc), code, loc);
 });
@@ -207,4 +214,14 @@ test('a language check in the wrong alphabet is ignored ("Maghrib woy" is not Ar
   const tr = new Translator({ fetch: fakeNvidia(calls, { langs: { 'Maghrib woy': 'ar' } }), nvidiaKey: 'k' });
   await tr.translate('ann', 'Maghrib woy', 'en', '');
   assert.ok(!calls.some((c) => c.pair?.startsWith('ar-')));
+});
+
+test('Riva sees the Ludo lines most like the message', async () => {
+  const { closestLines, LUDO_PHRASES } = await import('../shared/ludo-phrases.js');
+  const pick = (t, l) => closestLines(t, l).map((i) => LUDO_PHRASES.en[i]);
+  assert.ok(pick('woy, udah Maghrib, aku pergi bentar', 'id').includes("hey, it's Maghrib, brb"));
+  assert.ok(pick('el dado me odia', 'es').includes('the dice hate me'));
+  assert.ok(pick('我网卡了', 'zh').includes('my internet is lagging'));
+  // nothing alike: the four Ludo basics
+  assert.deepEqual(closestLines('xyzzy', 'en'), [0, 1, 2, 3]);
 });

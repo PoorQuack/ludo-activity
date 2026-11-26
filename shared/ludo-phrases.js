@@ -1,44 +1,99 @@
-// Four short Ludo lines in every chat language, given to Riva Translate as worked examples so it
-// knows this is a dice game ("dado" is a die, not "data"; "szóstka" is a six, not six o'clock) and
-// keeps the swearing and slang. For a French -> German translation it sees the French and German.
-// Same order everywhere: roll the die / damn, a six again! / you captured my token / the token on
-// the left (Arabic: the everyday "الشمال", which read as "north" without it)
+// Ludo chat lines in every chat language, given to Riva Translate as worked examples, so it knows
+// this is a dice game ("dado" is a die, not "data"; "szóstka" is a six, not six o'clock; Arabic
+// "الشمال" is "left", not "north") and keeps slang, laughter and swearing natural.
+// For each message the server picks the few lines that look most like it (server/translate.js),
+// in the message's language and the reader's. Same order in every language.
+export const LUDO_LINES = [
+  'roll the die',
+  'damn, a six again!',
+  'you captured my token',
+  'the token on the left',
+  'your turn',
+  'hurry up!',
+  'one more game?',
+  'gg, well played',
+  'that was so lucky',
+  "you're cheating",
+  "I'm stuck in my base",
+  'I need a six',
+  "wait for me, I'll be right back",
+  'brb',
+  'I have to go, bye',
+  'who wants to play?',
+  "let's team up",
+  "please don't capture me",
+  'revenge!',
+  'I almost won',
+  'easy win',
+  'my internet is lagging',
+  'hi everyone',
+  'thanks',
+  'lol',
+  'shut up',
+  "hey, it's Maghrib, brb",
+  'the dice hate me',
+  'nice move',
+  'my token got home',
+];
+
 export const LUDO_PHRASES = {
-  en: ['roll the die', 'damn, a six again!', 'you captured my token', 'the token on the left'],
-  ar: ['ارمِ النرد', 'تبًا، ستة مرة أخرى!', 'أكلت قطعتي', 'القطعة اللي على الشمال'],
-  bg: ['хвърли зара', 'по дяволите, пак шестица!', 'изяде ми пулчето', 'пулчето отляво'],
-  cs: ['hoď kostkou', 'sakra, zase šestka!', 'sebral jsi mi figurku', 'figurka vlevo'],
-  da: ['slå med terningen', 'pokkers, en sekser igen!', 'du slog min brik hjem', 'brikken til venstre'],
-  de: ['würfel', 'verdammt, schon wieder eine Sechs!', 'du hast meine Figur geschlagen', 'die Figur links'],
-  el: ['ρίξε το ζάρι', 'να πάρει, πάλι εξάρα!', 'μου έφαγες το πιόνι', 'το πιόνι στα αριστερά'],
-  es: ['tira el dado', '¡joder, otro seis!', 'me comiste la ficha', 'la ficha de la izquierda'],
-  'es-419': ['tira el dado', '¡rayos, otro seis!', 'me comiste la ficha', 'la ficha de la izquierda'],
-  et: ['viska täringut', 'kurat, jälle kuus!', 'sa lõid mu nupu välja', 'vasakpoolne nupp'],
-  fi: ['heitä noppaa', 'hitto, taas kutonen!', 'söit minun nappulani', 'vasemmanpuoleinen nappula'],
-  fr: ['lance le dé', 'zut, encore un six !', "tu as mangé mon pion", 'le pion à gauche'],
-  hi: ['पासा फेंको', 'धत्, फिर से छह!', 'तुमने मेरी गोटी काट दी', 'बाईं तरफ़ वाली गोटी'],
-  hr: ['baci kocku', 'dovraga, opet šestica!', 'pojeo si mi figuru', 'figura lijevo'],
-  hu: ['dobj a kockával', 'a fenébe, megint hatos!', 'leütötted a bábumat', 'a bal oldali bábu'],
-  id: ['lempar dadunya', 'sial, enam lagi!', 'kamu memakan bidakku', 'bidak yang di kiri'],
-  it: ['tira il dado', 'accidenti, un altro sei!', 'mi hai mangiato la pedina', 'la pedina a sinistra'],
-  ja: ['サイコロを振って', 'くそっ、また6だ！', '私のコマを取ったね', '左のコマ'],
-  ko: ['주사위 굴려', '젠장, 또 6이야!', '내 말을 잡았네', '왼쪽 말'],
-  lt: ['mesk kauliuką', 'velnias, vėl šešetas!', 'tu nukirtai mano figūrėlę', 'kairėje esanti figūrėlė'],
-  lv: ['met kauliņu', 'velns, atkal sešinieks!', 'tu nositi manu kauliņu', 'kauliņš pa kreisi'],
-  nl: ['gooi de dobbelsteen', 'verdorie, weer een zes!', 'je hebt mijn pion geslagen', 'de pion links'],
-  no: ['kast terningen', 'pokker, en sekser igjen!', 'du slo ut brikken min', 'brikken til venstre'],
-  pl: ['rzuć kostką', 'cholera, znowu szóstka!', 'zbiłeś mój pionek', 'pionek po lewej'],
-  pt: ['joga o dado', 'droga, outro seis!', 'você comeu minha peça', 'a peça da esquerda'],
-  'pt-PT': ['lança o dado', 'bolas, outro seis!', 'comeste-me a peça', 'a peça da esquerda'],
-  ro: ['aruncă zarul', 'la naiba, iar șase!', 'mi-ai luat piesa', 'piesa din stânga'],
-  ru: ['брось кубик', 'чёрт, опять шестёрка!', 'ты съел мою фишку', 'фишка слева'],
-  sk: ['hoď kockou', 'sakra, zase šestka!', 'vyhodil si mi figúrku', 'figúrka vľavo'],
-  sl: ['vrzi kocko', 'presneto, spet šestica!', 'pojedel si mi figuro', 'figura na levi'],
-  sv: ['slå tärningen', 'fan, en sexa igen!', 'du slog ut min pjäs', 'pjäsen till vänster'],
-  th: ['ทอยลูกเต๋า', 'ให้ตายสิ ได้หกอีกแล้ว!', 'นายกินหมากของฉัน', 'หมากทางซ้าย'],
-  tr: ['zarı at', 'kahretsin, yine altı!', 'taşımı yedin', 'soldaki taş'],
-  uk: ['кинь кубик', 'чорт, знову шістка!', 'ти з’їв мою фішку', 'фішка ліворуч'],
-  vi: ['tung xúc xắc đi', 'chết tiệt, lại sáu nữa!', 'bạn ăn quân của tôi rồi', 'quân bên trái'],
-  zh: ['掷骰子', '该死，又是六！', '你吃掉了我的棋子', '左边的棋子'],
-  'zh-TW': ['擲骰子', '可惡，又是六！', '你吃掉了我的棋子', '左邊的棋子'],
+  en: LUDO_LINES,
+  ar: ['ارمِ النرد', 'تبًا، ستة مرة أخرى!', 'أكلت قطعتي', 'القطعة اللي على الشمال', 'دورك', 'يلا بسرعة!', 'جولة كمان؟', 'جيجي، لعبت حلو', 'كان حظ قوي', 'إنت بتغش', 'أنا عالق في البيت', 'محتاج ستة', 'استنوني، راجع حالًا', 'راجع', 'لازم أمشي، باي', 'مين بده يلعب؟', 'خلينا نلعب فريق', 'أرجوك لا تاكلني', 'انتقام!', 'كنت رح أفوز', 'فوز سهل', 'النت عندي بطيء', 'مرحبا يا جماعة', 'شكرًا', 'ههههه', 'اسكت', 'يا جماعة، أذّن المغرب، راجع', 'النرد بكرهني', 'حركة حلوة', 'قطعتي وصلت البيت'],
+  bg: ['хвърли зара', 'по дяволите, пак шестица!', 'изяде ми пулчето', 'пулчето отляво', 'твой ред е', 'побързай!', 'още една игра?', 'гг, добре изиграно', 'това беше голям късмет', 'мамиш', 'заседнах в базата си', 'трябва ми шестица', 'чакайте ме, връщам се веднага', 'връщам се след малко', 'трябва да тръгвам, чао', 'кой иска да играе?', 'хайде да сме отбор', 'моля те, не ме изяждай', 'реванш!', 'почти спечелих', 'лесна победа', 'интернетът ми засича', 'здравейте на всички', 'благодаря', 'хаха', 'млъквай', 'хей, време е за Магриб, връщам се', 'заровете ме мразят', 'хубав ход', 'пулчето ми се прибра'],
+  cs: ['hoď kostkou', 'sakra, zase šestka!', 'sebral jsi mi figurku', 'figurka vlevo', 'jsi na tahu', 'pospěš si!', 'ještě jednu hru?', 'gg, dobře zahráno', 'to bylo ale štěstí', 'podvádíš', 'trčím v domečku', 'potřebuju šestku', 'počkejte na mě, hned jsem zpátky', 'hned jsem zpátky', 'musím jít, čau', 'kdo chce hrát?', 'pojďme do týmu', 'prosím, nevyhazuj mě', 'odveta!', 'skoro jsem vyhrál', 'snadná výhra', 'laguje mi internet', 'ahoj všichni', 'díky', 'haha', 'drž hubu', 'hej, je Maghrib, hned jsem zpátky', 'kostky mě nenávidí', 'pěkný tah', 'moje figurka je doma'],
+  da: ['slå med terningen', 'pokkers, en sekser igen!', 'du slog min brik hjem', 'brikken til venstre', 'din tur', 'skynd dig!', 'et spil mere?', 'gg, godt spillet', 'det var så heldigt', 'du snyder', 'jeg sidder fast i min base', 'jeg skal bruge en sekser', 'vent på mig, jeg er lige tilbage', 'brb', 'jeg skal gå, hej hej', 'hvem vil spille?', 'skal vi være på hold?', 'lad være med at slå mig hjem', 'revanche!', 'jeg vandt næsten', 'nem sejr', 'mit internet lagger', 'hej allesammen', 'tak', 'haha', 'hold kæft', 'hey, det er Maghrib, brb', 'terningen hader mig', 'godt træk', 'min brik kom i mål'],
+  de: ['würfel', 'verdammt, schon wieder eine Sechs!', 'du hast meine Figur geschlagen', 'die Figur links', 'du bist dran', 'mach schneller!', 'noch eine Runde?', 'gg, gut gespielt', 'das war so ein Glück', 'du schummelst', 'ich hänge in meinem Haus fest', 'ich brauche eine Sechs', 'wartet auf mich, bin gleich zurück', 'bin gleich wieder da', 'ich muss los, tschüss', 'wer will spielen?', 'lass uns ein Team machen', 'bitte schlag mich nicht', 'Revanche!', 'ich hätte fast gewonnen', 'leichter Sieg', 'mein Internet laggt', 'hallo zusammen', 'danke', 'lol', 'halt die Klappe', 'hey, es ist Maghrib, bin gleich zurück', 'der Würfel hasst mich', 'guter Zug', 'meine Figur ist im Ziel'],
+  el: ['ρίξε το ζάρι', 'να πάρει, πάλι εξάρα!', 'μου έφαγες το πιόνι', 'το πιόνι στα αριστερά', 'σειρά σου', 'βιάσου!', 'άλλο ένα παιχνίδι;', 'gg, καλό παιχνίδι', 'αυτό ήταν τύχη', 'κλέβεις', 'έχω κολλήσει στη βάση μου', 'θέλω εξάρα', 'περιμένετέ με, έρχομαι αμέσως', 'έρχομαι σε λίγο', 'πρέπει να φύγω, γεια', 'ποιος θέλει να παίξει;', 'πάμε ομάδα', 'σε παρακαλώ μη με φας', 'εκδίκηση!', 'παραλίγο να κερδίσω', 'εύκολη νίκη', 'το ίντερνετ μου κολλάει', 'γεια σε όλους', 'ευχαριστώ', 'χαχα', 'σκάσε', 'έι, είναι ώρα για Μαγκρίμπ, έρχομαι σε λίγο', 'τα ζάρια με μισούν', 'ωραία κίνηση', 'το πιόνι μου έφτασε σπίτι'],
+  es: ['tira el dado', '¡joder, otro seis!', 'me comiste la ficha', 'la ficha de la izquierda', 'te toca', '¡date prisa!', '¿otra partida?', 'gg, bien jugado', 'qué suerte has tenido', 'estás haciendo trampa', 'estoy atascado en mi casa', 'necesito un seis', 'esperadme, ahora vuelvo', 'ahora vuelvo', 'me tengo que ir, chao', '¿quién quiere jugar?', 'hagamos equipo', 'por favor, no me comas', '¡revancha!', 'casi gano', 'victoria fácil', 'me va lento internet', 'hola a todos', 'gracias', 'jajaja', 'cállate', 'oye, es la hora del Magrib, ahora vuelvo', 'el dado me odia', 'buena jugada', 'mi ficha llegó a casa'],
+  'es-419': ['tira el dado', '¡rayos, otro seis!', 'me comiste la ficha', 'la ficha de la izquierda', 'te toca', '¡apúrate!', '¿otra partida?', 'gg, bien jugado', 'qué suerte tuviste', 'estás haciendo trampa', 'estoy atorado en mi casa', 'necesito un seis', 'espérenme, ya vuelvo', 'ya vuelvo', 'me tengo que ir, chao', '¿quién quiere jugar?', 'hagamos equipo', 'porfa, no me comas', '¡revancha!', 'casi gano', 'victoria fácil', 'mi internet está lento', 'hola a todos', 'gracias', 'jajaja', 'cállate', 'oye, es la hora del Magrib, ya vuelvo', 'el dado me odia', 'buena jugada', 'mi ficha llegó a casa'],
+  et: ['viska täringut', 'kurat, jälle kuus!', 'sa lõid mu nupu välja', 'vasakpoolne nupp', 'sinu kord', 'kiirusta!', 'veel üks mäng?', 'gg, hästi mängitud', 'see oli nii vedanud', 'sa sohid', 'ma olen oma kodus kinni', 'mul on kuut vaja', 'oodake mind, tulen kohe tagasi', 'tulen kohe', 'pean minema, tšau', 'kes tahab mängida?', 'teeme tiimi', 'palun ära löö mind välja', 'revanš!', 'ma peaaegu võitsin', 'lihtne võit', 'mu internet hangub', 'tere kõigile', 'aitäh', 'haha', 'jää vait', 'hei, on Maghrib, tulen kohe', 'täring vihkab mind', 'hea käik', 'mu nupp jõudis koju'],
+  fi: ['heitä noppaa', 'hitto, taas kutonen!', 'söit minun nappulani', 'vasemmanpuoleinen nappula', 'sinun vuorosi', 'pidä kiirettä!', 'vielä yksi peli?', 'gg, hyvin pelattu', 'olipa tuuria', 'sä huijaat', 'olen jumissa lähtöruudussa', 'tarvitsen kutosen', 'odottakaa, tulen heti takaisin', 'tulen kohta', 'pitää lähteä, moi', 'kuka haluaa pelata?', 'tehdään tiimi', 'älä syö mua, pliis', 'kosto!', 'melkein voitin', 'helppo voitto', 'nettini lagaa', 'moi kaikki', 'kiitos', 'hah', 'turpa kiinni', 'hei, nyt on Maghrib, tulen kohta', 'noppa vihaa mua', 'hyvä siirto', 'nappulani pääsi maaliin'],
+  fr: ['lance le dé', 'zut, encore un six !', 'tu as mangé mon pion', 'le pion à gauche', "c'est ton tour", 'dépêche-toi !', 'encore une partie ?', 'gg, bien joué', "t'as eu trop de chance", 'tu triches', 'je suis bloqué dans ma maison', "j'ai besoin d'un six", 'attendez-moi, je reviens tout de suite', 'je reviens', 'je dois y aller, salut', 'qui veut jouer ?', 'on fait équipe ?', 'stp ne me mange pas', 'revanche !', "j'ai presque gagné", 'victoire facile', 'mon internet lag', 'salut tout le monde', 'merci', 'mdr', 'ferme-la', "hé, c'est l'heure du Maghrib, je reviens", 'le dé me déteste', 'joli coup', 'mon pion est arrivé'],
+  hi: ['पासा फेंको', 'धत्, फिर से छह!', 'तुमने मेरी गोटी काट दी', 'बाईं तरफ़ वाली गोटी', 'तुम्हारी बारी', 'जल्दी करो!', 'एक और गेम?', 'gg, बढ़िया खेले', 'बहुत किस्मत वाला था', 'तुम चीटिंग कर रहे हो', 'मैं अपने घर में फँसा हूँ', 'मुझे छह चाहिए', 'रुको, अभी आता हूँ', 'अभी आया', 'मुझे जाना है, बाय', 'कौन खेलना चाहता है?', 'चलो टीम बनाते हैं', 'प्लीज़ मेरी गोटी मत काटो', 'बदला!', 'मैं लगभग जीत गया था', 'आसान जीत', 'मेरा इंटरनेट लैग कर रहा है', 'सबको नमस्ते', 'धन्यवाद', 'हाहा', 'चुप रहो', 'अरे, मग़रिब का वक़्त है, अभी आता हूँ', 'पासा मुझसे नफ़रत करता है', 'बढ़िया चाल', 'मेरी गोटी घर पहुँच गई'],
+  hr: ['baci kocku', 'dovraga, opet šestica!', 'pojeo si mi figuru', 'figura lijevo', 'ti si na redu', 'požuri!', 'još jednu igru?', 'gg, dobro odigrano', 'to je bila sreća', 'varaš', 'zapeo sam u kućici', 'treba mi šestica', 'čekajte me, odmah se vraćam', 'odmah se vraćam', 'moram ići, bok', 'tko želi igrati?', 'ajmo u tim', 'molim te, nemoj me pojesti', 'osveta!', 'skoro sam pobijedio', 'laka pobjeda', 'internet mi laga', 'bok svima', 'hvala', 'hahaha', 'začepi', 'hej, Magrib je, odmah se vraćam', 'kocka me mrzi', 'dobar potez', 'moja figura je stigla kući'],
+  hu: ['dobj a kockával', 'a fenébe, megint hatos!', 'leütötted a bábumat', 'a bal oldali bábu', 'te jössz', 'siess!', 'még egy kör?', 'gg, szép volt', 'ez nagy mázli volt', 'csalsz', 'beragadtam a házamba', 'hatos kell', 'várjatok, mindjárt jövök', 'mindjárt jövök', 'mennem kell, szia', 'ki akar játszani?', 'legyünk csapat', 'kérlek, ne üss le', 'visszavágó!', 'majdnem nyertem', 'könnyű győzelem', 'laggol a netem', 'sziasztok', 'köszi', 'haha', 'kuss', 'hé, itt a Maghrib, mindjárt jövök', 'a kocka utál engem', 'szép lépés', 'a bábum hazaért'],
+  id: ['lempar dadunya', 'sial, enam lagi!', 'kamu memakan bidakku', 'bidak yang di kiri', 'giliranmu', 'cepetan woy!', 'main sekali lagi?', 'gg, mainnya bagus', 'hoki banget itu', 'kamu curang', 'aku nyangkut di rumah', 'aku butuh enam', 'tungguin, bentar lagi balik', 'bentar ya', 'aku harus pergi, dah', 'siapa mau main?', 'ayo satu tim', 'tolong jangan makan aku', 'balas dendam!', 'hampir menang', 'menang gampang', 'internetku lag', 'halo semua', 'makasih', 'wkwkwk', 'diam lu', 'woy, udah Maghrib, bentar ya', 'dadunya benci aku', 'langkah bagus', 'bidakku sampai rumah'],
+  it: ['tira il dado', 'accidenti, un altro sei!', 'mi hai mangiato la pedina', 'la pedina a sinistra', 'tocca a te', 'sbrigati!', "un'altra partita?", 'gg, ben giocato', 'che fortuna', 'stai barando', 'sono bloccato nella mia base', 'mi serve un sei', 'aspettatemi, torno subito', 'torno subito', 'devo andare, ciao', 'chi vuole giocare?', 'facciamo squadra', 'ti prego, non mangiarmi', 'rivincita!', 'ho quasi vinto', 'vittoria facile', 'mi lagga internet', 'ciao a tutti', 'grazie', 'ahah', 'stai zitto', "ehi, è l'ora del Maghrib, torno subito", 'il dado mi odia', 'bella mossa', 'la mia pedina è arrivata a casa'],
+  ja: ['サイコロを振って', 'くそっ、また6だ！', '私のコマを取ったね', '左のコマ', 'きみの番だよ', '早くして！', 'もう一回やる？', 'gg、いい試合だった', '運良すぎ', 'ズルしてるでしょ', '自陣から出られない', '6が欲しい', '待ってて、すぐ戻る', 'ちょっと離席', 'もう行かなきゃ、またね', '誰かやる？', 'チーム組もう', 'お願い、取らないで', 'リベンジだ！', 'もう少しで勝てたのに', '楽勝', 'ネットがラグい', 'みんなこんにちは', 'ありがとう', '笑', 'うるさい', 'ねえ、マグリブの時間だからちょっと離れる', 'サイコロに嫌われてる', 'ナイスな手', 'コマがゴールした'],
+  ko: ['주사위 굴려', '젠장, 또 6이야!', '내 말을 잡았네', '왼쪽 말', '네 차례야', '빨리 해!', '한 판 더?', 'gg, 잘했어', '운 진짜 좋네', '너 치트 쓰지', '집에서 못 나가고 있어', '6이 필요해', '기다려, 금방 올게', '잠깐 자리 비움', '나 가야 해, 안녕', '할 사람?', '팀 하자', '제발 나 잡지 마', '복수다!', '거의 이길 뻔했어', '쉬운 승리', '인터넷이 렉 걸려', '다들 안녕', '고마워', 'ㅋㅋㅋ', '닥쳐', '저기, 마그립 시간이라 잠깐만', '주사위가 날 싫어해', '좋은 수', '내 말이 집에 도착했어'],
+  lt: ['mesk kauliuką', 'velnias, vėl šešetas!', 'tu nukirtai mano figūrėlę', 'kairėje esanti figūrėlė', 'tavo eilė', 'paskubėk!', 'dar vieną žaidimą?', 'gg, gerai sužaista', 'tau tiesiog pasisekė', 'tu sukčiauji', 'įstrigau savo namelyje', 'man reikia šešeto', 'palaukit manęs, tuoj grįšiu', 'tuoj grįšiu', 'turiu eiti, iki', 'kas nori žaisti?', 'būkim komanda', 'prašau, nenukirsk manęs', 'revanšas!', 'beveik laimėjau', 'lengva pergalė', 'mano internetas lagina', 'labas visiems', 'ačiū', 'cha cha', 'užsičiaupk', 'ei, Magribo metas, tuoj grįšiu', 'kauliukas manęs nekenčia', 'geras ėjimas', 'mano figūrėlė parėjo namo'],
+  lv: ['met kauliņu', 'velns, atkal sešinieks!', 'tu nositi manu kauliņu', 'kauliņš pa kreisi', 'tavs gājiens', 'pasteidzies!', 'vēl vienu spēli?', 'gg, labi nospēlēts', 'tev vienkārši paveicās', 'tu krāp', 'es esmu iestrēdzis savā mājā', 'man vajag sešinieku', 'pagaidiet mani, tūlīt būšu atpakaļ', 'tūlīt būšu', 'man jāiet, atā', 'kurš grib spēlēt?', 'būsim komanda', 'lūdzu, nesit mani', 'revanšs!', 'es gandrīz uzvarēju', 'viegla uzvara', 'man internets lago', 'sveiki visiem', 'paldies', 'haha', 'aizveries', 'ei, ir Magribs, tūlīt būšu', 'kauliņš mani ienīst', 'labs gājiens', 'mans kauliņš tika mājās'],
+  nl: ['gooi de dobbelsteen', 'verdorie, weer een zes!', 'je hebt mijn pion geslagen', 'de pion links', 'jij bent', 'schiet op!', 'nog een potje?', 'gg, goed gespeeld', 'wat een geluk', 'je speelt vals', 'ik zit vast in mijn huis', 'ik heb een zes nodig', 'wacht op mij, ben zo terug', 'ben zo terug', 'ik moet gaan, doei', 'wie wil spelen?', 'laten we een team maken', 'sla me alsjeblieft niet', 'revanche!', 'ik had bijna gewonnen', 'makkelijke winst', 'mijn internet laggt', 'hallo allemaal', 'bedankt', 'haha', 'hou je mond', 'hé, het is Maghrib, ben zo terug', 'de dobbelsteen haat me', 'mooie zet', 'mijn pion is thuis'],
+  no: ['kast terningen', 'pokker, en sekser igjen!', 'du slo ut brikken min', 'brikken til venstre', 'din tur', 'skynd deg!', 'ett spill til?', 'gg, godt spilt', 'det var så flaks', 'du jukser', 'jeg sitter fast i basen min', 'jeg trenger en sekser', 'vent på meg, er straks tilbake', 'straks tilbake', 'jeg må gå, ha det', 'hvem vil spille?', 'skal vi være på lag?', 'vær så snill, ikke slå meg ut', 'revansj!', 'jeg vant nesten', 'lett seier', 'internettet mitt lagger', 'hei alle sammen', 'takk', 'haha', 'hold kjeft', 'hei, det er Maghrib, straks tilbake', 'terningen hater meg', 'godt trekk', 'brikken min kom i mål'],
+  pl: ['rzuć kostką', 'cholera, znowu szóstka!', 'zbiłeś mój pionek', 'pionek po lewej', 'twoja kolej', 'pospiesz się!', 'jeszcze jedna gra?', 'gg, dobrze zagrane', 'ale miałeś farta', 'oszukujesz', 'utknąłem w domku', 'potrzebuję szóstki', 'poczekajcie, zaraz wracam', 'zaraz wracam', 'muszę lecieć, nara', 'kto chce zagrać?', 'zróbmy drużynę', 'proszę, nie bij mnie', 'rewanż!', 'prawie wygrałem', 'łatwa wygrana', 'laguje mi internet', 'cześć wszystkim', 'dzięki', 'xD', 'zamknij się', 'hej, jest Maghrib, zaraz wracam', 'kostka mnie nienawidzi', 'dobry ruch', 'mój pionek doszedł do domu'],
+  pt: ['joga o dado', 'droga, outro seis!', 'você comeu minha peça', 'a peça da esquerda', 'sua vez', 'anda logo!', 'mais uma partida?', 'gg, jogou bem', 'que sorte, hein', 'você tá roubando', 'tô preso na minha casa', 'preciso de um seis', 'me espera, já volto', 'já volto', 'tenho que ir, falou', 'quem quer jogar?', 'bora fazer dupla', 'por favor, não me come', 'revanche!', 'quase ganhei', 'vitória fácil', 'minha internet tá travando', 'oi, galera', 'valeu', 'kkkk', 'cala a boca', 'ei, é hora do Maghrib, já volto', 'o dado me odeia', 'boa jogada', 'minha peça chegou em casa'],
+  'pt-PT': ['lança o dado', 'bolas, outro seis!', 'comeste-me a peça', 'a peça da esquerda', 'é a tua vez', 'despacha-te!', 'mais um jogo?', 'gg, bem jogado', 'que sorte, pá', 'estás a fazer batota', 'estou preso na minha casa', 'preciso de um seis', 'esperem por mim, volto já', 'volto já', 'tenho de ir, adeus', 'quem quer jogar?', 'vamos fazer equipa', 'por favor, não me comas', 'desforra!', 'quase ganhei', 'vitória fácil', 'a minha internet está com lag', 'olá a todos', 'obrigado', 'ahahah', 'cala-te', 'olha, é hora do Maghrib, volto já', 'o dado odeia-me', 'boa jogada', 'a minha peça chegou a casa'],
+  ro: ['aruncă zarul', 'la naiba, iar șase!', 'mi-ai luat piesa', 'piesa din stânga', 'e rândul tău', 'grăbește-te!', 'încă un joc?', 'gg, bine jucat', 'ce noroc ai avut', 'trișezi', 'am rămas blocat în casă', 'am nevoie de un șase', 'așteptați-mă, revin imediat', 'revin imediat', 'trebuie să plec, pa', 'cine vrea să joace?', 'hai să facem echipă', 'te rog, nu mă lua', 'revanșă!', 'aproape am câștigat', 'victorie ușoară', 'îmi merge greu netul', 'salut tuturor', 'mersi', 'haha', 'taci', 'hei, e Maghrib, revin imediat', 'zarul mă urăște', 'mișcare bună', 'piesa mea a ajuns acasă'],
+  ru: ['брось кубик', 'чёрт, опять шестёрка!', 'ты съел мою фишку', 'фишка слева', 'твой ход', 'давай быстрее!', 'ещё одну партию?', 'gg, хорошо сыграно', 'вот это везение', 'ты читеришь', 'я застрял в своём доме', 'мне нужна шестёрка', 'подождите меня, сейчас вернусь', 'щас вернусь', 'мне пора, пока', 'кто хочет поиграть?', 'давай в команде', 'пожалуйста, не ешь меня', 'реванш!', 'я почти выиграл', 'лёгкая победа', 'у меня лагает интернет', 'всем привет', 'спасибо', 'ахаха', 'заткнись', 'эй, сейчас Магриб, щас вернусь', 'кубик меня ненавидит', 'хороший ход', 'моя фишка дошла до дома'],
+  sk: ['hoď kockou', 'sakra, zase šestka!', 'vyhodil si mi figúrku', 'figúrka vľavo', 'si na ťahu', 'poponáhľaj sa!', 'ešte jednu hru?', 'gg, dobre zahrané', 'to bolo ale šťastie', 'podvádzaš', 'trčím v domčeku', 'potrebujem šestku', 'počkajte ma, hneď som späť', 'hneď som späť', 'musím ísť, čau', 'kto chce hrať?', 'poďme do tímu', 'prosím, nevyhadzuj ma', 'odveta!', 'skoro som vyhral', 'ľahká výhra', 'laguje mi internet', 'ahojte všetci', 'vďaka', 'haha', 'drž hubu', 'hej, je Maghrib, hneď som späť', 'kocky ma nenávidia', 'pekný ťah', 'moja figúrka je doma'],
+  sl: ['vrzi kocko', 'presneto, spet šestica!', 'pojedel si mi figuro', 'figura na levi', 'ti si na vrsti', 'pohiti!', 'še eno igro?', 'gg, dobro odigrano', 'to je bila pa sreča', 'goljufaš', 'obtičal sem v svoji hišici', 'rabim šestico', 'počakajte me, takoj se vrnem', 'takoj se vrnem', 'moram iti, adijo', 'kdo bi igral?', 'dajmo v ekipo', 'prosim, ne pojej me', 'revanša!', 'skoraj sem zmagal', 'lahka zmaga', 'internet mi laga', 'živjo vsi', 'hvala', 'haha', 'utihni', 'hej, Magrib je, takoj se vrnem', 'kocka me sovraži', 'dobra poteza', 'moja figura je prišla domov'],
+  sv: ['slå tärningen', 'fan, en sexa igen!', 'du slog ut min pjäs', 'pjäsen till vänster', 'din tur', 'skynda dig!', 'en match till?', 'gg, bra spelat', 'vilken tur du hade', 'du fuskar', 'jag sitter fast i mitt bo', 'jag behöver en sexa', 'vänta på mig, strax tillbaka', 'strax tillbaka', 'jag måste gå, hej då', 'vem vill spela?', 'ska vi köra lag?', 'snälla, slå inte ut mig', 'revansch!', 'jag vann nästan', 'lätt vinst', 'mitt internet laggar', 'hej allihop', 'tack', 'haha', 'håll käften', 'hej, det är Maghrib, strax tillbaka', 'tärningen hatar mig', 'snyggt drag', 'min pjäs kom i mål'],
+  th: ['ทอยลูกเต๋า', 'ให้ตายสิ ได้หกอีกแล้ว!', 'นายกินหมากของฉัน', 'หมากทางซ้าย', 'ตาเธอแล้ว', 'เร็วๆ หน่อย!', 'อีกตาไหม?', 'gg เล่นดีมาก', 'ดวงดีสุดๆ', 'นายโกง', 'ฉันติดอยู่ในบ้าน', 'ฉันต้องการหก', 'รอฉันด้วย เดี๋ยวกลับมา', 'เดี๋ยวมา', 'ต้องไปแล้ว บาย', 'ใครอยากเล่นบ้าง?', 'มาเล่นทีมเดียวกัน', 'อย่ากินฉันเลยนะ', 'แก้แค้น!', 'เกือบชนะแล้ว', 'ชนะง่ายๆ', 'เน็ตฉันแลค', 'สวัสดีทุกคน', 'ขอบคุณ', '555', 'หุบปาก', 'นี่ ถึงเวลามัฆริบแล้ว เดี๋ยวมา', 'ลูกเต๋าเกลียดฉัน', 'ตาเดินดีมาก', 'หมากฉันถึงบ้านแล้ว'],
+  tr: ['zarı at', 'kahretsin, yine altı!', 'taşımı yedin', 'soldaki taş', 'sıra sende', 'acele et!', 'bir oyun daha?', 'gg, iyi oynadın', 'çok şanslıydın', 'hile yapıyorsun', 'evimde sıkıştım', 'bana altı lazım', 'beni bekleyin, hemen dönüyorum', 'hemen dönerim', 'gitmem lazım, görüşürüz', 'kim oynamak ister?', 'takım olalım', 'lütfen beni yeme', 'rövanş!', 'neredeyse kazanıyordum', 'kolay galibiyet', 'internetim lag yapıyor', 'herkese selam', 'teşekkürler', 'jsjsjs', 'kes sesini', 'hey, akşam ezanı okundu, hemen dönerim', 'zar benden nefret ediyor', 'güzel hamle', 'taşım eve vardı'],
+  uk: ['кинь кубик', 'чорт, знову шістка!', 'ти з’їв мою фішку', 'фішка ліворуч', 'твій хід', 'швидше!', 'ще одну партію?', 'gg, гарно зіграно', 'оце пощастило', 'ти шахраюєш', 'я застряг у своєму будиночку', 'мені потрібна шістка', 'зачекайте мене, зараз повернуся', 'зараз буду', 'мені треба йти, бувай', 'хто хоче пограти?', 'давай у команді', 'будь ласка, не їж мене', 'реванш!', 'я майже виграв', 'легка перемога', 'у мене лагає інтернет', 'всім привіт', 'дякую', 'хаха', 'замовкни', 'гей, зараз Магриб, зараз буду', 'кубик мене ненавидить', 'гарний хід', 'моя фішка дійшла додому'],
+  vi: ['tung xúc xắc đi', 'chết tiệt, lại sáu nữa!', 'bạn ăn quân của tôi rồi', 'quân bên trái', 'đến lượt bạn', 'nhanh lên!', 'chơi thêm ván nữa không?', 'gg, chơi hay lắm', 'hên quá trời', 'bạn gian lận', 'tôi bị kẹt trong chuồng', 'tôi cần con sáu', 'đợi tôi, tôi quay lại ngay', 'đợi xíu', 'tôi phải đi rồi, bye', 'ai muốn chơi không?', 'mình chung đội nhé', 'làm ơn đừng ăn tôi', 'phục thù!', 'suýt nữa thì thắng', 'thắng dễ', 'mạng tôi lag quá', 'chào mọi người', 'cảm ơn', 'haha', 'im đi', 'này, đến giờ Maghrib rồi, đợi xíu', 'xúc xắc ghét tôi', 'nước đi hay', 'quân của tôi về đích rồi'],
+  zh: ['掷骰子', '该死，又是六！', '你吃掉了我的棋子', '左边的棋子', '轮到你了', '快点！', '再来一局？', 'gg，打得好', '运气太好了吧', '你作弊', '我被困在家里出不去', '我需要一个六', '等我一下，马上回来', '马上回来', '我得走了，拜拜', '谁想玩？', '我们组队吧', '求你别吃我', '报仇！', '我差点就赢了', '轻松获胜', '我网卡了', '大家好', '谢谢', '哈哈哈', '闭嘴', '嘿，到昏礼时间了，马上回来', '骰子讨厌我', '好棋', '我的棋子到家了'],
+  'zh-TW': ['擲骰子', '可惡，又是六！', '你吃掉了我的棋子', '左邊的棋子', '輪到你了', '快點！', '再來一局？', 'gg，打得好', '運氣也太好了吧', '你作弊', '我被困在家裡出不去', '我需要一個六', '等我一下，馬上回來', '馬上回來', '我得走了，掰掰', '誰想玩？', '我們組隊吧', '拜託別吃我', '報仇！', '我差點就贏了', '輕鬆獲勝', '我網路卡卡的', '大家好', '謝謝', '哈哈哈', '閉嘴', '嘿，到昏禮時間了，馬上回來', '骰子討厭我', '好棋', '我的棋子到家了'],
 };
+
+// The lines most like `text` (in the language it's written in): the server shows Riva these.
+// Words in common score; the first four lines (dice, sixes, captures, left) are always there to
+// fill up with, as they're what Ludo chat is mostly about.
+export function closestLines(text, from, count = 6) {
+  const lines = LUDO_PHRASES[from];
+  if (!lines) return [];
+  const words = (s) => new Set(String(s).toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+/gu) || []);
+  // scripts without spaces (Chinese, Japanese, Thai): compare characters instead of words
+  const chars = (s) => new Set([...String(s).replace(/[\s\p{P}]/gu, '')]);
+  const spaced = !/[぀-ヿ一-鿿฀-๿]/.test(text);
+  const mine = spaced ? words(text) : chars(text);
+  const score = lines.map((line, i) => {
+    const theirs = spaced ? words(line) : chars(line);
+    let n = 0;
+    for (const w of mine) if (theirs.has(w)) n += spaced ? 1 : 0.5;
+    return { i, n };
+  });
+  const picked = score.filter((s) => s.n > 0).sort((a, b) => b.n - a.n || a.i - b.i).slice(0, count).map((s) => s.i);
+  for (let i = 0; picked.length < Math.min(count, 4) && i < 4; i++) if (!picked.includes(i)) picked.push(i);
+  return picked.sort((a, b) => a - b);
+}
