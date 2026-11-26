@@ -55,8 +55,9 @@ export class Translator {
    *  nvidiaKey: NVIDIA's API key (build.nvidia.com); deeplKey: DeepL's (free keys end in ":fx");
    *  azureKey / azureRegion: Azure Translator's. Without any, Google and MyMemory only.
    */
-  constructor({ fetch: f = globalThis.fetch, now = Date.now, perUser = 20, perServer = 400, nvidiaKey = '', deeplKey = '', azureKey = '', azureRegion = '' } = {}) {
+  constructor({ fetch: f = globalThis.fetch, now = Date.now, perUser = 20, perServer = 400, nvidiaKey = '', deeplKey = '', azureKey = '', azureRegion = '', feedback = null } = {}) {
     this.fetch = f;
+    this.feedback = feedback; // players' approved translations (server/tr-feedback.js)
     this.nvidiaKey = String(nvidiaKey || '').trim();
     this.deeplKey = String(deeplKey || '').trim();
     this.azureKey = String(azureKey || '').trim();
@@ -91,6 +92,9 @@ export class Translator {
     const words = parts.map((p, i) => (i % 2 === 0 ? p : null));
     const sendable = words.filter((p) => p && p.trim());
     if (!sendable.length) return { text, from: to };
+    // the players' own translation, once enough of them agreed on it, beats any machine
+    const players = this.feedback?.approvedFor(to, text);
+    if (players) return { text: players.text, from: players.from || hint || '', approved: true };
     const key = `${to}|${text}`;
     const hit = this.cache.get(key);
     if (hit) {
@@ -367,6 +371,11 @@ export class Translator {
             ...closestLines(text, from).flatMap((i) => [
               { role: 'user', content: LUDO_PHRASES[from][i] },
               { role: 'assistant', content: LUDO_PHRASES[to][i] },
+            ]),
+            // and translations the players corrected and agreed on, for this pair
+            ...(this.feedback?.examples(from, to) || []).flatMap(([a, b]) => [
+              { role: 'user', content: a },
+              { role: 'assistant', content: b },
             ]),
             { role: 'user', content: text.slice(0, 1900) },
           ],

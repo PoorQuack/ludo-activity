@@ -107,7 +107,7 @@ export class LobbyChat {
       try {
         const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
         for (const [id, ch] of Object.entries(doc.channels || {})) {
-          if ((id === 'global' || /^lang:[a-z]{2}$/.test(id)) && Array.isArray(ch.msgs)) this.channels[id] = { seq: Number(ch.seq) || 0, msgs: ch.msgs.slice(-KEEP) };
+          if ((id === 'global' || /^lang:[a-z]{2}(-[A-Za-z0-9]{2,3})?$/.test(id)) && Array.isArray(ch.msgs)) this.channels[id] = { seq: Number(ch.seq) || 0, msgs: ch.msgs.slice(-KEEP) };
         }
         return;
       } catch (err) {

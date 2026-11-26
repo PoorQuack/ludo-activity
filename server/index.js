@@ -21,6 +21,7 @@ import { Inbox } from './inbox.js';
 import { LobbyChat, channelId } from './lobbychat.js';
 import { DirectMessages, pairKey } from './dms.js';
 import { Translator, LANGS } from './translate.js';
+import { TranslationFeedback } from './tr-feedback.js';
 import { PASS_XP } from '../shared/pass.js';
 import { playerLevel } from '../shared/badges.js';
 
@@ -38,6 +39,7 @@ const DMS_FILE = process.env.DMS_FILE || path.join(path.dirname(DATA_FILE), 'dms
 const QUESTS_FILE = process.env.QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests.json');
 const WEEKLY_QUESTS_FILE = process.env.WEEKLY_QUESTS_FILE || path.join(path.dirname(DATA_FILE), 'quests-weekly.json');
 const SUPPORT_FILE = process.env.SUPPORT_FILE || path.join(path.dirname(DATA_FILE), 'support.json');
+const TR_FEEDBACK_FILE = process.env.TR_FEEDBACK_FILE || path.join(path.dirname(DATA_FILE), 'translation-feedback.json');
 // Friends and "played with" lists
 const SOCIAL_FILE = process.env.SOCIAL_FILE || path.join(path.dirname(DATA_FILE), 'social.json');
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
@@ -487,7 +489,10 @@ const leaderboard = new Leaderboard(LEADERBOARD_FILE, { profiles: store, onAward
 
 // The menu's chat (Global, and one channel per language) and chat translation
 const lobbyChat = new LobbyChat(LOBBY_CHAT_FILE, { profiles: store });
+// 👍 / 👎 and players' better translations (server/tr-feedback.js)
+const trFeedback = new TranslationFeedback(TR_FEEDBACK_FILE);
 const translator = new Translator({
+  feedback: trFeedback,
   nvidiaKey: process.env.NVIDIA_API_KEY,
   deeplKey: process.env.DEEPL_API_KEY,
   azureKey: process.env.AZURE_TRANSLATOR_KEY,
@@ -577,14 +582,38 @@ function handleDm(ws, msg) {
 
 // "Translate" under a chat message: the message is looked up here (so this can't be used to
 // translate any text at all), then put into the player's language.
+// The chat message a translation is about (in their room, or their menu chat channel)
+function chatMessage(ctx, scope, msgId) {
+  if (scope === 'room') return ctx.room?.chat.find((m) => m.id === msgId && !m.system) || null;
+  if (scope === 'global' || scope === 'lang') return lobbyChat.find(channelId(scope, ctx.lobbyLang || 'en'), msgId) || null;
+  return null;
+}
+
+// 👍 / 👎 on a translation, or a player's better one
+function handleTrFeedback(ws, msg) {
+  const { ctx } = ws;
+  const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
+  const scope = String(msg.scope);
+  const msgId = Number(msg.id);
+  const to = String(msg.to);
+  const reply = { type: 'trFeedback', scope, id: msgId };
+  const found = chatMessage(ctx, scope, msgId);
+  if (!found || !LANGS.has(to) || found.userId === ctx.user.id) return send({ ...reply, error: 'That message is gone' });
+  const base = { to, text: found.text, from: String(msg.from || '').slice(0, 8), shown: String(msg.shown || '').slice(0, 400) };
+  try {
+    const r = msg.op === 'suggest' ? trFeedback.suggest(ctx.user.id, { ...base, suggestion: String(msg.text || '') }) : trFeedback.vote(ctx.user.id, { ...base, up: !!msg.up });
+    send({ ...reply, ok: true, op: msg.op === 'suggest' ? 'suggest' : 'vote', ...r });
+  } catch (err) {
+    send({ ...reply, error: err.message });
+  }
+}
+
 function handleTranslate(ws, msg) {
   const { ctx } = ws;
   const send = (obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
   const scope = String(msg.scope);
   const msgId = Number(msg.id);
-  let found = null;
-  if (scope === 'room') found = ctx.room?.chat.find((m) => m.id === msgId && !m.system);
-  else if (scope === 'global' || scope === 'lang') found = lobbyChat.find(channelId(scope, ctx.lobbyLang || 'en'), msgId);
+  const found = chatMessage(ctx, scope, msgId);
   const reply = { type: 'translated', scope, id: msgId };
   if (!found) return send({ ...reply, error: 'That message is gone' });
   // what it's probably written in: the writer's chat language (Riva Translate has to be told)
@@ -596,7 +625,7 @@ function handleTranslate(ws, msg) {
       const to = String(msg.to);
       // already in their language (Spanish from Spain for a Latin American player counts, unless it changed)
       const already = r.from === to || (r.from.split('-')[0] === to.split('-')[0] && r.text.trim() === found.text.trim());
-      send({ ...reply, text: r.text, from: r.from, already });
+      send({ ...reply, text: r.text, from: r.from, already: already && !r.approved, approved: !!r.approved });
     })
     .catch((err) => send({ ...reply, error: err.message }));
 }
@@ -1124,6 +1153,7 @@ wss.on('connection', (ws, req) => {
         return send({ type: 'passClaimed', given });
       }
       if (msg.type === 'translate') return handleTranslate(ws, msg);
+      if (msg.type === 'trFeedback') return handleTrFeedback(ws, msg);
       if (msg.type === 'chatLang') {
         if (LANGS.has(msg.lang)) ctx.chatLang = msg.lang;
         return;
@@ -1227,6 +1257,7 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     store.flush();
     leaderboard.flush();
     lobbyChat.flush();
+    trFeedback.flush();
     dms.flush();
     quests.flush();
     weekly.flush();

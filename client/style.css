@@ -2725,7 +2725,6 @@ button, .btn { touch-action: manipulation; }
 #lobby-chat .chat-log .lchat-body { padding: 0; }
 #lobby-chat .chat-log .chat-msg { flex-direction: row; }
 #lobby-chat .chat-log .chat-msg.me { flex-direction: row-reverse; }
-:is([data-chat], #lobby-chat) .chat-log .chat-line { border-radius: 0; }
 /* the inbox on the beige chat: white rows, dark text */
 #lobby-chat .dm-row { background: #fff; color: #1b1714; box-shadow: 0 1px 2px rgba(60, 40, 20, 0.08); }
 #lobby-chat .dm-row-meta small, #lobby-chat .dm-empty, #lobby-chat .chat-log .empty { color: #6b5d50; }
@@ -2821,3 +2820,89 @@ button, .btn { touch-action: manipulation; }
 [dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-bubble { border-radius: 4px 12px 12px 12px; }
 [dir='rtl'] .dm-row-meta { text-align: right; }
 .shop-grid { padding: 4px 4px 8px; }
+
+/* ---------- chats, laid out like a messaging app ----------
+   One rounded bubble per message. Messages in a row from the same player sit close together, the
+   corners between them tucked in, and the last one has a little tail. Others: on the left, white,
+   with their name above and their picture by the last bubble. You: on the right, in the game's red,
+   no name. Translate is a small "AI" chip beside the bubble; Reply / React float over its corner. */
+:is([data-chat], #lobby-chat) { --me-bubble: #d9573b; --them-bubble: #ffffff; }
+:is([data-chat], #lobby-chat) .chat-log { gap: 10px; padding-inline: 10px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg { align-items: flex-end; gap: 6px; max-width: calc(100% - 56px); }
+:is([data-chat], #lobby-chat) .chat-log .chat-av { width: 28px; height: 28px; margin: 0 0 1px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-av { display: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-col { gap: 2px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg .who { font-size: 11.5px; font-weight: 700; color: #7a6c5f; margin: 0 0 1px 12px; display: inline-flex; align-items: center; gap: 5px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg .who::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--seat-col, #b9a996); flex: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .who { display: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.vip .who { color: #a87a00; }
+:is([data-chat], #lobby-chat) .chat-log .chat-bubble { padding: 0; background: none; border: 0; box-shadow: none; border-radius: 0; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.vip .chat-bubble { box-shadow: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-body { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-body { align-items: flex-end; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line {
+  position: relative; width: auto; max-width: 100%; padding: 7px 12px; border-radius: 18px; border-top: 0; margin: 0;
+  background: var(--them-bubble); color: #1b1714; line-height: 1.32; box-shadow: 0 1px 1px rgba(70, 45, 20, 0.08);
+}
+:is([data-chat], #lobby-chat) .chat-log .chat-line + .chat-line { margin: 0; padding-top: 7px; border-top: 0; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line { background: var(--me-bubble); color: #fff; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .chat-line-content { color: #fff; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .mention { color: #fff; text-decoration: underline; }
+/* corners: tucked in between bubbles of the same run (left side for others, right side for you) */
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:not(:last-child) { border-bottom-left-radius: 6px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:not(:first-child) { border-top-left-radius: 6px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line:not(:last-child) { border-bottom-right-radius: 6px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line:not(:first-child) { border-top-right-radius: 6px; }
+/* the tail, on the last bubble of a run */
+:is([data-chat], #lobby-chat) .chat-log .chat-msg .chat-line:last-child::before,
+:is([data-chat], #lobby-chat) .chat-log .chat-msg .chat-line:last-child::after { content: ''; position: absolute; bottom: 0; height: 16px; pointer-events: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:last-child::before { left: -6px; width: 16px; background: var(--them-bubble); border-bottom-right-radius: 14px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:last-child::after { left: -10px; width: 10px; background: var(--chat-bg); border-bottom-right-radius: 10px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line:last-child::before { right: -6px; width: 16px; background: var(--me-bubble); border-bottom-left-radius: 14px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line:last-child::after { right: -10px; width: 10px; background: var(--chat-bg); border-bottom-left-radius: 10px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line > * { position: relative; z-index: 1; }
+/* stickers and short emoji-only messages: no bubble, just big */
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only .chat-line,
+:is([data-chat], #lobby-chat) .chat-log .chat-line.jumbo { background: none; box-shadow: none; padding: 0 2px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only .chat-line::before, :is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only .chat-line::after,
+:is([data-chat], #lobby-chat) .chat-log .chat-line.jumbo::before, :is([data-chat], #lobby-chat) .chat-log .chat-line.jumbo::after { display: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line.jumbo .msg-text { font-size: 30px; line-height: 1.15; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line.jumbo .chat-line-content { color: inherit; }
+/* a reply: the message it answers, small and grey above the bubble */
+:is([data-chat], #lobby-chat) .chat-log .chat-bubble > .reply-quote { margin: 0 6px 2px; padding: 3px 9px; border-radius: 12px; background: rgba(90, 60, 30, 0.08); color: #6b5d50; border-inline-start: 2px solid var(--seat-col, #b9a996); }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-bubble > .reply-quote { border-inline-start: 0; border-inline-end: 2px solid var(--me-bubble); }
+/* Translate: the small AI chip, outside the bubble, level with its bottom */
+:is([data-chat], #lobby-chat) .chat-log .chat-line-content > .tr-btn {
+  position: absolute; bottom: -2px; left: calc(100% + 16px); padding: 1px 5px; border-radius: 6px; border: 1px solid #dccdb8; background: #fff;
+  color: #8a6e52; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.4; cursor: pointer;
+}
+:is([data-chat], #lobby-chat) .chat-log .chat-line-content > .tr-btn:hover { color: #1b1714; border-color: #b9a996; }
+:is([data-chat], #lobby-chat) .chat-log .chat-line-content > .tr-btn.busy { opacity: 0.6; }
+/* the translation, under the words in the same bubble, with 👍 👎 ✎ */
+:is([data-chat], #lobby-chat) .chat-log .tr-out { margin-top: 5px; padding: 5px 0 0; border: 0; border-top: 1px solid #ece3d8; font-size: 0.95em; }
+:is([data-chat], #lobby-chat) .chat-log .tr-out small { display: inline; margin-inline-start: 6px; font-size: 10.5px; color: #8a7d70; }
+.tr-rate { display: inline-flex; gap: 2px; margin-inline-start: 6px; vertical-align: middle; }
+.tr-rate-btn { border: 0; background: transparent; padding: 0 3px; font-size: 12px; line-height: 1.4; border-radius: 6px; cursor: pointer; opacity: 0.55; filter: grayscale(0.6); color: #6b5d50; }
+.tr-rate-btn:hover, .tr-rate-btn.on { opacity: 1; filter: none; }
+.tr-rate-btn.on { background: rgba(90, 60, 30, 0.1); }
+.tr-better { display: flex; gap: 5px; margin-top: 5px; }
+.tr-better input { flex: 1; min-width: 0; padding: 5px 9px; border-radius: 12px; border: 1px solid #dccdb8; background: #fbf7f2; color: #1b1714; font: inherit; font-size: 13px; }
+.tr-better .btn { padding: 4px 10px; }
+/* Reply / React: a little pill over the bubble's top corner */
+:is([data-chat], #lobby-chat) .chat-log .line-acts { top: -26px; right: 6px; left: auto; padding: 1px 2px; border-radius: 10px; box-shadow: 0 2px 6px rgba(60, 40, 20, 0.14); z-index: 3; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .line-acts { right: auto; left: 6px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .line-act { color: #6b6158; }
+/* reactions: tucked under the bubble's corner */
+:is([data-chat], #lobby-chat) .chat-log .chat-line .msg-reacts { margin: 4px 0 -2px; }
+/* new messages slide in */
+@keyframes chat-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+:is([data-chat], #lobby-chat) .chat-log .chat-line.arrive { animation: chat-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) { :is([data-chat], #lobby-chat) .chat-log .chat-line.arrive { animation: none; } }
+[dir='rtl'] :is([data-chat], #lobby-chat) .chat-log .chat-line-content > .tr-btn { left: auto; right: calc(100% + 16px); }
+/* (stronger than the "my message" bubble above: stickers and big emoji have no bubble or tail) */
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:is(.me, :not(.me)) .chat-line:is(.jumbo, .jumbo),
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only:is(.me, :not(.me)) .chat-line { background: none; box-shadow: none; padding: 0 2px; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:is(.me, :not(.me)) .chat-line.jumbo:last-child::before,
+:is([data-chat], #lobby-chat) .chat-log .chat-msg:is(.me, :not(.me)) .chat-line.jumbo:last-child::after,
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only:is(.me, :not(.me)) .chat-line:last-child::before,
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.sticker-only:is(.me, :not(.me)) .chat-line:last-child::after { display: none; }

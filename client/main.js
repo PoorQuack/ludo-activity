@@ -321,6 +321,7 @@ function connect() {
     } else if (msg.type === 'lobbyChat') onLobbyChat(msg);
     else if (msg.type === 'dmSummary' || msg.type === 'dmHistory' || msg.type === 'dmMsg' || msg.type === 'dmReact') onDmMessage(msg);
     else if (msg.type === 'translated') onTranslated(msg);
+    else if (msg.type === 'trFeedback') onTrFeedback(msg);
     else if (msg.type === 'awards') showAwards(msg.awards);
     else if (msg.type === 'quests') {
       questData = msg.quests;
@@ -893,6 +894,7 @@ function renderChat() {
       const prevLi = list.lastElementChild;
       const canGroup = !stickerOnly && !m.replyTo && prevLi?.classList.contains('chat-msg') && !prevLi.classList.contains('sticker-only') && prevLi.dataset.userId === m.userId;
       const line = buildChatLine({ msg: m, isMe, scope: 'room', logEl: list, stickerOnly, showTime: false, onReply: replyFn, onReact: reactFn });
+      if (!fresh) line.classList.add('arrive'); // a new message slides in (not on a redraw)
       if (canGroup) {
         prevLi.querySelector('.chat-body')?.appendChild(line);
         prevLi.dataset.id = m.id;
@@ -4833,11 +4835,21 @@ function appendReplyQuote(parentEl, replyTo, logEl) {
   });
   parentEl.appendChild(q);
 }
+// 1 to 3 emoji and nothing else
+const isJumbo = (text) => {
+  const s = String(text || '').trim();
+  if (!s || s.length > 24 || /[\p{L}\p{N}]/u.test(s)) return false;
+  const marks = s.match(/\p{Extended_Pictographic}/gu) || [];
+  return marks.length >= 1 && marks.length <= 3 && !s.replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f\s]/gu, '');
+};
+
 function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onReply, onReact }) {
   const line = document.createElement('div');
   line.className = 'chat-line';
   line.dataset.msgId = m.id;
   line.tabIndex = -1; // a tap focuses it, which shows its Reply / React on phones
+  // a few emoji on their own: shown big, without a bubble
+  if (!stickerOnly && isJumbo(m.text)) line.classList.add('jumbo');
   const row = document.createElement('div');
   row.className = 'chat-line-row';
   const content = document.createElement('div');
@@ -5197,6 +5209,11 @@ function renderLobbyChat() {
     : (lchat.tab === 'lang' ? lchat.local : lchat.global).filter((m) => !isHiddenUser(m.userId));
   const msgs = raw;
   const pinned = log._pinned !== false;
+  // which messages are new since the last time this list was drawn (they slide in)
+  const listKey = isDm ? `dm:${dmState.activeId || ''}` : `${lchat.tab}:${lchat.lang || ''}`;
+  const seenBefore = log._seenKey === listKey ? log._seenId || 0 : Infinity;
+  log._seenKey = listKey;
+  log._seenId = Math.max(0, ...msgs.map((m) => Number(m.id) || 0));
   log.innerHTML = '';
   if (!msgs.length) {
     const li = document.createElement('li');
@@ -5226,6 +5243,7 @@ function renderLobbyChat() {
     }
     lastAt = m.at || lastAt;
     const line = buildChatLine({ msg: m, isMe, scope: isDm ? 'dm' : scope, logEl: log, stickerOnly, showTime: false, onReply: replyFn, onReact: reactFn });
+    if ((Number(m.id) || 0) > seenBefore) line.classList.add('arrive');
 
     if (!stickerOnly && !m.replyTo && prev && !prev.stickerOnly && prev.userId === m.userId) {
       prev.body.appendChild(line);
@@ -5314,15 +5332,17 @@ function addTranslate(li, scope, id) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'tr-btn';
-  b.textContent = t('Translate');
+  b.textContent = 'AI'; // small: a chip beside the bubble
   b.title = t('Translate into {lang}', { lang: langInMine(chatLanguage()) });
+  b.setAttribute('aria-label', b.title);
   if (done === 'pending') b.disabled = true;
   b.addEventListener('click', () => {
     if (ws?.readyState !== WebSocket.OPEN) return;
     translations.set(key, 'pending');
     for (const el of document.querySelectorAll(`[data-tr="${key}"] .tr-btn`)) {
       el.disabled = true;
-      el.textContent = t('Translating…');
+      el.textContent = '…';
+      el.classList.add('busy');
     }
     ws.send(JSON.stringify({ type: 'translate', scope, id, to: chatLanguage() }));
   });
@@ -5339,16 +5359,84 @@ function showTranslation(li, r) {
   else {
     out.textContent = r.text;
     const note = document.createElement('small');
-    note.textContent = r.from && CHAT_LANG[r.from] ? t('Translated from {lang}', { lang: langInMine(r.from) }) : t('Translated');
+    note.textContent = r.approved ? t('Translated by players') : r.from && CHAT_LANG[r.from] ? t('Translated from {lang}', { lang: langInMine(r.from) }) : t('Translated');
     out.appendChild(note);
+    out.appendChild(rateRow(li, r));
   }
   li.appendChild(out);
   const list = li.closest('.chat-log');
   if (list) keepAtBottom(list);
 }
+// 👍 / 👎 under a translation, and "a better one" for players who speak both languages
+function rateRow(li, r) {
+  const row = document.createElement('span');
+  row.className = 'tr-rate';
+  const key = li.dataset.tr;
+  const [scope, id] = key.split(':');
+  const send = (extra) => {
+    if (ws?.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'trFeedback', scope, id: Number(id), to: chatLanguage(), from: r.from || '', shown: r.text, ...extra }));
+  };
+  const btn = (label, title, cls, on) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `tr-rate-btn ${cls}`;
+    b.textContent = label;
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      on(b);
+    });
+    row.appendChild(b);
+    return b;
+  };
+  const mark = (which) => {
+    r.voted = which;
+    for (const b of row.querySelectorAll('.tr-rate-btn')) b.classList.toggle('on', b.classList.contains(which));
+  };
+  btn('👍', t('Good translation'), 'up', () => {
+    mark('up');
+    send({ op: 'vote', up: true });
+  });
+  btn('👎', t('Bad translation'), 'down', () => {
+    mark('down');
+    send({ op: 'vote', up: false });
+    openBetter();
+  });
+  btn('✎', t('Suggest a better one'), 'better', () => openBetter());
+  if (r.voted) mark(r.voted);
+  const openBetter = () => {
+    if (li.querySelector('.tr-better')) return li.querySelector('.tr-better input').focus();
+    const form = document.createElement('form');
+    form.className = 'tr-better';
+    form.innerHTML = '<input type="text" maxlength="300" autocomplete="off" /><button type="submit" class="btn small"></button>';
+    const input = form.querySelector('input');
+    input.placeholder = t('A better translation…');
+    input.value = r.text;
+    form.querySelector('button').textContent = t('Send');
+    form.addEventListener('click', (e) => e.stopPropagation());
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || text === r.text) return form.remove();
+      send({ op: 'suggest', text });
+      form.remove();
+    });
+    row.after(form);
+    input.focus();
+    input.select();
+  };
+  return row;
+}
+function onTrFeedback(msg) {
+  if (msg.error) return toast(translateServer(msg.error));
+  if (msg.op === 'suggest') toast(msg.approved ? t('Thanks! Players agreed: everyone sees your translation now.') : t('Thanks! It replaces the translation once {n} players agree.', { n: 3 }));
+  // (a vote just lights its button up)
+}
 function onTranslated(msg) {
   const key = `${msg.scope}:${msg.id}`;
-  const r = msg.error ? { error: msg.error } : { text: msg.text, from: msg.from, already: !!msg.already };
+  const r = msg.error ? { error: msg.error } : { text: msg.text, from: msg.from, already: !!msg.already, approved: !!msg.approved };
   if (msg.error) translations.delete(key); // they can try again
   else translations.set(key, r);
   for (const li of document.querySelectorAll(`[data-tr="${key}"]`)) {
