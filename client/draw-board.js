@@ -20,6 +20,13 @@ export function drawTile(ctx, sq, fill, style, theme, role = 'cell', turn = 0) {
   ctx.save();
   ctx.translate(sq.x, sq.y);
   ctx.rotate(sq.angle);
+  const customTile = role === 'safe' ? theme?.art?.tileSafe : role === 'cell' ? theme?.art?.tilePath : null;
+  const tileImg = customTile ? texture(customTile) : null;
+  if (tileImg) {
+    ctx.drawImage(tileImg, -0.46, -0.46, 0.92, 0.92);
+    ctx.restore();
+    return;
+  }
   ctx.fillStyle = fill;
   roundRect(ctx, -0.45, -0.45, 0.9, 0.9, 0.12);
   ctx.fill();

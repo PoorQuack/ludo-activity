@@ -51,11 +51,27 @@ export function diceStyle(styleId, color, sign) {
   return { ...st, edge: color, pip: color, outline: color };
 }
 
+const dicePics = {};
+function bundleDieImg(dir, file) {
+  const key = `${dir}/${file}`;
+  let img = dicePics[key];
+  if (!img) {
+    if (typeof Image === 'undefined') return null;
+    img = dicePics[key] = new Image();
+    img.onload = () => {
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('ludo-textures'));
+    };
+    img.src = `/bundles/${key}.webp`;
+  }
+  return img.complete && img.naturalWidth ? img : null;
+}
+
 // One face of the dice in its own coordinates (-50..50). The flat dice and every face of the
 // 3D cube use this, so the cube's front face looks exactly like the flat dice it turns into.
 // `light` < 1 darkens faces turned away from you; `px` is one face unit in pixels; `t` is the
 // time in ms, for skins that move (twinkling stars, glowing cracks, a glint sweeping across).
 export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null, px = 1, t = 0, solid = false } = {}) {
+  const facePic = st.bundle ? bundleDieImg(st.bundle, value ? `die_${value}` : 'die_iso') : null;
   let fill = st.face;
   if (st.shine) {
     fill = ctx.createLinearGradient(-50, -50, 50, 50);
@@ -75,28 +91,32 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
   ctx.save();
   roundRect(ctx, -50, -50, 100, 100, cr);
   ctx.clip();
-  if (st.art) DICE_ART[st.art](ctx, st, t);
-  if (pips) {
-    if (value && st.links) {
-      // join the pips with fine gold lines, like a constellation
-      const p = PIPS[value];
-      ctx.strokeStyle = 'rgba(240, 205, 120, 0.7)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (const [i, j] of PIP_LINKS[value]) {
-        ctx.moveTo(p[i][0] * 27, p[i][1] * 27);
-        ctx.lineTo(p[j][0] * 27, p[j][1] * 27);
+  if (facePic) {
+    ctx.drawImage(facePic, -50, -50, 100, 100);
+  } else {
+    if (st.art) DICE_ART[st.art](ctx, st, t);
+    if (pips) {
+      if (value && st.links) {
+        // join the pips with fine gold lines, like a constellation
+        const p = PIPS[value];
+        ctx.strokeStyle = 'rgba(240, 205, 120, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (const [i, j] of PIP_LINKS[value]) {
+          ctx.moveTo(p[i][0] * 27, p[i][1] * 27);
+          ctx.lineTo(p[j][0] * 27, p[j][1] * 27);
+        }
+        ctx.stroke();
       }
-      ctx.stroke();
-    }
-    if (value) {
-      PIPS[value].forEach(([x, y], i) => (PIP_STYLES[st.pips || 'round'])(ctx, x * 27, y * 27, 10, st, i, t, px));
-    } else {
-      ctx.fillStyle = st.pip;
-      ctx.font = '800 58px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('?', 0, 3);
+      if (value) {
+        PIPS[value].forEach(([x, y], i) => (PIP_STYLES[st.pips || 'round'])(ctx, x * 27, y * 27, 10, st, i, t, px));
+      } else {
+        ctx.fillStyle = st.pip;
+        ctx.font = '800 58px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', 0, 3);
+      }
     }
   }
   ctx.shadowBlur = 0;
@@ -701,6 +721,15 @@ export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = 
   ctx.translate(cx, cy);
   ctx.scale(k, k);
   ctx.lineJoin = 'round';
+  if (st.bundle && fx) {
+    const gl = bundleDieImg(st.bundle, 'die_glow');
+    if (gl) {
+      ctx.save();
+      ctx.globalAlpha *= 0.72 + 0.18 * Math.sin(t / 420);
+      ctx.drawImage(gl, -82, -82, 164, 164);
+      ctx.restore();
+    }
+  }
   const prop = fx && DICE_PROPS[st.prop];
   if (prop) prop(ctx, st, t / 1000, 'back', 1);
   // A darker edge underneath gives it a little thickness

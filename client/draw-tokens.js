@@ -413,6 +413,17 @@ export const PAWN_STYLES = {
   'token-penguin': { shape: 'penguin' },
   'token-sakura': { shape: 'sakura' },
   'token-dino': { shape: 'dino' },
+  // Cosmetic bundle tokens: /bundles/<tier>/<dir>/token_<col>.webp + token_glow.webp
+  'token-woodland-grove': { bundle: 'common/woodland_grove' },
+  'token-street-playground': { bundle: 'common/street_playground' },
+  'token-space-odyssey': { bundle: 'rare/space_odyssey' },
+  'token-pharaohs-oasis': { bundle: 'rare/pharaohs_oasis' },
+  'token-mystic-alchemy': { bundle: 'epic/mystic_alchemy' },
+  'token-christmas-holiday': { bundle: 'epic/christmas_holiday' },
+  'token-turtle-lotus': { bundle: 'epic/turtle_lotus' },
+  'token-pirates-cove': { bundle: 'epic/pirates_cove' },
+  'token-celestial-olympus': { bundle: 'legendary/celestial_olympus', fx: 'glitter' },
+  'token-steampunk-workshop': { bundle: 'legendary/steampunk_workshop', fx: 'glitter' },
   // Battle Pass Season 1: painted pictures, one per colour
   'token-samurai': { shape: 'samurai' },
   'token-football': { shape: 'football' },
@@ -453,6 +464,25 @@ export const GOLD_DARK = '#9a6f00';
 
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
 export function paintPawn(ctx, r, hex, style, sign) {
+  if (style.bundle) {
+    const map = { red: 'red', green: 'green', yellow: 'yellow', blue: 'blue', orange: 'yellow', purple: 'blue' };
+    const col = map[sign] || 'red';
+    const glow = bundleTokenPic(style.bundle, 'token_glow');
+    const img = bundleTokenPic(style.bundle, `token_${col}`);
+    if (img) {
+      const h = r * 2.75;
+      const w = (h * img.naturalWidth) / img.naturalHeight;
+      if (glow) {
+        ctx.save();
+        ctx.globalAlpha *= 0.65;
+        ctx.drawImage(glow, -w / 2, -h + r * 0.14, w, h);
+        ctx.restore();
+      }
+      ctx.drawImage(img, -w / 2, -h + r * 0.14, w, h);
+      return;
+    }
+    return paintPawn(ctx, r, hex, {}, sign);
+  }
   if (style.shape) return TOKEN_SHAPES[style.shape](ctx, r, hex, sign);
   const body = style.neon ? '#141724' : hex;
   const edge = style.neon ? mix(hex, '#ffffff', 0.25) : mix(hex, '#000000', 0.38);
@@ -630,8 +660,25 @@ function tokenPicture(name, sign) {
   if (!img) {
     if (typeof Image === 'undefined') return null;
     img = pictureArt[key] = new Image();
-    img.onload = () => pawnSprites.clear();
+    img.onload = () => {
+      pawnSprites.clear();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('ludo-textures'));
+    };
     img.src = `/tokens/${key}.webp`;
+  }
+  return img.complete && img.naturalWidth ? img : null;
+}
+function bundleTokenPic(dir, file) {
+  const key = `bundle/${dir}/${file}`;
+  let img = pictureArt[key];
+  if (!img) {
+    if (typeof Image === 'undefined') return null;
+    img = pictureArt[key] = new Image();
+    img.onload = () => {
+      pawnSprites.clear();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('ludo-textures'));
+    };
+    img.src = `/bundles/${dir}/${file}.webp`;
   }
   return img.complete && img.naturalWidth ? img : null;
 }

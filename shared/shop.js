@@ -65,6 +65,16 @@ export const SHOP_ITEMS = [
   { id: 'token-dino', type: 'token', name: 'Dino', rarity: 'epic', price: 190, priceCurrency: 'gems' },
   { id: 'token-ufo', type: 'token', name: 'UFO', rarity: 'legendary', price: 500, priceCurrency: 'gems', perk: 'When captured, a beam of light carries it back to its base.' },
   { id: 'token-dragon', type: 'token', name: 'Dragon', rarity: 'legendary', price: 500, priceCurrency: 'gems', perk: 'When captured, it flies home on its own wings.' },
+  { id: 'token-woodland-grove', type: 'token', name: 'Woodland Grove', rarity: 'common', price: 120, desc: 'Painted oak acorns with leafy plinths in each colour.' },
+  { id: 'token-street-playground', type: 'token', name: 'Street Playground', rarity: 'common', price: 120, desc: 'Classic bottle-cap street tokens in each player colour.' },
+  { id: 'token-space-odyssey', type: 'token', name: 'Space Odyssey', rarity: 'rare', price: 250, desc: 'Astronaut explorers standing on lunar plinths.' },
+  { id: 'token-pharaohs-oasis', type: 'token', name: "Pharaoh's Oasis", rarity: 'rare', price: 250, desc: 'Gilded scarab jewels perched atop desert pedestals.' },
+  { id: 'token-mystic-alchemy', type: 'token', name: 'Mystic Alchemy', rarity: 'epic', price: 190, priceCurrency: 'gems', desc: 'Glowing potion flasks set on rune-carved pedestals.' },
+  { id: 'token-christmas-holiday', type: 'token', name: 'Christmas Holiday', rarity: 'epic', price: 190, priceCurrency: 'gems', desc: 'Santa, Tree, Gingerbread and Snowman festive tokens.' },
+  { id: 'token-turtle-lotus', type: 'token', name: 'Turtle & Lotus Pond', rarity: 'epic', price: 190, priceCurrency: 'gems', desc: 'Friendly pond turtles sporting painted player-coloured shells.' },
+  { id: 'token-pirates-cove', type: 'token', name: "Pirate's Cove", rarity: 'epic', price: 190, priceCurrency: 'gems', desc: 'Tricorn-hatted brass ship anchors in pirate colours.' },
+  { id: 'token-celestial-olympus', type: 'token', name: 'Celestial Olympus', rarity: 'legendary', price: 450, priceCurrency: 'gems', perk: 'When captured, it soars back to Olympus in golden starlight.' },
+  { id: 'token-steampunk-workshop', type: 'token', name: 'Steampunk Workshop', rarity: 'legendary', price: 450, priceCurrency: 'gems', perk: 'When captured, its clockwork furnace rockets back to base.' },
 
   { id: 'dice-classic', type: 'dice', name: 'Classic', rarity: 'common', price: 0 },
   { id: 'dice-midnight', type: 'dice', name: 'Midnight', rarity: 'rare', price: 200 },
@@ -92,6 +102,16 @@ export const SHOP_ITEMS = [
   { id: 'dice-alien', type: 'dice', name: 'Alien', rarity: 'legendary', price: 400, priceCurrency: 'gems', perk: 'Eyes on stalks that look about and blink, rings of light beneath it.' },
   { id: 'dice-dragon', type: 'dice', name: 'Dragon', rarity: 'legendary', price: 500, priceCurrency: 'gems', perk: 'Horns, beating wings, and sparks on every roll.' },
   { id: 'dice-constellation', type: 'dice', name: 'Constellation', rarity: 'legendary', price: 400, priceCurrency: 'gems', perk: 'A ring of stars circles it, and sparks fly when it rolls.' },
+  { id: 'dice-woodland-grove', type: 'dice', name: 'Woodland Grove', rarity: 'common', price: 120 },
+  { id: 'dice-street-playground', type: 'dice', name: 'Street Playground', rarity: 'common', price: 120 },
+  { id: 'dice-space-odyssey', type: 'dice', name: 'Space Odyssey', rarity: 'rare', price: 250 },
+  { id: 'dice-pharaohs-oasis', type: 'dice', name: "Pharaoh's Oasis", rarity: 'rare', price: 250 },
+  { id: 'dice-mystic-alchemy', type: 'dice', name: 'Mystic Alchemy', rarity: 'epic', price: 190, priceCurrency: 'gems' },
+  { id: 'dice-christmas-holiday', type: 'dice', name: 'Christmas Holiday', rarity: 'epic', price: 190, priceCurrency: 'gems' },
+  { id: 'dice-turtle-lotus', type: 'dice', name: 'Turtle & Lotus Pond', rarity: 'epic', price: 190, priceCurrency: 'gems' },
+  { id: 'dice-pirates-cove', type: 'dice', name: "Pirate's Cove", rarity: 'epic', price: 190, priceCurrency: 'gems' },
+  { id: 'dice-celestial-olympus', type: 'dice', name: 'Celestial Olympus', rarity: 'legendary', price: 450, priceCurrency: 'gems', perk: 'Forged solar gold with radiant sparks on every roll.' },
+  { id: 'dice-steampunk-workshop', type: 'dice', name: 'Steampunk Workshop', rarity: 'legendary', price: 450, priceCurrency: 'gems', perk: 'Riveted brass clockwork with ember sparks on every roll.' },
 
   // Taunts: what pops up over the square when you capture someone. Everyone in the room sees it.
   { id: 'taunt-none', type: 'taunt', name: 'No taunt', rarity: 'common', price: 0 },
@@ -126,6 +146,16 @@ export const SHOP_ITEMS = [
   { id: 'board-royal', type: 'board', name: 'Royal', rarity: 'legendary', price: 500, priceCurrency: 'gems' },
   { id: 'board-cat', type: 'board', name: 'Cat', rarity: 'epic', price: 210, priceCurrency: 'gems' },
   { id: 'board-constellation', type: 'board', name: 'Constellation', rarity: 'legendary', price: 500, priceCurrency: 'gems' },
+  { id: 'board-woodland-grove', type: 'board', name: 'Woodland Grove', rarity: 'common', price: 150 },
+  { id: 'board-street-playground', type: 'board', name: 'Street Playground', rarity: 'common', price: 150 },
+  { id: 'board-space-odyssey', type: 'board', name: 'Space Odyssey', rarity: 'rare', price: 350 },
+  { id: 'board-pharaohs-oasis', type: 'board', name: "Pharaoh's Oasis", rarity: 'rare', price: 350 },
+  { id: 'board-mystic-alchemy', type: 'board', name: 'Mystic Alchemy', rarity: 'epic', price: 210, priceCurrency: 'gems' },
+  { id: 'board-christmas-holiday', type: 'board', name: 'Christmas Holiday', rarity: 'epic', price: 210, priceCurrency: 'gems' },
+  { id: 'board-turtle-lotus', type: 'board', name: 'Turtle & Lotus Pond', rarity: 'epic', price: 210, priceCurrency: 'gems' },
+  { id: 'board-pirates-cove', type: 'board', name: "Pirate's Cove", rarity: 'epic', price: 210, priceCurrency: 'gems' },
+  { id: 'board-celestial-olympus', type: 'board', name: 'Celestial Olympus', rarity: 'legendary', price: 500, priceCurrency: 'gems' },
+  { id: 'board-steampunk-workshop', type: 'board', name: 'Steampunk Workshop', rarity: 'legendary', price: 500, priceCurrency: 'gems' },
 
   // Emotes are pack stickers now: big in chat, and a solo sticker floats over your base.
   // Single stickers (type 'emote' with an img + slug) work the same way, just sold one at a time.
@@ -437,6 +467,16 @@ export const SETS = [
   { id: 'set-ice', name: 'Ice set', items: ['dice-ice', 'board-ice'] },
   { id: 'set-wood', name: 'Wood set', items: ['dice-wood', 'board-wood'] },
   { id: 'set-midnight', name: 'Midnight set', items: ['dice-midnight', 'board-midnight'] },
+  { id: 'set-woodland-grove', name: 'Woodland Grove set', items: ['token-woodland-grove', 'dice-woodland-grove', 'board-woodland-grove'] },
+  { id: 'set-street-playground', name: 'Street Playground set', items: ['token-street-playground', 'dice-street-playground', 'board-street-playground'] },
+  { id: 'set-space-odyssey', name: 'Space Odyssey set', items: ['token-space-odyssey', 'dice-space-odyssey', 'board-space-odyssey'] },
+  { id: 'set-pharaohs-oasis', name: "Pharaoh's Oasis set", items: ['token-pharaohs-oasis', 'dice-pharaohs-oasis', 'board-pharaohs-oasis'] },
+  { id: 'set-mystic-alchemy', name: 'Mystic Alchemy set', items: ['token-mystic-alchemy', 'dice-mystic-alchemy', 'board-mystic-alchemy'] },
+  { id: 'set-christmas-holiday', name: 'Christmas Holiday set', items: ['token-christmas-holiday', 'dice-christmas-holiday', 'board-christmas-holiday'] },
+  { id: 'set-turtle-lotus', name: 'Turtle & Lotus Pond set', items: ['token-turtle-lotus', 'dice-turtle-lotus', 'board-turtle-lotus'] },
+  { id: 'set-pirates-cove', name: "Pirate's Cove set", items: ['token-pirates-cove', 'dice-pirates-cove', 'board-pirates-cove'] },
+  { id: 'set-celestial-olympus', name: 'Celestial Olympus set', items: ['token-celestial-olympus', 'dice-celestial-olympus', 'board-celestial-olympus'] },
+  { id: 'set-steampunk-workshop', name: 'Steampunk Workshop set', items: ['token-steampunk-workshop', 'dice-steampunk-workshop', 'board-steampunk-workshop'] },
 ];
 export const SETS_BY_ID = Object.fromEntries(SETS.map((set) => [set.id, set]));
 
@@ -508,4 +548,4 @@ export const PAID_ITEMS = Object.fromEntries([
 // Shop items new in the latest update: tagged "New" in the shop until the player has looked at
 // them (on each device). Change this list with each update that adds items; items added later
 // than a player's first visit are tagged automatically anyway.
-export const NEW_ITEMS = new Set(['frame-neon', 'frame-rank-1', 'frame-rank-2', 'frame-rank-3', 'frame-bronze', 'frame-gold', 'frame-flame', 'frame-crown', 'emote-buffcat', 'emote-eatingchips', 'emote-cozykitten', 'emote-wadafak', 'emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair']);
+export const NEW_ITEMS = new Set(['frame-neon', 'frame-rank-1', 'frame-rank-2', 'frame-rank-3', 'frame-bronze', 'frame-gold', 'frame-flame', 'frame-crown', 'emote-buffcat', 'emote-eatingchips', 'emote-cozykitten', 'emote-wadafak', 'emote-cathello', 'token-dino', 'board-crystal', 'emote-blepcat', 'token-sakura', 'dice-sakura', 'token-robot', 'token-penguin', 'token-ufo', 'token-dragon', 'dice-bubble', 'dice-slime', 'dice-robot', 'dice-ghost', 'dice-duck', 'dice-snowball', 'dice-comet', 'dice-alien', 'dice-dragon', 'taunt-bonk', 'taunt-bye', 'taunt-chicken', 'taunt-violin', 'taunt-clown', 'taunt-l', 'taunt-ggez', 'taunt-skill', 'taunt-cackle', 'taunt-fireworks', 'board-desert', 'board-sakura', 'board-arcade', 'board-haunted', 'board-swamp', 'board-factory', 'board-space', 'board-lair', 'token-woodland-grove', 'dice-woodland-grove', 'board-woodland-grove', 'token-street-playground', 'dice-street-playground', 'board-street-playground', 'token-space-odyssey', 'dice-space-odyssey', 'board-space-odyssey', 'token-pharaohs-oasis', 'dice-pharaohs-oasis', 'board-pharaohs-oasis', 'token-mystic-alchemy', 'dice-mystic-alchemy', 'board-mystic-alchemy', 'token-christmas-holiday', 'dice-christmas-holiday', 'board-christmas-holiday', 'token-turtle-lotus', 'dice-turtle-lotus', 'board-turtle-lotus', 'token-pirates-cove', 'dice-pirates-cove', 'board-pirates-cove', 'token-celestial-olympus', 'dice-celestial-olympus', 'board-celestial-olympus', 'token-steampunk-workshop', 'dice-steampunk-workshop', 'board-steampunk-workshop']);

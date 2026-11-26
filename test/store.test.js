@@ -169,7 +169,7 @@ test("today's deal: one item a day at 30% off, the same for everyone, and the se
   const { dailyDeal, priceOf, ITEMS } = await import('../shared/shop.js');
   const day = '2026-11-15';
   const deal = dailyDeal(day);
-  assert.ok(['token', 'dice', 'board'].includes(deal.type) && deal.price > 0);
+  assert.ok(['token', 'dice', 'board', 'taunt'].includes(deal.type) && deal.price > 0);
   assert.equal(dailyDeal(day).id, deal.id, 'the same all day');
   assert.ok(new Set(Array.from({ length: 30 }, (_, i) => dailyDeal(`2026-12-${String(i + 1).padStart(2, '0')}`).id)).size > 10, 'it changes from day to day');
   assert.equal(priceOf(deal, day), Math.round((deal.price * 0.7) / 10) * 10);

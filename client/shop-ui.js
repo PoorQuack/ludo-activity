@@ -329,6 +329,8 @@ function animate(now) {
   lastPreview = now;
   for (const a of animated) {
     if (!a.canvas.isConnected) continue;
+    if (a.once && !a.dirty) continue;
+    a.dirty = false;
     if (watcher) {
       if (!watched.has(a.canvas)) {
         watched.add(a.canvas);
@@ -344,6 +346,9 @@ function animate(now) {
   }
 }
 requestAnimationFrame(animate);
+window.addEventListener('ludo-textures', () => {
+  for (const a of animated) a.dirty = true;
+});
 
 // Tokens are shown in the colours of your equipped board, so you see how they'll really look.
 export { preview as itemPreview };
@@ -394,10 +399,10 @@ function preview(item, theme) {
   ctx.scale(dpr, dpr);
 
   if (item.type === 'token') {
-    const wide = ['token-constellation', 'token-ufo', 'token-dragon', 'token-samurai'].includes(item.id);
+    const wide = ['token-constellation', 'token-ufo', 'token-dragon', 'token-samurai', 'token-woodland-grove', 'token-street-playground', 'token-space-odyssey', 'token-pharaohs-oasis', 'token-mystic-alchemy', 'token-christmas-holiday', 'token-turtle-lotus', 'token-pirates-cove', 'token-celestial-olympus', 'token-steampunk-workshop'].includes(item.id);
     const draw = (c, now) => ['red', 'green', 'yellow', 'blue'].forEach((col, i) => drawToken(c, (wide ? 25.5 + i * 33 : 30 + i * 30), 68, wide ? 12.5 : 14, playerColor(theme, col), item.id, { sign: col, t: now }));
     draw(ctx, performance.now());
-    if (rarityOf(item).id === 'legendary') animated.push({ canvas, dpr, draw }); // their effects move
+    animated.push({ canvas, dpr, draw, once: rarityOf(item).id !== 'legendary', dirty: false });
   } else if (item.type === 'dice') {
     const draw = (c, now) => drawDice(c, W / 2, H / 2, 56, 5, item.id, { t: now });
     draw(ctx, performance.now());
@@ -418,7 +423,7 @@ function preview(item, theme) {
       c.drawImage(off, (W - size) / 2, 4, size, size);
     };
     draw(ctx, performance.now());
-    animated.push({ canvas, dpr, draw });
+    animated.push({ canvas, dpr, draw, once: !r.theme?.art?.fx && !r.theme?.art?.under?.speed, dirty: false });
   }
   return canvas;
 }

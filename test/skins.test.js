@@ -24,6 +24,9 @@ test('every board has a safe-square shield and its textures exist', async () => 
     assert.ok(shields.includes(typeof s === 'string' ? s : s?.kind), `${id} has no shield`);
     const specs = [...Object.values(theme.art.tex || {}), theme.art.under].filter(Boolean);
     for (const spec of specs) assert.ok(existsSync(new URL(`../client/public${spec.src}`, import.meta.url)), `${id}: ${spec.src} missing`);
+    for (const tile of [theme.art.tilePath, theme.art.tileSafe].filter(Boolean)) {
+      assert.ok(existsSync(new URL(`../client/public${tile}`, import.meta.url)), `${id}: ${tile} missing`);
+    }
   }
 });
 

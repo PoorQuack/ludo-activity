@@ -285,7 +285,7 @@ export class BoardRenderer {
         drawShape(ctx, this.seatShape(startSeat), sq.x, sq.y, 0.27, ink.fill, ink.edge, 0.05);
       }
       else if (startSeat >= 0) motif(ctx, art.mark || 'star', sq.x, sq.y, 0.27, 'rgba(255,255,255,0.92)');
-      else if (safe) {
+      else if (safe && !art.tileSafe) {
         // Safe squares: optionally a ring round the tile and an outlined mark, so they stand out
         if (art.safeRing) {
           ctx.save();
