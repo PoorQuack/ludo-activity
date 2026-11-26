@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Використано тестові кубики: усі отримують ставку назад.",
   "🎵 Music": "🎵 Музика",
   "🏦 House fee: {n} coins": "🏦 Комісія закладу: {n} монет",
-  "🏳️ Surrender": "🏳️ Здатися",
   "🐞 Bug": "🐞 Помилка",
-  "👋 Invite friends": "👋 Запросити друзів",
   "👋 {name} sent you a friend request": "👋 {name} надсилає тобі запит у друзі",
   "👥 Modes": "👥 Режими",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} самоцвітів! Дякуємо за підтримку",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Запрошення надіслано в особисті повідомлення Discord: {name}",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Перезапуск для оновлення. Повторне підключення за кілька секунд…",
   "🔧 Updating the game… back in a few seconds": "🔧 Гра оновлюється… повернемося за кілька секунд",
-  "🚪 Leave room": "🚪 Покинути кімнату",
   "🚪 Rooms": "🚪 Кімнати",
   "🛍️ Shop": "🛍️ Магазин",
-  "🤖 Fill empty seats with bots": "🤖 Заповнити вільні місця ботами",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Нічия, по {points} очок! Вирішальний раунд: по одному кольору на команду, напарники кидають по черзі. Перемагає перший колір, що дійшов додому!",
   "🤝 You and {name} are friends now": "🤝 Тепер ви з {name} друзі",
   "🧭 Getting started": "🧭 Початок гри",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Оціни цей переклад",
   "Rated": "Оцінено",
   "Thanks for rating!": "Дякуємо за оцінку!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Безпечна оплата відкриється в браузері. Самоцвіти надійдуть одразу після оплати."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Безпечна оплата відкриється в браузері. Самоцвіти надійдуть одразу після оплати.",
+  "Fill empty seats with bots": "Заповнити вільні місця ботами",
+  "Surrender": "Здатися",
+  "The podium is empty: play a game against other people to be first on it.": "П'єдестал порожній: зіграйте з іншими людьми, щоб першим на нього піднятися.",
+  "How it works": "Як це працює"
 }

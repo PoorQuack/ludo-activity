@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Использовались тестовые кубики: все получают ставку обратно.",
   "🎵 Music": "🎵 Музыка",
   "🏦 House fee: {n} coins": "🏦 Комиссия заведения: {n} монет",
-  "🏳️ Surrender": "🏳️ Сдаться",
   "🐞 Bug": "🐞 Ошибка",
-  "👋 Invite friends": "👋 Пригласить друзей",
   "👋 {name} sent you a friend request": "👋 {name} отправляет тебе запрос в друзья",
   "👥 Modes": "👥 Режимы",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} самоцветов! Спасибо за поддержку",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Приглашение отправлено в личные сообщения Discord: {name}",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Перезапуск для обновления. Переподключение через несколько секунд…",
   "🔧 Updating the game… back in a few seconds": "🔧 Игра обновляется… вернёмся через несколько секунд",
-  "🚪 Leave room": "🚪 Покинуть комнату",
   "🚪 Rooms": "🚪 Комнаты",
   "🛍️ Shop": "🛍️ Магазин",
-  "🤖 Fill empty seats with bots": "🤖 Заполнить свободные места ботами",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Ничья, по {points} очков! Решающий раунд: по одному цвету на команду, напарники бросают по очереди. Побеждает первый цвет, пришедший домой!",
   "🤝 You and {name} are friends now": "🤝 Теперь вы с {name} друзья",
   "🧭 Getting started": "🧭 Начало игры",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Оцени этот перевод",
   "Rated": "Оценено",
   "Thanks for rating!": "Спасибо за оценку!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Безопасная оплата откроется в браузере. Самоцветы придут сразу после оплаты."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Безопасная оплата откроется в браузере. Самоцветы придут сразу после оплаты.",
+  "Fill empty seats with bots": "Заполнить свободные места ботами",
+  "Surrender": "Сдаться",
+  "The podium is empty: play a game against other people to be first on it.": "Пьедестал пуст: сыграйте с другими людьми, чтобы первым на него подняться.",
+  "How it works": "Как это работает"
 }

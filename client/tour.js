@@ -38,7 +38,7 @@ export function maybeTour({ force = false } = {}) {
       <p class="tour-text"></p>
       <div class="tour-dots"></div>
       <div class="tour-row">
-        <button type="button" class="btn small tour-skip"></button>
+        <button type="button" class="btn quiet tour-skip"></button>
         <button type="button" class="btn primary tour-next"></button>
       </div>
     </div>`;

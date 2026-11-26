@@ -29,7 +29,7 @@
             <button type="button" class="dock-tab" data-hub-tab="friends"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.3a3.5 3.5 0 0 1 0 6.4M18 14.3a6.5 6.5 0 0 1 3.5 5.7" /></svg><span data-i18n>Friends</span><i class="dock-dot hidden" data-dot="friends" aria-hidden="true"></i></button>
             <button type="button" class="dock-tab" data-hub-tab="ranking"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4.5a2.5 2.5 0 0 0 2.6 3.9M17 6h2.5a2.5 2.5 0 0 1-2.6 3.9" /></svg><span data-i18n>Ranking</span></button>
             <button type="button" class="dock-tab" data-hub-tab="chat"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 3.5V17.5H4A1.5 1.5 0 0 1 2.5 16V7A1.5 1.5 0 0 1 4 5.5z" /><path d="M7 10h10M7 13.5h6" /></svg><span data-i18n>Chat</span><i class="dock-dot hidden" data-dot="chat" aria-hidden="true"></i></button>
-            <button type="button" class="dock-tab dock-vip" data-hub-tab="pass"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12l3.5 5.5L12 20.5 2.5 9z" /><path d="M2.5 9h19M9 3.5 12 20.5l3-17" /></svg><span data-i18n>Pass</span><i class="dock-dot hidden" data-dot="pass" aria-hidden="true"></i></button>
+            <button type="button" class="dock-tab dock-vip" data-hub-tab="pass"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 8.5 7.5 12 12 5l4.5 7 4-3.5-1.75 10H5.25z" /><path d="M5.5 21h13" /><circle cx="12" cy="14.25" r="1.25" /></svg><span data-i18n>Pass</span><i class="dock-dot hidden" data-dot="pass" aria-hidden="true"></i></button>
             <button type="button" class="dock-tab" data-hub-tab="quests"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h11M8 12h11M8 18h11M4 6l.8.8L6.4 5M4 12l.8.8 1.6-1.8M4 18h2" /></svg><span data-i18n>Quests</span><i class="dock-dot hidden" data-dot="quests" aria-hidden="true"></i></button>
             <button type="button" class="dock-tab dock-shop" data-hub-tab="shop" data-go="shop"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 11.2a1.5 1.5 0 0 1-1.5 1.3H6.7a1.5 1.5 0 0 1-1.5-1.3z" /><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3" /></svg><span data-i18n>Shop</span></button>
           </nav>
@@ -128,8 +128,8 @@
                 </form>
               </section>
 
-              <!-- Find a room -->
-              <section class="menu-sec">
+              <!-- Find a room (wide screens: moved to the side column, under Quests) -->
+              <section id="rooms-sec" class="menu-sec">
                 <div class="sec-head">
                   <h2 data-i18n class="sec-title">Open rooms</h2>
                   <span id="rooms-count" class="sec-count"></span>
@@ -187,6 +187,7 @@
                 </div>
                 <span id="deal-price" class="deal-price"></span>
               </section>
+              <div id="side-rooms" class="side-rooms"></div>
             </div>
             <div class="hub-panel" data-panel-for="friends">
               <div class="panel-back"><button type="button" class="btn small" data-hub-home><span data-i18n>← Back</span></button><h2 class="panel-title" data-i18n>Friends</h2></div>
@@ -271,7 +272,7 @@
             <div class="mode-list">
               <button type="button" class="mode-opt" data-power="2v2"><span class="mode-ico">🤝</span><span class="mode-text"><b data-i18n>Team 2 vs 2</b><small data-i18n>Teammates sit opposite: their finishes score for you</small></span></button>
               <button type="button" class="mode-opt" data-power="3v3"><span class="mode-ico">👥</span><span class="mode-text"><b data-i18n>Team 3 vs 3</b><small data-i18n>Six players on the big board, three a side</small></span></button>
-              <button type="button" class="mode-opt" data-power="quick"><span class="mode-ico">⚡</span><span class="mode-text"><b data-i18n>Quick game</b><small data-i18n>Two tokens each: about half as long</small></span></button>
+              <button type="button" class="mode-opt" data-power="quick"><span class="mode-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 5 13.5h6l-1 8 8.5-11h-6z" /></svg></span><span class="mode-text"><b data-i18n>Quick game</b><small data-i18n>Two tokens each: about half as long</small></span></button>
             </div>
             <div class="soon-card" aria-label="Coming soon" data-i18n-attr="aria-label">
               <div class="soon-art" aria-hidden="true"><i class="pc pc1">✦</i><i class="pc pc2">⇄</i><i class="pc pc3">🛡</i><i class="sd">✸</i></div>
@@ -437,7 +438,7 @@
             <div class="lobby-opts">
               <!-- Quick game: under the mode, where the game is chosen (the host flips it; everyone sees it) -->
               <button type="button" id="quick-btn" class="quick-card" role="switch" aria-checked="false">
-                <span class="quick-bolt" aria-hidden="true">⚡</span>
+                <span class="quick-bolt" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2.5 5 13.5h6l-1 8 8.5-11h-6z" /></svg></span>
                 <span class="quick-text"><b data-i18n>Quick game</b><small data-i18n>2 tokens each</small></span>
                 <span class="quick-pawns" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
                 <span class="switch quick-switch" aria-hidden="true"><i></i></span>
@@ -453,11 +454,11 @@
             <div id="lobby-controls" class="controls hidden">
               <!-- Play now made you a new room and nobody has come yet: offer bots -->
               <div id="lone-card" class="lone-card hidden">
-                <span class="lone-icon" aria-hidden="true">🤖</span>
+                <span class="lone-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="8" width="15" height="11" rx="3" /><path d="M12 8V4.5" /><circle cx="12" cy="3.75" r="0.9" /><circle cx="9" cy="13" r="1.2" /><circle cx="15" cy="13" r="1.2" /><path d="M9.5 16.5h5" /></svg></span>
                 <div class="lone-text"><b data-i18n>Nobody has joined yet</b><small data-i18n>Start now against bots, or keep waiting: the room stays open.</small></div>
                 <button data-i18n id="lone-btn" class="btn primary small">Play with bots</button>
               </div>
-              <button data-i18n id="fill-btn" class="btn">🤖 Fill empty seats with bots</button>
+              <button id="fill-btn" class="btn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="8" width="15" height="11" rx="3" /><path d="M12 8V4.5" /><circle cx="12" cy="3.75" r="0.9" /><circle cx="9" cy="13" r="1.2" /><circle cx="15" cy="13" r="1.2" /><path d="M9.5 16.5h5" /></svg><span data-i18n>Fill empty seats with bots</span></button>
               <button data-i18n id="start-btn" class="btn primary">Start game</button>
               <p id="lobby-hint" class="hint"></p>
             </div>
@@ -465,7 +466,7 @@
             <div id="play-controls" class="controls hidden">
               <div id="turn-text" class="turn-text"></div>
               <div id="timer" class="timer"><div id="timer-bar"></div></div>
-              <button data-i18n id="surrender-btn" class="btn surrender hidden">🏳️ Surrender</button>
+              <button id="surrender-btn" class="btn surrender hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 21V4" /><path d="M5.5 4.5h11l-2.25 4 2.25 4h-11" /></svg><span data-i18n>Surrender</span></button>
             </div>
 
             <div id="finish-controls" class="controls hidden">
@@ -477,9 +478,9 @@
             <div id="drawer" class="drawer">
               <div class="menu-row">
                 <button data-i18n class="btn" data-go="menu">← Main menu</button>
-                <button data-i18n id="leave-room-btn" class="btn">🚪 Leave room</button>
+                <button id="leave-room-btn" class="btn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5H7a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 7 19.5h7" /><path d="M11 12h9.5M17.5 8.5 21 12l-3.5 3.5" /></svg><span data-i18n>Leave room</span></button>
               </div>
-              <button data-i18n id="room-invite-friends-btn" class="btn room-invite-friends-btn" type="button">👋 Invite friends</button>
+              <button id="room-invite-friends-btn" class="btn room-invite-friends-btn" type="button"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9.5" cy="8" r="3.5" /><path d="M3 19.5c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5" /><path d="M18.5 8v6M15.5 11h6" /></svg><span data-i18n>Invite friends</span></button>
 
               <!-- Host only -->
               <div id="room-settings" class="room-settings">

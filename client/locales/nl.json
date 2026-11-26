@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Er zijn testdobbelstenen gebruikt: iedereen krijgt zijn inzet terug.",
   "🎵 Music": "🎵 Muziek",
   "🏦 House fee: {n} coins": "🏦 Huiskosten: {n} munten",
-  "🏳️ Surrender": "🏳️ Opgeven",
   "🐞 Bug": "🐞 Bug",
-  "👋 Invite friends": "👋 Vrienden uitnodigen",
   "👋 {name} sent you a friend request": "👋 {name} heeft je een vriendschapsverzoek gestuurd",
   "👥 Modes": "👥 Modi",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} edelstenen! Bedankt voor je steun",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Uitnodiging als Discord-DM gestuurd naar {name}",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Herstart voor een update. Over een paar seconden opnieuw verbinden…",
   "🔧 Updating the game… back in a few seconds": "🔧 Het spel wordt bijgewerkt… over een paar seconden terug",
-  "🚪 Leave room": "🚪 Kamer verlaten",
   "🚪 Rooms": "🚪 Kamers",
   "🛍️ Shop": "🛍️ Winkel",
-  "🤖 Fill empty seats with bots": "🤖 Lege plekken vullen met bots",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Gelijkspel, {points} punten elk! Beslissingsronde: één kleur per team, teamgenoten gooien om de beurt. De eerste kleur thuis wint!",
   "🤝 You and {name} are friends now": "🤝 Jij en {name} zijn nu vrienden",
   "🧭 Getting started": "🧭 Aan de slag",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Beoordeel deze vertaling",
   "Rated": "Beoordeeld",
   "Thanks for rating!": "Bedankt voor je beoordeling!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "De veilige betaling opent in je browser. De edelstenen komen binnen zodra de betaling rond is."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "De veilige betaling opent in je browser. De edelstenen komen binnen zodra de betaling rond is.",
+  "Fill empty seats with bots": "Lege plekken vullen met bots",
+  "Surrender": "Opgeven",
+  "The podium is empty: play a game against other people to be first on it.": "Het podium is leeg: speel een potje tegen anderen om er als eerste op te staan.",
+  "How it works": "Zo werkt het"
 }

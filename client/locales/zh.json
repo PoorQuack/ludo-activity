@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 使用了测试骰子：所有人拿回赌注。",
   "🎵 Music": "🎵 音乐",
   "🏦 House fee: {n} coins": "🏦 抽成：{n} 金币",
-  "🏳️ Surrender": "🏳️ 认输",
   "🐞 Bug": "🐞 错误",
-  "👋 Invite friends": "👋 邀请好友",
   "👋 {name} sent you a friend request": "👋 {name} 向你发送了好友请求",
   "👥 Modes": "👥 模式",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} 宝石！感谢你的支持",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 已通过 Discord 私信向 {name} 发送邀请",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 正在为更新重启。几秒后重新连接…",
   "🔧 Updating the game… back in a few seconds": "🔧 游戏更新中… 几秒后回来",
-  "🚪 Leave room": "🚪 离开房间",
   "🚪 Rooms": "🚪 房间",
   "🛍️ Shop": "🛍️ 商店",
-  "🤖 Fill empty seats with bots": "🤖 用机器人填满空座位",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 平局，各 {points} 分！决胜局：每队一种颜色，队友轮流掷骰。最先到家的颜色获胜！",
   "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了",
   "🧭 Getting started": "🧭 新手导航",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "给这条翻译评分",
   "Rated": "已评分",
   "Thanks for rating!": "谢谢你的评分！",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "安全支付页面会在浏览器中打开。付款完成后宝石立即到账。"
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "安全支付页面会在浏览器中打开。付款完成后宝石立即到账。",
+  "Fill empty seats with bots": "用机器人填满空座位",
+  "Surrender": "认输",
+  "The podium is empty: play a game against other people to be first on it.": "领奖台还空着：和其他玩家对战，成为第一个登台的人。",
+  "How it works": "规则说明"
 }

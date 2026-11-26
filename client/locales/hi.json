@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 टेस्ट पासे इस्तेमाल हुए: सबको दाँव वापस।",
   "🎵 Music": "🎵 संगीत",
   "🏦 House fee: {n} coins": "🏦 हाउस फ़ीस: {n} सिक्के",
-  "🏳️ Surrender": "🏳️ हार मानें",
   "🐞 Bug": "🐞 बग",
-  "👋 Invite friends": "👋 दोस्तों को बुलाएँ",
   "👋 {name} sent you a friend request": "👋 {name} ने आपको दोस्ती का अनुरोध भेजा",
   "👥 Modes": "👥 मोड",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} रत्न! आपके साथ के लिए धन्यवाद",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 {name} के Discord DM में न्योता भेजा गया",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 अपडेट के लिए रीस्टार्ट हो रहा है। कुछ सेकंड में फिर से जुड़ेंगे…",
   "🔧 Updating the game… back in a few seconds": "🔧 खेल अपडेट हो रहा है… कुछ सेकंड में वापस",
-  "🚪 Leave room": "🚪 रूम छोड़ें",
   "🚪 Rooms": "🚪 रूम",
   "🛍️ Shop": "🛍️ दुकान",
-  "🤖 Fill empty seats with bots": "🤖 खाली सीटें बॉट से भरें",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 बराबरी, दोनों के {points} अंक! निर्णायक दौर: हर टीम का एक रंग, साथी बारी-बारी से फेंकते हैं। जो रंग पहले घर पहुँचे, वह जीतेगा!",
   "🤝 You and {name} are friends now": "🤝 आप और {name} अब दोस्त हैं",
   "🧭 Getting started": "🧭 शुरुआत करें",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "इस अनुवाद को रेट करें",
   "Rated": "रेट किया",
   "Thanks for rating!": "रेट करने के लिए धन्यवाद!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "सुरक्षित भुगतान आपके ब्राउज़र में खुलता है। भुगतान होते ही जेम्स मिल जाते हैं।"
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "सुरक्षित भुगतान आपके ब्राउज़र में खुलता है। भुगतान होते ही जेम्स मिल जाते हैं।",
+  "Fill empty seats with bots": "खाली सीटें बॉट से भरें",
+  "Surrender": "हार मानें",
+  "The podium is empty: play a game against other people to be first on it.": "पोडियम खाली है: सबसे पहले उस पर आने के लिए दूसरे लोगों के ख़िलाफ़ एक गेम खेलें।",
+  "How it works": "यह कैसे काम करता है"
 }

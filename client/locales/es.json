@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Se usaron dados de prueba: todos recuperan su apuesta.",
   "🎵 Music": "🎵 Música",
   "🏦 House fee: {n} coins": "🏦 Comisión de la casa: {n} monedas",
-  "🏳️ Surrender": "🏳️ Rendirse",
   "🐞 Bug": "🐞 Error",
-  "👋 Invite friends": "👋 Invitar amigos",
   "👋 {name} sent you a friend request": "👋 {name} te envió una solicitud de amistad",
   "👥 Modes": "👥 Modos",
   "💎 +{gems} gems! Thank you for your support": "💎 ¡+{gems} gemas! Gracias por tu apoyo",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Invitación enviada por mensaje directo de Discord a {name}",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Reiniciando por una actualización. Reconectando en unos segundos…",
   "🔧 Updating the game… back in a few seconds": "🔧 Actualizando el juego… vuelve en unos segundos",
-  "🚪 Leave room": "🚪 Salir de la sala",
   "🚪 Rooms": "🚪 Salas",
   "🛍️ Shop": "🛍️ Tienda",
-  "🤖 Fill empty seats with bots": "🤖 Llenar asientos libres con bots",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 ¡Empate, {points} puntos cada uno! Desempate: un color por equipo, los compañeros se turnan para tirar. ¡Gana el primer color que llegue a casa!",
   "🤝 You and {name} are friends now": "🤝 Ahora {name} y tú sois amigos",
   "🧭 Getting started": "🧭 Primeros pasos",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Valora esta traducción",
   "Rated": "Valorada",
   "Thanks for rating!": "¡Gracias por valorar!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "El pago seguro se abre en tu navegador. Las gemas llegan en cuanto se completa el pago."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "El pago seguro se abre en tu navegador. Las gemas llegan en cuanto se completa el pago.",
+  "Fill empty seats with bots": "Llenar asientos libres con bots",
+  "Surrender": "Rendirse",
+  "The podium is empty: play a game against other people to be first on it.": "El podio está vacío: juega una partida contra otras personas para ser el primero.",
+  "How it works": "Cómo funciona"
 }

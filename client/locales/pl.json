@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Użyto testowych kostek: wszyscy odzyskują stawkę.",
   "🎵 Music": "🎵 Muzyka",
   "🏦 House fee: {n} coins": "🏦 Prowizja kasyna: {n} monet",
-  "🏳️ Surrender": "🏳️ Poddaj się",
   "🐞 Bug": "🐞 Błąd",
-  "👋 Invite friends": "👋 Zaproś znajomych",
   "👋 {name} sent you a friend request": "👋 {name} wysyła ci zaproszenie do znajomych",
   "👥 Modes": "👥 Tryby",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} klejnotów! Dzięki za wsparcie",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Wysłano zaproszenie na Discordzie do: {name}",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Restart z powodu aktualizacji. Ponowne łączenie za kilka sekund…",
   "🔧 Updating the game… back in a few seconds": "🔧 Aktualizacja gry… wracamy za kilka sekund",
-  "🚪 Leave room": "🚪 Opuść pokój",
   "🚪 Rooms": "🚪 Pokoje",
   "🛍️ Shop": "🛍️ Sklep",
-  "🤖 Fill empty seats with bots": "🤖 Wypełnij wolne miejsca botami",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Remis, po {points} punktów! Dogrywka: jeden kolor na drużynę, członkowie drużyny rzucają na zmianę. Wygrywa pierwszy kolor w domu!",
   "🤝 You and {name} are friends now": "🤝 Ty i {name} jesteście teraz znajomymi",
   "🧭 Getting started": "🧭 Pierwsze kroki",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Oceń to tłumaczenie",
   "Rated": "Ocenione",
   "Thanks for rating!": "Dzięki za ocenę!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Bezpieczna płatność otworzy się w przeglądarce. Klejnoty dotrą, gdy tylko płatność przejdzie."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Bezpieczna płatność otworzy się w przeglądarce. Klejnoty dotrą, gdy tylko płatność przejdzie.",
+  "Fill empty seats with bots": "Wypełnij wolne miejsca botami",
+  "Surrender": "Poddaj się",
+  "The podium is empty: play a game against other people to be first on it.": "Podium jest puste: zagraj z innymi ludźmi, żeby stanąć na nim pierwszy.",
+  "How it works": "Jak to działa"
 }

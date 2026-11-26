@@ -14,6 +14,7 @@ import { PASS_TIERS, XP_PER_TIER, PASS_XP, passRewards, seasonFor } from '../sha
 import { REACTION_EMOJIS } from '../shared/chat.js';
 import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
 import { setFrame } from './frames.js';
+import { ICONS, withIcon } from './icons.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour, openTour } from './tour.js';
 import { playerColor, SYMBOLS, isColorBlind, colorBlindMode, setColorBlindMode, CB_MODES, BOARD_THEMES, TOKEN_SIGNATURES } from './skins.js';
@@ -1425,7 +1426,7 @@ function renderLeaderboard() {
   const list = rows ? `<ol class="lb-list">${rows}</ol>` : '';
   const upcomingAll = all && b.startsAt && b.startsAt > Date.now() + clockOffset;
   const empty = !b.top.length
-    ? (upcomingAll ? `<p class="lb-empty">${t('Coming soon')} — ${escapeHtml(sinceLabel(b.since))}</p>` : pointsMode ? '' : `<p class="lb-empty">${t('Nobody yet. Win a public stakes game to be first on the board.')}</p>`)
+    ? (upcomingAll ? `<p class="lb-empty">${t('Coming soon')} — ${escapeHtml(sinceLabel(b.since))}</p>` : pointsMode ? `<p class="lb-empty">${t('The podium is empty: play a game against other people to be first on it.')}</p>` : `<p class="lb-empty">${t('Nobody yet. Win a public stakes game to be first on the board.')}</p>`)
     : '';
   const yours = b.me
     ? t("You're <b>{place}</b> of {players}.", { place: ordinal(b.me.rank), players: b.players })
@@ -1450,7 +1451,7 @@ function renderLeaderboard() {
     ${list}
     ${yours ? `<p class="lb-you">${yours}</p>` : ''}
     <p class="lb-note">${when}</p>
-    <p class="lb-note lb-how">${how}</p>
+    <details class="lb-how-box"><summary>${t('How it works')}</summary><p class="lb-note lb-how">${how}</p></details>
     ${last}`;
   for (const av of body.querySelectorAll('[data-lb-avatar]')) {
     const key = av.dataset.lbAvatar;
@@ -3094,9 +3095,9 @@ function renderMyRoom() {
 
 // "🔒 Private · code K7QX" — the code is what friends type to join.
 function roomInfoText() {
-  const kind = state.visibility === 'private' ? `🔒 ${t('Private')}` : `🌐 ${t('Public')}`;
+  const kind = state.visibility === 'private' ? t('Private') : t('Public');
   const stake = state.pot ? ` · ${t('Pot {n} coins', { n: state.pot.total.toLocaleString(currentLang()) })}` : state.stake ? ` · ${t('Stake {n} coins', { n: state.stake.toLocaleString(currentLang()) })}` : '';
-  return `${kind} · ${t('code {code}', { code: state.code })}${stake}`;
+  return `${kind} · ${t('code {code}', { code: state.code })}${stake}`; // the icon goes in front (roomInfo)
 }
 
 // Cash pot (Classic: Off or 100..10,000, shared by all except last) vs Stakes Room (100..10,000, winner takes all)
@@ -3145,7 +3146,7 @@ function renderStakes() {
 function renderRoomSettings() {
   els.roomSettings.classList.toggle('hidden', !isHost());
   const pub = state.visibility === 'public';
-  els.visibilityBtn.textContent = pub ? `🌐 ${t('Public')}` : `🔒 ${t('Private')}`;
+  els.visibilityBtn.innerHTML = withIcon(pub ? 'globe' : 'lock', escapeHtml(pub ? t('Public') : t('Private')));
   els.visibilityNote.textContent = pub ? t('(listed for everyone)') : t('(your call or the code)');
 }
 
@@ -3235,7 +3236,7 @@ function renderPanel() {
     phase === 'lobby'
       ? `${t('Lobby')} · ${t(MODES[state.mode].label)}`
       : (phase === 'playing' ? (state.decider ? t('Decider') : t('In game')) : t('Game over')) + score;
-  els.roomInfo.textContent = roomInfoText();
+  els.roomInfo.innerHTML = ICONS[state.visibility === 'private' ? 'lock' : 'globe'] + escapeHtml(roomInfoText());
   renderStakes();
   renderRoomSettings();
   renderPeople();
@@ -3332,16 +3333,17 @@ function renderPanel() {
           const pick = document.createElement('select');
           pick.className = `bot-level lvl-${level}`;
           pick.setAttribute('aria-label', t("{name}'s difficulty", { name: s.name }));
-          for (const [id, label] of Object.entries(BOT_LEVEL_LABELS)) pick.add(new Option(`🤖 ${t(label)}`, id, false, id === level));
+          for (const [id, label] of Object.entries(BOT_LEVEL_LABELS)) pick.add(new Option(t(label), id, false, id === level));
           pick.addEventListener('change', () => send('botLevel', { seat: i, level: pick.value }));
         pick.addEventListener('blur', () => setTimeout(renderUI)); // catch up on what changed meanwhile
           sub.appendChild(pick);
-        } else sub.textContent = `🤖 ${t(BOT_LEVEL_LABELS[level])}`;
+        } else sub.innerHTML = withIcon('bot', escapeHtml(t(BOT_LEVEL_LABELS[level])));
       } else if (phase === 'lobby') sub.textContent = s.userId === state.hostId ? t('Host') : t('Ready');
-      else if (s.surrendered) sub.textContent = `🏳️ ${t('Surrendered')}`;
+      else if (s.surrendered) sub.innerHTML = withIcon('flag', escapeHtml(t('Surrendered')));
       else if (phase === 'playing' && state.decider) {
         const tm = state.decider.players.findIndex((ps) => ps.includes(i));
-        sub.textContent = tm >= 0 ? `🎲 ${t('Rolls for {color}', { color: capitalize(board.colors[state.decider.colors[tm]]) })}` : t('Out of the decider');
+        if (tm >= 0) sub.innerHTML = withIcon('dice', escapeHtml(t('Rolls for {color}', { color: capitalize(board.colors[state.decider.colors[tm]]) })));
+        else sub.textContent = t('Out of the decider');
       } else {
         const home = state.tokens[i].filter((p) => p >= board.finished).length;
         const place = state.winners.indexOf(i);
@@ -4246,11 +4248,11 @@ confirmTap(
 // Buttons that need a second tap within 3 seconds, so they aren't hit by accident.
 function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
   let timer = null;
-  let label = btn.textContent;
+  let label = btn.innerHTML; // may hold an icon
   const reset = () => {
     clearTimeout(timer);
     timer = null;
-    btn.textContent = label;
+    btn.innerHTML = label;
     btn.classList.remove('danger');
   };
   btn.addEventListener('click', () => {
@@ -4259,7 +4261,7 @@ function confirmTap(btn, confirmLabel, action, needsConfirm = () => true) {
       action();
       return;
     }
-    label = btn.textContent;
+    label = btn.innerHTML;
     btn.textContent = confirmLabel;
     btn.classList.add('danger');
     timer = setTimeout(reset, 3000);
@@ -5615,9 +5617,9 @@ function renderPass() {
     <p class="pass-earn">${t('Earn XP: daily login +{a} · each daily quest +{b} · each weekly quest +{c}', { a: PASS_XP.login, b: PASS_XP.daily, c: PASS_XP.weekly })}</p>
     ${
       p.active
-        ? `<div class="pass-status on">👑 <span>${t('Battle Pass active until {date}', { date: escapeHtml(new Date(p.until || p.endsAt).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short' })) })}</span></div>`
+        ? `<div class="pass-status on">${ICONS.crown}<span>${t('Battle Pass active until {date}', { date: escapeHtml(new Date(p.until || p.endsAt).toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short' })) })}</span></div>`
         : `<div class="pass-status buy">
-            <div><b>👑 ${t('Get the Battle Pass')}</b>
+            <div><b>${ICONS.crown} ${t('Get the Battle Pass')}</b>
             <ul>
               <li>${t('{n} Die Gems over the month', { n: gemsTotal })}</li>
               <li>${t('{n} exclusive items, never sold in the shop', { n: exclusive })}</li>
@@ -5628,7 +5630,7 @@ function renderPass() {
           </div>`
     }
     ${claimable ? `<button type="button" class="btn primary pass-claim-all" id="pass-claim-all">${t('Claim all ({n})', { n: claimable })}</button>` : ''}
-    <div class="pass-lanes-head"><span></span><b>${t('Free')}</b><b class="prem">👑 ${t('Battle Pass')}</b></div>
+    <div class="pass-lanes-head"><span></span><b>${t('Free')}</b><b class="prem">${ICONS.crown} ${t('Battle Pass')}</b></div>
     <ol class="pass-track"></ol>`;
   const track = box.querySelector('.pass-track');
   for (const x of tiers) {
@@ -5696,6 +5698,7 @@ function setPanel(name) {
     if (['friends', 'ranking', 'quests', 'chat', 'pass'].includes(b.dataset.hubTab)) b.setAttribute('aria-pressed', String(on));
   }
   if (name === 'ranking') fetchLeaderboard();
+  if (shown === 'quests') requestAnimationFrame(() => d20.start()); // it stops drawing while hidden
   if (name === 'pass') renderPass();
   if (name === 'chat' || lchat.open) lobbyChatPanel(name === 'chat');
   if (name === 'chat') {
@@ -5718,6 +5721,15 @@ for (const b of document.querySelectorAll('[data-hub-tab]')) {
 }
 for (const b of document.querySelectorAll('[data-hub-home]')) b.addEventListener('click', () => setPanel(''));
 wide.addEventListener('change', () => setPanel($('menu').dataset.panel));
+// Wide screens: the open rooms list fills the side column under Quests; phones keep it in the menu
+const roomsSec = $('rooms-sec');
+const roomsHome = roomsSec.parentElement;
+function placeRooms() {
+  const to = wide.matches ? $('side-rooms') : roomsHome;
+  if (roomsSec.parentElement !== to) to.appendChild(roomsSec);
+}
+wide.addEventListener('change', placeRooms);
+placeRooms();
 setPanel('');
 
 // Little dots on the dock: the daily roll is ready (Quests), a friend request is waiting (Friends)

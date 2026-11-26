@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Sono stati usati dadi di prova: tutti riavranno la posta.",
   "🎵 Music": "🎵 Musica",
   "🏦 House fee: {n} coins": "🏦 Commissione della casa: {n} monete",
-  "🏳️ Surrender": "🏳️ Arrenditi",
   "🐞 Bug": "🐞 Bug",
-  "👋 Invite friends": "👋 Invita amici",
   "👋 {name} sent you a friend request": "👋 {name} ti ha inviato una richiesta di amicizia",
   "👥 Modes": "👥 Modalità",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} gemme! Grazie per il supporto",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Invito inviato a {name} come messaggio diretto su Discord",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Riavvio per un aggiornamento. Riconnessione tra pochi secondi…",
   "🔧 Updating the game… back in a few seconds": "🔧 Aggiornamento del gioco… torna tra pochi secondi",
-  "🚪 Leave room": "🚪 Esci dalla stanza",
   "🚪 Rooms": "🚪 Stanze",
   "🛍️ Shop": "🛍️ Negozio",
-  "🤖 Fill empty seats with bots": "🤖 Riempi i posti liberi con i bot",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Pareggio, {points} punti a testa! Spareggio: un colore per squadra, i compagni tirano a turno. Vince il primo colore che arriva a casa!",
   "🤝 You and {name} are friends now": "🤝 Tu e {name} ora siete amici",
   "🧭 Getting started": "🧭 Per iniziare",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Valuta questa traduzione",
   "Rated": "Valutata",
   "Thanks for rating!": "Grazie per la valutazione!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Il pagamento sicuro si apre nel browser. Le gemme arrivano appena il pagamento va a buon fine."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Il pagamento sicuro si apre nel browser. Le gemme arrivano appena il pagamento va a buon fine.",
+  "Fill empty seats with bots": "Riempi i posti liberi con i bot",
+  "Surrender": "Arrenditi",
+  "The podium is empty: play a game against other people to be first on it.": "Il podio è vuoto: gioca una partita contro altre persone per salirci per primo.",
+  "How it works": "Come funziona"
 }

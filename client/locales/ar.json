@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 استُخدم نرد تجريبي: يستعيد الجميع رهانهم.",
   "🎵 Music": "🎵 الموسيقى",
   "🏦 House fee: {n} coins": "🏦 رسوم البيت: {n} عملة",
-  "🏳️ Surrender": "🏳️ استسلام",
   "🐞 Bug": "🐞 خطأ",
-  "👋 Invite friends": "👋 ادعُ أصدقاءك",
   "👋 {name} sent you a friend request": "👋 أرسل لك {name} طلب صداقة",
   "👥 Modes": "👥 الأوضاع",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} جوهرة! شكرًا لدعمك",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 أُرسلت الدعوة إلى {name} كرسالة خاصة على Discord",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 إعادة تشغيل من أجل تحديث. إعادة الاتصال خلال ثوانٍ…",
   "🔧 Updating the game… back in a few seconds": "🔧 جارٍ تحديث اللعبة… نعود خلال ثوانٍ",
-  "🚪 Leave room": "🚪 مغادرة الغرفة",
   "🚪 Rooms": "🚪 الغرف",
   "🛍️ Shop": "🛍️ المتجر",
-  "🤖 Fill empty seats with bots": "🤖 املأ المقاعد الشاغرة بالبوتات",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 تعادل، {points} نقاط لكل فريق! الجولة الفاصلة: لون واحد لكل فريق، يتناوب الزملاء على الرمي. أول لون يصل إلى البيت يفوز!",
   "🤝 You and {name} are friends now": "🤝 أنت و{name} صديقان الآن",
   "🧭 Getting started": "🧭 البداية السريعة",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "قيّم هذه الترجمة",
   "Rated": "تم التقييم",
   "Thanks for rating!": "شكرًا على التقييم!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "يُفتح الدفع الآمن في متصفحك. تصل الجواهر فور إتمام الدفع."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "يُفتح الدفع الآمن في متصفحك. تصل الجواهر فور إتمام الدفع.",
+  "Fill empty seats with bots": "املأ المقاعد الشاغرة بالبوتات",
+  "Surrender": "استسلام",
+  "The podium is empty: play a game against other people to be first on it.": "المنصة فارغة: العب مباراة ضد لاعبين آخرين لتكون أول من يعتليها.",
+  "How it works": "كيف يعمل"
 }

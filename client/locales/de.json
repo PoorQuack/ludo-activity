@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Testwürfel wurden benutzt: alle bekommen ihren Einsatz zurück.",
   "🎵 Music": "🎵 Musik",
   "🏦 House fee: {n} coins": "🏦 Hausgebühr: {n} Münzen",
-  "🏳️ Surrender": "🏳️ Aufgeben",
   "🐞 Bug": "🐞 Fehler",
-  "👋 Invite friends": "👋 Freunde einladen",
   "👋 {name} sent you a friend request": "👋 {name} hat dir eine Freundschaftsanfrage geschickt",
   "👥 Modes": "👥 Modi",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} Edelsteine! Danke für deine Unterstützung",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Einladung als Discord-DM an {name} gesendet",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Neustart für ein Update. Verbinde in wenigen Sekunden neu…",
   "🔧 Updating the game… back in a few seconds": "🔧 Das Spiel wird aktualisiert… gleich wieder da",
-  "🚪 Leave room": "🚪 Raum verlassen",
   "🚪 Rooms": "🚪 Räume",
   "🛍️ Shop": "🛍️ Shop",
-  "🤖 Fill empty seats with bots": "🤖 Freie Plätze mit Bots füllen",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Unentschieden, je {points} Punkte! Stechen: eine Farbe pro Team, Teamkollegen würfeln abwechselnd. Die erste Farbe im Ziel gewinnt!",
   "🤝 You and {name} are friends now": "🤝 Du und {name} seid jetzt Freunde",
   "🧭 Getting started": "🧭 Erste Schritte",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Bewerte diese Übersetzung",
   "Rated": "Bewertet",
   "Thanks for rating!": "Danke fürs Bewerten!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Der sichere Bezahlvorgang öffnet sich in deinem Browser. Die Edelsteine kommen an, sobald die Zahlung durch ist."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Der sichere Bezahlvorgang öffnet sich in deinem Browser. Die Edelsteine kommen an, sobald die Zahlung durch ist.",
+  "Fill empty seats with bots": "Freie Plätze mit Bots füllen",
+  "Surrender": "Aufgeben",
+  "The podium is empty: play a game against other people to be first on it.": "Das Podest ist leer: Spiel gegen andere Leute, um als Erster draufzukommen.",
+  "How it works": "So funktioniert es"
 }

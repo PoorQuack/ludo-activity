@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Test zarları kullanıldı: herkes bahsini geri alır.",
   "🎵 Music": "🎵 Müzik",
   "🏦 House fee: {n} coins": "🏦 Kasa payı: {n} para",
-  "🏳️ Surrender": "🏳️ Pes et",
   "🐞 Bug": "🐞 Hata",
-  "👋 Invite friends": "👋 Arkadaşlarını davet et",
   "👋 {name} sent you a friend request": "👋 {name} sana arkadaşlık isteği gönderdi",
   "👥 Modes": "👥 Modlar",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} mücevher! Desteğin için teşekkürler",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Davet {name} adlı kişiye Discord özel mesajıyla gönderildi",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Güncelleme için yeniden başlatılıyor. Birkaç saniye içinde yeniden bağlanılacak…",
   "🔧 Updating the game… back in a few seconds": "🔧 Oyun güncelleniyor… birkaç saniyede döneriz",
-  "🚪 Leave room": "🚪 Odadan ayrıl",
   "🚪 Rooms": "🚪 Odalar",
   "🛍️ Shop": "🛍️ Mağaza",
-  "🤖 Fill empty seats with bots": "🤖 Boş yerleri botlarla doldur",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Berabere, ikisi de {points} puan! Karar turu: her takıma bir renk, takım arkadaşları sırayla zar atar. Eve ilk varan renk kazanır!",
   "🤝 You and {name} are friends now": "🤝 {name} ile artık arkadaşsınız",
   "🧭 Getting started": "🧭 Başlangıç",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Bu çeviriyi puanla",
   "Rated": "Puanlandı",
   "Thanks for rating!": "Puanladığın için teşekkürler!",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Güvenli ödeme tarayıcında açılır. Ödeme tamamlanır tamamlanmaz mücevherler gelir."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Güvenli ödeme tarayıcında açılır. Ödeme tamamlanır tamamlanmaz mücevherler gelir.",
+  "Fill empty seats with bots": "Boş yerleri botlarla doldur",
+  "Surrender": "Pes et",
+  "The podium is empty: play a game against other people to be first on it.": "Kürsü boş: ilk çıkan olmak için başka oyunculara karşı bir oyun oyna.",
+  "How it works": "Nasıl çalışır"
 }

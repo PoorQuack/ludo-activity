@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 テスト用のダイスが使われました：全員に賭け金が戻ります。",
   "🎵 Music": "🎵 音楽",
   "🏦 House fee: {n} coins": "🏦 手数料：{n}コイン",
-  "🏳️ Surrender": "🏳️ 降参",
   "🐞 Bug": "🐞 バグ",
-  "👋 Invite friends": "👋 フレンドを招待",
   "👋 {name} sent you a friend request": "👋 {name}さんからフレンド申請が届きました",
   "👥 Modes": "👥 モード",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems}ジェム！応援ありがとう",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 {name}のDiscord DMに招待を送りました",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 アップデートのため再起動します。数秒後に再接続します…",
   "🔧 Updating the game… back in a few seconds": "🔧 ゲームをアップデート中… 数秒で戻ります",
-  "🚪 Leave room": "🚪 ルームを出る",
   "🚪 Rooms": "🚪 ルーム",
   "🛍️ Shop": "🛍️ ショップ",
-  "🤖 Fill empty seats with bots": "🤖 空席をボットで埋める",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 同点、各{points}ポイント！ 決勝戦：チームごとに1色、チームメイトが交代で振ります。先にゴールした色の勝ち！",
   "🤝 You and {name} are friends now": "🤝 {name}さんとフレンドになりました",
   "🧭 Getting started": "🧭 はじめに",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "この翻訳を評価",
   "Rated": "評価済み",
   "Thanks for rating!": "評価ありがとう！",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "安全な決済画面がブラウザで開きます。支払いが完了するとすぐにジェムが届きます。"
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "安全な決済画面がブラウザで開きます。支払いが完了するとすぐにジェムが届きます。",
+  "Fill empty seats with bots": "空席をボットで埋める",
+  "Surrender": "降参",
+  "The podium is empty: play a game against other people to be first on it.": "表彰台はまだ空です。ほかのプレイヤーと対戦して一番乗りしよう。",
+  "How it works": "仕組み"
 }

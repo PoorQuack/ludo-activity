@@ -1,5 +1,5 @@
 // The shop screen: tabs plus a grid of item cards with drawn previews.
-import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeals, priceOf, DEAL_DISCOUNT, NEW_ITEMS, currencyOf, setCurrency, featured, featuredEnds, limitedNow, limitedEnds, inShop, dayKeyOf, STARTER } from '../shared/shop.js';
+import { SHOP_ITEMS, ITEMS, ownsItem, SETS, setPrice, SET_DISCOUNT, RARITIES, rarityOf, setRarity, ownsItem as owns, dailyDeals, priceOf, DEAL_DISCOUNT, currencyOf, setCurrency, featured, featuredEnds, limitedNow, limitedEnds, inShop, dayKeyOf, STARTER } from '../shared/shop.js';
 import { passItemInfo } from '../shared/pass.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
@@ -33,8 +33,9 @@ function seenSet() {
     const saved = JSON.parse(localStorage.getItem(SEEN_KEY) || 'null');
     if (Array.isArray(saved)) return (seen = new Set(saved));
   } catch {}
-  // first visit on this device: everything is known except what this update added
-  seen = new Set(SHOP_ITEMS.filter((i) => !NEW_ITEMS.has(i.id)).map((i) => i.id));
+  // first visit on this device: nothing is "new" (a fresh player would see dots on every tab);
+  // items added in later updates show as new from then on
+  seen = new Set(SHOP_ITEMS.map((i) => i.id));
   saveSeen();
   return seen;
 }

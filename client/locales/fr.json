@@ -1016,9 +1016,7 @@
   "🎲 Test dice were used: everyone got their stake back.": "🎲 Des dés de test ont été utilisés : tout le monde récupère sa mise.",
   "🎵 Music": "🎵 Musique",
   "🏦 House fee: {n} coins": "🏦 Commission de la maison : {n} pièces",
-  "🏳️ Surrender": "🏳️ Abandonner",
   "🐞 Bug": "🐞 Bug",
-  "👋 Invite friends": "👋 Inviter des amis",
   "👋 {name} sent you a friend request": "👋 {name} t’a envoyé une demande d’ami",
   "👥 Modes": "👥 Modes",
   "💎 +{gems} gems! Thank you for your support": "💎 +{gems} gemmes ! Merci pour ton soutien",
@@ -1032,10 +1030,8 @@
   "📨 Invite sent to {name}'s Discord DMs": "📨 Invitation envoyée en message privé Discord à {name}",
   "🔧 Restarting for an update. Reconnecting in a few seconds…": "🔧 Redémarrage pour une mise à jour. Reconnexion dans quelques secondes…",
   "🔧 Updating the game… back in a few seconds": "🔧 Mise à jour du jeu… retour dans quelques secondes",
-  "🚪 Leave room": "🚪 Quitter le salon",
   "🚪 Rooms": "🚪 Salons",
   "🛍️ Shop": "🛍️ Boutique",
-  "🤖 Fill empty seats with bots": "🤖 Remplir les places libres avec des bots",
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 Égalité, {points} points chacun ! Départage : une couleur par équipe, les coéquipiers lancent à tour de rôle. La première couleur rentrée gagne !",
   "🤝 You and {name} are friends now": "🤝 {name} et toi êtes maintenant amis",
   "🧭 Getting started": "🧭 Prise en main",
@@ -1053,5 +1049,9 @@
   "Rate this translation": "Note cette traduction",
   "Rated": "Notée",
   "Thanks for rating!": "Merci d’avoir noté !",
-  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Le paiement sécurisé s'ouvre dans ton navigateur. Les gemmes arrivent dès que le paiement est validé."
+  "Secure checkout opens in your browser. Gems arrive as soon as the payment goes through.": "Le paiement sécurisé s'ouvre dans ton navigateur. Les gemmes arrivent dès que le paiement est validé.",
+  "Fill empty seats with bots": "Remplir les places libres avec des bots",
+  "Surrender": "Abandonner",
+  "The podium is empty: play a game against other people to be first on it.": "Le podium est vide : joue une partie contre d'autres joueurs pour y monter le premier.",
+  "How it works": "Comment ça marche"
 }
