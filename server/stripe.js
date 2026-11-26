@@ -1,4 +1,4 @@
-// Web Store & Stripe Checkout (for Safari / Apple Pay on iOS, and direct browser purchases).
+// Web Store & Stripe Checkout: every gem purchase goes through this page's link.
 // Works alongside Discord SKUs: both fulfill into the exact same ProfileStore (`grantPurchase` /
 // `setPassUntil`) with `stripe:<id>` idempotency keys so a payment can never pay out twice.
 import crypto from 'node:crypto';
@@ -375,7 +375,12 @@ export function renderStorePage({ user, profile, prices, enabled, notice = '', a
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .brand { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
   .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 99px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); font-size: 13.5px; }
-  .gem-dot { width: 12px; height: 12px; border-radius: 3px; background: linear-gradient(135deg, #98fff4, #1fb8aa); display: inline-block; transform: rotate(45deg); }
+  .gem-dot { width: 18px; height: 18px; flex: none; display: inline-block; background: url('/icons/gem.webp') center / contain no-repeat; vertical-align: -3px; }
+  .gem-title { width: 22px; height: 22px; vertical-align: -4px; margin-right: 2px; }
+  .gem-pile { position: relative; display: block; height: 54px; width: calc(22px + var(--n) * 9px); }
+  .gem-pile i { position: absolute; bottom: 0; width: 26px; height: 26px; background: url('/icons/gem.webp') center / contain no-repeat; }
+  .gem-pile i:nth-child(1) { left: 0; } .gem-pile i:nth-child(2) { left: 14px; bottom: 6px; } .gem-pile i:nth-child(3) { left: 28px; }
+  .gem-pile i:nth-child(4) { left: 7px; bottom: 20px; } .gem-pile i:nth-child(5) { left: 22px; bottom: 24px; } .gem-pile i:nth-child(6) { left: 38px; bottom: 12px; }
   .card { background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; }
   .notice { background: rgba(76, 195, 138, 0.14); border: 1px solid rgba(76, 195, 138, 0.35); color: #bff2d8; border-radius: 12px; padding: 12px 14px; font-size: 14px; }
   .notice.warn { background: rgba(255, 194, 46, 0.12); border-color: rgba(255, 194, 46, 0.3); color: #ffe39a; }
@@ -415,7 +420,7 @@ export function renderStorePage({ user, profile, prices, enabled, notice = '', a
   ${
     !user
       ? `<div class="card">
-          <p class="sub">Sign in with Discord so any <strong>Die Gems</strong> or <strong>Battle Pass</strong> you buy go straight to your Ludo profile (Apple Pay &amp; cards supported in Safari).</p>
+          <p class="sub">Sign in with Discord so any <strong>Die Gems</strong> or <strong>Battle Pass</strong> you buy go straight to your Ludo profile.</p>
           ${authUrl ? `<p style="margin:12px 0 0"><a class="btn discord" href="${esc(authUrl)}">Sign in with Discord</a></p>` : ''}
         </div>`
       : ''
@@ -448,14 +453,15 @@ export function renderStorePage({ user, profile, prices, enabled, notice = '', a
   }
 
   <div class="card">
-    <h2 style="margin:0 0 6px;font-size:18px">💎 Die Gems</h2>
-    <p class="sub" style="margin-bottom:12px">Secure Stripe Checkout — Apple Pay &amp; cards work right in Safari.</p>
+    <h2 style="margin:0 0 6px;font-size:18px"><span class="gem-dot gem-title"></span> Die Gems</h2>
+    <p class="sub" style="margin-bottom:12px">Secure checkout. Gems go straight to your Ludo profile.</p>
     ${user && profile && !profile.packs ? `<div class="notice">✨ First purchase: your first gem pack gives ×${FIRST_PACK_BONUS} the gems.</div>` : ''}
     <div class="grid">
       ${COIN_PACKS.map(
-        (p) => `
+        (p, i) => `
         <div class="pack">
           ${p.bonus ? `<span class="bonus">+${p.bonus}% extra</span>` : ''}
+          <span class="gem-pile" style="--n:${i + 2}">${'<i></i>'.repeat(i + 2)}</span>
           <b><span class="gem-dot"></span> ${p.gems.toLocaleString('en')}</b>
           <small>${esc(p.name)}</small>
           ${

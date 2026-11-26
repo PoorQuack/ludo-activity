@@ -121,9 +121,7 @@ function render() {
     ? t('Purchases work in the Discord app.')
     : !anySku
       ? t('Die Gems packs are coming soon.')
-      : isMobile && webReady
-        ? t('Apple Pay & card checkout opens securely in Safari.')
-        : mobileUnavailable
+      : mobileUnavailable
           ? t("Purchases aren't available on Discord mobile yet — open Ludo on Discord Desktop or Web to buy.")
           : '';
   el.innerHTML = `
