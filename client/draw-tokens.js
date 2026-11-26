@@ -465,8 +465,8 @@ export const GOLD_DARK = '#9a6f00';
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
 export function paintPawn(ctx, r, hex, style, sign) {
   if (style.bundle) {
-    const map = { red: 'red', green: 'green', yellow: 'yellow', blue: 'blue', orange: 'yellow', purple: 'blue' };
-    const col = map[sign] || 'red';
+    // six colours, like the other picture tokens (6-player games need orange and purple too)
+    const col = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(sign) ? sign : 'red';
     const glow = bundleTokenPic(style.bundle, 'token_glow');
     const img = bundleTokenPic(style.bundle, `token_${col}`);
     if (img) {

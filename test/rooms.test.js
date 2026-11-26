@@ -181,3 +181,24 @@ test('play now: the fullest open lobby (your call first), never a full, private,
   assert.equal(dir.findOpen(ann, 'call-9'), busy, 'not the room you are already sitting in');
   dir.destroy();
 });
+
+test('a turn with two moves: the second move goes through even when sent before the first move\'s update', () => {
+  const dir = new RoomDirectory();
+  let nextRoll = 6;
+  const room = dir.create(ann, { visibility: 'public', mode: '2p' });
+  room.rng = () => nextRoll;
+  dir.join(room, bob, {});
+  room.start(ann);
+  const roller = room.turn === 0 ? ann : bob;
+  const seat = room.turn;
+  room.handle(roller, { action: 'roll', seq: room.seq });
+  nextRoll = 3;
+  room.handle(roller, { action: 'roll', seq: room.seq });
+  assert.deepEqual(room.rolls, [6, 3]);
+  // what the client sends now: the first send of a move carries no seq
+  room.handle(roller, { action: 'move', token: 0, roll: 0 });
+  assert.equal(room.tokens[seat][0], 0);
+  room.handle(roller, { action: 'move', token: 0 }); // the 3, tapped before the first move's update
+  assert.equal(room.tokens[seat][0], 3);
+  dir.destroy();
+});

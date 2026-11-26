@@ -3987,8 +3987,11 @@ function sendMove(token, roll) {
     toast(t('Reconnecting…'), 'notice', 2000);
     return;
   }
+  // Only a retry (stepAnimations) carries `seq`, so the server can drop it if this move already
+  // went through. The first send doesn't: in a turn with two moves (a 6, then another number) the
+  // second tap can come before the first move's update, with a seq that's already out of date.
   const seq = state?.seq ?? null;
-  send('move', { token, roll, seq });
+  send('move', { token, roll });
   const seat = playSeat();
   const from = latestTokens?.[seat]?.[token];
   const value = state.rolls?.[roll];
