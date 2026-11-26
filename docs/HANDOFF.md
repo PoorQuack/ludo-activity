@@ -3,6 +3,31 @@
 Newest entry first. Whoever finishes a piece of work adds an entry: date, who, branch, what
 changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
 
+## 26 Nov 2026, Antigravity: reworked existing VFX pack (`antigravity/reworked-vfx-pack`)
+- Drop-in rasters applied into `client/public/`: 24 tokens (`raster/tokens/*.webp`), 14 avatar
+  frames (`raster/frames/*.webp`, centered 256×256 with updated `--s` / `--dy: 0%` + `?v=4` in
+  `client/style.css` and `client/main.js`), 9 mascot stickers (`raster/emotes/mascot/*.webp`),
+  7 HUD icons (`raster/icons/*.webp`), and 13 seamless textures (`raster/textures/*.jpg`).
+- Copied and wired all 8 upgraded 6-colour VFX bundles in `client/public/bundles/`, `shared/shop.js`,
+  `client/skins.js`, and `client/draw-tokens.js`:
+  - `classic` (`token-classic` / `dice-classic` / `board-classic` -> `common/classic_tabletop`)
+  - `samurai` (`token-samurai` / `dice-samurai` / `board-dojo` -> `legendary/cyber_samurai`)
+  - `football` (`token-football` / `dice-football` / `board-pitch` -> `epic/football_stadium`)
+  - `dragon` (`token-dragon` / `dice-dragon` / `board-lair` -> `legendary/dragons_lair`)
+  - `dino` / `crystal` (`token-dino` / `dice-crystal` / `board-crystal` -> `epic/crystal_dino`, `set-crystal` updated)
+  - `crown` / `gold` / `royal` (`token-crown` / `dice-gold` / `board-royal` -> `legendary/royal_crown`)
+  - `constellation` (`token-constellation` / `dice-constellation` / `board-constellation` -> `legendary/cosmic_constellation`)
+  - `neon` (`token-neon` / `dice-neon` / `board-neon` -> `epic/cyber_neon`)
+- Safe zones (`safe_zone_neutral`, `safe_zone_{red..purple}`, `safe_zone_aura`) render via
+  `drawTile` (`client/draw-board.js`); safe tokens prefer `tokensShielded[color]`
+  (`token_${col}_shielded.webp` via `bundleHasShielded` / `drawToken`), falling back to
+  `token_shield_back`/`front`; bundle tokens and dice (`die_glow` on flat + cube) run with zero
+  runtime `ctx.shadowBlur`.
+- Fixed offscreen `dirty` reset race in `client/shop-ui.js` (`animate()`) and extracted + translated
+  new i18n string across all 15 `client/locales/*.json` files.
+- Verified: `npm run build`, `npm test` (276/276), `npm run smoke`, and headless Edge visual checks
+  at desktop + 390×844 mobile with 0 console errors.
+
 ## 26 Nov 2026, Claude: state of `main` (live on ludo.commontern.com)
 - Translation: DeepL → Azure → NVIDIA Riva → Google → MyMemory, with Indonesian slang rewriting
   and player ratings ("Rate" on a translation; 3 matching suggestions become the translation).

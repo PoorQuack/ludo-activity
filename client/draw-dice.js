@@ -78,7 +78,7 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
     fill.addColorStop(0, st.shine);
     fill.addColorStop(1, st.face);
   }
-  if (glow) {
+  if (glow && !st.bundle) {
     ctx.shadowColor = glow;
     ctx.shadowBlur = 45 * px;
   }
@@ -128,7 +128,7 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
   ctx.restore();
 
   roundRect(ctx, -50, -50, 100, 100, cr);
-  if (st.outline) {
+  if (st.outline && !st.bundle) {
     ctx.shadowColor = st.outline;
     ctx.shadowBlur = (st.pulse ? 14 + 8 * Math.sin(t / 260) : 20) * px;
   }
@@ -725,8 +725,9 @@ export function drawDice(ctx, cx, cy, size, value, styleId, { alpha = 1, glow = 
     const gl = bundleDieImg(st.bundle, 'die_glow');
     if (gl) {
       ctx.save();
-      ctx.globalAlpha *= 0.72 + 0.18 * Math.sin(t / 420);
-      ctx.drawImage(gl, -82, -82, 164, 164);
+      ctx.globalAlpha *= glow ? 0.95 : 0.72 + 0.18 * Math.sin(t / 420);
+      const gs = glow ? 176 : 164;
+      ctx.drawImage(gl, -gs / 2, -gs / 2, gs, gs);
       ctx.restore();
     }
   }
@@ -777,6 +778,16 @@ export function drawDiceCube(ctx, cx, cy, size, value, styleId, { spin = IDENTIT
   ctx.globalAlpha *= alpha;
   ctx.translate(cx, cy);
   ctx.lineJoin = 'round';
+  if (st.bundle) {
+    const gl = bundleDieImg(st.bundle, 'die_glow');
+    if (gl) {
+      ctx.save();
+      ctx.globalAlpha *= glow ? 0.92 : 0.72 + 0.18 * Math.sin(t / 420);
+      const gs = size * (glow ? 1.72 : 1.56);
+      ctx.drawImage(gl, -gs / 2, -gs / 2, gs, gs);
+      ctx.restore();
+    }
+  }
   // One solid cube. The body is drawn first, in the dice's own colour: a rounded cube is a
   // smaller cube grown by a ball, and its outline on screen is the smaller cube's outline grown by
   // a disc, so fill that and stroke it thick and round. The faces then sit on it and meet at the

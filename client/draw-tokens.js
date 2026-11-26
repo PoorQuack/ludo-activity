@@ -6,7 +6,7 @@ import { TAU, circle, drawStar, hexA, mix, path, polygon, roundRect, sparkle, zo
 // Draws one 3D pawn standing on (x, y). `lift` raises it (px), `squash` < 1 flattens it on landing.
 // `t` (ms): the time, for skins with a moving effect (the Legendary ones); leave it out for a
 // still picture.
-export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1, sign = 'red', t = null } = {}) {
+export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1, sign = 'red', safe = false, t = null } = {}) {
   const gy = y + r * 0.2; // the pawn's base sits on the centre of its square
   const shrink = 1 - Math.min(0.45, lift / (r * 4));
   const sw = r * 0.95 * shrink;
@@ -30,9 +30,9 @@ export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1, sign 
   if (fx) fx(ctx, r, hex, time, 'back');
   ctx.save();
   ctx.scale(1 / squash, squash);
-  const sp = pawnSprite(ctx, r, hex, skin, sign);
+  const sp = pawnSprite(ctx, r, hex, skin, sign, safe);
   if (sp) ctx.drawImage(sp.canvas, -SPRITE_L * r, -SPRITE_T * r, SPRITE_L * 2 * r, (SPRITE_T + SPRITE_B) * r);
-  else paintPawn(ctx, r, hex, style, sign);
+  else paintPawn(ctx, r, hex, style, sign, safe);
   ctx.restore();
   if (fx) fx(ctx, r, hex, time, 'front');
   ctx.restore();
@@ -373,13 +373,21 @@ export const SPRITE_T = 3.6;
 export const SPRITE_B = 1.2;
 export const pawnSprites = new Map();
 export const pawnCache = { on: true }; // (tests compare against painting directly)
-export function pawnSprite(ctx, r, hex, skin, sign) {
+export function pawnSprite(ctx, r, hex, skin, sign, safe = false) {
   if (!pawnCache.on) return null;
+  const style = PAWN_STYLES[skin] || PAWN_STYLES['token-classic'];
+  if (style.bundle) {
+    const col = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(sign) ? sign : 'red';
+    const want = safe && bundleTokenPic(style.bundle, `token_${col}_shielded`)
+      ? `token_${col}_shielded`
+      : `token_${col}`;
+    if (!bundleTokenPic(style.bundle, want)) return null;
+  }
   const m = ctx.getTransform();
   const scale = Math.hypot(m.a, m.b); // CSS → device pixels where it will be stamped
   const px = Math.round(r * scale * 2) / 2; // radius in device pixels (half-pixel steps)
   if (!(px > 1) || px > 200) return null; // tiny or huge: just paint it
-  const key = `${skin}|${hex}|${sign}|${px}`;
+  const key = `${skin}|${hex}|${sign}|${px}|${safe ? 1 : 0}`;
   let sp = pawnSprites.get(key);
   if (!sp) {
     if (pawnSprites.size > 300) pawnSprites.clear(); // themes/skins changed a lot: start over
@@ -388,7 +396,7 @@ export function pawnSprite(ctx, r, hex, skin, sign) {
     canvas.height = Math.ceil((SPRITE_T + SPRITE_B) * px);
     const g = canvas.getContext('2d');
     g.setTransform(canvas.width / (SPRITE_L * 2 * r), 0, 0, canvas.height / ((SPRITE_T + SPRITE_B) * r), SPRITE_L * r * (canvas.width / (SPRITE_L * 2 * r)), SPRITE_T * r * (canvas.height / ((SPRITE_T + SPRITE_B) * r)));
-    paintPawn(g, r, hex, PAWN_STYLES[skin] || PAWN_STYLES['token-classic'], sign);
+    paintPawn(g, r, hex, style, sign, safe);
     sp = { canvas };
     pawnSprites.set(key, sp);
   }
@@ -397,10 +405,10 @@ export function pawnSprite(ctx, r, hex, skin, sign) {
 
 // What each token skin changes about the pawn.
 export const PAWN_STYLES = {
-  'token-classic': {},
+  'token-classic': { bundle: 'common/classic_tabletop' },
   'token-star': { star: true },
   'token-gem': { gem: true },
-  'token-neon': { neon: true },
+  'token-neon': { bundle: 'epic/cyber_neon' },
   'token-candy': { stripes: true },
 
   // Whole new shapes instead of the pawn
@@ -412,7 +420,7 @@ export const PAWN_STYLES = {
   'token-robot': { shape: 'robot' },
   'token-penguin': { shape: 'penguin' },
   'token-sakura': { shape: 'sakura' },
-  'token-dino': { shape: 'dino' },
+  'token-dino': { bundle: 'epic/crystal_dino', shape: 'dino' },
   // Cosmetic bundle tokens: /bundles/<tier>/<dir>/token_<col>.webp + token_glow.webp
   'token-woodland-grove': { bundle: 'common/woodland_grove' },
   'token-street-playground': { bundle: 'common/street_playground' },
@@ -424,17 +432,17 @@ export const PAWN_STYLES = {
   'token-pirates-cove': { bundle: 'epic/pirates_cove' },
   'token-celestial-olympus': { bundle: 'legendary/celestial_olympus', fx: 'glitter' },
   'token-steampunk-workshop': { bundle: 'legendary/steampunk_workshop', fx: 'glitter' },
-  // Battle Pass Season 1: painted pictures, one per colour
-  'token-samurai': { shape: 'samurai' },
-  'token-football': { shape: 'football' },
+  // Battle Pass Season 1: upgraded 6-colour bundles
+  'token-samurai': { bundle: 'legendary/cyber_samurai', shape: 'samurai', fx: 'glitter' },
+  'token-football': { bundle: 'epic/football_stadium', shape: 'football' },
   // Legendary: a figure of their own, with an effect that moves (TOKEN_FX), and a way of their
   // own of going back to base when captured (TOKEN_SIGNATURES in skins.js)
-  'token-crown': { shape: 'king', fx: 'glitter' },
+  'token-crown': { bundle: 'legendary/royal_crown', shape: 'king', fx: 'glitter' },
   'token-rocket': { shape: 'rocket', fx: 'thrust' },
   'token-ufo': { shape: 'ufo', fx: 'saucer', hover: 0.16 },
-  'token-dragon': { shape: 'dragon', fx: 'wings' },
-  // The player's zodiac sign: a ram for red, a bull for green, a crab for blue…
-  'token-constellation': { shape: 'zodiac', fx: 'orbit' },
+  'token-dragon': { bundle: 'legendary/dragons_lair', shape: 'dragon', fx: 'wings' },
+  // The player's zodiac sign: cosmic constellation bundle + orbital star sparkle FX
+  'token-constellation': { bundle: 'legendary/cosmic_constellation', shape: 'zodiac', fx: 'orbit' },
 };
 
 // Where the colour-blind shape sits on each token shape: height above the base (in r), a
@@ -463,16 +471,17 @@ export const GOLD = '#f6cf57';
 export const GOLD_DARK = '#9a6f00';
 
 // A pawn drawn upwards from (0, 0): base disc, tapered body, collar and round head.
-export function paintPawn(ctx, r, hex, style, sign) {
+export function paintPawn(ctx, r, hex, style, sign, safe = false) {
   if (style.bundle) {
     // six colours, like the other picture tokens (6-player games need orange and purple too)
     const col = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(sign) ? sign : 'red';
-    // first time this bundle shows: start loading its effects too, so they're ready when needed
-    for (const f of ['token_shield_back', 'token_shield_front', 'vfx_aura', 'vfx_capture']) bundleTokenPic(style.bundle, f);
+    // first time this bundle shows: start loading its effects + shielded variant so they're ready when needed
+    for (const f of ['token_shield_back', 'token_shield_front', 'vfx_aura', 'vfx_capture', `token_${col}_shielded`]) bundleTokenPic(style.bundle, f);
     const glow = bundleTokenPic(style.bundle, 'token_glow');
-    const img = bundleTokenPic(style.bundle, `token_${col}`);
+    const shielded = safe ? bundleTokenPic(style.bundle, `token_${col}_shielded`) : null;
+    const img = shielded || bundleTokenPic(style.bundle, `token_${col}`);
     if (img) {
-      const h = r * 2.75 * bundleScale(style.bundle, img);
+      const h = r * 2.75 * bundleScale(style.bundle, bundleTokenPic(style.bundle, 'token_red') || img);
       const w = (h * img.naturalWidth) / img.naturalHeight;
       if (glow) {
         ctx.save();
@@ -483,7 +492,7 @@ export function paintPawn(ctx, r, hex, style, sign) {
       ctx.drawImage(img, -w / 2, -h + r * 0.14, w, h);
       return;
     }
-    return paintPawn(ctx, r, hex, {}, sign);
+    return paintPawn(ctx, r, hex, {}, sign, safe);
   }
   if (style.shape) return TOKEN_SHAPES[style.shape](ctx, r, hex, sign);
   const body = style.neon ? '#141724' : hex;
@@ -673,6 +682,14 @@ function tokenPicture(name, sign) {
 // ---- Cosmetic bundles: their own shield, aura and capture burst (pictures in /bundles/<dir>/) ----
 // The bundle folder of a token skin, or null
 export const bundleOf = (skin) => PAWN_STYLES[skin]?.bundle || null;
+
+// True once this bundle's dedicated tokensShielded[color] sprite is loaded
+export function bundleHasShielded(skin, sign = 'red') {
+  const dir = bundleOf(skin);
+  if (!dir) return false;
+  const col = ['red', 'green', 'yellow', 'blue', 'orange', 'purple'].includes(sign) ? sign : 'red';
+  return !!bundleTokenPic(dir, `token_${col}_shielded`);
+}
 
 // The token's own shield while it sits on a safe square: `part` 'back' goes before the token,
 // 'front' after it. Same frame as the token picture (156×220), so it wraps it exactly. `grow`
