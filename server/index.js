@@ -541,7 +541,7 @@ function handleLobbyChat(ws, msg) {
       // @mentioned and not looking at this chat: a notice they can tap to open it
       for (const { id: uid } of m.mentions || []) {
         if (social.isBlocked?.(uid, ctx.user.id)) continue;
-        if (!isOnline(uid)) notifier.mention(uid, { fromId: m.userId, from: m.name, text: m.text, where: 'world' });
+        if (!isOnline(uid)) notifier.mention(uid, { from: m.name, text: m.text, where: channel });
         for (const c of userSockets.get(uid) || []) {
           if (c.readyState !== 1 || (lobbyListeners.has(c) && (channel === 'global' || c.ctx.lobbyLang === ctx.lobbyLang))) continue;
           if (channel === 'lang' && (c.ctx.lobbyLang || 'en') !== ctx.lobbyLang) continue; // (a language chat they're not in)
@@ -590,7 +590,7 @@ function handleDm(ws, msg) {
     if (!res) return;
     sendTo(ctx.user.id, { type: 'dmMsg', friendId: toId, msg: res.msg, unread: dms.unreadCount(ctx.user.id) });
     sendTo(toId, { type: 'dmMsg', friendId: ctx.user.id, msg: res.msg, unread: dms.unreadCount(toId) });
-    if (!isOnline(toId) && !social.isBlocked?.(toId, ctx.user.id)) notifier.message(toId, { fromId: ctx.user.id, from: ctx.user.name, text: res.msg.text });
+    if (!isOnline(toId) && !social.isBlocked?.(toId, ctx.user.id)) notifier.message(toId, { from: ctx.user.name, text: res.msg.text });
     return;
   }
   if (msg.op === 'react') {
@@ -762,7 +762,7 @@ const directory = new RoomDirectory({
     onStat: questProgress,
     onMention: (room, m) => {
       for (const { id: uid } of m.mentions) {
-        if (!isOnline(uid) && !social.isBlocked?.(uid, m.userId)) notifier.mention(uid, { fromId: m.userId, from: m.name, text: m.text, where: 'room' });
+        if (!isOnline(uid) && !social.isBlocked?.(uid, m.userId)) notifier.mention(uid, { from: m.name, text: m.text, where: 'room' });
       }
     },
     onChange: (room) => {
