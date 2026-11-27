@@ -295,6 +295,7 @@ function connect() {
       lbAsked = 0;
       fetchLeaderboard();
       if (lchat.open) lobbyChatJoin(); // back after a reconnect with the chat open
+      openLaunchTarget();
     } else if (msg.type === 'profile') onProfile(msg.profile);
     else if (msg.type === 'playNew') {
       toast(t('No open games right now, so here is a new one. Add bots or wait for people to join.'), 'ok', 6000);
@@ -4765,6 +4766,17 @@ function setLobbyReply(msg) {
   const bar = ensureReplyBar(box, $('lobby-chat-form'), () => setLobbyReply(null));
   renderReplyBar(bar, lobbyReply);
   if (msg) $('lobby-chat-input')?.focus({ preventScroll: true });
+}
+// Opened from the "Open Ludo" button on a Discord notification: go straight to that chat
+// (custom_id dm-<friend id>, chat-global or chat-lang). Once per launch.
+let launchTargetDone = false;
+function openLaunchTarget() {
+  if (launchTargetDone) return;
+  launchTargetDone = true;
+  const id = String(discordSdk?.customId || '');
+  const dm = /^dm-(\d{5,25})$/.exec(id);
+  if (dm) setTimeout(() => openDm(dm[1]), 300);
+  else if (id === 'chat-global' || id === 'chat-lang') setTimeout(() => openLobbyTab(id.slice(5)), 300);
 }
 function openDm(friendId, fallbackName = '') {
   closePlayerCardModal();

@@ -44,15 +44,17 @@ test('a burst of pings while away arrives as one DM after a minute, every ping c
   await run(1);
   assert.equal(sent.length, 1);
   const c = sent[0].content;
-  assert.match(c, /You have 9 new pings in Ludo/);
-  assert.match(c, /Ana\*\* mentioned you 6 times in the Ludo world chat: “ping 5”/);
-  assert.match(c, /Cy\*\* mentioned you in the Ludo language chat/);
-  assert.match(c, /Bo\*\* sent you 2 messages: “two”/);
+  assert.match(c.content, /You have 9 new pings in Ludo/);
+  const by = Object.fromEntries(c.embeds.map((e) => [e.author.name, e.description]));
+  assert.equal(by['Ana mentioned you 6 times in the Ludo world chat'], 'ping 5');
+  assert.equal(by['Cy mentioned you in the Ludo language chat'], 'hola');
+  assert.equal(by['Bo sent you 2 messages'], 'two');
   // the next ping starts a new wait
   n.mention('123456', { fromId: '900001', from: 'Ana', text: 'again', where: 'room' });
   await run(GROUP_MS);
   assert.equal(sent.length, 2);
-  assert.match(sent[1].content, /^🔔 \*\*Ana\*\* mentioned you in your Ludo room:\n> again/);
+  assert.equal(sent[1].content.content, '🔔 **Ana** mentioned you in Ludo');
+  assert.equal(sent[1].content.embeds[0].author.name, 'Ana mentioned you in your Ludo room');
 });
 
 test('back in the game within the minute: nothing is sent', async () => {
@@ -81,7 +83,7 @@ test('quiet hours keep the pings and send one summary when they end', async () =
   state.quiet = false;
   await run(10 * 60_000);
   assert.equal(sent.length, 1);
-  assert.match(sent[0].content, /mentioned you 2 times/);
+  assert.match(sent[0].content.content, /mentioned you 2 times/);
 });
 
 test('guests, switched-off kinds, and people Discord refuses', async () => {
@@ -119,7 +121,7 @@ test('names and text cannot ping everyone or break the formatting', async () => 
   const { n, sent, run } = make();
   n.message('123456', { fromId: '900001', from: '**@everyone**', text: '`code` @here' });
   await run(GROUP_MS);
-  assert.doesNotMatch(sent[0].content, /@everyone|@here|`/);
+  assert.doesNotMatch(JSON.stringify(sent[0].content), /@everyone|@here|`/);
 });
 
 test('settings are kept across a restart: switches, quiet hours, blocked list', () => {
@@ -157,4 +159,24 @@ test('old saved "noPings" turns both kinds off', () => {
   const b = new SocialBook(file);
   assert.equal(b.acceptsPings('111111', 'dm'), false);
   assert.equal(b.acceptsPings('111111', 'mention'), false);
+});
+
+test('the card shows the sender like a Discord message: picture, name, Ludo stats, Open Ludo', async () => {
+  const profiles = { 900001: { name: 'Ana', avatar: 'abc123', level: 12, wins: 30, games: 71 } };
+  const { n, sent, run } = make({ appId: '777', profileOf: (id) => profiles[id] });
+  n.message('123456', { fromId: '900001', from: 'Ana', text: 'yes' });
+  await run(GROUP_MS);
+  const m = sent[0].content;
+  assert.equal(m.content, '💬 **Ana** sent you a message in Ludo');
+  const e = m.embeds[0];
+  assert.equal(e.author.name, 'Ana sent you a message');
+  assert.equal(e.author.icon_url, 'https://cdn.discordapp.com/avatars/900001/abc123.png?size=128');
+  assert.equal(e.description, 'yes');
+  assert.deepEqual(e.fields.map((f) => [f.name, f.value]), [['Level', '12'], ['Wins', '30'], ['Games', '71']]);
+  assert.equal(m.components[0].components[0].url, 'https://discord.com/activities/777?custom_id=dm-900001');
+  // no picture: Discord's default one
+  n.mention('123456', { fromId: '4194304', from: 'Zed', text: 'hi', where: 'lang' });
+  await run(GROUP_MS);
+  assert.match(sent[1].content.embeds[0].author.icon_url, /embed\/avatars\/1\.png$/);
+  assert.match(sent[1].content.components[0].components[0].url, /custom_id=chat-lang$/);
 });

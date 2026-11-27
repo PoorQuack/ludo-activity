@@ -730,9 +730,9 @@ export function bundleCaptureArt(skin) {
   return dir ? bundleTokenPic(dir, 'vfx_capture') : null;
 }
 
-// Bundle token pictures share one frame (156×220) but some fill little of it (a turtle, a
-// bottle cap): scale those up so every token stands about as tall as the rest, but never wider
-// than its square allows. Measured once from the red token's visible pixels; anchored at the foot.
+// Bundle token pictures share one frame (156×220) but fill it differently (a turtle, a bottle
+// cap, sparkles around the edge): scale each set so its visible picture is about as big as the
+// classic pawn, but never much wider than its square. Measured once from the red token's visible pixels; anchored at the foot.
 const bundleScales = new Map();
 function bundleScale(dir, img = null) {
   if (bundleScales.has(dir)) return bundleScales.get(dir);
@@ -746,17 +746,20 @@ function bundleScale(dir, img = null) {
     const x = c.getContext('2d', { willReadFrequently: true });
     x.drawImage(pic, 0, 0);
     const a = x.getImageData(0, 0, c.width, c.height).data;
-    let top = c.height, left = c.width, right = 0;
+    let top = c.height, left = c.width, right = 0, bottom = 0;
     for (let y = 0; y < c.height; y++)
       for (let i = 0; i < c.width; i++)
         if (a[(y * c.width + i) * 4 + 3] > 40) {
           if (y < top) top = y;
           if (i < left) left = i;
           if (i > right) right = i;
+          if (y > bottom) bottom = y;
         }
-    const tall = (c.height - top) / c.height;
-    const wide = (right - left + 1) / c.width;
-    if (tall > 0 && wide > 0) k = Math.max(1, Math.min(1.45, 0.86 / tall, 1.3 / wide));
+    // drawn 2.75 r tall (r = 0.4 of a square): aim for about 3.35 r of visible picture (as big as
+    // the classic pawn reads), and at most 3.3 r wide (1.3 squares) for flat ones like a turtle
+    const tall = (bottom - top + 1) / c.height;
+    const wide = ((right - left + 1) / c.width) * (c.width / c.height);
+    if (tall > 0 && wide > 0) k = Math.max(1, Math.min(2, 3.35 / (2.75 * tall), 3.3 / (2.75 * wide)));
   } catch {
     k = 1;
   }

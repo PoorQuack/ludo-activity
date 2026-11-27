@@ -9,6 +9,8 @@
 //    (⚙ Settings → General: mentions, friends' messages).
 //  - Each player's DMs go out one at a time, in order. When Discord says "slow down" (429),
 //    we wait the time it asks and carry on, so nothing is dropped.
+//  - Each DM is a card per sender: their Discord name and picture, their Ludo level, wins and
+//    games, the message, and an "Open Ludo" button that opens the activity on that chat.
 //  - The DM channel with each player is remembered, so a notice is one call to Discord, not two.
 //  - Bots can only DM people who share a server with them. When Discord refuses, that player is
 //    skipped for an hour (they may join the server) instead of being retried on every message.
@@ -38,6 +40,8 @@ export class DiscordNotifier {
     allowed = () => true,
     isOnline = () => false,
     quietNow = () => false,
+    profileOf = () => null,
+    appId = '',
     send = null,
     fetchImpl = globalThis.fetch,
     now = () => Date.now(),
@@ -49,10 +53,12 @@ export class DiscordNotifier {
     this.allowed = allowed; // (userId, 'mention' | 'dm') => false when they turned that kind off
     this.isOnline = isOnline; // (userId) => true while they have the game open
     this.quietNow = quietNow; // (userId) => true during their quiet hours
+    this.profileOf = profileOf; // (userId) => { name, avatar (Discord hash or ''), level, wins, games } for the card
+    this.appId = appId; // the activity's application id, for the "Open Ludo" link
     this.timers = timers;
     this.waiting = new Map(); // userId -> { mentions: Map, messages: Map, timer }
     this.fetch = fetchImpl;
-    this.send = send || ((token2, userId, content) => this.botDm(userId, content));
+    this.send = send || ((token2, userId, body) => this.botDm(userId, body));
     this.now = now;
     this.wait = wait;
     this.log = log;
@@ -81,7 +87,7 @@ export class DiscordNotifier {
     }
   }
 
-  async botDm(userId, content) {
+  async botDm(userId, body) {
     let ch = this.channels.get(userId);
     if (!ch) {
       const r = await this.call(`${API}/users/@me/channels`, { recipient_id: userId });
@@ -90,7 +96,8 @@ export class DiscordNotifier {
       this.channels.set(userId, ch);
       if (this.channels.size > 50_000) this.channels.delete(this.channels.keys().next().value);
     }
-    const r = await this.call(`${API}/channels/${ch}/messages`, { content, allowed_mentions: { parse: [] } });
+    const msg = typeof body === 'string' ? { content: body } : body;
+    const r = await this.call(`${API}/channels/${ch}/messages`, { ...msg, allowed_mentions: { parse: [] } });
     if (!r.ok) {
       if (r.status === 404) this.channels.delete(userId);
       throw new Error(`DM refused (${r.status})`);
@@ -143,9 +150,9 @@ export class DiscordNotifier {
     }
     const list = kind === 'dm' ? w.messages : w.mentions;
     const key = kind === 'dm' ? String(fromId) : `${fromId}|${where}`;
-    const e = list.get(key) || { from, where, count: 0, text: '' };
+    const e = list.get(key) || { fromId: String(fromId), from, where, count: 0, text: '' };
     list.delete(key); // (latest last)
-    list.set(key, { ...e, from: from || e.from, count: e.count + 1, text });
+    list.set(key, { ...e, from: from || e.from, count: e.count + 1, text, at: this.now() });
     if (list.size > 100) list.delete(list.keys().next().value);
     return true;
   }
@@ -179,30 +186,75 @@ export class DiscordNotifier {
       return Promise.resolve(false);
     }
     this.waiting.delete(userId);
-    const content = summary(w);
-    return content ? this.notify(userId, content) : Promise.resolve(false);
+    const body = summary(w, { profileOf: this.profileOf, appId: this.appId });
+    return body ? this.notify(userId, body) : Promise.resolve(false);
   }
 }
 
 const PLACE = { room: 'your Ludo room', lang: 'the Ludo language chat', global: 'the Ludo world chat' };
+const COLOR = { dm: 0xd9573b, mention: 0xf2bf3f }; // Ludo red for messages, gold for mentions
 const times = (n) => (n === 1 ? '' : ` ${n} times`);
 
-// The DM for what was waiting
-export function summary({ mentions, messages }) {
-  const items = [...[...mentions.values()].map((e) => ({ ...e, kind: 'mention' })), ...[...messages.values()].map((e) => ({ ...e, kind: 'dm' }))];
-  if (!items.length) return '';
-  const foot = '\n\nOpen the Ludo activity in Discord to reply.';
+// Their Discord picture (the default one when they have none)
+export function avatarUrl(id, hash) {
+  if (hash) return `https://cdn.discordapp.com/avatars/${id}/${hash}.${hash.startsWith('a_') ? 'gif' : 'png'}?size=128`;
+  let n = 0;
+  try {
+    n = Number((BigInt(id) >> 22n) % 6n);
+  } catch {}
+  return `https://cdn.discordapp.com/embed/avatars/${n}.png`;
+}
+
+// Where "Open Ludo" lands: a DM with that friend, the chat they were mentioned in, or the menu
+export function openLink(appId, e) {
+  if (!appId) return '';
+  const to = !e ? 'menu' : e.kind === 'dm' ? `dm-${e.fromId}` : e.where === 'room' ? 'room' : `chat-${e.where === 'lang' ? 'lang' : 'global'}`;
+  return `https://discord.com/activities/${appId}?custom_id=${encodeURIComponent(to)}`;
+}
+
+// One sender's card: their name and picture at the top, what they said, their Ludo stats
+function card(e, profileOf) {
+  const p = profileOf(e.fromId) || {};
+  const name = plain(p.name || e.from, 60) || (e.kind === 'dm' ? 'A friend' : 'Someone');
+  const what =
+    e.kind === 'dm'
+      ? e.count === 1 ? 'sent you a message' : `sent you ${e.count} messages`
+      : `mentioned you${times(e.count)} in ${PLACE[e.where] || PLACE.global}`;
+  const fields = [];
+  if (p.level) fields.push({ name: 'Level', value: String(p.level), inline: true });
+  if (p.wins != null) fields.push({ name: 'Wins', value: String(p.wins), inline: true });
+  if (p.games != null) fields.push({ name: 'Games', value: String(p.games), inline: true });
+  return {
+    color: COLOR[e.kind],
+    author: { name: `${name} ${what}`.slice(0, 256), icon_url: avatarUrl(e.fromId, p.avatar || '') },
+    description: plain(e.text, 600) || '…',
+    thumbnail: { url: avatarUrl(e.fromId, p.avatar || '') },
+    ...(fields.length ? { fields } : {}),
+    footer: { text: 'Ludo' },
+    timestamp: new Date(e.at || Date.now()).toISOString(),
+  };
+}
+
+// The DM for what was waiting: a line for the phone's notification, a card per sender (up to
+// 10, Discord's limit, latest last) and the "Open Ludo" button
+export function summary({ mentions, messages }, { profileOf = () => null, appId = '' } = {}) {
+  const items = [...[...mentions.values()].map((e) => ({ ...e, kind: 'mention' })), ...[...messages.values()].map((e) => ({ ...e, kind: 'dm' }))].sort((a, b) => (a.at || 0) - (b.at || 0));
+  if (!items.length) return null;
+  const total = items.reduce((n, e) => n + e.count, 0);
+  let content;
   if (items.length === 1) {
     const e = items[0];
-    if (e.kind === 'dm') return `💬 **${plain(e.from, 40) || 'A friend'}** sent you ${e.count === 1 ? 'a message' : `${e.count} messages`} in Ludo:\n> ${plain(e.text, 180)}${foot}`;
-    return `🔔 **${plain(e.from, 40) || 'Someone'}** mentioned you${times(e.count)} in ${PLACE[e.where] || PLACE.global}:\n> ${plain(e.text, 180)}${foot}`;
-  }
-  const total = items.reduce((n, e) => n + e.count, 0);
-  const lines = items.slice(-MAX_LINES).map((e) =>
-    e.kind === 'dm'
-      ? `💬 **${plain(e.from, 40) || 'A friend'}** sent you ${e.count === 1 ? 'a message' : `${e.count} messages`}: “${plain(e.text, 100)}”`
-      : `🔔 **${plain(e.from, 40) || 'Someone'}** mentioned you${times(e.count)} in ${PLACE[e.where] || PLACE.global}: “${plain(e.text, 100)}”`,
-  );
-  const more = items.length - lines.length;
-  return `You have ${total} new pings in Ludo:\n${lines.join('\n')}${more > 0 ? `\n…and ${more} more` : ''}${foot}`;
+    const name = plain(profileOf(e.fromId)?.name || e.from, 40) || 'Someone';
+    content = e.kind === 'dm' ? `💬 **${name}** sent you ${e.count === 1 ? 'a message' : `${e.count} messages`} in Ludo` : `🔔 **${name}** mentioned you${times(e.count)} in Ludo`;
+  } else content = `🔔 You have ${total} new pings in Ludo`;
+  const shown = items.slice(-10);
+  const more = items.length - shown.length;
+  if (more > 0) content += ` (the latest ${shown.length} people below, and ${more} more)`;
+  const last = items[items.length - 1];
+  const url = openLink(appId, last); // (the latest one)
+  return {
+    content,
+    embeds: shown.map((e) => card(e, profileOf)),
+    ...(url ? { components: [{ type: 1, components: [{ type: 2, style: 5, label: 'Open Ludo', url }] }] } : {}),
+  };
 }
