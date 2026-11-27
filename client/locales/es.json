@@ -1097,5 +1097,7 @@
   "All In is people only: no bots": "All In es solo para personas: sin bots",
   "All In needs at least 2 players": "All In necesita al menos 2 jugadores",
   "Team games need every seat filled": "Las partidas por equipos necesitan todos los asientos ocupados",
-  "Click to open": "Haz clic para abrir"
+  "Click to open": "Haz clic para abrir",
+  "Discord notifications": "Notificaciones de Discord",
+  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "Cuando no estés en el juego, recibe un MD en Discord si alguien te menciona con @ o un amigo te escribe."
 }

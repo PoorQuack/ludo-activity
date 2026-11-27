@@ -1818,6 +1818,7 @@ function renderPrefs() {
   setSceneLighting(prefs.lighting);
   renderSceneSeg();
   $('pref-invites').setAttribute('aria-checked', String(friendsData?.invitesOn !== false));
+  $('pref-pings').setAttribute('aria-checked', String(friendsData?.pingsOn !== false));
 }
 $('pref-chat').addEventListener('click', () => {
   prefs.chat = !prefs.chat;
@@ -1856,6 +1857,12 @@ $('pref-invites').addEventListener('click', () => {
   if (friendsData) friendsData.invitesOn = on;
   renderPrefs();
   ws?.send(JSON.stringify({ type: 'friend', op: 'invites', on }));
+});
+$('pref-pings').addEventListener('click', () => {
+  const on = friendsData?.pingsOn === false;
+  if (friendsData) friendsData.pingsOn = on;
+  renderPrefs();
+  ws?.send(JSON.stringify({ type: 'friend', op: 'pings', on }));
 });
 applyPrefs();
 

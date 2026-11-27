@@ -1097,5 +1097,7 @@
   "All In is people only: no bots": "올인은 사람끼리만: 봇은 안 돼요",
   "All In needs at least 2 players": "올인은 최소 2명이 필요해요",
   "Team games need every seat filled": "팀 게임은 모든 자리가 차야 해요",
-  "Click to open": "클릭해서 열기"
+  "Click to open": "클릭해서 열기",
+  "Discord notifications": "Discord 알림",
+  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "게임에 없을 때 누군가 나를 @멘션하거나 친구가 메시지를 보내면 Discord DM으로 알려 드려요."
 }

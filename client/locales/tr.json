@@ -1097,5 +1097,7 @@
   "All In is people only: no bots": "All In sadece insanlar için: bot yok",
   "All In needs at least 2 players": "All In için en az 2 oyuncu gerekir",
   "Team games need every seat filled": "Takım oyunlarında tüm koltukların dolu olması gerekir",
-  "Click to open": "Açmak için tıkla"
+  "Click to open": "Açmak için tıkla",
+  "Discord notifications": "Discord bildirimleri",
+  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "Oyunda değilken biri seni @ ile andığında ya da bir arkadaşın mesaj attığında Discord’dan DM al."
 }

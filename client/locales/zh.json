@@ -1097,5 +1097,7 @@
   "All In is people only: no bots": "全押模式仅限真人：不能加机器人",
   "All In needs at least 2 players": "全押模式至少需要 2 名玩家",
   "Team games need every seat filled": "团队游戏需要坐满所有座位",
-  "Click to open": "点击打开"
+  "Click to open": "点击打开",
+  "Discord notifications": "Discord 通知",
+  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "不在游戏中时，如果有人 @ 提到你或好友给你发消息，你会收到 Discord 私信。"
 }

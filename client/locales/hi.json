@@ -1097,5 +1097,7 @@
   "All In is people only: no bots": "ऑल इन सिर्फ़ असली खिलाड़ियों के लिए है: बॉट नहीं",
   "All In needs at least 2 players": "ऑल इन के लिए कम से कम 2 खिलाड़ी चाहिए",
   "Team games need every seat filled": "टीम गेम में हर सीट भरी होनी चाहिए",
-  "Click to open": "खोलने के लिए क्लिक करें"
+  "Click to open": "खोलने के लिए क्लिक करें",
+  "Discord notifications": "Discord सूचनाएँ",
+  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "जब आप गेम में नहीं हों, तब कोई आपको @ से मेंशन करे या कोई दोस्त मैसेज करे तो Discord पर DM पाएँ।"
 }

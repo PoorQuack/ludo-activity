@@ -17,6 +17,7 @@ import { rig, unrig, riggedList } from './rig.js';
 import { SupportDesk, SUPPORT_MAX_FILE } from './support.js';
 import { ServerInvite, SNOOZE_MS } from './invite.js';
 import { SocialBook, sendDm } from './social.js';
+import { DiscordNotifier } from './notify.js';
 import { Inbox } from './inbox.js';
 import { LobbyChat, channelId } from './lobbychat.js';
 import { DirectMessages, pairKey } from './dms.js';
@@ -540,6 +541,7 @@ function handleLobbyChat(ws, msg) {
       // @mentioned and not looking at this chat: a notice they can tap to open it
       for (const { id: uid } of m.mentions || []) {
         if (social.isBlocked?.(uid, ctx.user.id)) continue;
+        if (!isOnline(uid)) notifier.mention(uid, { fromId: m.userId, from: m.name, text: m.text, where: 'world' });
         for (const c of userSockets.get(uid) || []) {
           if (c.readyState !== 1 || (lobbyListeners.has(c) && (channel === 'global' || c.ctx.lobbyLang === ctx.lobbyLang))) continue;
           if (channel === 'lang' && (c.ctx.lobbyLang || 'en') !== ctx.lobbyLang) continue; // (a language chat they're not in)
@@ -588,6 +590,7 @@ function handleDm(ws, msg) {
     if (!res) return;
     sendTo(ctx.user.id, { type: 'dmMsg', friendId: toId, msg: res.msg, unread: dms.unreadCount(ctx.user.id) });
     sendTo(toId, { type: 'dmMsg', friendId: ctx.user.id, msg: res.msg, unread: dms.unreadCount(toId) });
+    if (!isOnline(toId) && !social.isBlocked?.(toId, ctx.user.id)) notifier.message(toId, { fromId: ctx.user.id, from: ctx.user.name, text: res.msg.text });
     return;
   }
   if (msg.op === 'react') {
@@ -672,6 +675,8 @@ async function maybeInvite(ws, userId) {
 }
 const social = new SocialBook(SOCIAL_FILE);
 const isOnline = (id) => userSockets.has(id);
+// Away from the game: @mentions and friends' messages reach them as a Discord DM (see notify.js)
+const notifier = new DiscordNotifier({ token: (process.env.DISCORD_BOT_TOKEN || '').trim(), allowed: (id) => social.acceptsPings(id) });
 const dms = new DirectMessages(DMS_FILE, { profiles: store, social, isOnline });
 function sendFriends(userId) {
   sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null });
@@ -755,6 +760,11 @@ const directory = new RoomDirectory({
       for (const p of players) sendFriends(p.userId);
     },
     onStat: questProgress,
+    onMention: (room, m) => {
+      for (const { id: uid } of m.mentions) {
+        if (!isOnline(uid) && !social.isBlocked?.(uid, m.userId)) notifier.mention(uid, { fromId: m.userId, from: m.name, text: m.text, where: 'room' });
+      }
+    },
     onChange: (room) => {
       broadcast(room);
       listsChanged();
@@ -1085,6 +1095,7 @@ wss.on('connection', (ws, req) => {
       if (msg.type === 'friend') {
         const id = String(msg.id || '');
         if (msg.op === 'invites') social.setInvites(ctx.user.id, !!msg.on);
+        else if (msg.op === 'pings') social.setPings(ctx.user.id, !!msg.on);
         else if (msg.op === 'add') {
           const r = social.request(ctx.user.id, id);
           if (r === 'sent') sendTo(id, { type: 'friendRequest', from: { id: ctx.user.id, name: ctx.user.name } });

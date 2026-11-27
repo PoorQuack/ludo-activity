@@ -36,7 +36,9 @@ export class SocialBook {
             friends: (u.friends || []).filter((f) => typeof f === 'string').slice(0, MAX_FRIENDS),
             in: (u.in || []).filter((r) => r && typeof r.id === 'string').slice(0, MAX_REQUESTS),
             out: (u.out || []).filter((r) => r && typeof r.id === 'string').slice(0, MAX_REQUESTS),
+            blocked: (u.blocked || []).filter((b) => typeof b === 'string'),
             ...(u.noInvites ? { noInvites: true } : {}),
+            ...(u.noPings ? { noPings: true } : {}),
           });
         }
         this.migrateOneWay();
@@ -181,6 +183,19 @@ export class SocialBook {
     return !this.users.get(id)?.noInvites;
   }
 
+  // ⚙ Settings → General → "Discord notifications": a DM from the bot when you're away and
+  // someone @mentions you or a friend messages you
+  setPings(id, on) {
+    const u = this.user(id);
+    if (on) delete u.noPings;
+    else u.noPings = true;
+    this.save();
+  }
+
+  acceptsPings(id) {
+    return !this.users.get(id)?.noPings;
+  }
+
   isFriend(id, friendId) {
     return this.users.get(id)?.friends.includes(friendId) || false;
   }
@@ -222,6 +237,7 @@ export class SocialBook {
     const asked = new Set((u.in || []).map((r) => r.id));
     return {
       invitesOn: !u.noInvites,
+      pingsOn: !u.noPings,
       friends: u.friends.map((f) => person(f)),
       blocked: u.blocked || [],
       // requests waiting for your answer (shown in the inbox and on the Friends card)

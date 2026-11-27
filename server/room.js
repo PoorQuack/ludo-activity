@@ -54,7 +54,7 @@ const SAVED_FIELDS = [
 export class Room {
   constructor(
     id,
-    { onChange, onKick, onGameEnd, onGameStart, onStat, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null, fee = potFee } = {},
+    { onChange, onKick, onGameEnd, onGameStart, onStat, onMention, rng = () => randomInt(1, 7), delays = {}, profiles = null, code = null, visibility = 'private', instanceId = null, fee = potFee } = {},
   ) {
     this.id = id;
     this.fee = fee; // the house's cut of a pot (shared/shop.js potFee; tests can turn it off)
@@ -75,6 +75,7 @@ export class Room {
     this.onChange = onChange || (() => {});
     this.onGameEnd = onGameEnd || (() => {}); // results of a game that paid out (for the leaderboards)
     this.onGameStart = onGameStart || (() => {}); // the humans in a game that just started (for friends lists)
+    this.onMention = onMention || (() => {}); // (room, msg): someone was @mentioned in the chat
     this.onStat = onStat || (() => {}); // things players did, for daily quests: (userId, name, stat, n)
     this.rng = rng;
     this.delays = {
@@ -534,6 +535,7 @@ export class Room {
       this.emotes = this.emotes.filter((e) => now - e.at < EMOTE_TTL_MS);
       this.emotes.push({ id: ++this.emoteSeq, seat, img: EMOTE_SLUGS[solo[1]].img, at: now });
     }
+    if (msg.mentions) this.onMention(this, msg);
     this.onChange(this); // nothing in the game changed, so skip automate()
   }
 

@@ -1097,5 +1097,7 @@
   "All In is people only: no bots": "オールインは人間だけ：ボットは使えません",
   "All In needs at least 2 players": "オールインには2人以上必要です",
   "Team games need every seat filled": "チーム戦は全席が埋まっている必要があります",
-  "Click to open": "クリックして開く"
+  "Click to open": "クリックして開く",
+  "Discord notifications": "Discord通知",
+  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "ゲームを離れているときに、誰かに@メンションされたりフレンドからメッセージが届いたりすると、DiscordのDMでお知らせします。"
 }
