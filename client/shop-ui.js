@@ -4,6 +4,8 @@ import { passItemInfo } from '../shared/pass.js';
 import { BOARDS } from '../shared/board.js';
 import { BoardRenderer, drawToken, drawDice } from './renderer.js';
 import { drawTauntPreview } from './taunts.js';
+// The moment (ms into its loop) each taunt card shows in the shop grid: the hit, the wave, the stamp
+const TAUNT_STILL = { 'taunt-bonk': 750, 'taunt-bye': 250, 'taunt-chicken': 500, 'taunt-violin': 500, 'taunt-clown': 250, 'taunt-l': 250, 'taunt-ggez': 250, 'taunt-skill': 0, 'taunt-cackle': 500, 'taunt-fireworks': 750 };
 import { bundleOf, bundleTokenScale } from './draw-tokens.js';
 import { playerColor } from './skins.js';
 import { t } from './i18n.js';
@@ -411,10 +413,8 @@ function preview(item, theme) {
     draw(ctx, performance.now());
     animated.push({ canvas, dpr, draw });
   } else if (item.type === 'taunt') {
-    // looping: it pops up, holds and fades, again and again
-    const draw = (c, now) => drawTauntPreview(c, item.id, W, H, now + item.id.length * 331, { name: t('Blue') });
-    draw(ctx, 300);
-    animated.push({ canvas, dpr, draw });
+    // A still picture at the taunt's best moment; it only plays when you open it (item view)
+    drawTauntPreview(ctx, item.id, W, H, TAUNT_STILL[item.id] ?? 500, { name: t('Blue') });
   } else if (item.type === 'board') {
     const size = H - 8;
     const off = document.createElement('canvas');
