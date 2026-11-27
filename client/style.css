@@ -2894,7 +2894,7 @@ button, .btn { touch-action: manipulation; }
 :is([data-chat], #lobby-chat) .chat-log .chat-line + .chat-line { margin: 0; padding-top: 7px; border-top: 0; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line { background: var(--me-bubble); color: #fff; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .chat-line-content { color: #fff; }
-:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .mention { color: #fff; text-decoration: underline; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .mention { color: #dcebff; font-weight: 800; } /* (a mention on your own red bubble: light blue) */
 /* corners: tucked in between bubbles of the same run (left side for others, right side for you) */
 :is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:not(:last-child) { border-bottom-left-radius: 6px; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:not(:first-child) { border-top-left-radius: 6px; }
@@ -3053,11 +3053,8 @@ button, .btn { touch-action: manipulation; }
 @media (max-width: 340px) { .menu-tools [data-player-btn] { display: none; } }
 
 /* ---------- @mentions ---------- */
-.mention { font-weight: 700; color: #b5532f; background: rgba(217, 87, 59, 0.1); border-radius: 5px; padding: 0 3px; }
-.mention.me { color: #fff; background: #d9573b; }
-.chat-msg.me .mention { color: #fff; background: rgba(255, 255, 255, 0.2); }
-/* a message that mentions you: an accent edge on its bubble */
-.chat-msg:has(.chat-line.mention-me) .chat-bubble { box-shadow: 0 0 0 2px #d9573b, 0 2px 10px rgba(217, 87, 59, 0.25); }
+/* a mention: the name in bold blue, no background (lighter blue on your own red bubbles) */
+.mention, .mention.me { font-weight: 800; color: #1d6fe0; background: none; padding: 0; border-radius: 0; }
 /* the @ list above the chat box */
 .mention-pop { position: absolute; left: 10px; bottom: calc(100% + 6px); z-index: 30; min-width: 180px; max-width: min(280px, calc(100% - 20px)); margin: 0; padding: 4px; list-style: none; background: #fffaf3; border: 1px solid #d8c8b4; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
 .mention-opt { padding: 7px 10px; border-radius: 8px; color: #1b1714; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
