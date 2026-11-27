@@ -64,3 +64,32 @@ test('without a bot, or for guests, membership is unknown (so they are just aske
   assert.equal(await inv.isMember('guest-abc12345'), null);
   assert.equal(new ServerInvite({ url: '' }).enabled, false);
 });
+
+test('the thank-you for joining is paid once per account, never to guests', () => {
+  const store = new ProfileStore(null);
+  const before = store.get('123456').coins;
+  assert.equal(store.joinReward('123456'), 100);
+  assert.equal(store.get('123456').coins, before + 100);
+  assert.equal(store.get('123456').invite.status, 'joined');
+  assert.equal(store.joinReward('123456'), 0); // left and joined again: no second payout
+  assert.equal(store.joinReward('guest-abc'), 0);
+});
+
+test('one-tap join: the bot adds them with their guilds.join token', async () => {
+  const calls = [];
+  const fetch = async (url, init = {}) => {
+    calls.push({ url, init });
+    if (url.includes('/invites/')) return { ok: true, status: 200, json: async () => ({ guild: { id: '42' } }) };
+    if (url.endsWith('/guilds/42/members/123456') && init.method === 'PUT') return { ok: true, status: 201, text: async () => '' };
+    if (url.endsWith('/guilds/42/members/999999') && init.method === 'PUT') return { ok: true, status: 204, text: async () => '' };
+    return { ok: false, status: 403, text: async () => 'Missing Permissions' };
+  };
+  const inv = new ServerInvite({ url: 'https://discord.gg/abc', token: 'bot', fetch });
+  assert.equal(await inv.addMember('123456', 'user-token'), 'added');
+  assert.equal(JSON.parse(calls.at(-1).init.body).access_token, 'user-token');
+  assert.equal(calls.at(-1).init.headers.Authorization, 'Bot bot');
+  assert.equal(await inv.isMember('123456'), true); // (remembered, no extra call)
+  assert.equal(await inv.addMember('999999', 'user-token'), 'already');
+  assert.equal(await inv.addMember('555555', 'user-token'), null);
+  assert.match(inv.lastError, /403/);
+});

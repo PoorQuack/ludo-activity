@@ -1108,5 +1108,11 @@
   "To": "Tot",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord laat de Ludo-bot alleen berichten sturen naar mensen die een server met hem delen. Word lid van onze server zodat je meldingen aankomen.",
   "Join our server": "Word lid van onze server",
-  "{name} has quiet hours on right now": "{name} heeft nu stille uren"
+  "{name} has quiet hours on right now": "{name} heeft nu stille uren",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Bedankt dat je lid bent geworden van de Ludo-community! +{coins} munten",
+  "🎉 Welcome to the Ludo community!": "🎉 Welkom in de Ludo-community!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "Iemand noemde je! Word lid van onze Discord-server zodat pings je op Discord bereiken als je weg bent.",
+  "You're already in the Ludo community 👍": "Je zit al in de Ludo-community 👍",
+  "+{coins} coins for joining": "+{coins} munten voor lid worden",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "Vrienden kunnen je berichten sturen terwijl je weg bent. Word lid van onze Discord-server zodat die berichten je op Discord bereiken."
 }

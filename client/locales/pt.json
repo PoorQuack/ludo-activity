@@ -1108,5 +1108,11 @@
   "To": "Até",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "O Discord só deixa o bot do Ludo mandar mensagem para quem está em um servidor com ele. Entre no nosso servidor para receber suas notificações.",
   "Join our server": "Entrar no servidor",
-  "{name} has quiet hours on right now": "{name} está no horário de silêncio agora"
+  "{name} has quiet hours on right now": "{name} está no horário de silêncio agora",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Obrigado por entrar na comunidade do Ludo! +{coins} moedas",
+  "🎉 Welcome to the Ludo community!": "🎉 Boas-vindas à comunidade do Ludo!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "Alguém mencionou você! Entre no nosso servidor do Discord para receber as menções no Discord quando estiver fora.",
+  "You're already in the Ludo community 👍": "Você já está na comunidade do Ludo 👍",
+  "+{coins} coins for joining": "+{coins} moedas por entrar",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "Seus amigos podem mandar mensagens enquanto você está fora. Entre no nosso servidor do Discord para recebê-las no Discord."
 }

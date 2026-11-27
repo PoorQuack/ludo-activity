@@ -1108,5 +1108,11 @@
   "To": "Bitiş",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord, Ludo botunun yalnızca onunla bir sunucuyu paylaşan kişilere mesaj atmasına izin verir. Bildirimlerin sana ulaşması için sunucumuza katıl.",
   "Join our server": "Sunucumuza katıl",
-  "{name} has quiet hours on right now": "{name} şu an sessiz saatlerde"
+  "{name} has quiet hours on right now": "{name} şu an sessiz saatlerde",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Ludo topluluğuna katıldığın için teşekkürler! +{coins} jeton",
+  "🎉 Welcome to the Ludo community!": "🎉 Ludo topluluğuna hoş geldin!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "Biri senden bahsetti! Yokken pinglerin Discord’a gelmesi için Discord sunucumuza katıl.",
+  "You're already in the Ludo community 👍": "Zaten Ludo topluluğundasın 👍",
+  "+{coins} coins for joining": "Katılınca +{coins} jeton",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "Sen yokken arkadaşların sana mesaj atabilir. Mesajlarının Discord’a gelmesi için Discord sunucumuza katıl."
 }

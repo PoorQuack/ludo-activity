@@ -1108,5 +1108,11 @@
   "To": "До",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord дозволяє боту Ludo писати лише тим, хто має з ним спільний сервер. Приєднайтеся до нашого сервера, щоб сповіщення до вас доходили.",
   "Join our server": "Приєднатися до сервера",
-  "{name} has quiet hours on right now": "У {name} зараз тихі години"
+  "{name} has quiet hours on right now": "У {name} зараз тихі години",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Дякуємо, що приєдналися до спільноти Ludo! +{coins} монет",
+  "🎉 Welcome to the Ludo community!": "🎉 Ласкаво просимо до спільноти Ludo!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "Вас згадали! Приєднайтеся до нашого сервера Discord, щоб згадки приходили в Discord, коли вас немає в грі.",
+  "You're already in the Ludo community 👍": "Ви вже у спільноті Ludo 👍",
+  "+{coins} coins for joining": "+{coins} монет за приєднання",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "Друзі можуть писати вам, поки вас немає. Приєднайтеся до нашого сервера Discord, щоб їхні повідомлення приходили в Discord."
 }

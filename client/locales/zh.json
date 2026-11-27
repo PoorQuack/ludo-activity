@@ -1108,5 +1108,11 @@
   "To": "到",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord 只允许 Ludo 机器人给与它在同一服务器的人发消息。加入我们的服务器，通知才能送达。",
   "Join our server": "加入我们的服务器",
-  "{name} has quiet hours on right now": "{name} 现在处于免打扰时段"
+  "{name} has quiet hours on right now": "{name} 现在处于免打扰时段",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 感谢加入 Ludo 社区！+{coins} 金币",
+  "🎉 Welcome to the Ludo community!": "🎉 欢迎加入 Ludo 社区！",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "有人提到了你！加入我们的 Discord 服务器，不在游戏时也能在 Discord 收到提及。",
+  "You're already in the Ludo community 👍": "你已经在 Ludo 社区里了 👍",
+  "+{coins} coins for joining": "加入即得 +{coins} 金币",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "你不在时好友也能给你发消息。加入我们的 Discord 服务器，就能在 Discord 收到这些消息。"
 }

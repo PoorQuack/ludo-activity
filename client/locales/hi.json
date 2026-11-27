@@ -1108,5 +1108,11 @@
   "To": "तक",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord, Ludo बॉट को सिर्फ़ उन्हीं लोगों को संदेश भेजने देता है जो उसके साथ कोई सर्वर साझा करते हैं। सूचनाएँ पाने के लिए हमारे सर्वर से जुड़ें।",
   "Join our server": "हमारे सर्वर से जुड़ें",
-  "{name} has quiet hours on right now": "{name} के अभी शांत घंटे चल रहे हैं"
+  "{name} has quiet hours on right now": "{name} के अभी शांत घंटे चल रहे हैं",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Ludo समुदाय से जुड़ने के लिए धन्यवाद! +{coins} सिक्के",
+  "🎉 Welcome to the Ludo community!": "🎉 Ludo समुदाय में आपका स्वागत है!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "किसी ने आपको मेंशन किया! हमारे Discord सर्वर से जुड़ें ताकि आपके दूर रहने पर पिंग Discord पर पहुँचें।",
+  "You're already in the Ludo community 👍": "आप पहले से Ludo समुदाय में हैं 👍",
+  "+{coins} coins for joining": "जुड़ने पर +{coins} सिक्के",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "आपके दूर रहने पर दोस्त आपको संदेश भेज सकते हैं। हमारे Discord सर्वर से जुड़ें ताकि उनके संदेश Discord पर पहुँचें।"
 }

@@ -9,7 +9,7 @@ import { WebSocketServer } from 'ws';
 import { RoomDirectory } from './rooms.js';
 import { Purchases, parseSkus } from './purchases.js';
 import { parseStripePrices, renderResultPage, renderStorePage, StripeStore } from './stripe.js';
-import { ProfileStore } from './store.js';
+import { ProfileStore, JOIN_REWARD } from './store.js';
 import { Leaderboard } from './leaderboard.js';
 import { QuestBook } from './quests.js';
 import { TokenBucket, KeyedLimiter, TtlCache } from './limits.js';
@@ -182,6 +182,37 @@ app.post('/api/token', (req, res, next) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// One-tap "Join our Discord server" (see invite.js addMember): the code is from a second
+// authorize in the game with the guilds.join permission, which the player approves in Discord.
+app.post('/api/join-server', (req, res, next) => {
+  if (!tokenLimiter.hit(clientIp(req))) return res.status(429).json({ error: 'Too many requests' });
+  next();
+}, async (req, res) => {
+  try {
+    const code = req.body?.code;
+    if (!code || !invite.enabled) return res.status(400).json({ error: 'Missing code' });
+    const r = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'authorization_code', code }),
+    });
+    const tok = await r.json();
+    if (!r.ok || !String(tok.scope || '').split(' ').includes('guilds.join')) return res.status(400).json({ error: 'Not approved' });
+    const me = await fetch('https://discord.com/api/v10/users/@me', { headers: { Authorization: `Bearer ${tok.access_token}` } });
+    const user = me.ok ? await me.json() : null;
+    if (!user?.id) return res.status(400).json({ error: 'Not approved' });
+    const done = await invite.addMember(user.id, tok.access_token);
+    if (!done) {
+      console.warn(`Join server for ${user.id} failed: ${invite.lastError}`);
+      return res.status(502).json({ error: 'fallback', url: invite.url });
+    }
+    res.json({ ok: true, already: done === 'already', coins: joinedServer(user.id) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'fallback', url: invite.url });
   }
 });
 
@@ -668,16 +699,29 @@ const invite = new ServerInvite({
   url: (process.env.INVITE_URL ?? 'https://discord.gg/vByCBThFbM').trim(),
   token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
 });
+// They're in our Discord server (just joined, or found to be): DMs can reach them now, and the
+// one-time thank-you coins. Returns the coins paid (0 if already paid).
+function joinedServer(userId) {
+  inServer.set(userId, true);
+  notifier.refused.delete(userId);
+  const coins = store.joinReward(userId);
+  if (coins) {
+    sendProfile(userId);
+    sendTo(userId, { type: 'serverJoined', coins });
+  }
+  sendFriends(userId);
+  return coins;
+}
 async function maybeInvite(ws, userId) {
   if (!invite.enabled) return;
   const member = await invite.isMember(userId);
-  if (member !== null && inServer.get(userId) !== member) {
-    inServer.set(userId, member);
-    if (member) notifier.refused.delete(userId); // joined: worth trying DMs again
+  if (member === true && (inServer.get(userId) !== true || !store.peek(userId)?.joinPaid)) return joinedServer(userId);
+  if (member === false && inServer.get(userId) !== false) {
+    inServer.set(userId, false);
     sendFriends(userId);
   }
   if (!store.wantsInvite(userId)) return;
-  if (member === true) return store.answerInvite(userId, 'join'); // already in
+  if (member === true) return; // already in
   if (ws.readyState === 1 && store.wantsInvite(userId)) ws.send(JSON.stringify({ type: 'invite', url: invite.url }));
 }
 const social = new SocialBook(SOCIAL_FILE);
@@ -697,7 +741,15 @@ const inServer = new Map();
 const dms = new DirectMessages(DMS_FILE, { profiles: store, social, isOnline });
 function sendFriends(userId) {
   const reach = notifier.refused.has(userId) ? false : inServer.get(userId);
-  sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null, inServer: reach ?? null });
+  const prof = store.peek(userId);
+  sendTo(userId, {
+    type: 'friends',
+    ...social.view(userId, isOnline),
+    inviteUrl: invite.enabled ? invite.url : null,
+    inServer: reach ?? null,
+    joinCoins: prof && !prof.joinPaid && !String(userId).startsWith('guest-') ? JOIN_REWARD : 0, // the thank-you for joining
+    joinNever: prof?.invite?.status === 'never', // ticked "Don't ask again"
+  });
 }
 // The inbox: personal notices, announcements, and (from the friends book) requests waiting
 const inbox = new Inbox(INBOX_FILE);

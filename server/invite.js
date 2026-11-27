@@ -53,4 +53,29 @@ export class ServerInvite {
       return null;
     }
   }
+
+  // One-tap join from inside the game: the player approved "join servers for you" (guilds.join)
+  // in Discord's own window, and their access token says so. The bot adds them to our server
+  // (it needs the Create Invite permission there). 'added', 'already', or null if it couldn't.
+  async addMember(userId, accessToken) {
+    if (!this.token || !/^\d+$/.test(userId) || !accessToken) return null;
+    const guildId = await this.guild();
+    if (!guildId) return null;
+    try {
+      const r = await this.fetch(`${API}/guilds/${guildId}/members/${userId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bot ${this.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken }),
+      });
+      if (r.status !== 201 && r.status !== 204) {
+        this.lastError = `add member: ${r.status} ${(await r.text().catch(() => '')).slice(0, 200)}`;
+        return null;
+      }
+      this.members.set(userId, { member: true, at: this.now() });
+      return r.status === 201 ? 'added' : 'already';
+    } catch (err) {
+      this.lastError = `add member: ${err.message}`;
+      return null;
+    }
+  }
 }

@@ -199,7 +199,9 @@ function watchLayoutMode(sdk) {
   });
 }
 
+let discordClientId = '';
 async function discordLogin(clientId) {
+  discordClientId = clientId;
   setLoading(t('Talking to Discord…'));
   const sdk = new DiscordSDK(clientId);
   discordSdk = sdk;
@@ -338,7 +340,10 @@ function connect() {
     else if (msg.type === 'dmSummary' || msg.type === 'dmHistory' || msg.type === 'dmMsg' || msg.type === 'dmReact') onDmMessage(msg);
     else if (msg.type === 'translated') onTranslated(msg);
     else if (msg.type === 'mention') {
-      if (!isHiddenUser(msg.fromId)) mentionNotice(msg.from, () => openLobbyTab(msg.channel));
+      if (!isHiddenUser(msg.fromId)) {
+        mentionNotice(msg.from, () => openLobbyTab(msg.channel));
+        setTimeout(() => askToJoin('mention'), 4000); // (after the notice)
+      }
     }
     else if (msg.type === 'trFeedback') onTrFeedback(msg);
     else if (msg.type === 'awards') showAwards(msg.awards);
@@ -354,7 +359,9 @@ function connect() {
     else if (msg.type === 'invite') showInvite(msg.url);
     else if (msg.type === 'daily') onDailyRoll(msg);
     else if (msg.type === 'friends') {
+      const hadFriends = friendsData ? friendsData.friends.length : null;
       friendsData = msg;
+      if (hadFriends !== null && msg.friends.length > hadFriends) setTimeout(() => askToJoin('friend'), 1500); // a new friend
       renderFriends();
       if (!$('room-friends-modal').classList.contains('hidden')) renderRoomFriends();
       renderPrefs();
@@ -390,6 +397,9 @@ function connect() {
         if (msg.error || !msg.url) w.reject(new Error(msg.error || 'Checkout unavailable'));
         else w.resolve(msg.url);
       }
+    } else if (msg.type === 'serverJoined') {
+      sfx('buy');
+      toast(t('🎉 Thanks for joining the Ludo community! +{coins} coins', { coins: msg.coins }), 'ok', 5500);
     } else if (msg.type === 'referral') {
       sfx('buy');
       toast(t('🎉 {name} played their first game: +{coins} coins for inviting them!', { name: msg.name, coins: msg.coins }), 'ok', 5000);
@@ -1596,11 +1606,9 @@ function showInvite(url) {
     card.classList.add('hidden');
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'invite', answer: value }));
   };
-  $('invite-join').onclick = () => {
-    // Inside Discord, invite links open Discord's own "Join server" window
-    if (discordSdk) discordSdk.commands.openExternalLink({ url }).catch(() => {});
-    else window.open(url, '_blank', 'noopener');
-    answer('join');
+  $('invite-join').onclick = async () => {
+    const how = await joinServer(url);
+    if (how !== 'cancelled') answer('join');
   };
   $('invite-no').onclick = () => answer('later');
   $('invite-never').onclick = () => answer('never');
@@ -1905,7 +1913,7 @@ $('pref-quiet').addEventListener('click', () => {
   $('quiet-to').value = '8';
   saveQuiet(true);
 });
-$('pings-join').addEventListener('click', () => $('friends-discord').onclick?.());
+$('pings-join').addEventListener('click', () => joinServer());
 applyPrefs();
 
 // ---------------- language ----------------
@@ -2376,12 +2384,73 @@ for (const b of document.querySelectorAll('[data-ftab]')) {
 }
 // The Discord server invite, always on hand in the Friends card (the launch card only
 // shows until you join or say no). Same link the invite card uses.
-$('friends-discord').onclick = () => {
-  const url = friendsData?.inviteUrl;
-  if (!url) return;
-  if (discordSdk) discordSdk.commands.openExternalLink({ url }).catch(() => {});
-  else window.open(url, '_blank', 'noopener');
+$('friends-discord').onclick = () => joinServer();
+
+// Our Discord server, joined in one tap without leaving the game: Discord asks the player to
+// approve "join servers for you" (guilds.join), then the bot adds them. Anything else (in a
+// browser, or the bot can't) opens the invite link instead. 'joined' | 'opened' | 'cancelled'
+async function joinServer(url = friendsData?.inviteUrl) {
+  const openLink = () => {
+    if (!url) return 'cancelled';
+    if (discordSdk) discordSdk.commands.openExternalLink({ url }).catch(() => {});
+    else window.open(url, '_blank', 'noopener');
+    return 'opened';
+  };
+  if (!discordSdk || !discordClientId) return openLink();
+  let code;
+  try {
+    ({ code } = await discordSdk.commands.authorize({ client_id: discordClientId, response_type: 'code', state: '', scope: ['identify', 'guilds.join'] }));
+  } catch {
+    return 'cancelled'; // they closed Discord's window
+  }
+  try {
+    const r = await fetch(`${BASE}/api/join-server`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok) {
+      // (the thank-you coins come with their own message)
+      if (!j.coins) toast(j.already ? t("You're already in the Ludo community 👍") : t('🎉 Welcome to the Ludo community!'), 'ok', 4000);
+      if (friendsData) friendsData.inServer = true;
+      $('join-prompt').classList.add('hidden');
+      $('invite-card').classList.add('hidden');
+      renderPrefs();
+      return 'joined';
+    }
+  } catch {}
+  return openLink();
+}
+
+// Asked when joining helps (a new friend, a ping): once for each reason, at most once a day, and
+// never after "Don't ask again" or once they're in
+const JOIN_ASK_KEY = 'ludo-join-asked';
+const JOIN_ASK_TEXT = {
+  friend: () => t('Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.'),
+  mention: () => t('Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.'),
 };
+function askToJoin(reason) {
+  if (friendsData?.inServer !== false || !friendsData?.inviteUrl || friendsData?.joinNever) return;
+  let asked = {};
+  try {
+    asked = JSON.parse(localStorage.getItem(JOIN_ASK_KEY) || '{}') || {};
+  } catch {}
+  if (asked[reason] || Date.now() - (asked.last || 0) < 86_400_000) return;
+  asked[reason] = 1;
+  asked.last = Date.now();
+  try {
+    localStorage.setItem(JOIN_ASK_KEY, JSON.stringify(asked));
+  } catch {}
+  $('join-prompt-text').textContent = JOIN_ASK_TEXT[reason]();
+  const coins = friendsData?.joinCoins || 0;
+  $('join-prompt-coins').textContent = coins ? t('+{coins} coins for joining', { coins }) : '';
+  $('join-prompt-coins').classList.toggle('hidden', !coins);
+  $('join-prompt').classList.remove('hidden');
+  clearTimeout(askToJoin.timer);
+  askToJoin.timer = setTimeout(() => $('join-prompt').classList.add('hidden'), 20_000);
+}
+$('join-prompt-go').onclick = () => {
+  $('join-prompt').classList.add('hidden');
+  joinServer();
+};
+$('join-prompt-x').onclick = () => $('join-prompt').classList.add('hidden');
 renderFriends();
 
 // ---------- room invite-friends modal ----------

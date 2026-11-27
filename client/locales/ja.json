@@ -1108,5 +1108,11 @@
   "To": "終了",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "DiscordではLudoのボットは同じサーバーにいる人にしかメッセージを送れません。通知を受け取るにはサーバーに参加してください。",
   "Join our server": "サーバーに参加",
-  "{name} has quiet hours on right now": "{name}さんは今おやすみ時間です"
+  "{name} has quiet hours on right now": "{name}さんは今おやすみ時間です",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Ludoコミュニティへの参加ありがとう！ +{coins}コイン",
+  "🎉 Welcome to the Ludo community!": "🎉 Ludoコミュニティへようこそ！",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "誰かがあなたをメンションしました！Discordサーバーに参加すると、離れているときもDiscordでメンションが届きます。",
+  "You're already in the Ludo community 👍": "すでにLudoコミュニティに参加しています 👍",
+  "+{coins} coins for joining": "参加で+{coins}コイン",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "離れている間もフレンドはメッセージを送れます。Discordサーバーに参加すると、そのメッセージがDiscordに届きます。"
 }

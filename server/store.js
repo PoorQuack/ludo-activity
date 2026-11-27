@@ -32,6 +32,8 @@ const MIGRATIONS = [
   }),
 ];
 
+export const JOIN_REWARD = 100; // coins for joining our Discord server
+
 export class ProfileStore {
   constructor(file, { onChange, onBadge, freeShop = false, now = Date.now } = {}) {
     this.file = file;
@@ -154,6 +156,19 @@ export class ProfileStore {
     else if (answer === 'later') p.invite = { status: '', until: this.now() + snoozeMs };
     else return;
     this.save();
+  }
+
+  // The thank-you for joining our Discord server: once per account, ever (leaving and joining
+  // again doesn't pay twice). Returns the coins paid, or 0.
+  joinReward(id, coins = JOIN_REWARD) {
+    if (String(id).startsWith('guest-')) return 0;
+    const p = this.get(id);
+    if (p.joinPaid) return 0;
+    p.joinPaid = true;
+    p.coins += coins;
+    p.invite = { status: 'joined', until: 0 };
+    this.changed(id);
+    return coins;
   }
 
   // Grants up to what's left under the daily earning cap and returns the granted amount.
@@ -669,7 +684,7 @@ function normalize(p) {
     botCaptures: nonNeg(p.played?.botCaptures),
     botSixes: nonNeg(p.played?.botSixes),
   };
-  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, played, badges, title, pins, pass, passUntil, packs, starter };
+  const profile = { coins: Number.isFinite(p.coins) ? p.coins : STARTING_COINS, gems, earned, owned, equipped: { ...DEFAULT_EQUIPPED }, invite, daily, streak, ref, bought, stats, played, badges, title, pins, pass, passUntil, packs, starter, ...(p.joinPaid ? { joinPaid: true } : {}) };
   for (const [type, id] of Object.entries(p.equipped || {})) {
     if (ITEMS[id]?.type === type && ownsItem(profile, id)) profile.equipped[type] = id;
   }

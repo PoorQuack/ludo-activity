@@ -1108,5 +1108,11 @@
   "To": "종료",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord에서는 Ludo 봇이 같은 서버에 있는 사람에게만 메시지를 보낼 수 있어요. 알림을 받으려면 서버에 참여하세요.",
   "Join our server": "서버 참여하기",
-  "{name} has quiet hours on right now": "{name}님은 지금 방해 금지 시간이에요"
+  "{name} has quiet hours on right now": "{name}님은 지금 방해 금지 시간이에요",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 Ludo 커뮤니티에 참여해 줘서 고마워요! +{coins} 코인",
+  "🎉 Welcome to the Ludo community!": "🎉 Ludo 커뮤니티에 오신 걸 환영해요!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "누군가 나를 멘션했어요! Discord 서버에 참여하면 자리를 비웠을 때도 Discord로 멘션을 받을 수 있어요.",
+  "You're already in the Ludo community 👍": "이미 Ludo 커뮤니티에 참여 중이에요 👍",
+  "+{coins} coins for joining": "참여하면 +{coins} 코인",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "자리를 비운 동안에도 친구가 메시지를 보낼 수 있어요. Discord 서버에 참여하면 그 메시지가 Discord로 와요."
 }

@@ -1108,5 +1108,11 @@
   "To": "إلى",
   "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "لا يسمح Discord لبوت Ludo بمراسلة إلا من يشاركونه خادمًا. انضم إلى خادمنا لتصلك إشعاراتك.",
   "Join our server": "انضم إلى خادمنا",
-  "{name} has quiet hours on right now": "{name} في ساعات الهدوء الآن"
+  "{name} has quiet hours on right now": "{name} في ساعات الهدوء الآن",
+  "🎉 Thanks for joining the Ludo community! +{coins} coins": "🎉 شكرًا لانضمامك إلى مجتمع Ludo! +{coins} عملة",
+  "🎉 Welcome to the Ludo community!": "🎉 أهلًا بك في مجتمع Ludo!",
+  "Someone mentioned you! Join our Discord server so pings reach you on Discord when you are away.": "أشار إليك أحدهم! انضم إلى خادمنا على Discord لتصلك الإشارات على Discord عندما تكون بعيدًا.",
+  "You're already in the Ludo community 👍": "أنت بالفعل في مجتمع Ludo 👍",
+  "+{coins} coins for joining": "+{coins} عملة عند الانضمام",
+  "Friends can message you while you are away. Join our Discord server so those messages reach you on Discord.": "يمكن لأصدقائك مراسلتك وأنت بعيد. انضم إلى خادمنا على Discord لتصلك رسائلهم على Discord."
 }

@@ -3090,3 +3090,15 @@ html.pip:not(:has(#game:not(.hidden))) .pip-card {
 .pings-reach { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 2px 0 10px 46px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 13px; color: var(--muted); }
 .pings-reach span { flex: 1 1 220px; }
 @media (max-width: 420px) { .quiet-times, .pings-reach { margin-left: 0; padding-left: 0; } .pings-reach { padding-left: 12px; } }
+
+/* "Join our Discord server", asked at the right moment: a card at the top (toasts use the bottom) */
+.join-prompt {
+  position: fixed; z-index: 65; left: calc(var(--sail, 0px) + 12px); right: calc(var(--sair, 0px) + 12px);
+  top: calc(var(--top-gap, 0px) + 12px); margin: 0 auto; max-width: 460px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
+  padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); animation: modal-in 0.18s ease-out;
+}
+.join-prompt p { margin: 0; font-size: 12.5px; line-height: 1.35; }
+.join-prompt-coins { display: block; margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--gold, #f2bf3f); }
+html.pip .join-prompt { display: none; }
