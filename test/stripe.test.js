@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { ProfileStore } from '../server/store.js';
 import { parseStripePrices, StripeStore } from '../server/stripe.js';
+import { dailyDeals, dayKeyOf } from '../shared/shop.js';
 
 const tempFile = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'ludo-stripe-')), 'profiles.json');
 
@@ -166,7 +167,11 @@ test('Stripe Battle Pass subscription activates, renews on invoice.paid, and can
 
 test('Stripe refund and dispute claw back Die Gems, remove bought gem items, and revoke Battle Pass', async () => {
   const file = tempFile();
-  let store = new ProfileStore(file);
+  // a day when the Dragon's Lair board is at full price (not one of that day's 30%-off deals)
+  let day = Date.UTC(2026, 0, 1);
+  while (dailyDeals(dayKeyOf(day)).some((d) => d.id === 'board-lair')) day += 86_400_000;
+  const now = () => day;
+  let store = new ProfileStore(file, { now });
   store.get('33333333333333333');
 
   // 220 + 300 gems, then the Dragon's Lair board (500): 20 left
@@ -177,7 +182,7 @@ test('Stripe refund and dispute claw back Die Gems, remove bought gem items, and
   assert.equal(store.peek('33333333333333333').equipped.board, 'board-lair');
 
   // Reload from disk to confirm stripe: bought ids survive restart
-  store = new ProfileStore(file);
+  store = new ProfileStore(file, { now });
   assert.ok(store.peek('33333333333333333').bought.includes('stripe:cs_pack_1'));
 
   const s = new StripeStore({
