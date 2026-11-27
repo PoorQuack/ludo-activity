@@ -1093,5 +1093,8 @@
   "🧭 Getting started": "🧭 Начало игры",
   "🪙 Coins": "🪙 Монеты",
   "Undo": "Отменить",
-  "{name} mentioned you": "{name} упомянул(а) вас"
+  "{name} mentioned you": "{name} упомянул(а) вас",
+  "All In is people only: no bots": "Ва-банк только для людей: без ботов",
+  "All In needs at least 2 players": "Для ва-банка нужно минимум 2 игрока",
+  "Team games need every seat filled": "Для командной игры нужно занять все места"
 }

@@ -1093,5 +1093,8 @@
   "🧭 Getting started": "🧭 Prise en main",
   "🪙 Coins": "🪙 Pièces",
   "Undo": "Annuler",
-  "{name} mentioned you": "{name} t'a mentionné"
+  "{name} mentioned you": "{name} t'a mentionné",
+  "All In is people only: no bots": "All In, c’est entre joueurs : pas de bots",
+  "All In needs at least 2 players": "All In demande au moins 2 joueurs",
+  "Team games need every seat filled": "Les parties en équipe demandent que toutes les places soient prises"
 }

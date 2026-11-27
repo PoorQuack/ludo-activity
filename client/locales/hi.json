@@ -1093,5 +1093,8 @@
   "🧭 Getting started": "🧭 शुरुआत करें",
   "🪙 Coins": "🪙 सिक्के",
   "Undo": "वापस लें",
-  "{name} mentioned you": "{name} ने आपका ज़िक्र किया"
+  "{name} mentioned you": "{name} ने आपका ज़िक्र किया",
+  "All In is people only: no bots": "ऑल इन सिर्फ़ असली खिलाड़ियों के लिए है: बॉट नहीं",
+  "All In needs at least 2 players": "ऑल इन के लिए कम से कम 2 खिलाड़ी चाहिए",
+  "Team games need every seat filled": "टीम गेम में हर सीट भरी होनी चाहिए"
 }

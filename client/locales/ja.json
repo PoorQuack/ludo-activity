@@ -1093,5 +1093,8 @@
   "🧭 Getting started": "🧭 はじめに",
   "🪙 Coins": "🪙 コイン",
   "Undo": "元に戻す",
-  "{name} mentioned you": "{name}さんがあなたをメンションしました"
+  "{name} mentioned you": "{name}さんがあなたをメンションしました",
+  "All In is people only: no bots": "オールインは人間だけ：ボットは使えません",
+  "All In needs at least 2 players": "オールインには2人以上必要です",
+  "Team games need every seat filled": "チーム戦は全席が埋まっている必要があります"
 }

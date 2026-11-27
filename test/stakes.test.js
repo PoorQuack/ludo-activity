@@ -330,3 +330,15 @@ test("All In: trading wins between two players doesn't climb the leaderboard", (
   assert.equal(one.a + two.a, 0);
   assert.equal(one.b + two.b, 0);
 });
+
+test('All In rooms are people only: no bots can be added, filled or started with', async () => {
+  const { RoomDirectory } = await import('../server/rooms.js');
+  const dir = new RoomDirectory();
+  const ann = { id: 'ann', name: 'Ann' };
+  const room = dir.create(ann, { visibility: 'public', mode: '2p', stake: 100, winnerTakeAll: true });
+  assert.throws(() => room.handle(ann, { action: 'addBot', seat: room.seats.findIndex((s, i) => !s && room.seatsAllowed?.includes?.(i)) }), /no bots/);
+  assert.throws(() => room.handle(ann, { action: 'fillBots' }), /no bots/);
+  assert.equal(room.seats.filter((s) => s?.bot).length, 0);
+  assert.throws(() => room.handle(ann, { action: 'start' }), /at least 2 players/);
+  dir.destroy();
+});

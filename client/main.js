@@ -3385,7 +3385,7 @@ function renderPanel() {
         actions.className = 'seat-actions';
         if (!s) {
           actions.appendChild(button(seat >= 0 ? t('Switch') : t('Sit'), () => send('sit', { seat: i })));
-          if (isHost()) actions.appendChild(button(t('+ Bot'), () => send('addBot', { seat: i })));
+          if (isHost() && !state.winnerTakeAll) actions.appendChild(button(t('+ Bot'), () => send('addBot', { seat: i }))); // (All In: people only)
         } else if (seat === i) {
           actions.appendChild(button(t('Leave'), () => send('stand')));
         } else if (isHost()) {
@@ -3402,7 +3402,7 @@ function renderPanel() {
   // Alone in the room Play now made: after a little while, offer to start against bots
   const humans = state.seats.filter((x) => x && !x.bot).length;
   if (phase !== 'lobby' || humans > 1) loneSince = 0;
-  $('lone-card').classList.toggle('hidden', !(loneSince && isHost() && Date.now() - loneSince >= LONE_MS));
+  $('lone-card').classList.toggle('hidden', !(loneSince && isHost() && !state.winnerTakeAll && Date.now() - loneSince >= LONE_MS));
   els.playControls.classList.toggle('hidden', phase !== 'playing');
   if (phase === 'playing' && mySeat() >= 0) maybeTour(); // (the first game only)
   els.finishControls.classList.toggle('hidden', phase !== 'finished');
@@ -3411,7 +3411,7 @@ function renderPanel() {
     const count = state.seats.filter(Boolean).length;
     const empty = state.seatsAllowed.some((i) => !state.seats[i]);
     els.startBtn.classList.toggle('hidden', !isHost());
-    els.fillBtn.classList.toggle('hidden', !isHost() || !empty);
+    els.fillBtn.classList.toggle('hidden', !isHost() || !empty || !!state.winnerTakeAll);
     els.startBtn.disabled = count < 2;
     const hostName = state.seats.find((s) => s && s.userId === state.hostId)?.name;
     if (!state.hostId) {

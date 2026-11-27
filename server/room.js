@@ -308,6 +308,7 @@ export class Room {
   addBot(user, seat) {
     this.requirePhase('lobby');
     this.requireHost(user);
+    if (this.winnerTakeAll) throw new Error('All In is people only: no bots');
     if (!this.validSeat(seat) || this.seats[seat]) throw new Error('That seat is taken');
     this.seats[seat] = newBot(seat, 'medium', this.seats);
     this.changed();
@@ -326,6 +327,7 @@ export class Room {
   fillBots(user) {
     this.requirePhase('lobby');
     this.requireHost(user);
+    if (this.winnerTakeAll) throw new Error('All In is people only: no bots');
     for (const i of MODES[this.mode].seats) if (!this.seats[i]) this.seats[i] = newBot(i, 'medium', this.seats);
     this.changed();
   }
@@ -374,6 +376,12 @@ export class Room {
     this.requirePhase('lobby');
     this.requireHost(user);
     const active = this.activeSeats();
+    if (this.winnerTakeAll) {
+      // All In is people only (a room from before this rule could still have one seated)
+      if (active.some((i) => this.seats[i].bot)) throw new Error('All In is people only: no bots');
+      if (active.length < 2) throw new Error('All In needs at least 2 players');
+      if (this.teams && active.length < MODES[this.mode].seats.length) throw new Error('Team games need every seat filled');
+    }
     if (active.length < 2) throw new Error('Need at least 2 players (add a bot!)');
     if (this.teams && active.length < MODES[this.mode].seats.length) throw new Error('Team games need every seat filled (add bots!)');
     if (!active.some((i) => !this.seats[i].bot)) throw new Error('At least one human must play');

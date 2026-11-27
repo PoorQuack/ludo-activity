@@ -1093,5 +1093,8 @@
   "🧭 Getting started": "🧭 البداية السريعة",
   "🪙 Coins": "🪙 العملات",
   "Undo": "تراجع",
-  "{name} mentioned you": "أشار إليك {name}"
+  "{name} mentioned you": "أشار إليك {name}",
+  "All In is people only: no bots": "وضع الكل أو لا شيء للاعبين فقط: بلا روبوتات",
+  "All In needs at least 2 players": "وضع الكل أو لا شيء يحتاج لاعبَين على الأقل",
+  "Team games need every seat filled": "ألعاب الفرق تحتاج أن تُملأ كل المقاعد"
 }

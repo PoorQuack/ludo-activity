@@ -1093,5 +1093,8 @@
   "🧭 Getting started": "🧭 시작 가이드",
   "🪙 Coins": "🪙 코인",
   "Undo": "되돌리기",
-  "{name} mentioned you": "{name}님이 회원님을 언급했어요"
+  "{name} mentioned you": "{name}님이 회원님을 언급했어요",
+  "All In is people only: no bots": "올인은 사람끼리만: 봇은 안 돼요",
+  "All In needs at least 2 players": "올인은 최소 2명이 필요해요",
+  "Team games need every seat filled": "팀 게임은 모든 자리가 차야 해요"
 }
