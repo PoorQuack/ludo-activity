@@ -161,7 +161,7 @@ test('old saved "noPings" turns both kinds off', () => {
   assert.equal(b.acceptsPings('111111', 'mention'), false);
 });
 
-test('the card shows the sender like a Discord message: picture, name, Ludo stats, Open Ludo', async () => {
+test('the card shows the sender like a Discord message: picture, name, Open Ludo', async () => {
   const profiles = { 900001: { name: 'Ana', avatar: 'abc123', level: 12, wins: 30, games: 71 } };
   const { n, sent, run } = make({ appId: '777', profileOf: (id) => profiles[id] });
   n.message('123456', { fromId: '900001', from: 'Ana', text: 'yes' });
@@ -172,7 +172,7 @@ test('the card shows the sender like a Discord message: picture, name, Ludo stat
   assert.equal(e.author.name, 'Ana sent you a message');
   assert.equal(e.author.icon_url, 'https://cdn.discordapp.com/avatars/900001/abc123.png?size=128');
   assert.equal(e.description, 'yes');
-  assert.deepEqual(e.fields.map((f) => [f.name, f.value]), [['Level', '12'], ['Wins', '30'], ['Games', '71']]);
+  assert.equal(e.fields, undefined); // no stats in a DM
   assert.equal(m.components[0].components[0].url, 'https://discord.com/activities/777?custom_id=dm-900001');
   // no picture: Discord's default one
   n.mention('123456', { fromId: '4194304', from: 'Zed', text: 'hi', where: 'lang' });

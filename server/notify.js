@@ -9,8 +9,7 @@
 //    (⚙ Settings → General: mentions, friends' messages).
 //  - Each player's DMs go out one at a time, in order. When Discord says "slow down" (429),
 //    we wait the time it asks and carry on, so nothing is dropped.
-//  - Each DM is a card per sender: their Discord name and picture, their Ludo level, wins and
-//    games, the message, and an "Open Ludo" button that opens the activity on that chat.
+//  - Each DM is a card per sender: their Discord name and picture, the message, and an "Open Ludo" button that opens the activity on that chat.
 //  - The DM channel with each player is remembered, so a notice is one call to Discord, not two.
 //  - Bots can only DM people who share a server with them. When Discord refuses, that player is
 //    skipped for an hour (they may join the server) instead of being retried on every message.
@@ -53,7 +52,7 @@ export class DiscordNotifier {
     this.allowed = allowed; // (userId, 'mention' | 'dm') => false when they turned that kind off
     this.isOnline = isOnline; // (userId) => true while they have the game open
     this.quietNow = quietNow; // (userId) => true during their quiet hours
-    this.profileOf = profileOf; // (userId) => { name, avatar (Discord hash or ''), level, wins, games } for the card
+    this.profileOf = profileOf; // (userId) => { name, avatar (Discord hash or '') } for the card
     this.appId = appId; // the activity's application id, for the "Open Ludo" link
     this.timers = timers;
     this.waiting = new Map(); // userId -> { mentions: Map, messages: Map, timer }
@@ -212,7 +211,7 @@ export function openLink(appId, e) {
   return `https://discord.com/activities/${appId}?custom_id=${encodeURIComponent(to)}`;
 }
 
-// One sender's card: their name and picture at the top, what they said, their Ludo stats
+// One sender's card: their name and picture at the top, and what they said
 function card(e, profileOf) {
   const p = profileOf(e.fromId) || {};
   const name = plain(p.name || e.from, 60) || (e.kind === 'dm' ? 'A friend' : 'Someone');
@@ -220,16 +219,11 @@ function card(e, profileOf) {
     e.kind === 'dm'
       ? e.count === 1 ? 'sent you a message' : `sent you ${e.count} messages`
       : `mentioned you${times(e.count)} in ${PLACE[e.where] || PLACE.global}`;
-  const fields = [];
-  if (p.level) fields.push({ name: 'Level', value: String(p.level), inline: true });
-  if (p.wins != null) fields.push({ name: 'Wins', value: String(p.wins), inline: true });
-  if (p.games != null) fields.push({ name: 'Games', value: String(p.games), inline: true });
   return {
     color: COLOR[e.kind],
     author: { name: `${name} ${what}`.slice(0, 256), icon_url: avatarUrl(e.fromId, p.avatar || '') },
     description: plain(e.text, 600) || '…',
     thumbnail: { url: avatarUrl(e.fromId, p.avatar || '') },
-    ...(fields.length ? { fields } : {}),
     footer: { text: 'Ludo' },
     timestamp: new Date(e.at || Date.now()).toISOString(),
   };

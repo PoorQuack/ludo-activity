@@ -689,10 +689,7 @@ const notifier = new DiscordNotifier({
   isOnline,
   quietNow: (id) => social.quietNow(id),
   appId: CLIENT_ID,
-  profileOf: (id) => {
-    const p = store.peek(id);
-    return { name: social.names.get(id), avatar: social.avatars.get(id) || '', level: p ? playerLevel(p) : null, wins: p?.played?.wins ?? null, games: p?.played?.games ?? null };
-  },
+  profileOf: (id) => ({ name: social.names.get(id), avatar: social.avatars.get(id) || '' }),
 });
 // Whether the bot can reach someone on Discord (it shares our server with them): true / false,
 // or unknown. Shown in Settings so players outside the server know to join for notifications.
