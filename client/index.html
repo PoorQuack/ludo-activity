@@ -10,6 +10,13 @@
   </head>
   <body>
     <div id="app">
+      <!-- Discord's mini window: a preview card (see setPip in main.js) -->
+      <div id="pip-card" class="pip-card" aria-hidden="true">
+        <div class="pip-logo"><i></i><i></i><i></i><i></i></div>
+        <b>Ludo</b>
+        <span id="pip-status"></span>
+        <small data-i18n>Click to open</small>
+      </div>
       <div id="loading" class="overlay">
         <div class="spinner"></div>
         <p data-i18n id="loading-text">Connecting…</p>

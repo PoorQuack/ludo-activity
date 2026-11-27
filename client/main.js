@@ -181,11 +181,30 @@ async function main() {
   }
 }
 
+// Discord's mini window (picture-in-picture, when you leave the activity's channel): too small to
+// use, and a click there takes you back to the activity. So it shows a preview: the board during
+// a game, otherwise a small Ludo card. Back to the full layout when it's focused again.
+function setPip(on) {
+  document.documentElement.classList.toggle('pip', !!on);
+  if (on) {
+    $('pip-status').textContent = $('online-text')?.textContent || '';
+    if (screen === 'game') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  } else requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+}
+function watchLayoutMode(sdk) {
+  const PIP = 1; // Common.LayoutModeTypeObject.PIP
+  sdk.subscribe('ACTIVITY_LAYOUT_MODE_UPDATE', (d) => setPip(d?.layout_mode === PIP)).catch(() => {
+    // older Discord apps only send the PiP event
+    sdk.subscribe('ACTIVITY_PIP_MODE_UPDATE', (d) => setPip(!!d?.is_pip_mode)).catch(() => {});
+  });
+}
+
 async function discordLogin(clientId) {
   setLoading(t('Talking to Discord…'));
   const sdk = new DiscordSDK(clientId);
   discordSdk = sdk;
   await sdk.ready();
+  watchLayoutMode(sdk);
   const { code } = await sdk.commands.authorize({
     client_id: clientId,
     response_type: 'code',

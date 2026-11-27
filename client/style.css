@@ -3061,3 +3061,24 @@ button, .btn { touch-action: manipulation; }
 .toast.tap { pointer-events: auto; cursor: pointer; }
 #lobby-chat { position: relative; }
 .toast.ok.tap { background: #d9573b; }
+
+/* ---------- Discord's mini window (picture-in-picture): a preview ----------
+   In a game: just the board. Anywhere else: a small Ludo card. A click returns to the activity. */
+.pip-card { display: none; }
+html.pip #game .panel, html.pip .toast, html.pip #turn-pop, html.pip .modal-wrap { display: none !important; }
+html.pip #game { padding: 4px; gap: 0; justify-content: center; }
+html.pip:not(:has(#game:not(.hidden))) .pip-card {
+  display: flex; position: fixed; inset: 0; z-index: 9999; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: radial-gradient(circle at 50% 35%, #2c231b, #15110d 75%); color: #f7efe6; text-align: center; padding: 10px;
+}
+.pip-card b { font-family: var(--display); font-size: clamp(20px, 9vh, 34px); line-height: 1; }
+.pip-card span { font-size: 13px; color: #cdbfae; }
+.pip-card span:empty { display: none; }
+.pip-card small { font-size: 11px; color: #8f8172; }
+.pip-logo { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: clamp(34px, 16vh, 56px); aspect-ratio: 1; padding: 4px; border-radius: 12px; background: #f7efe6; transform: rotate(-8deg); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); margin-bottom: 4px; }
+.pip-logo i { border-radius: 4px; }
+.pip-logo i:nth-child(1) { background: #e8483f; } .pip-logo i:nth-child(2) { background: #2fb36a; }
+.pip-logo i:nth-child(3) { background: #3b82f6; } .pip-logo i:nth-child(4) { background: #f2bf3f; }
+/* the picture (and a big frame round it) sits above the bubble's tail, whose cut-out is painted
+   in the chat's background colour and showed as a square over large frames */
+:is([data-chat], #lobby-chat) .chat-log .chat-av { position: relative; z-index: 3; }
