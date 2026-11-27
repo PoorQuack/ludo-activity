@@ -26,7 +26,7 @@ changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
 - The owner didn't like the overhauled original sprites, so commit 4ec7d39 is reverted: Classic,
   Neon, Dino, Samurai, Football, Crown, Dragon and Constellation are back to their original look,
   with the original frames, stickers, icons and textures. The 3 dice it added (football, crystal,
-  samurai) are gone; the one player who had bought them got 830 gems back.
+  samurai) are gone. One player (1211649569352450090) had bought all three (830 gems); refund is up to the owner.
 - Kept: wide bundle tokens fit in shop cards (7df0788).
 - Antigravity: don't reapply that pack. The 10 Carbon bundles (VFX remake) are unaffected.
 
