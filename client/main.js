@@ -5874,15 +5874,6 @@ for (const b of document.querySelectorAll('[data-hub-tab]')) {
 }
 for (const b of document.querySelectorAll('[data-hub-home]')) b.addEventListener('click', () => setPanel(''));
 wide.addEventListener('change', () => setPanel($('menu').dataset.panel));
-// Wide screens: the open rooms list fills the side column under Quests; phones keep it in the menu
-const roomsSec = $('rooms-sec');
-const roomsHome = roomsSec.parentElement;
-function placeRooms() {
-  const to = wide.matches ? $('side-rooms') : roomsHome;
-  if (roomsSec.parentElement !== to) to.appendChild(roomsSec);
-}
-wide.addEventListener('change', placeRooms);
-placeRooms();
 setPanel('');
 
 // Little dots on the dock: the daily roll is ready (Quests), a friend request is waiting (Friends)

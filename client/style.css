@@ -3009,10 +3009,6 @@ button, .btn { touch-action: manipulation; }
 @media (hover: hover) and (pointer: fine) { .lb-how-box summary:hover { color: var(--text); } }
 .lb-how-box .lb-how { margin-top: 4px; text-align: start; }
 
-/* wide screens: Open rooms sits in the side column under Quests */
-.side-rooms:empty { display: none; }
-.side-rooms .menu-sec { margin-top: 4px; padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); }
-.side-rooms .room-list { max-height: 52vh; overflow-y: auto; }
 /* wide screens: toasts in the bottom-right corner, clear of the menu's buttons */
 @media (min-width: 900px) { :root:not(.kb-open) .toast { left: auto; right: 24px; transform: none; } }
 @media (min-width: 900px) { :root:not(.kb-open) .toast { animation-name: toast-in-corner; } }
