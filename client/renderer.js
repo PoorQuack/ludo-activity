@@ -117,6 +117,13 @@ export class BoardRenderer {
     this.size = 0; // redraw at the new sharpness (Low draws at 1.5×)
   }
 
+  // The effect layer (mist, snow, light...) only takes part in compositing when it has something
+  // on it: an empty, transparent canvas over the whole board was still blended every frame
+  showFx(on) {
+    const v = on ? '' : 'hidden';
+    if (this.fx && this.fx.style.visibility !== v) this.fx.style.visibility = v;
+  }
+
   // A seat's colour on this board (the colour-blind palette when that's on).
   seatColor(seat) {
     const name = this.board.colors[seat];
@@ -508,6 +515,7 @@ export class BoardRenderer {
       if (this.fxStill !== lit) {
         this.fxStill = lit;
         this.fxLive = true;
+        this.showFx(true);
         const f = this.fx.getContext('2d');
         f.setTransform(1, 0, 0, 1, 0, 0);
         f.clearRect(0, 0, this.fx.width, this.fx.height);
@@ -521,12 +529,14 @@ export class BoardRenderer {
       if (this.fxLive !== false) {
         this.fxLive = false;
         this.fx.getContext('2d').clearRect(0, 0, this.fx.width, this.fx.height);
+        this.showFx(false);
       }
       return;
     }
     if (now - this.fxAt < 32 && now >= this.fxAt) return;
     this.fxAt = now;
     this.fxLive = true;
+    this.showFx(true);
     const f = this.fx.getContext('2d');
     f.setTransform(1, 0, 0, 1, 0, 0);
     f.clearRect(0, 0, this.fx.width, this.fx.height);

@@ -1514,13 +1514,12 @@ html, body {
   box-shadow: 0 0 0 3px var(--my-color, var(--accent)), 0 0 24px 6px var(--my-color, var(--accent));
   will-change: opacity;
 }
-.turn-ring.on { animation: my-turn-glow 1.6s ease-in-out infinite; }
-@keyframes my-turn-glow {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-}
+/* Its pulse (0.35 → 1 → 0.35 every 1.6 s) is set from the board's own frame loop (main.js, frame):
+   as a CSS animation it made the GPU recomposite the whole board at the screen's full rate
+   (120 times a second on high-refresh phones) even while the board itself stood still. */
+.turn-ring.on { opacity: 0.35; }
 @media (prefers-reduced-motion: reduce) {
-  .turn-ring.on { animation: none; opacity: 0.8; }
+  .turn-ring.on { opacity: 0.8 !important; }
 }
 
 /* Pixel-art stickers stay crisp when scaled */

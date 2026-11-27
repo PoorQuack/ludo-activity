@@ -3,6 +3,28 @@ import { TAU, circle, drawStar, hexA, mix, path, polygon, roundRect, sparkle, zo
 
 // ---------- tokens ----------
 
+// A token's shadow on the board: an ellipse (0.95 × 0.40 of its radius) filled with a circular
+// gradient as wide as the ellipse. Same picture at every size, so it's made once.
+let shadowPic = null;
+function groundShadow() {
+  if (shadowPic) return shadowPic;
+  const W = 190;
+  const H = 80; // 0.40 / 0.95 of the width, as drawn
+  shadowPic = document.createElement('canvas');
+  shadowPic.width = W;
+  shadowPic.height = H;
+  const g = shadowPic.getContext('2d');
+  const sg = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2);
+  sg.addColorStop(0, 'rgba(0,0,0,0.38)');
+  sg.addColorStop(0.55, 'rgba(0,0,0,0.18)');
+  sg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.beginPath();
+  g.ellipse(W / 2, H / 2, W / 2, H / 2, 0, 0, TAU);
+  g.fillStyle = sg;
+  g.fill();
+  return shadowPic;
+}
+
 // Draws one 3D pawn standing on (x, y). `lift` raises it (px), `squash` < 1 flattens it on landing.
 // `t` (ms): the time, for skins with a moving effect (the Legendary ones); leave it out for a
 // still picture.
@@ -11,14 +33,9 @@ export function drawToken(ctx, x, y, r, hex, skin, { lift = 0, squash = 1, sign 
   const shrink = 1 - Math.min(0.45, lift / (r * 4));
   const sw = r * 0.95 * shrink;
   const sh = r * 0.4 * shrink;
-  const sg = ctx.createRadialGradient(x, gy, 0, x, gy, sw);
-  sg.addColorStop(0, 'rgba(0,0,0,0.38)');
-  sg.addColorStop(0.55, 'rgba(0,0,0,0.18)');
-  sg.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.beginPath();
-  ctx.ellipse(x, gy, sw, sh, 0, 0, TAU);
-  ctx.fillStyle = sg;
-  ctx.fill();
+  // its shadow on the board: one picture made once and stamped (it was a new gradient per token
+  // per frame); always the same shape, sw wide and sh = sw × 0.42 tall
+  ctx.drawImage(groundShadow(), x - sw, gy - sh, sw * 2, sh * 2);
 
   const style = PAWN_STYLES[skin] || PAWN_STYLES['token-classic'];
   const fx = t !== null && style.fx ? TOKEN_FX[style.fx] : null;

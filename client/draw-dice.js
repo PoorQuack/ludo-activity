@@ -78,15 +78,13 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
     fill.addColorStop(0, st.shine);
     fill.addColorStop(1, st.face);
   }
-  if (glow) {
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = 45 * px;
-  }
   const cr = solid ? 6 : 16;
+  // the coloured glow round a dice waiting to be rolled: blurred once into a small picture and
+  // stamped (a live shadowBlur here was redrawn every frame, the costliest thing on a phone's GPU)
+  if (glow) stampBlur(ctx, 'fill', glow, 45 * px, cr, 0);
   roundRect(ctx, -50, -50, 100, 100, cr);
   ctx.fillStyle = fill;
   ctx.fill();
-  ctx.shadowBlur = 0;
 
   ctx.save();
   roundRect(ctx, -50, -50, 100, 100, cr);
@@ -127,17 +125,63 @@ export function paintFace(ctx, st, value, { light = 1, pips = true, glow = null,
   }
   ctx.restore();
 
-  roundRect(ctx, -50, -50, 100, 100, cr);
+  // A glowing rim (neon-style dice): its blur is stamped from a cached picture too; a pulsing one
+  // steps through a few cached sizes (8 steps over its range look the same as a smooth pulse)
   if (st.outline) {
-    ctx.shadowColor = st.outline;
-    ctx.shadowBlur = (st.pulse ? 14 + 8 * Math.sin(t / 260) : 20) * px;
+    const blur = st.pulse ? 14 + 8 * Math.round(Math.sin(t / 260) * 4) / 4 : 20;
+    stampBlur(ctx, 'rim', st.outline, blur * px, cr, 3);
   }
+  roundRect(ctx, -50, -50, 100, 100, cr);
   // On the 3D cube the faces meet at the edges, so each one gets only a fine seam (a heavy
   // border round every face made the cube look like separate sheets). Glowing dice keep their rim.
   ctx.lineWidth = solid && !st.outline ? 1.5 : 3;
   ctx.strokeStyle = st.outline || (solid ? mix(st.face, st.edge, 0.55) : st.edge);
   ctx.stroke();
-  ctx.shadowBlur = 0;
+}
+
+// ---- blurred glows, made once ----
+// The glow a shadowBlur would paint round the dice face (a 100×100 rounded square, face units),
+// rendered once per colour / blur / pixel size into a small canvas and stamped. `kind` 'fill': the
+// glow of the filled face; 'rim': the glow of its outline stroke (width `lw`). `blur` is in device
+// pixels (shadowBlur ignores the transform), as before. Only the glow is in the picture: the face
+// and its rim are still drawn on top as usual.
+const blurCache = new Map();
+function stampBlur(ctx, kind, color, blur, cr, lw) {
+  const m = ctx.getTransform();
+  const unit = Math.hypot(m.a, m.b); // device pixels per face unit
+  if (!(unit > 0) || !(blur > 0)) return;
+  if (ctx.shadowBlur === 0 && Object.getOwnPropertyDescriptor(ctx, 'shadowBlur')) return; // Low graphics: no glows
+  const qUnit = Math.round(unit * 20) / 20;
+  const qBlur = Math.round(blur * 2) / 2;
+  const key = `${kind}|${color}|${qBlur}|${qUnit}|${cr}|${lw}`;
+  let c = blurCache.get(key);
+  if (!c) {
+    if (blurCache.size > 120) blurCache.clear();
+    const pad = Math.ceil(qBlur * 1.6 + lw * qUnit + 2); // device pixels round the face
+    const size = Math.ceil(100 * qUnit + pad * 2);
+    c = document.createElement('canvas');
+    c.width = c.height = size;
+    const g = c.getContext('2d');
+    // Paint the shape far off to the side and let only its shadow fall on the canvas, so the
+    // picture holds the glow alone (no copy of the face under it)
+    const off = size * 4;
+    g.shadowColor = color;
+    g.shadowBlur = qBlur;
+    g.shadowOffsetX = off;
+    g.setTransform(qUnit, 0, 0, qUnit, size / 2 - off, size / 2);
+    roundRect(g, -50, -50, 100, 100, cr);
+    if (kind === 'rim') {
+      g.lineWidth = lw;
+      g.strokeStyle = color;
+      g.stroke();
+    } else {
+      g.fillStyle = color;
+      g.fill();
+    }
+    c._half = size / 2 / qUnit; // half its size in face units
+    blurCache.set(key, c);
+  }
+  ctx.drawImage(c, -c._half, -c._half, c._half * 2, c._half * 2); // (in face units: at the face's scale)
 }
 
 // ---------- dice artwork ----------

@@ -233,16 +233,42 @@ export function orbiters(ctx, part, n, x, cy, rx, ry, t, speed, draw) {
   }
 }
 
+// The dome's glows are always the same shape (rx : ry = 1.18 : 1.42), so each one is painted once
+// into a small picture and stamped (they were new gradients per shielded token per frame).
+// inner 0: a glow fading out from the middle (aura); inner > 0: clear inside, the colour at the rim.
+const domePics = new Map();
+function domeGlow(color, inner) {
+  const key = `${color}|${inner}`;
+  let c = domePics.get(key);
+  if (!c) {
+    if (domePics.size > 60) domePics.clear();
+    const H = 128;
+    const W = Math.round((H * 1.18) / 1.42);
+    c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d');
+    const grad = g.createRadialGradient(W / 2, H / 2, inner * (H / 2), W / 2, H / 2, H / 2);
+    if (inner) {
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(1, color);
+    } else {
+      grad.addColorStop(0, color);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+    }
+    g.fillStyle = grad;
+    g.beginPath();
+    g.ellipse(W / 2, H / 2, W / 2, H / 2, 0, 0, TAU);
+    g.fill();
+    domePics.set(key, c);
+  }
+  return c;
+}
+
 // A soft glow behind the token
 export function aura(ctx, x, gy, r, k, color) {
   const d = dome(x, gy, r, k);
-  const g = ctx.createRadialGradient(d.cx, d.cy, 0, d.cx, d.cy, d.ry * 1.05);
-  g.addColorStop(0, color);
-  g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.ellipse(d.cx, d.cy, d.rx * 1.05, d.ry * 1.05, 0, 0, TAU);
-  ctx.fill();
+  ctx.drawImage(domeGlow(color, 0), d.cx - d.rx * 1.05, d.cy - d.ry * 1.05, d.rx * 2.1, d.ry * 2.1);
 }
 
 export const SHIELDS = {
@@ -494,13 +520,9 @@ export const SHIELDS = {
     } else {
       // a faint glassy dome, so it reads as a shield
       ctx.save();
+      ctx.drawImage(domeGlow(glow, 0.6), d.cx - d.rx, d.cy - d.ry, d.rx * 2, d.ry * 2);
       ctx.beginPath();
       ctx.ellipse(d.cx, d.cy, d.rx, d.ry, 0, 0, TAU);
-      const g = ctx.createRadialGradient(d.cx, d.cy, d.ry * 0.6, d.cx, d.cy, d.ry);
-      g.addColorStop(0, 'rgba(255,255,255,0)');
-      g.addColorStop(1, glow);
-      ctx.fillStyle = g;
-      ctx.fill();
       ctx.globalAlpha = 0.55 + 0.2 * Math.sin(t * 3);
       ctx.lineWidth = Math.max(1, r * 0.05);
       ctx.strokeStyle = spec.colors?.[0] || '#ffd54a';

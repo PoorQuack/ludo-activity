@@ -4163,6 +4163,20 @@ function frame(now) {
     now,
   );
 
+  // Your-turn glow round the board: the same ease-in-out pulse the CSS animation had (1.6 s),
+  // set at the board's pace (30/s at rest), only when it visibly changes
+  if (turnRing.classList.contains('on')) {
+    const k = 0.5 - 0.5 * Math.cos(((now % 1600) / 1600) * Math.PI * 2);
+    const o = (0.35 + 0.65 * k).toFixed(2);
+    if (o !== ringShown) {
+      ringShown = o;
+      turnRing.style.opacity = o;
+    }
+  } else if (ringShown !== null) {
+    ringShown = null;
+    turnRing.style.opacity = '';
+  }
+
   // Turn timer
   if (state.phase === 'playing' && state.turnDeadline) {
     const left = state.turnDeadline - (Date.now() + clockOffset);
@@ -4400,6 +4414,7 @@ function waitingOnMe() {
 }
 
 const turnRing = document.getElementById('turn-ring'); // the pulsing your-turn glow round the board
+let ringShown = null; // its opacity as last set (see frame)
 
 function updateTurnNudge() {
   const waiting = waitingOnMe();
