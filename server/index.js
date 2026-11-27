@@ -596,6 +596,11 @@ function handleDm(ws, msg) {
 function chatMessage(ctx, scope, msgId) {
   if (scope === 'room') return ctx.room?.chat.find((m) => m.id === msgId && !m.system) || null;
   if (scope === 'global' || scope === 'lang') return lobbyChat.find(channelId(scope, ctx.lobbyLang || 'en'), msgId) || null;
+  // a DM: 'dm:<friend id>', looked up only in this player's own conversation with that friend
+  if (scope.startsWith('dm:')) {
+    const m = dms.threads[pairKey(ctx.user.id, scope.slice(3))]?.msgs.find((x) => x.id === msgId);
+    return m ? { id: m.id, text: m.text, userId: m.from } : null;
+  }
   return null;
 }
 

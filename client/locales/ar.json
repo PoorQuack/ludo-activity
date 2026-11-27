@@ -1091,5 +1091,6 @@
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 تعادل، {points} نقاط لكل فريق! الجولة الفاصلة: لون واحد لكل فريق، يتناوب الزملاء على الرمي. أول لون يصل إلى البيت يفوز!",
   "🤝 You and {name} are friends now": "🤝 أنت و{name} صديقان الآن",
   "🧭 Getting started": "🧭 البداية السريعة",
-  "🪙 Coins": "🪙 العملات"
+  "🪙 Coins": "🪙 العملات",
+  "Undo": "تراجع"
 }

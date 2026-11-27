@@ -4915,7 +4915,7 @@ function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onRe
     content.appendChild(when);
   }
   // (nothing to translate in emoji and stickers alone)
-  if (!stickerOnly && !isMe && scope && scope !== 'dm' && hasWords(m.text)) addTranslate(content, scope, m.id);
+  if (!stickerOnly && !isMe && scope && hasWords(m.text)) addTranslate(content, scope === 'dm' ? `dm:${dmState.activeId}` : scope, m.id); // (a DM: which friend's conversation)
   const acts = document.createElement('div');
   acts.className = 'line-acts';
   for (const ev of ['pointerdown', 'mousedown']) acts.addEventListener(ev, (e) => e.target.closest('button') && e.preventDefault());
@@ -5368,11 +5368,15 @@ wireEmojiToggle($('lobby-chat'));
 // Translate: one small button after someone else's message. The answer is kept, so the message
 // shows it again whenever the chat is redrawn.
 const translations = new Map(); // `${scope}:${id}` -> { text, from } | { error } | 'pending'
+// Translations the player put away with "Undo": the result stays cached, so AI brings it straight back
+const trHidden = new Set();
 function addTranslate(li, scope, id) {
   const key = `${scope}:${id}`;
   li.dataset.tr = key;
+  li.dataset.trScope = scope;
+  li.dataset.trId = id;
   const done = translations.get(key);
-  if (done && done !== 'pending') return showTranslation(li, done);
+  if (done && done !== 'pending' && !trHidden.has(key)) return showTranslation(li, done);
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'tr-btn';
@@ -5381,6 +5385,12 @@ function addTranslate(li, scope, id) {
   b.setAttribute('aria-label', b.title);
   if (done === 'pending') b.disabled = true;
   b.addEventListener('click', () => {
+    const cached = translations.get(key);
+    if (cached && cached !== 'pending') {
+      trHidden.delete(key);
+      for (const el of document.querySelectorAll(`[data-tr="${CSS.escape(key)}"]`)) showTranslation(el, cached);
+      return;
+    }
     if (ws?.readyState !== WebSocket.OPEN) return;
     translations.set(key, 'pending');
     for (const el of document.querySelectorAll(`[data-tr="${key}"] .tr-btn`)) {
@@ -5407,12 +5417,31 @@ function showTranslation(li, r) {
     out.appendChild(note);
     out.appendChild(rateRow(li, r));
   }
+  out.appendChild(undoTranslation(li));
   li.appendChild(out);
   const list = li.closest('.chat-log');
   if (list) keepAtBottom(list);
 }
 // "Rate" under a translation: a small pop-up with the message, the translation, Good / Bad, and
 // a box to write a better one (for players who speak both languages)
+// "Undo": put the translation away and bring back the AI chip (tapping it shows it again, no new request)
+function undoTranslation(li) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'tr-rate-link tr-undo';
+  b.textContent = t('Undo');
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const key = li.dataset.tr;
+    trHidden.add(key);
+    document.querySelector('.tr-rate-pop')?.remove();
+    for (const el of document.querySelectorAll(`[data-tr="${CSS.escape(key)}"]`)) {
+      el.querySelector('.tr-out')?.remove();
+      addTranslate(el, el.dataset.trScope, Number(el.dataset.trId));
+    }
+  });
+  return b;
+}
 function rateRow(li, r) {
   const b = document.createElement('button');
   b.type = 'button';

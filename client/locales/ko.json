@@ -1091,5 +1091,6 @@
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 동점, 각 {points}점! 결승전: 팀마다 한 색, 팀원이 번갈아 굴려요. 먼저 집에 들어간 색이 이겨요!",
   "🤝 You and {name} are friends now": "🤝 이제 {name}님과 친구예요",
   "🧭 Getting started": "🧭 시작 가이드",
-  "🪙 Coins": "🪙 코인"
+  "🪙 Coins": "🪙 코인",
+  "Undo": "되돌리기"
 }

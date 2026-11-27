@@ -1091,5 +1091,6 @@
   "🤝 Draw, {points} points each! Decider: one colour per team, teammates take turns rolling. First colour home wins!": "🤝 平局，各 {points} 分！决胜局：每队一种颜色，队友轮流掷骰。最先到家的颜色获胜！",
   "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了",
   "🧭 Getting started": "🧭 新手导航",
-  "🪙 Coins": "🪙 金币"
+  "🪙 Coins": "🪙 金币",
+  "Undo": "撤销"
 }
