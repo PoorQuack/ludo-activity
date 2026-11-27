@@ -3,31 +3,6 @@
 Newest entry first. Whoever finishes a piece of work adds an entry: date, who, branch, what
 changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
 
-## 26 Nov 2026, Antigravity: reworked existing VFX pack (`antigravity/reworked-vfx-pack`)
-- Drop-in rasters applied into `client/public/`: 24 tokens (`raster/tokens/*.webp`), 14 avatar
-  frames (`raster/frames/*.webp`, centered 256×256 with updated `--s` / `--dy: 0%` + `?v=4` in
-  `client/style.css` and `client/main.js`), 9 mascot stickers (`raster/emotes/mascot/*.webp`),
-  7 HUD icons (`raster/icons/*.webp`), and 13 seamless textures (`raster/textures/*.jpg`).
-- Copied and wired all 8 upgraded 6-colour VFX bundles in `client/public/bundles/`, `shared/shop.js`,
-  `client/skins.js`, and `client/draw-tokens.js`:
-  - `classic` (`token-classic` / `dice-classic` / `board-classic` -> `common/classic_tabletop`)
-  - `samurai` (`token-samurai` / `dice-samurai` / `board-dojo` -> `legendary/cyber_samurai`)
-  - `football` (`token-football` / `dice-football` / `board-pitch` -> `epic/football_stadium`)
-  - `dragon` (`token-dragon` / `dice-dragon` / `board-lair` -> `legendary/dragons_lair`)
-  - `dino` / `crystal` (`token-dino` / `dice-crystal` / `board-crystal` -> `epic/crystal_dino`, `set-crystal` updated)
-  - `crown` / `gold` / `royal` (`token-crown` / `dice-gold` / `board-royal` -> `legendary/royal_crown`)
-  - `constellation` (`token-constellation` / `dice-constellation` / `board-constellation` -> `legendary/cosmic_constellation`)
-  - `neon` (`token-neon` / `dice-neon` / `board-neon` -> `epic/cyber_neon`)
-- Safe zones (`safe_zone_neutral`, `safe_zone_{red..purple}`, `safe_zone_aura`) render via
-  `drawTile` (`client/draw-board.js`); safe tokens prefer `tokensShielded[color]`
-  (`token_${col}_shielded.webp` via `bundleHasShielded` / `drawToken`), falling back to
-  `token_shield_back`/`front`; bundle tokens and dice (`die_glow` on flat + cube) run with zero
-  runtime `ctx.shadowBlur`.
-- Fixed offscreen `dirty` reset race in `client/shop-ui.js` (`animate()`) and extracted + translated
-  new i18n string across all 15 `client/locales/*.json` files.
-- Verified: `npm run build`, `npm test` (276/276), `npm run smoke`, and headless Edge visual checks
-  at desktop + 390×844 mobile with 0 console errors.
-
 ## 26 Nov 2026, Claude: state of `main` (live on ludo.commontern.com)
 - Translation: DeepL → Azure → NVIDIA Riva → Google → MyMemory, with Indonesian slang rewriting
   and player ratings ("Rate" on a translation; 3 matching suggestions become the translation).
@@ -46,6 +21,14 @@ changed (item ids), and anything half-done. Rules for agents: see `AGENTS.md`.
   Pharaoh's Oasis tokens are small and dark; redraw them bigger and brighter.
 - To do (owner): Starter Pack needs a Discord Durable SKU (`starter:<id>` in `SHOP_SKUS`) and a
   Stripe price (`starter:price_…` in `STRIPE_PRICES`).
+
+## 27 Nov 2026, Claude: reverted Antigravity's reworked existing VFX pack (owner's call)
+- The owner didn't like the overhauled original sprites, so commit 4ec7d39 is reverted: Classic,
+  Neon, Dino, Samurai, Football, Crown, Dragon and Constellation are back to their original look,
+  with the original frames, stickers, icons and textures. The 3 dice it added (football, crystal,
+  samurai) are gone; the one player who had bought them got 830 gems back.
+- Kept: wide bundle tokens fit in shop cards (7df0788).
+- Antigravity: don't reapply that pack. The 10 Carbon bundles (VFX remake) are unaffected.
 
 ## 26 Nov 2026 (evening), Claude: reviewed and shipped Antigravity's reworked existing VFX pack
 - Antigravity's commit 4ec7d39 (made in the owner's local copy, not pushed) was brought over, reviewed and deployed.

@@ -2,7 +2,7 @@
 // Board positions come in board units (one square = 1, centre = 0,0); see shared/board.js.
 import { DECOR, HUBS, SPOTS, TOKEN_STARS, baseDecor, drawConstellation, drawShield, drawSpots, cutSpots, drawTile, gemYard, innerPanel, motif, paintBase, routeTurn, setDrawingFor, setTileK, texPattern, texture } from './draw-board.js';
 import { drawDice, drawDiceCube } from './draw-dice.js';
-import { PAWN_STYLES, TOKEN_MARKS, bundleHasShielded, bundleOf, drawBundleAura, drawBundleShield, drawToken, glowSprite } from './draw-tokens.js';
+import { PAWN_STYLES, TOKEN_MARKS, bundleOf, drawBundleAura, drawBundleShield, drawToken, glowSprite } from './draw-tokens.js';
 import { IDENTITY, TAU, TEAM_COLORS, catDecor, circle, drawDents, drawPinSpots, drawShape, easeInOut, easeOutBack, easeOutCubic, emoteImg, hexA, inkOn, mix, mul, path, rnd, rotX, rotY, roundRect, sparkle, teamBadge } from './draw-util.js';
 import { BOARD_THEMES, SHAPES, TOKEN_SIGNATURES, cbColor, colorBlindMode } from './skins.js';
 import { currentLanguage, t } from './i18n.js';
@@ -737,18 +737,16 @@ export class BoardRenderer {
       ctx.strokeStyle = hex;
       ctx.stroke();
     }
-    // On a safe square: prefer tokensShielded[color] when present, else bundle shield back/front or the board's shield
-    const sign = this.board.colors[p.seat];
+    // On a safe square: a bundle token brings its own shield; any other gets the board's
     const own = p.safe && !!bundleOf(p.skin);
-    const swapped = own && bundleHasShielded(p.skin, sign);
     const shield = p.safe && !own && this.theme.art?.shield;
     const grow = shield || own ? easeOutBack(Math.min(1, p.shieldAge / 450)) : 0;
     if (p.moving || ((shield || own) && p.shieldAge < 450)) this.fast = true;
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'back');
-    if (own && !swapped) drawBundleShield(ctx, x, y, r, p.skin, 'back', { lift: p.lift * s, grow, t: now });
+    if (own) drawBundleShield(ctx, x, y, r, p.skin, 'back', { lift: p.lift * s, grow, t: now });
     if (p.fade < 1) ctx.globalAlpha = p.fade;
     if (this.lit && this.theme.art?.scene && sceneSwitch.on) pieceShadow(ctx, x, y - p.lift * s * 0.3, r); // lit boards: a long shadow, like the trees'
-    drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash, sign, safe: swapped, t: this.lite ? null : now });
+    drawToken(ctx, x, y, r, hex, p.skin, { lift: p.lift * s, squash: p.squash, sign: this.board.colors[p.seat], t: this.lite ? null : now });
     ctx.globalAlpha = 1;
     // Colour-blind mode: the player's shape on the token's body (each shape has its own spot)
     if (this.cb) {
@@ -757,7 +755,7 @@ export class BoardRenderer {
       drawShape(ctx, this.seatShape(p.seat), x + r * mark.x, by, r * 0.36 * mark.size, '#ffffff', '#111111', Math.max(1.2, r * 0.08));
     }
     if (shield) drawShield(ctx, shield, x, y + r * 0.2 - p.lift * s, r, hex, now / 1000, grow, 'front');
-    if (own && !swapped) drawBundleShield(ctx, x, y, r, p.skin, 'front', { lift: p.lift * s, grow, t: now });
+    if (own) drawBundleShield(ctx, x, y, r, p.skin, 'front', { lift: p.lift * s, grow, t: now });
     // Team games: a small A/B badge at the foot of pins out on the board, so you can tell
     // a teammate's pin from a rival's at a glance
     const team = this.teamOf?.[p.seat];

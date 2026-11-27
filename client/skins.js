@@ -8,14 +8,8 @@ export const BOARD_THEMES = {
   // art.shield: what wraps a token standing on a safe square (renderer.js SHIELDS)
   'board-classic': {
     // Safe squares stand out: a warm gold tile, a darker ring and a big outlined star
-    art: {
-      mark: 'star', markSize: 0.34, markEdge: '#ffffff', safeRing: '#d39a1e',
-      tex: { surface: { src: '/bundles/common/classic_tabletop/board_bg.jpg', size: 6 } },
-      tilePath: '/bundles/common/classic_tabletop/tile_path.webp',
-      bundle: 'common/classic_tabletop',
-      tileSafe: '/bundles/common/classic_tabletop/tile_safe.webp',
-      shield: { kind: 'orbit', motif: 'star', colors: ['#ffd54a', '#ffb52e'], glow: 'rgba(255, 220, 120, 0.5)' },
-    },
+    art: { mark: 'star', markSize: 0.34, markEdge: '#ffffff', safeRing: '#d39a1e',
+      shield: { kind: 'orbit', motif: 'star', colors: ['#ffd54a', '#ffb52e'], glow: 'rgba(255, 220, 120, 0.5)' } },
     bg: '#e9e2d3', // shows between the squares
     cell: '#fbf8f1',
     safe: '#fbdc85',
@@ -61,9 +55,6 @@ export const BOARD_THEMES = {
         surface: { src: '/textures/samurai-surface.jpg', size: 6 },
         tile: { src: '/textures/samurai-tile.jpg', size: 2, blend: 'screen', alpha: 0.85 },
       },
-      tilePath: '/bundles/legendary/cyber_samurai/tile_path.webp',
-      bundle: 'legendary/cyber_samurai',
-      tileSafe: '/bundles/legendary/cyber_samurai/tile_safe.webp',
       under: { src: '/textures/samurai-surface.jpg', size: 6, alpha: 0.55, blend: 'screen', speed: 0.25, single: true },
       tile: 'neon', mark: 'star',
       pins: 'ring', decor: 'neon', hub: 'rings',
@@ -84,9 +75,6 @@ export const BOARD_THEMES = {
         surface: { src: '/textures/football-surface.jpg', size: 7 },
         base: { src: '/textures/football-surface.jpg', size: 5, blend: 'multiply', alpha: 0.35 },
       },
-      tilePath: '/bundles/epic/football_stadium/tile_path.webp',
-      bundle: 'epic/football_stadium',
-      tileSafe: '/bundles/epic/football_stadium/tile_safe.webp',
       tile: 'gloss', mark: 'star',
       pins: 'recess', hub: 'rings',
       shield: { kind: 'orbit', motif: 'leaf', colors: ['#ffffff', '#d7f0c8', '#a6dd8c'], glow: 'rgba(255, 255, 255, 0.4)' },
@@ -147,9 +135,6 @@ export const BOARD_THEMES = {
         surface: { src: '/textures/neon-grid.jpg', size: 4 },
         tile: { src: '/textures/neon-tarmac.jpg', size: 3, blend: 'multiply', alpha: 1 },
       },
-      tilePath: '/bundles/epic/cyber_neon/tile_path.webp',
-      bundle: 'epic/cyber_neon',
-      tileSafe: '/bundles/epic/cyber_neon/tile_safe.webp',
       under: { src: '/textures/neon-grid.jpg', size: 4, alpha: 0.7, blend: 'screen', speed: 0.5, single: true },
       tile: 'neon', mark: 'star',
       pins: 'ring', decor: 'neon', hub: 'rings',
@@ -416,9 +401,6 @@ export const BOARD_THEMES = {
         base: { src: '/textures/lava-basalt.jpg', size: 4, blend: 'overlay', alpha: 0.8 },
         tile: { src: '/textures/lava-basalt.jpg', size: 3, blend: 'multiply', alpha: 1 },
       },
-      tilePath: '/bundles/legendary/dragons_lair/tile_path.webp',
-      bundle: 'legendary/dragons_lair',
-      tileSafe: '/bundles/legendary/dragons_lair/tile_safe.webp',
       tile: 'stone', mark: 'flame', markSize: 0.3, fx: 'embers', fxCount: 22,
       pins: 'medal', decor: 'hoard', hub: 'crater',
       shield: 'fire',
@@ -440,9 +422,6 @@ export const BOARD_THEMES = {
         tile: { src: '/textures/royal-marble.jpg', size: 4, blend: 'multiply', alpha: 1 },
         panel: { src: '/textures/royal-velvet.jpg', size: 5 },
       },
-      tilePath: '/bundles/legendary/royal_crown/tile_path.webp',
-      bundle: 'legendary/royal_crown',
-      tileSafe: '/bundles/legendary/royal_crown/tile_safe.webp',
       pattern: 'damask', patternColor: 'rgba(255, 228, 150, 0.22)', patternSize: 0.2, patternSpin: 0,
       tile: 'gilded', mark: 'crown', emblem: 'crown', emblemAlpha: 0.3, emblemColor: '#e9c35a', fx: 'sheen',
       pins: 'medal', decor: 'royal', hub: 'seal',
@@ -468,9 +447,6 @@ export const BOARD_THEMES = {
         base: { src: '/textures/crystal-gold.png', size: 6, blend: 'source-over', alpha: 0.85 },
         panel: { src: '/textures/crystal-gold.png', size: 4.5, blend: 'source-over', alpha: 0.6 },
       },
-      tilePath: '/bundles/epic/crystal_dino/tile_path.webp',
-      bundle: 'epic/crystal_dino',
-      tileSafe: '/bundles/epic/crystal_dino/tile_safe.webp',
       tile: 'facet', mark: 'sparkle', markSize: 0.3, fx: 'sparkle', fxColor: '#fff6dc', fxCount: 22,
       pins: 'cut', decor: 'jewel', hub: 'brilliant',
       shield: { kind: 'orbit', motif: 'sparkle', colors: ['#fff6dc', '#f3d27a'], glow: 'rgba(255, 226, 150, 0.45)', n: 6 },
@@ -490,9 +466,6 @@ export const BOARD_THEMES = {
     art: {
       base: 'celestial', frame: ['#8a6a24', '#f3d98a', 0.22], panel: 'window', windowRim: '#e2bf6a', pins: 'constellation',
       tex: { surface: { src: '/textures/constellation-sky.jpg', size: 9 } },
-      tilePath: '/bundles/legendary/cosmic_constellation/tile_path.webp',
-      bundle: 'legendary/cosmic_constellation',
-      tileSafe: '/bundles/legendary/cosmic_constellation/tile_safe.webp',
       under: { src: '/textures/constellation-sky.jpg', size: 12, alpha: 0.5, blend: 'screen', speed: 0 },
       tile: 'celestial', mark: 'sparkle', markSize: 0.3, fx: 'cosmos', fxColor: '#fff3c4', fxCount: 26,
       decor: 'cosmos',
@@ -735,16 +708,16 @@ export function playerColor(themeId, name) {
 // sparks: the Legendary dice's effect, sparkles in these colours (a few at rest, a swirl when rolled).
 // prop: what sticks out of it and moves (DICE_PROPS in renderer.js): ears, flames, a crown…
 export const DICE_STYLES = {
-  'dice-classic': { bundle: 'common/classic_tabletop', face: '#f2eee4', shine: '#ffffff', edge: '#c8c0af', pip: '#242429' },
+  'dice-classic': { face: '#f2eee4', shine: '#ffffff', edge: '#c8c0af', pip: '#242429', pips: 'inset' },
   'dice-midnight': { face: '#151a3d', edge: '#3b4580', pip: '#ffe9a8', art: 'night', pips: 'glow', prop: 'moon' },
   'dice-wood': { face: '#c8935a', edge: '#7f5226', pip: '#3d2208', art: 'grain', pips: 'inset', prop: 'sprout' },
   // The Starter Pack's die: cut jade, the colour of Die Gems
   'dice-jade': { face: '#1f9e8c', edge: '#0b5c51', pip: '#f4fffb', pipDark: '#b9d8d1', art: 'gem', facets: ['#7af2df', '#2fc4ad', '#138a79', '#0a5a4f'], pips: 'pearl', prop: 'flash' },
   'dice-ruby': { face: '#b3122a', edge: '#6b0614', pip: '#fff4f4', pipDark: '#c9b8bb', art: 'gem', facets: ['#ff6b7f', '#d42a42', '#8c0a1f', '#5e0413'], pips: 'pearl', prop: 'flash' },
-  // Glows in the colour of whoever is rolling (green in shop previews).
-  'dice-neon': { bundle: 'epic/cyber_neon', face: '#0b0c14', edge: '#2ef29a', pip: '#2ef29a', playerColor: true },
-  // The crown jewels: sculpted royal faces with sparkles
-  'dice-gold': { bundle: 'legendary/royal_crown', face: '#e2b44a', edge: '#8c6512', pip: '#e0284a', sparks: ['#fff6cf', '#ffd766'] },
+  // Glows in the colour of whoever is rolling (green in shop previews), and pulses.
+  'dice-neon': { face: '#0b0c14', edge: '#2ef29a', pip: '#2ef29a', outline: '#2ef29a', playerColor: true, pulse: true, art: 'grid', pips: 'glow', prop: 'neon' },
+  // The crown jewels: ruby pips, a crown on top, gems in the corners, rays of light behind
+  'dice-gold': { face: '#e2b44a', edge: '#8c6512', pip: '#e0284a', pipDark: '#7a0d22', art: 'metal', pips: 'pearl', prop: 'gold', sparks: ['#fff6cf', '#ffd766'] },
   'dice-ice': { face: '#bfe6fb', edge: '#4f96c4', pip: '#1d669c', pipDark: '#0b2d4a', art: 'frost', pips: 'pearl', prop: 'ice' },
   'dice-candy': { face: '#ffffff', edge: '#e4577f', pip: '#ff4f7b', pipColors: ['#ff5ca8', '#3fd8a4', '#ffd23f', '#5aa8ff', '#b07bff', '#ff8a3d'], art: 'peppermint', pips: 'candy', prop: 'candy' },
   'dice-emerald': { face: '#0f7a4c', edge: '#064a2c', pip: '#ffd86a', pipDark: '#9a6b00', art: 'stepcut', facets: ['#6ff0b0', '#1fae6e', '#08502f'], pips: 'pearl', prop: 'flash' },
@@ -752,8 +725,9 @@ export const DICE_STYLES = {
   'dice-ludo': { face: '#ffffff', edge: '#cfc8b8', pip: '#ffffff', art: 'ludo', quads: ['#d24d47', '#2f9467', '#e2a92a', '#3a68c8'], pips: 'outlined', prop: 'pawn' },
   'dice-lava': { face: '#1c0d0a', edge: '#ff6a2a', pip: '#ffb02e', outline: '#ff6a2a', pulse: true, art: 'magma', pips: 'magma', prop: 'lava' },
   'dice-galaxy': { face: '#0d0726', edge: '#5b3fb0', pip: '#ffffff', outline: '#8a5cff', art: 'nebula', pips: 'glow', prop: 'galaxy' },
-  // Navy and gold celestial starlight faces + constellation sparks
-  'dice-constellation': { bundle: 'legendary/cosmic_constellation', face: '#0b1034', edge: '#d9b25a', pip: '#fff1c2', sparks: ['#fff1c2', '#bcd0ff'] },
+  // Navy and gold, tinted with the roller's colour and showing their zodiac sign; each face's
+  // pips are stars joined into a constellation
+  'dice-constellation': { face: '#0b1034', edge: '#d9b25a', pip: '#fff1c2', outline: '#d9b25a', art: 'zodiac', pips: 'star', links: true, signed: true, prop: 'cosmos', sparks: ['#fff1c2', '#bcd0ff'] },
   'dice-cat': { face: '#f5b26b', edge: '#b0641f', pip: '#5a2d0c', art: 'tabby', pips: 'paw', prop: 'cat' },
   // Pale pink with blossom pips, a flowering twig on top, petals drifting past
   'dice-sakura': { face: '#ffe3ec', shine: '#fff6f9', edge: '#e88aac', pip: '#e2457a', art: 'sakura', pips: 'blossom', prop: 'sakura' },
@@ -767,12 +741,8 @@ export const DICE_STYLES = {
   'dice-comet': { face: '#1c0d0a', edge: '#ff8a2a', pip: '#ffe14d', outline: '#ff8a2a', pulse: true, art: 'magma', pips: 'magma', prop: 'comet', sparks: ['#ffe14d', '#ff8a2a'] },
   // Legendary: eyes on stalks that look about and blink, rings of light under it
   'dice-alien': { face: '#5fd86a', shine: '#d6ffb8', edge: '#2a8a3a', pip: '#0c2a12', pipDark: '#000000', pips: 'pearl', prop: 'alien', sparks: ['#aaffe6', '#5cf2ff'] },
-  // Legendary: dragon-scale sculpted faces with fiery sparks
-  'dice-dragon': { bundle: 'legendary/dragons_lair', face: '#2f7d4a', edge: '#17442a', pip: '#ffd23f', sparks: ['#ffb02e', '#ff5a1a'] },
-  // Reworked existing VFX pack dice (6 sculpted webp faces + die_glow backdrop)
-  'dice-football': { bundle: 'epic/football_stadium', face: '#2f7d2a', edge: '#1a4718', pip: '#ffffff' },
-  'dice-crystal': { bundle: 'epic/crystal_dino', face: '#1f2336', edge: '#6b3fd8', pip: '#ffe082' },
-  'dice-samurai': { bundle: 'legendary/cyber_samurai', face: '#141926', edge: '#00E5FF', pip: '#00E5FF', sparks: ['#00E5FF', '#b84dff'] },
+  // Legendary: horns, beating wings, smoke from its nostrils, and sparks when it rolls
+  'dice-dragon': { face: '#2f7d4a', edge: '#17442a', pip: '#ffd23f', outline: '#ffb02e', wing: '#c2412d', art: 'scales', pips: 'magma', prop: 'dragon', sparks: ['#ffb02e', '#ff5a1a'] },
   // Carbon bundle dice (6 sculpted webp faces + glow backdrop)
   'dice-woodland-grove': { bundle: 'common/woodland_grove', face: '#8d9288', edge: '#465239', pip: '#4a3518' },
   'dice-street-playground': { bundle: 'common/street_playground', face: '#8f9396', edge: '#4d5259', pip: '#f0f4f8' },

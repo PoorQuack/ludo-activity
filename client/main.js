@@ -1412,7 +1412,7 @@ function renderLeaderboard() {
     if (!e) return `<div class="pod pod${place} empty"><div class="pod-pic"><span>?</span></div><b class="pod-name">—</b>${prize}<div class="pod-step"><span>${place}</span></div></div>`;
     const fid = frameFor(place);
     return `<div class="pod pod${place}${e.you ? ' you' : ''}">
-        <div class="pod-pic"><span class="avatar pod-avatar" data-lb-avatar="${place}"></span><img src="/frames/${fid}.webp?v=4" alt="" class="pod-frame" data-pod-frame="${fid}"></div>
+        <div class="pod-pic"><span class="avatar pod-avatar" data-lb-avatar="${place}"></span><img src="/frames/${fid}.webp" alt="" class="pod-frame" data-pod-frame="${fid}"></div>
         <b class="pod-name">${escapeHtml(e.name)}${e.you ? ` <small>${t('(you)')}</small>` : ''}</b>
         <span class="pod-chips${!pointsMode && e.points < 0 ? ' neg' : ''}">${scoreHtml(e.points)}</span>
         ${prize}

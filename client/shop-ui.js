@@ -331,6 +331,7 @@ function animate(now) {
   for (const a of animated) {
     if (!a.canvas.isConnected) continue;
     if (a.once && !a.dirty) continue;
+    a.dirty = false;
     if (watcher) {
       if (!watched.has(a.canvas)) {
         watched.add(a.canvas);
@@ -339,7 +340,6 @@ function animate(now) {
       }
       if (!onScreen.has(a.canvas)) continue;
     } else if (a.canvas.offsetParent === null) continue;
-    a.dirty = false;
     const ctx = a.canvas.getContext('2d');
     ctx.setTransform(a.dpr, 0, 0, a.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
