@@ -250,16 +250,6 @@ function itemCard(item, { profile, freeShop, onBuy, onEquip, onView }) {
     if (price < item.price) card.classList.add('on-deal');
     if ((profile?.[cur] ?? 0) < price) btn.classList.add('cant');
     btn.addEventListener('click', () => onBuy(item));
-    // roughly what that is in real money (from Discord's prices, once they're known)
-    const money = cur === 'gems' ? cardOpts.gemsInMoney?.(price) : '';
-    if (money) {
-      const approx = document.createElement('small');
-      approx.className = 'item-money';
-      approx.textContent = `≈ ${money}`;
-      card.appendChild(btn);
-      card.appendChild(approx);
-      return card;
-    }
   }
   if (owned && !equipped) card.classList.add('owned');
   card.appendChild(btn);
@@ -333,7 +323,6 @@ function animate(now) {
   for (const a of animated) {
     if (!a.canvas.isConnected) continue;
     if (a.once && !a.dirty) continue;
-    a.dirty = false;
     if (watcher) {
       if (!watched.has(a.canvas)) {
         watched.add(a.canvas);
@@ -342,6 +331,7 @@ function animate(now) {
       }
       if (!onScreen.has(a.canvas)) continue;
     } else if (a.canvas.offsetParent === null) continue;
+    a.dirty = false; // (only once it's really drawn: a card off screen keeps it for later)
     const ctx = a.canvas.getContext('2d');
     ctx.setTransform(a.dpr, 0, 0, a.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -488,13 +478,6 @@ function renderFront(grid, opts) {
     const btn = itemCard(star, cardCtx).querySelector('.btn');
     btn.classList.add('front-hero-btn');
     info.appendChild(btn);
-    const money = currencyOf(star) === 'gems' && !owns(profile, star.id) ? opts.gemsInMoney?.(priceOf(star, day)) : '';
-    if (money) {
-      const approx = document.createElement('small');
-      approx.className = 'item-money';
-      approx.textContent = `≈ ${money}`;
-      info.appendChild(approx);
-    }
     hero.appendChild(info);
     grid.appendChild(hero);
   }
