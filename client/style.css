@@ -3082,3 +3082,8 @@ html.pip:not(:has(#game:not(.hidden))) .pip-card {
 /* the picture (and a big frame round it) sits above the bubble's tail, whose cut-out is painted
    in the chat's background colour and showed as a square over large frames */
 :is([data-chat], #lobby-chat) .chat-log .chat-av { position: relative; z-index: 3; }
+
+/* hold a chat picture to @mention: no long-press menu, no text selection, a pop when it's held */
+:is([data-chat], #lobby-chat) .chat-log .chat-av { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; transition: transform 0.15s var(--ease-out); }
+:is([data-chat], #lobby-chat) .chat-log .chat-av img { pointer-events: none; -webkit-user-drag: none; }
+:is([data-chat], #lobby-chat) .chat-log .chat-av.held { transform: scale(1.15); }

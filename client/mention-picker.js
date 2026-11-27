@@ -108,29 +108,80 @@ export function attachMentionPicker(input, candidates) {
   return { close };
 }
 
-// Hold someone's picture in a chat to mention them (a short tap still opens their profile)
+// Hold someone's picture in a chat to mention them (a short tap still opens their profile).
+// Phones: the hold is marked after a moment (a little pop and buzz); the mention is written when
+// the finger lifts, inside that touch, so focusing the box opens the keyboard (iOS only allows it
+// then). A finger that moves is a scroll, not a hold. The long-press menu and text selection are
+// kept off (see .chat-av in style.css), and if the phone cancels the touch anyway, it still mentions.
 export function holdToMention(el, who, input) {
+  const HOLD_MS = 420;
   let timer = null;
-  let fired = false;
-  const cancel = () => clearTimeout(timer);
+  let held = false;
+  let done = false;
+  let start = null;
+  let swallowUntil = 0;
+  const reset = () => {
+    clearTimeout(timer);
+    timer = null;
+    held = false;
+    start = null;
+    el.classList.remove('held');
+  };
+  const mention = () => {
+    if (done || !input || input.disabled) return;
+    done = true;
+    swallowUntil = performance.now() + 700; // the click that ends the hold doesn't open their profile
+    input.focus({ preventScroll: true });
+    input.setSelectionRange?.(input.value.length, input.value.length);
+    insertMention(input, who);
+  };
   el.addEventListener('pointerdown', (e) => {
     if (e.button > 0 || !input || input.disabled) return;
-    fired = false;
-    cancel();
+    reset();
+    done = false;
+    start = { x: e.clientX, y: e.clientY };
     timer = setTimeout(() => {
-      fired = true;
+      held = true;
+      el.classList.add('held');
       navigator.vibrate?.(15);
-      input.focus({ preventScroll: true });
-      input.setSelectionRange?.(input.value.length, input.value.length);
-      insertMention(input, who);
-    }, 450);
+    }, HOLD_MS);
   });
-  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(ev, cancel);
-  el.addEventListener('contextmenu', (e) => e.preventDefault()); // (a long press on a phone)
-  // the click that ends a hold doesn't also open their profile
+  el.addEventListener('pointermove', (e) => {
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) reset(); // scrolling
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (held) {
+      e.preventDefault();
+      mention();
+    }
+    reset();
+  });
+  el.addEventListener('pointercancel', () => {
+    if (held) mention();
+    reset();
+  });
+  el.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'mouse') reset();
+  });
+  // a long press on a phone: no "save image" menu; it's the hold
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (held || timer) {
+      held = true;
+      mention();
+      reset();
+    }
+  });
+  // after a hold, the phone's follow-up tap (mouse events and a click on this button) would take
+  // the focus off the box and close the keyboard: cancel it
+  el.addEventListener('touchend', (e) => {
+    if (performance.now() <= swallowUntil && e.cancelable) e.preventDefault();
+  }, { passive: false });
+  el.addEventListener('mousedown', (e) => {
+    if (performance.now() <= swallowUntil) e.preventDefault();
+  });
   el.addEventListener('click', (e) => {
-    if (!fired) return;
-    fired = false;
+    if (performance.now() > swallowUntil) return;
     e.stopImmediatePropagation();
     e.preventDefault();
   }, true);
