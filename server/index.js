@@ -733,6 +733,7 @@ const notifier = new DiscordNotifier({
   isOnline,
   quietNow: (id) => social.quietNow(id),
   appId: CLIENT_ID,
+  publicUrl: PUBLIC_URL,
   profileOf: (id) => ({ name: social.names.get(id), avatar: social.avatars.get(id) || '' }),
 });
 // Whether the bot can reach someone on Discord (it shares our server with them): true / false,

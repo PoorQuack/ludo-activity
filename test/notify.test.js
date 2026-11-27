@@ -180,3 +180,23 @@ test('the card shows the sender like a Discord message: picture, name, Open Ludo
   assert.match(sent[1].content.embeds[0].author.icon_url, /embed\/avatars\/1\.png$/);
   assert.match(sent[1].content.components[0].components[0].url, /custom_id=chat-lang$/);
 });
+
+test('a sticker shows as the picture, not its :code:', async () => {
+  const { n, sent, run } = make({ publicUrl: 'https://ludo.example' });
+  n.message('123456', { fromId: '900001', from: 'Ana', text: ':cathappy:' });
+  await run(GROUP_MS);
+  const m = sent[0].content;
+  assert.equal(m.content, '💬 **Ana** sent you a sticker in Ludo');
+  assert.equal(m.embeds[0].author.name, 'Ana sent you a sticker');
+  assert.equal(m.embeds[0].image.url, 'https://ludo.example/emotes/cats/cathappy.gif');
+  assert.equal(m.embeds[0].description, undefined);
+  // with words too: the words, and the sticker as the picture
+  n.message('123456', { fromId: '900002', from: 'Bo', text: 'gg :cathappy: lol' });
+  await run(GROUP_MS);
+  assert.equal(sent[1].content.embeds[0].description, 'gg lol');
+  assert.match(sent[1].content.embeds[0].image.url, /cathappy\.gif$/);
+  // not a real sticker: left as typed
+  n.message('123456', { fromId: '900003', from: 'Cy', text: ':nope:' });
+  await run(GROUP_MS);
+  assert.equal(sent[2].content.embeds[0].description, ':nope:');
+});

@@ -15,6 +15,8 @@
 //    skipped for an hour (they may join the server) instead of being retried on every message.
 // Kept in memory only: a restart forgets waiting pings, remembered channels and refusals.
 
+import { EMOTE_SLUGS } from '../shared/shop.js';
+
 const API = 'https://discord.com/api/v10';
 const REFUSED_MS = 60 * 60_000;
 const MAX_WAITS = 5; // "slow down" answers in a row before a notice is given up
@@ -41,6 +43,7 @@ export class DiscordNotifier {
     quietNow = () => false,
     profileOf = () => null,
     appId = '',
+    publicUrl = '',
     send = null,
     fetchImpl = globalThis.fetch,
     now = () => Date.now(),
@@ -54,6 +57,7 @@ export class DiscordNotifier {
     this.quietNow = quietNow; // (userId) => true during their quiet hours
     this.profileOf = profileOf; // (userId) => { name, avatar (Discord hash or '') } for the card
     this.appId = appId; // the activity's application id, for the "Open Ludo" link
+    this.publicUrl = publicUrl; // where the game's pictures are served (sticker images)
     this.timers = timers;
     this.waiting = new Map(); // userId -> { mentions: Map, messages: Map, timer }
     this.fetch = fetchImpl;
@@ -185,7 +189,7 @@ export class DiscordNotifier {
       return Promise.resolve(false);
     }
     this.waiting.delete(userId);
-    const body = summary(w, { profileOf: this.profileOf, appId: this.appId });
+    const body = summary(w, { profileOf: this.profileOf, appId: this.appId, publicUrl: this.publicUrl });
     return body ? this.notify(userId, body) : Promise.resolve(false);
   }
 }
@@ -211,19 +215,32 @@ export function openLink(appId, e) {
   return `https://discord.com/activities/${appId}?custom_id=${encodeURIComponent(to)}`;
 }
 
-// One sender's card: their name and picture at the top, and what they said
-function card(e, profileOf) {
+// Stickers in a message (:slug: codes): the first one is shown as the card's picture, and the
+// text reads without the codes. A message that's only stickers says "a sticker".
+export function readStickers(text) {
+  const found = [];
+  const rest = String(text ?? '')
+    .replace(/:([a-z0-9-]+):/g, (m, slug) => (EMOTE_SLUGS[slug] ? (found.push(EMOTE_SLUGS[slug]), ' ') : m))
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { stickers: found, rest };
+}
+
+// One sender's card: their name and picture at the top, and what they said (or the sticker)
+function card(e, profileOf, publicUrl) {
   const p = profileOf(e.fromId) || {};
   const name = plain(p.name || e.from, 60) || (e.kind === 'dm' ? 'A friend' : 'Someone');
+  const { stickers, rest } = readStickers(e.text);
+  const sticker = stickers[0] && publicUrl ? stickers[0] : null;
   const what =
     e.kind === 'dm'
-      ? e.count === 1 ? 'sent you a message' : `sent you ${e.count} messages`
+      ? e.count > 1 ? `sent you ${e.count} messages` : sticker && !rest ? 'sent you a sticker' : 'sent you a message'
       : `mentioned you${times(e.count)} in ${PLACE[e.where] || PLACE.global}`;
   return {
     color: COLOR[e.kind],
     author: { name: `${name} ${what}`.slice(0, 256), icon_url: avatarUrl(e.fromId, p.avatar || '') },
-    description: plain(e.text, 600) || '…',
-    thumbnail: { url: avatarUrl(e.fromId, p.avatar || '') },
+    ...(rest || !sticker ? { description: plain(sticker ? rest : e.text, 600) || '…' } : {}),
+    ...(sticker ? { image: { url: `${publicUrl}${sticker.img}` } } : { thumbnail: { url: avatarUrl(e.fromId, p.avatar || '') } }),
     footer: { text: 'Ludo' },
     timestamp: new Date(e.at || Date.now()).toISOString(),
   };
@@ -231,7 +248,7 @@ function card(e, profileOf) {
 
 // The DM for what was waiting: a line for the phone's notification, a card per sender (up to
 // 10, Discord's limit, latest last) and the "Open Ludo" button
-export function summary({ mentions, messages }, { profileOf = () => null, appId = '' } = {}) {
+export function summary({ mentions, messages }, { profileOf = () => null, appId = '', publicUrl = '' } = {}) {
   const items = [...[...mentions.values()].map((e) => ({ ...e, kind: 'mention' })), ...[...messages.values()].map((e) => ({ ...e, kind: 'dm' }))].sort((a, b) => (a.at || 0) - (b.at || 0));
   if (!items.length) return null;
   const total = items.reduce((n, e) => n + e.count, 0);
@@ -239,7 +256,8 @@ export function summary({ mentions, messages }, { profileOf = () => null, appId 
   if (items.length === 1) {
     const e = items[0];
     const name = plain(profileOf(e.fromId)?.name || e.from, 40) || 'Someone';
-    content = e.kind === 'dm' ? `💬 **${name}** sent you ${e.count === 1 ? 'a message' : `${e.count} messages`} in Ludo` : `🔔 **${name}** mentioned you${times(e.count)} in Ludo`;
+    const onlySticker = e.count === 1 && readStickers(e.text).stickers.length && !readStickers(e.text).rest;
+    content = e.kind === 'dm' ? `💬 **${name}** sent you ${e.count > 1 ? `${e.count} messages` : onlySticker ? 'a sticker' : 'a message'} in Ludo` : `🔔 **${name}** mentioned you${times(e.count)} in Ludo`;
   } else content = `🔔 You have ${total} new pings in Ludo`;
   const shown = items.slice(-10);
   const more = items.length - shown.length;
@@ -248,7 +266,7 @@ export function summary({ mentions, messages }, { profileOf = () => null, appId 
   const url = openLink(appId, last); // (the latest one)
   return {
     content,
-    embeds: shown.map((e) => card(e, profileOf)),
+    embeds: shown.map((e) => card(e, profileOf, publicUrl)),
     ...(url ? { components: [{ type: 1, components: [{ type: 2, style: 5, label: 'Open Ludo', url }] }] } : {}),
   };
 }
