@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 이제 {name}님과 친구예요",
   "🧭 Getting started": "🧭 시작 가이드",
   "🪙 Coins": "🪙 코인",
-  "Undo": "되돌리기"
+  "Undo": "되돌리기",
+  "{name} mentioned you": "{name}님이 회원님을 언급했어요"
 }

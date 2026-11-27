@@ -1,6 +1,7 @@
 // The menu's chat: one Global channel for everyone, and one per language (everyone whose game is
 // set to the same language). Rooms keep their own chat (room.js). The last messages of each
 // channel are kept, and saved, so the chat isn't empty after an update.
+import { resolveMentions } from '../shared/mentions.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { cleanText } from './filter.js';
@@ -54,7 +55,8 @@ export class LobbyChat {
   }
 
   /** Adds a message; returns it (or null when nothing was left to say). Throws when too fast. */
-  say(user, id, text, { replyId } = {}) {
+  // mentions: ids the player picked from their @ list; nameOf(id) says who can be mentioned
+  say(user, id, text, { replyId, mentions = null, nameOf = null } = {}) {
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -77,6 +79,8 @@ export class LobbyChat {
     if (prof?.equipped?.frame && prof.equipped.frame !== 'frame-none') msg.frame = prof.equipped.frame;
     const replyTo = replyId ? makeReplySnapshot(this.find(id, Number(replyId))) : null;
     if (replyTo) msg.replyTo = replyTo;
+    const named = nameOf ? resolveMentions(clean, mentions, (mid) => mid !== user.id && nameOf(mid)) : [];
+    if (named.length) msg.mentions = named;
     ch.msgs.push(msg);
     if (ch.msgs.length > KEEP) ch.msgs.splice(0, ch.msgs.length - KEEP);
     this.save();

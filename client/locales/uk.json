@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 Тепер ви з {name} друзі",
   "🧭 Getting started": "🧭 Початок гри",
   "🪙 Coins": "🪙 Монети",
-  "Undo": "Скасувати"
+  "Undo": "Скасувати",
+  "{name} mentioned you": "{name} згадав(ла) вас"
 }

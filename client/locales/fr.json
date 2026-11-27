@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 {name} et toi êtes maintenant amis",
   "🧭 Getting started": "🧭 Prise en main",
   "🪙 Coins": "🪙 Pièces",
-  "Undo": "Annuler"
+  "Undo": "Annuler",
+  "{name} mentioned you": "{name} t'a mentionné"
 }

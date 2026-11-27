@@ -1,4 +1,5 @@
 // One game room: its lobby, the game, its chat. Rooms are created and listed by rooms.js.
+import { resolveMentions } from '../shared/mentions.js';
 import { randomInt } from 'node:crypto';
 import { MODES, boardFor, teamsOf } from '../shared/board.js';
 import { DEFAULT_EQUIPPED, EMOTE_SLUGS, ITEMS, POT_SPLIT, REWARDS, STAKES, ownsItem, potFee } from '../shared/shop.js';
@@ -247,7 +248,7 @@ export class Room {
       case 'move': return this.move(user, msg.token, msg.roll, msg.seq);
       case 'emote': return this.emote(user, msg.item, msg.idx);
       case 'typing': return this.typing(user, msg.on !== false);
-      case 'chat': return this.say(user, msg.text, msg.replyId);
+      case 'chat': return this.say(user, msg.text, msg.replyId, msg.mentions);
       case 'react': return this.react(user, msg.id, msg.emoji);
       case 'surrender': return this.surrender(user);
       case 'newGame': return this.newGame(user);
@@ -488,7 +489,7 @@ export class Room {
 
   // The host can end a game at any time; once a game is over, anyone can start the next one.
   // Chat is open to everyone in the Activity, players and watchers alike.
-  say(user, text, replyId = null) {
+  say(user, text, replyId = null, mentions = null) {
     let clean = cleanText(
       String(text ?? '')
         .replace(/[\u0000-\u001f\u007f]/g, ' ')
@@ -512,6 +513,9 @@ export class Room {
     if (prof?.equipped?.frame && prof.equipped.frame !== 'frame-none') msg.frame = prof.equipped.frame; // round their picture in the chat
     const replyTo = replyId ? makeReplySnapshot(this.chat.find((m) => m.id === Number(replyId))) : null;
     if (replyTo) msg.replyTo = replyTo;
+    // @mentions: only people in this room (not yourself)
+    const named = resolveMentions(clean, mentions, (id) => id !== user.id && this.people.get(id));
+    if (named.length) msg.mentions = named;
     this.chat.push(msg);
     this.typingAt.delete(user.id); // they sent it: no longer typing
     if (this.chat.length > CHAT_KEEP) this.chat.shift();

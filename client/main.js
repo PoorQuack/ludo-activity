@@ -15,6 +15,7 @@ import { REACTION_EMOJIS } from '../shared/chat.js';
 import { PASS_SKU_ID, STAKES } from '../shared/shop.js';
 import { setFrame } from './frames.js';
 import { ICONS, withIcon } from './icons.js';
+import { attachMentionPicker, holdToMention, mentionIds } from './mention-picker.js';
 import { bundleCaptureArt } from './draw-tokens.js';
 import { signatureHome } from './signatures.js';
 import { maybeTour, openTour } from './tour.js';
@@ -316,6 +317,9 @@ function connect() {
     } else if (msg.type === 'lobbyChat') onLobbyChat(msg);
     else if (msg.type === 'dmSummary' || msg.type === 'dmHistory' || msg.type === 'dmMsg' || msg.type === 'dmReact') onDmMessage(msg);
     else if (msg.type === 'translated') onTranslated(msg);
+    else if (msg.type === 'mention') {
+      if (!isHiddenUser(msg.fromId)) mentionNotice(msg.from, () => openLobbyTab(msg.channel));
+    }
     else if (msg.type === 'trFeedback') onTrFeedback(msg);
     else if (msg.type === 'awards') showAwards(msg.awards);
     else if (msg.type === 'quests') {
@@ -821,6 +825,11 @@ function renderChat() {
   chatPrimed = true;
   if (prefs.chat && fromOthers) sfx('chat');
   if (fromOthers && chatFolded()) chatUnread += msgs.filter((m) => m.id > shownChatId && m.userId !== me?.id).length;
+  // @mentioned in the game's chat while you weren't typing in it: a notice (tap: the chat box)
+  if (fromOthers && ![...els.chats].some((b) => b.contains(document.activeElement))) {
+    const hit = msgs.find((m) => m.id > shownChatId && m.userId !== me?.id && mentionsMe(m) && !isHiddenUser(m.userId));
+    if (hit) mentionNotice(hit.name, () => els.chats[0]?.querySelector('.chat-form input')?.focus());
+  }
   shownChatId = latest;
   if (!onlyReactionsChanged) renderChatPeek(msgs, fromOthers);
 
@@ -909,6 +918,7 @@ function renderChat() {
       fillAvatar(av, { id: m.userId, name: m.name, avatar: !String(m.userId).startsWith('guest-') });
       setFrame(av, m.frame || state.seats[seat]?.skins?.frame);
       av.addEventListener('click', () => inspectPlayer(m.userId, m.name));
+      if (!isMe) holdToMention(av, { id: m.userId, name: m.name }, box.querySelector('.chat-form input'));
       li.appendChild(av);
       const col2 = document.createElement('div');
       col2.className = 'chat-col';
@@ -1161,6 +1171,7 @@ for (const box of els.chats) {
   const form = box.querySelector('form');
   const input = box.querySelector('input');
   wireEmojiToggle(box);
+  attachMentionPicker(input, roomMentionCandidates);
   // "0/100" beside the box: yellow when nearly full, red at the limit
   const count = document.createElement('span');
   count.className = 'chat-count';
@@ -1194,7 +1205,8 @@ for (const box of els.chats) {
     const text = input.value.trim();
     if (!text) return;
     const replyId = box._reply?.id || null;
-    send('chat', replyId ? { text, replyId } : { text });
+    const mentions = mentionIds(input, text);
+    send('chat', { text, ...(replyId ? { replyId } : {}), ...(mentions.length ? { mentions } : {}) });
     setRoomReply(box, null);
     input.value = '';
     lastTypingSent = 0; // the server clears "typing" when the message arrives
@@ -4318,6 +4330,7 @@ function setLoading(text) {
 let toastTimer = null;
 function toast(text, kind = 'error', ms = 2500) {
   if (kind === 'error') sfx('error');
+  els.toast.onclick = null; // (a mention notice can be tapped; others can't)
   els.toast.textContent = text;
   els.toast.className = `toast ${kind}`;
   clearTimeout(toastTimer);
@@ -4681,13 +4694,13 @@ function openDm(friendId, fallbackName = '') {
   setPanel('chat');
   if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'dm', op: 'open', friendId }));
 }
-function sendActiveLobbyOrDm(text, replyId = null) {
+function sendActiveLobbyOrDm(text, replyId = null, mentions = []) {
   if (!text || ws?.readyState !== WebSocket.OPEN) return;
   if (lchat.tab === 'dm') {
     if (!dmState.activeId) return;
     ws.send(JSON.stringify({ type: 'dm', op: 'say', toId: dmState.activeId, text, ...(replyId ? { replyId } : {}) }));
   } else {
-    ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text, ...(replyId ? { replyId } : {}) }));
+    ws.send(JSON.stringify({ type: 'lobbyChat', op: 'say', channel: lchat.tab, text, ...(replyId ? { replyId } : {}), ...(mentions.length ? { mentions } : {}) }));
   }
 }
 function onDmMessage(msg) {
@@ -4750,6 +4763,11 @@ function onLobbyChat(msg) {
     if (list.length > 80) list.splice(0, list.length - 80);
     if (msg.channel !== lchat.tab && msg.msg.userId !== me?.id && !isHiddenUser(msg.msg.userId)) lchat.unseen[msg.channel] = true;
     if (msg.msg.userId !== me?.id && !isHiddenUser(msg.msg.userId) && msg.channel === lchat.tab) sfx('chat');
+    // @mentioned in a menu chat you aren't looking at
+    if (mentionsMe(msg.msg) && !isHiddenUser(msg.msg.userId) && !(msg.channel === lchat.tab && lobbyChatVisible())) {
+      const channel = msg.channel;
+      mentionNotice(msg.msg.name, () => openLobbyTab(channel));
+    }
   } else if (msg.op === 'react') {
     const list = msg.channel === 'lang' ? lchat.local : lchat.global;
     const target = list.find((m) => m.id === msg.id);
@@ -4881,6 +4899,38 @@ const isJumbo = (text) => {
   return marks.length >= 1 && marks.length <= 3 && !s.replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f\s]/gu, '');
 };
 
+// ---- @mentions ----
+// Who the @ list offers: in a game, the other players in the room; in Global / a language
+// chat, people who spoke there lately and your friends who are online. (Never in DMs.)
+function roomMentionCandidates() {
+  return (state?.seats || []).filter((s) => s && !s.bot && s.userId && s.userId !== me?.id).map((s) => ({ id: s.userId, name: s.name }));
+}
+function lobbyMentionCandidates() {
+  if (lchat.tab === 'dm') return [];
+  const out = [];
+  const msgs = lchat.tab === 'lang' ? lchat.local : lchat.global;
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m.userId && m.userId !== me?.id && m.userId !== 'system' && !isHiddenUser(m.userId)) out.push({ id: m.userId, name: m.name });
+  }
+  for (const f of friendsData?.friends || []) if (f.online) out.push({ id: f.id, name: f.name });
+  return out;
+}
+const mentionsMe = (m) => !!me?.id && (m?.mentions || []).some((x) => x.id === me.id);
+// Someone @mentioned you where you aren't looking: a notice; tapping it opens that chat
+function mentionNotice(fromName, open) {
+  sfx('chat');
+  buzz([30, 40, 30]);
+  toast(`@ ${t('{name} mentioned you', { name: fromName || t('Someone') })}`, 'ok', 5000);
+  if (open) {
+    els.toast.classList.add('tap');
+    els.toast.onclick = () => {
+      els.toast.classList.add('hidden');
+      open();
+    };
+  }
+}
+
 function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onReply, onReact }) {
   const line = document.createElement('div');
   line.className = 'chat-line';
@@ -4904,8 +4954,9 @@ function buildChatLine({ msg: m, isMe, scope, logEl, stickerOnly, showTime, onRe
   const words = document.createElement('span');
   words.className = 'msg-text';
   words.dir = 'auto';
-  renderChatTokens(words, m.text, logEl, stickerOnly);
+  renderChatTokens(words, m.text, logEl, stickerOnly, m.mentions);
   content.appendChild(words);
+  if (!isMe && mentionsMe(m)) line.classList.add('mention-me');
   if (isRtlText(m.text)) content.dir = 'rtl';
   if (showTime) {
     const when = document.createElement('time');
@@ -4952,7 +5003,26 @@ const isRtlText = (text) => {
 };
 const hasWords = (text) => /\p{L}{2}/u.test(String(text).replace(/:[a-z0-9-]+:/g, ''));
 
-function renderChatTokens(target, text, logEl, stickerOnly) {
+// "@Name" for each mention, as a highlighted chip (yours stands out more)
+function appendWithMentions(target, text, mentions) {
+  if (!mentions?.length) return target.appendChild(document.createTextNode(text));
+  const names = mentions.map((x) => x.name).filter(Boolean).sort((a, b) => b.length - a.length);
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(@(?:${names.map(esc).join('|')}))`, 'gi');
+  for (const piece of text.split(re)) {
+    if (!piece) continue;
+    const hit = piece.startsWith('@') && mentions.find((x) => `@${x.name}`.toLowerCase() === piece.toLowerCase());
+    if (!hit) {
+      target.appendChild(document.createTextNode(piece));
+      continue;
+    }
+    const chip = document.createElement('span');
+    chip.className = `mention${hit.id === me?.id ? ' me' : ''}`;
+    chip.textContent = piece;
+    target.appendChild(chip);
+  }
+}
+function renderChatTokens(target, text, logEl, stickerOnly, mentions = null) {
   for (const part of text.split(/(:[a-z0-9-]+:)/g)) {
     const slug = /^:([a-z0-9-]+):$/.exec(part)?.[1];
     const hit = slug && EMOTE_SLUGS[slug];
@@ -4964,7 +5034,7 @@ function renderChatTokens(target, text, logEl, stickerOnly) {
       img.title = hit.name;
       img.addEventListener('load', () => keepAtBottom(logEl));
       target.appendChild(img);
-    } else if (part) target.appendChild(document.createTextNode(part));
+    } else if (part) appendWithMentions(target, part, mentions);
   }
 }
 
@@ -5305,6 +5375,7 @@ function renderLobbyChat() {
     fillAvatar(av, { id: m.userId, name: m.name, avatar: !String(m.userId).startsWith('guest-') });
     setFrame(av, m.frame);
     av.addEventListener('click', () => inspectPlayer(m.userId, m.name));
+    if (!isMe && !isDm) holdToMention(av, { id: m.userId, name: m.name }, $('lobby-chat-input')); // hold their picture: @mention them
     li.appendChild(av);
     const col2 = document.createElement('div');
     col2.className = 'chat-col';
@@ -5330,6 +5401,14 @@ function renderLobbyChat() {
   keepAtBottom(log);
 }
 
+// Open the menu's chat on a tab (from a mention notice)
+function openLobbyTab(channel) {
+  if (screen !== 'menu') showScreen('menu');
+  setPanel('chat');
+  document.querySelector(`[data-lchat="${channel === 'lang' ? 'lang' : 'global'}"]`)?.click();
+}
+const lobbyChatVisible = () => screen === 'menu' && $('menu').dataset.panel === 'chat' && !document.hidden;
+
 for (const b of document.querySelectorAll('[data-lchat]')) {
   b.addEventListener('click', () => {
     setLobbyReply(null);
@@ -5354,7 +5433,7 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   const input = $('lobby-chat-input');
   const text = input.value.trim();
   if (!text || ws?.readyState !== WebSocket.OPEN) return;
-  sendActiveLobbyOrDm(text, lobbyReply?.id || null);
+  sendActiveLobbyOrDm(text, lobbyReply?.id || null, mentionIds(input, text));
   setLobbyReply(null);
   input.value = '';
   const log = $('lobby-chat-log');
@@ -5363,6 +5442,7 @@ $('lobby-chat-form').addEventListener('submit', (e) => {
   if (document.documentElement.classList.contains('kb-open')) input.focus({ preventScroll: true });
 });
 $('lobby-chat-input').addEventListener('keydown', (e) => e.key === 'Escape' && lobbyReply && setLobbyReply(null));
+attachMentionPicker($('lobby-chat-input'), lobbyMentionCandidates);
 wireEmojiToggle($('lobby-chat'));
 
 // Translate: one small button after someone else's message. The answer is kept, so the message

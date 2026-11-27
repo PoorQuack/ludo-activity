@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 {name}さんとフレンドになりました",
   "🧭 Getting started": "🧭 はじめに",
   "🪙 Coins": "🪙 コイン",
-  "Undo": "元に戻す"
+  "Undo": "元に戻す",
+  "{name} mentioned you": "{name}さんがあなたをメンションしました"
 }

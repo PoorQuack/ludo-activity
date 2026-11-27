@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 Jij en {name} zijn nu vrienden",
   "🧭 Getting started": "🧭 Aan de slag",
   "🪙 Coins": "🪙 Munten",
-  "Undo": "Ongedaan maken"
+  "Undo": "Ongedaan maken",
+  "{name} mentioned you": "{name} heeft je genoemd"
 }

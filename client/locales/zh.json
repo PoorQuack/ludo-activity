@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 你和 {name} 现在是好友了",
   "🧭 Getting started": "🧭 新手导航",
   "🪙 Coins": "🪙 金币",
-  "Undo": "撤销"
+  "Undo": "撤销",
+  "{name} mentioned you": "{name} 提到了你"
 }

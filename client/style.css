@@ -3000,7 +3000,7 @@ button, .btn { touch-action: manipulation; }
 .btn.surrender .ico { color: inherit; }
 
 /* toasts sit above the bottom bar (phones), never on top of its buttons */
-@media (max-width: 899px) { :root:not(.kb-open):has(#menu:not(.hidden)) .toast { bottom: calc(var(--dock-h) + var(--saib, 0px) + 12px); } }
+@media (max-width: 899px) { :root:not(.kb-open):has(#menu:not(.hidden)) .toast { bottom: calc(66px + var(--saib, 0px) + 12px); } } /* 66px: the bottom bar (--dock-h lives on .hub, not up here) */
 
 /* the leaderboard's rules fold away under "How it works" */
 .lb-how-box { margin: 2px auto 0; max-width: 46ch; text-align: center; }
@@ -3051,3 +3051,17 @@ button, .btn { touch-action: manipulation; }
 :root:has(#game:not(.hidden)) .modal-wrap.tour .tour-text { min-height: 0; font-size: 15px; }
 /* The smallest phones (320px): the music button steps aside (music on/off is in Settings) */
 @media (max-width: 340px) { .menu-tools [data-player-btn] { display: none; } }
+
+/* ---------- @mentions ---------- */
+.mention { font-weight: 700; color: #b5532f; background: rgba(217, 87, 59, 0.1); border-radius: 5px; padding: 0 3px; }
+.mention.me { color: #fff; background: #d9573b; }
+.chat-msg.me .mention { color: #fff; background: rgba(255, 255, 255, 0.2); }
+/* a message that mentions you: an accent edge on its bubble */
+.chat-msg:has(.chat-line.mention-me) .chat-bubble { box-shadow: 0 0 0 2px #d9573b, 0 2px 10px rgba(217, 87, 59, 0.25); }
+/* the @ list above the chat box */
+.mention-pop { position: absolute; left: 10px; bottom: calc(100% + 6px); z-index: 30; min-width: 180px; max-width: min(280px, calc(100% - 20px)); margin: 0; padding: 4px; list-style: none; background: #fffaf3; border: 1px solid #d8c8b4; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.mention-opt { padding: 7px 10px; border-radius: 8px; color: #1b1714; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mention-opt.on, .mention-opt:hover { background: #f1e3d2; }
+.toast.tap { pointer-events: auto; cursor: pointer; }
+#lobby-chat { position: relative; }
+.toast.ok.tap { background: #d9573b; }

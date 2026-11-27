@@ -533,10 +533,19 @@ function handleLobbyChat(ws, msg) {
   };
   if (msg.op === 'say') {
     if (!lobbyListeners.has(ws)) throw new Error('Open the chat first');
-    const m = lobbyChat.say(ctx.user, id, msg.text, { replyId: msg.replyId });
+    const m = lobbyChat.say(ctx.user, id, msg.text, { replyId: msg.replyId, mentions: msg.mentions, nameOf: (uid) => social.names.get(uid) });
     if (m) {
       m.lang = ctx.lobbyLang || 'en'; // the language they chat in: what Translate guesses it's written in
       reach({ type: 'lobbyChat', op: 'msg', channel, msg: m });
+      // @mentioned and not looking at this chat: a notice they can tap to open it
+      for (const { id: uid } of m.mentions || []) {
+        if (social.isBlocked?.(uid, ctx.user.id)) continue;
+        for (const c of userSockets.get(uid) || []) {
+          if (c.readyState !== 1 || (lobbyListeners.has(c) && (channel === 'global' || c.ctx.lobbyLang === ctx.lobbyLang))) continue;
+          if (channel === 'lang' && (c.ctx.lobbyLang || 'en') !== ctx.lobbyLang) continue; // (a language chat they're not in)
+          c.send(JSON.stringify({ type: 'mention', channel, msgId: m.id, fromId: m.userId, from: m.name, text: m.text.slice(0, 140) }));
+        }
+      }
       const ping = JSON.stringify({ type: 'lobbyChat', op: 'ping', channel, userId: m.userId });
       for (const c of wss.clients) {
         if (c === ws || lobbyListeners.has(c) || c.readyState !== 1 || !c.ctx?.user) continue;

@@ -1092,5 +1092,6 @@
   "🤝 You and {name} are friends now": "🤝 {name} ile artık arkadaşsınız",
   "🧭 Getting started": "🧭 Başlangıç",
   "🪙 Coins": "🪙 Jetonlar",
-  "Undo": "Geri al"
+  "Undo": "Geri al",
+  "{name} mentioned you": "{name} senden bahsetti"
 }
