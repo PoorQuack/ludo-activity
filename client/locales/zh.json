@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "全押模式至少需要 2 名玩家",
   "Team games need every seat filled": "团队游戏需要坐满所有座位",
   "Click to open": "点击打开",
-  "Discord notifications": "Discord 通知",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "不在游戏中时，如果有人 @ 提到你或好友给你发消息，你会收到 Discord 私信。"
+  "@mentions on Discord": "Discord 上的 @ 提及",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "不在游戏中时，有人 @ 提到你，你会收到 Discord 私信。连续的提及会合并成一条消息。",
+  "Friend messages on Discord": "Discord 上的好友消息",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "不在游戏中时，好友给你发消息，你会收到 Discord 私信。",
+  "Quiet hours": "免打扰时段",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "夜间不发送 Discord 私信。期间收到的提及会保存下来，免打扰结束后合并成一条消息发送。",
+  "From": "从",
+  "To": "到",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord 只允许 Ludo 机器人给与它在同一服务器的人发消息。加入我们的服务器，通知才能送达。",
+  "Join our server": "加入我们的服务器",
+  "{name} has quiet hours on right now": "{name} 现在处于免打扰时段"
 }

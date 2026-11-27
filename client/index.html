@@ -617,8 +617,26 @@
               </div>
               <div class="set-row">
                 <span class="set-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" /></svg></span>
-                <div class="set-row-text"><b data-i18n>Discord notifications</b><small data-i18n>When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.</small></div>
-                <button type="button" class="switch" role="switch" id="pref-pings" aria-label="Discord notifications" data-i18n-attr="aria-label"><i></i></button>
+                <div class="set-row-text"><b data-i18n>@mentions on Discord</b><small data-i18n>When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.</small></div>
+                <button type="button" class="switch" role="switch" id="pref-pings" aria-label="@mentions on Discord" data-i18n-attr="aria-label"><i></i></button>
+              </div>
+              <div class="set-row">
+                <span class="set-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16v10H9l-4 3.5v-3.5H4z" /></svg></span>
+                <div class="set-row-text"><b data-i18n>Friend messages on Discord</b><small data-i18n>When you are away from the game, get a Discord DM when a friend messages you.</small></div>
+                <button type="button" class="switch" role="switch" id="pref-pings-dm" aria-label="Friend messages on Discord" data-i18n-attr="aria-label"><i></i></button>
+              </div>
+              <div class="set-row">
+                <span class="set-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z" /></svg></span>
+                <div class="set-row-text"><b data-i18n>Quiet hours</b><small data-i18n>No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.</small></div>
+                <button type="button" class="switch" role="switch" id="pref-quiet" aria-label="Quiet hours" data-i18n-attr="aria-label"><i></i></button>
+              </div>
+              <div id="quiet-times" class="quiet-times hidden">
+                <label><span data-i18n>From</span> <select id="quiet-from" class="chat-lang-select"></select></label>
+                <label><span data-i18n>To</span> <select id="quiet-to" class="chat-lang-select"></select></label>
+              </div>
+              <div id="pings-reach" class="pings-reach hidden">
+                <span data-i18n>Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.</span>
+                <button type="button" class="btn small" id="pings-join" data-i18n>Join our server</button>
               </div>
 
             </section>

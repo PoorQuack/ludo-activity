@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "وضع الكل أو لا شيء يحتاج لاعبَين على الأقل",
   "Team games need every seat filled": "ألعاب الفرق تحتاج أن تُملأ كل المقاعد",
   "Click to open": "انقر للفتح",
-  "Discord notifications": "إشعارات Discord",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "عندما تكون بعيدًا عن اللعبة، تصلك رسالة خاصة على Discord إذا أشار إليك أحد بـ @ أو راسلك صديق."
+  "@mentions on Discord": "الإشارات @ على Discord",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "عندما تكون بعيدًا عن اللعبة، تصلك رسالة خاصة على Discord عندما يشير إليك أحد بـ @. وتصلك الإشارات المتتالية في رسالة واحدة.",
+  "Friend messages on Discord": "رسائل الأصدقاء على Discord",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "عندما تكون بعيدًا عن اللعبة، تصلك رسالة خاصة على Discord عندما يراسلك صديق.",
+  "Quiet hours": "ساعات الهدوء",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "لا رسائل خاصة من Discord ليلًا. تُحفظ الإشارات التي تصل وتُرسل في رسالة واحدة عند انتهاء ساعات الهدوء.",
+  "From": "من",
+  "To": "إلى",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "لا يسمح Discord لبوت Ludo بمراسلة إلا من يشاركونه خادمًا. انضم إلى خادمنا لتصلك إشعاراتك.",
+  "Join our server": "انضم إلى خادمنا",
+  "{name} has quiet hours on right now": "{name} في ساعات الهدوء الآن"
 }

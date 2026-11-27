@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "올인은 최소 2명이 필요해요",
   "Team games need every seat filled": "팀 게임은 모든 자리가 차야 해요",
   "Click to open": "클릭해서 열기",
-  "Discord notifications": "Discord 알림",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "게임에 없을 때 누군가 나를 @멘션하거나 친구가 메시지를 보내면 Discord DM으로 알려 드려요."
+  "@mentions on Discord": "Discord에서 @멘션",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "게임에 없을 때 누군가 나를 @멘션하면 Discord DM으로 알려 드려요. 연달아 온 멘션은 메시지 하나로 모아 보내요.",
+  "Friend messages on Discord": "Discord에서 친구 메시지",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "게임에 없을 때 친구가 메시지를 보내면 Discord DM으로 알려 드려요.",
+  "Quiet hours": "방해 금지 시간",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "밤에는 Discord DM을 보내지 않아요. 그동안 온 멘션은 모아 두었다가 방해 금지 시간이 끝나면 메시지 하나로 보내요.",
+  "From": "시작",
+  "To": "종료",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord에서는 Ludo 봇이 같은 서버에 있는 사람에게만 메시지를 보낼 수 있어요. 알림을 받으려면 서버에 참여하세요.",
+  "Join our server": "서버 참여하기",
+  "{name} has quiet hours on right now": "{name}님은 지금 방해 금지 시간이에요"
 }

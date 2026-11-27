@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "ऑल इन के लिए कम से कम 2 खिलाड़ी चाहिए",
   "Team games need every seat filled": "टीम गेम में हर सीट भरी होनी चाहिए",
   "Click to open": "खोलने के लिए क्लिक करें",
-  "Discord notifications": "Discord सूचनाएँ",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "जब आप गेम में नहीं हों, तब कोई आपको @ से मेंशन करे या कोई दोस्त मैसेज करे तो Discord पर DM पाएँ।"
+  "@mentions on Discord": "Discord पर @मेंशन",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "जब आप गेम में नहीं हों, तब कोई आपको @ से मेंशन करे तो Discord पर DM पाएँ। लगातार कई पिंग एक ही संदेश में आते हैं।",
+  "Friend messages on Discord": "Discord पर दोस्तों के संदेश",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "जब आप गेम में नहीं हों, तब कोई दोस्त संदेश भेजे तो Discord पर DM पाएँ।",
+  "Quiet hours": "शांत घंटे",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "रात में Discord DM नहीं। आने वाले पिंग सहेजे जाते हैं और शांत घंटे खत्म होने पर एक संदेश में भेजे जाते हैं।",
+  "From": "से",
+  "To": "तक",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord, Ludo बॉट को सिर्फ़ उन्हीं लोगों को संदेश भेजने देता है जो उसके साथ कोई सर्वर साझा करते हैं। सूचनाएँ पाने के लिए हमारे सर्वर से जुड़ें।",
+  "Join our server": "हमारे सर्वर से जुड़ें",
+  "{name} has quiet hours on right now": "{name} के अभी शांत घंटे चल रहे हैं"
 }

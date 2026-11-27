@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "All In için en az 2 oyuncu gerekir",
   "Team games need every seat filled": "Takım oyunlarında tüm koltukların dolu olması gerekir",
   "Click to open": "Açmak için tıkla",
-  "Discord notifications": "Discord bildirimleri",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "Oyunda değilken biri seni @ ile andığında ya da bir arkadaşın mesaj attığında Discord’dan DM al."
+  "@mentions on Discord": "Discord’da @bahsetmeler",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "Oyunda değilken biri seni @ ile andığında Discord’dan DM al. Art arda gelen pingler tek mesajda gelir.",
+  "Friend messages on Discord": "Discord’da arkadaş mesajları",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "Oyunda değilken bir arkadaşın mesaj attığında Discord’dan DM al.",
+  "Quiet hours": "Sessiz saatler",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "Gece Discord DM’si yok. Gelen pingler saklanır ve sessiz saatler bitince tek mesajda gönderilir.",
+  "From": "Başlangıç",
+  "To": "Bitiş",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord, Ludo botunun yalnızca onunla bir sunucuyu paylaşan kişilere mesaj atmasına izin verir. Bildirimlerin sana ulaşması için sunucumuza katıl.",
+  "Join our server": "Sunucumuza katıl",
+  "{name} has quiet hours on right now": "{name} şu an sessiz saatlerde"
 }

@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "All In braucht mindestens 2 Spieler",
   "Team games need every seat filled": "Teamspiele brauchen alle Plätze besetzt",
   "Click to open": "Zum Öffnen klicken",
-  "Discord notifications": "Discord-Benachrichtigungen",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "Wenn du nicht im Spiel bist, bekommst du eine Discord-DM, wenn dich jemand mit @ erwähnt oder ein Freund dir schreibt."
+  "@mentions on Discord": "@Erwähnungen auf Discord",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "Wenn du nicht im Spiel bist, bekommst du eine Discord-DM, wenn dich jemand mit @ erwähnt. Viele Pings auf einmal kommen als eine Nachricht.",
+  "Friend messages on Discord": "Nachrichten von Freunden auf Discord",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "Wenn du nicht im Spiel bist, bekommst du eine Discord-DM, wenn dir ein Freund schreibt.",
+  "Quiet hours": "Ruhezeiten",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "Nachts keine Discord-DMs. Pings werden aufgehoben und als eine Nachricht geschickt, wenn die Ruhezeit endet.",
+  "From": "Von",
+  "To": "Bis",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord erlaubt dem Ludo-Bot nur, Leuten zu schreiben, die einen Server mit ihm teilen. Tritt unserem Server bei, damit deine Benachrichtigungen ankommen.",
+  "Join our server": "Unserem Server beitreten",
+  "{name} has quiet hours on right now": "{name} hat gerade Ruhezeit"
 }

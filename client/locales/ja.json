@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "オールインには2人以上必要です",
   "Team games need every seat filled": "チーム戦は全席が埋まっている必要があります",
   "Click to open": "クリックして開く",
-  "Discord notifications": "Discord通知",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "ゲームを離れているときに、誰かに@メンションされたりフレンドからメッセージが届いたりすると、DiscordのDMでお知らせします。"
+  "@mentions on Discord": "Discordで@メンション",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "ゲームを離れているときに@メンションされると、DiscordのDMでお知らせします。続けて届いたメンションは1通にまとめます。",
+  "Friend messages on Discord": "Discordでフレンドのメッセージ",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "ゲームを離れているときにフレンドからメッセージが届くと、DiscordのDMでお知らせします。",
+  "Quiet hours": "おやすみ時間",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "夜はDiscordのDMを送りません。届いたメンションは保存し、おやすみ時間が終わったら1通にまとめて送ります。",
+  "From": "開始",
+  "To": "終了",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "DiscordではLudoのボットは同じサーバーにいる人にしかメッセージを送れません。通知を受け取るにはサーバーに参加してください。",
+  "Join our server": "サーバーに参加",
+  "{name} has quiet hours on right now": "{name}さんは今おやすみ時間です"
 }

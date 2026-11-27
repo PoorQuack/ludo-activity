@@ -38,7 +38,9 @@ export class SocialBook {
             out: (u.out || []).filter((r) => r && typeof r.id === 'string').slice(0, MAX_REQUESTS),
             blocked: (u.blocked || []).filter((b) => typeof b === 'string'),
             ...(u.noInvites ? { noInvites: true } : {}),
-            ...(u.noPings ? { noPings: true } : {}),
+            ...(u.noPings || u.noMentionPings ? { noMentionPings: true } : {}),
+            ...(u.noPings || u.noDmPings ? { noDmPings: true } : {}),
+            ...(cleanQuiet(u.quiet) ? { quiet: cleanQuiet(u.quiet) } : {}),
           });
         }
         this.migrateOneWay();
@@ -183,17 +185,36 @@ export class SocialBook {
     return !this.users.get(id)?.noInvites;
   }
 
-  // ⚙ Settings → General → "Discord notifications": a DM from the bot when you're away and
-  // someone @mentions you or a friend messages you
-  setPings(id, on) {
+  // ⚙ Settings → General: Discord DMs while you're away, for @mentions ('mention') and for
+  // friends' messages ('dm')
+  setPings(id, kind, on) {
     const u = this.user(id);
-    if (on) delete u.noPings;
-    else u.noPings = true;
+    const key = kind === 'dm' ? 'noDmPings' : 'noMentionPings';
+    if (on) delete u[key];
+    else u[key] = true;
     this.save();
   }
 
-  acceptsPings(id) {
-    return !this.users.get(id)?.noPings;
+  acceptsPings(id, kind) {
+    const u = this.users.get(id);
+    return !(kind === 'dm' ? u?.noDmPings : u?.noMentionPings);
+  }
+
+  // Quiet hours: no Discord DMs from `from` o'clock to `to` o'clock in their time zone.
+  // null turns them off.
+  setQuiet(id, quiet) {
+    const u = this.user(id);
+    const q = quiet && cleanQuiet(quiet);
+    if (q) u.quiet = q;
+    else delete u.quiet;
+    this.save();
+  }
+
+  quietNow(id, at = this.now()) {
+    const q = this.users.get(id)?.quiet;
+    if (!q) return false;
+    const h = localHour(at, q.tz);
+    return q.from < q.to ? h >= q.from && h < q.to : h >= q.from || h < q.to;
   }
 
   isFriend(id, friendId) {
@@ -237,7 +258,8 @@ export class SocialBook {
     const asked = new Set((u.in || []).map((r) => r.id));
     return {
       invitesOn: !u.noInvites,
-      pingsOn: !u.noPings,
+      pings: { mention: !u.noMentionPings, dm: !u.noDmPings },
+      quiet: u.quiet || null,
       friends: u.friends.map((f) => person(f)),
       blocked: u.blocked || [],
       // requests waiting for your answer (shown in the inbox and on the Friends card)
@@ -277,6 +299,26 @@ export class SocialBook {
     fs.writeFileSync(tmp, JSON.stringify(doc));
     fs.renameSync(tmp, this.file);
   }
+}
+
+// Quiet hours as saved: whole hours 0-23 (different from each other) and a real time zone
+export function cleanQuiet(q) {
+  if (!q || typeof q !== 'object') return null;
+  const from = Number(q.from);
+  const to = Number(q.to);
+  if (![from, to].every((h) => Number.isInteger(h) && h >= 0 && h <= 23) || from === to) return null;
+  const tz = String(q.tz || 'UTC').slice(0, 60);
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+  } catch {
+    return null;
+  }
+  return { from, to, tz };
+}
+
+function localHour(at, tz) {
+  const h = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', hourCycle: 'h23' }).format(at);
+  return Number(h) % 24;
 }
 
 // A Discord DM from the app's bot. Bots can only DM people who share a server with them.

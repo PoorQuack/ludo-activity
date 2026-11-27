@@ -3082,3 +3082,11 @@ html.pip:not(:has(#game:not(.hidden))) .pip-card {
 :is([data-chat], #lobby-chat) .chat-log .chat-av { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; transition: transform 0.15s var(--ease-out); }
 :is([data-chat], #lobby-chat) .chat-log .chat-av img { pointer-events: none; -webkit-user-drag: none; }
 :is([data-chat], #lobby-chat) .chat-log .chat-av.held { transform: scale(1.15); }
+
+/* Settings → General: quiet hours times, and the "join our server" note for Discord notifications */
+.quiet-times { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 2px 0 10px 46px; }
+.quiet-times label { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.quiet-times select { flex: 0 0 auto; min-width: 110px; }
+.pings-reach { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 2px 0 10px 46px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 13px; color: var(--muted); }
+.pings-reach span { flex: 1 1 220px; }
+@media (max-width: 420px) { .quiet-times, .pings-reach { margin-left: 0; padding-left: 0; } .pings-reach { padding-left: 12px; } }

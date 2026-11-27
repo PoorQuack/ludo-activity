@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "Для ва-банка нужно минимум 2 игрока",
   "Team games need every seat filled": "Для командной игры нужно занять все места",
   "Click to open": "Нажмите, чтобы открыть",
-  "Discord notifications": "Уведомления в Discord",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "Когда вы не в игре, получайте личное сообщение в Discord, если кто-то упомянет вас через @ или напишет друг."
+  "@mentions on Discord": "@упоминания в Discord",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "Когда вы не в игре, получайте личное сообщение в Discord, если вас упомянули через @. Серия упоминаний приходит одним сообщением.",
+  "Friend messages on Discord": "Сообщения друзей в Discord",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "Когда вы не в игре, получайте личное сообщение в Discord, если вам написал друг.",
+  "Quiet hours": "Тихие часы",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "Ночью без сообщений в Discord. Упоминания сохраняются и приходят одним сообщением, когда тихие часы закончатся.",
+  "From": "С",
+  "To": "До",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord разрешает боту Ludo писать только тем, у кого с ним общий сервер. Вступите на наш сервер, чтобы уведомления до вас доходили.",
+  "Join our server": "Вступить на сервер",
+  "{name} has quiet hours on right now": "У {name} сейчас тихие часы"
 }

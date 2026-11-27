@@ -1818,7 +1818,9 @@ function renderPrefs() {
   setSceneLighting(prefs.lighting);
   renderSceneSeg();
   $('pref-invites').setAttribute('aria-checked', String(friendsData?.invitesOn !== false));
-  $('pref-pings').setAttribute('aria-checked', String(friendsData?.pingsOn !== false));
+  $('pref-pings').setAttribute('aria-checked', String(friendsData?.pings?.mention !== false));
+  $('pref-pings-dm').setAttribute('aria-checked', String(friendsData?.pings?.dm !== false));
+  renderQuiet();
 }
 $('pref-chat').addEventListener('click', () => {
   prefs.chat = !prefs.chat;
@@ -1858,12 +1860,51 @@ $('pref-invites').addEventListener('click', () => {
   renderPrefs();
   ws?.send(JSON.stringify({ type: 'friend', op: 'invites', on }));
 });
-$('pref-pings').addEventListener('click', () => {
-  const on = friendsData?.pingsOn === false;
-  if (friendsData) friendsData.pingsOn = on;
+// Discord DMs while away: @mentions and friends' messages, each with its own switch
+function togglePings(kind) {
+  const pings = (friendsData && (friendsData.pings ||= { mention: true, dm: true })) || { mention: true, dm: true };
+  pings[kind] = pings[kind] === false;
   renderPrefs();
-  ws?.send(JSON.stringify({ type: 'friend', op: 'pings', on }));
+  ws?.send(JSON.stringify({ type: 'friend', op: 'pings', kind, on: pings[kind] }));
+}
+$('pref-pings').addEventListener('click', () => togglePings('mention'));
+$('pref-pings-dm').addEventListener('click', () => togglePings('dm'));
+// Quiet hours (no Discord DMs), in the player's own time zone
+const hourLabel = (h) => new Intl.DateTimeFormat(currentLang() || undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(2020, 0, 1, h));
+for (const id of ['quiet-from', 'quiet-to']) {
+  const sel = $(id);
+  for (let h = 0; h < 24; h++) sel.add(new Option(hourLabel(h), String(h)));
+  sel.addEventListener('change', () => saveQuiet(true));
+}
+function renderQuiet() {
+  const q = friendsData?.quiet || null;
+  $('pref-quiet').setAttribute('aria-checked', String(!!q));
+  $('quiet-times').classList.toggle('hidden', !q);
+  if (q) {
+    $('quiet-from').value = String(q.from);
+    $('quiet-to').value = String(q.to);
+  }
+  $('pings-reach').classList.toggle('hidden', !(friendsData?.inServer === false && friendsData?.inviteUrl));
+}
+function saveQuiet(on) {
+  let quiet = null;
+  if (on) {
+    const from = Number($('quiet-from').value);
+    let to = Number($('quiet-to').value);
+    if (from === to) to = (from + 9) % 24;
+    quiet = { from, to, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' };
+  }
+  if (friendsData) friendsData.quiet = quiet;
+  renderPrefs();
+  ws?.send(JSON.stringify({ type: 'friend', op: 'quiet', quiet }));
+}
+$('pref-quiet').addEventListener('click', () => {
+  if (friendsData?.quiet) return saveQuiet(false);
+  $('quiet-from').value = '23';
+  $('quiet-to').value = '8';
+  saveQuiet(true);
 });
+$('pings-join').addEventListener('click', () => $('friends-discord').onclick?.());
 applyPrefs();
 
 // ---------------- language ----------------

@@ -1098,6 +1098,15 @@
   "All In needs at least 2 players": "All In heeft minstens 2 spelers nodig",
   "Team games need every seat filled": "Teamspellen hebben alle plaatsen bezet nodig",
   "Click to open": "Klik om te openen",
-  "Discord notifications": "Discord-meldingen",
-  "When you are away from the game, get a Discord DM if someone @mentions you or a friend messages you.": "Als je niet in het spel bent, krijg je een Discord-DM wanneer iemand je met @ noemt of een vriend je een bericht stuurt."
+  "@mentions on Discord": "@vermeldingen op Discord",
+  "When you are away from the game, get a Discord DM when someone @mentions you. A burst of pings arrives as one message.": "Als je niet in het spel bent, krijg je een Discord-DM wanneer iemand je met @ noemt. Een reeks pings komt als één bericht.",
+  "Friend messages on Discord": "Berichten van vrienden op Discord",
+  "When you are away from the game, get a Discord DM when a friend messages you.": "Als je niet in het spel bent, krijg je een Discord-DM wanneer een vriend je een bericht stuurt.",
+  "Quiet hours": "Stille uren",
+  "No Discord DMs at night. Pings that arrive are kept and sent as one message when quiet hours end.": "’s Nachts geen Discord-DM’s. Pings worden bewaard en als één bericht gestuurd wanneer de stille uren voorbij zijn.",
+  "From": "Van",
+  "To": "Tot",
+  "Discord only lets the Ludo bot message people who share a server with it. Join our server so your notifications reach you.": "Discord laat de Ludo-bot alleen berichten sturen naar mensen die een server met hem delen. Word lid van onze server zodat je meldingen aankomen.",
+  "Join our server": "Word lid van onze server",
+  "{name} has quiet hours on right now": "{name} heeft nu stille uren"
 }

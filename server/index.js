@@ -541,7 +541,7 @@ function handleLobbyChat(ws, msg) {
       // @mentioned and not looking at this chat: a notice they can tap to open it
       for (const { id: uid } of m.mentions || []) {
         if (social.isBlocked?.(uid, ctx.user.id)) continue;
-        if (!isOnline(uid)) notifier.mention(uid, { from: m.name, text: m.text, where: channel });
+        if (!isOnline(uid)) notifier.mention(uid, { fromId: m.userId, from: m.name, text: m.text, where: channel });
         for (const c of userSockets.get(uid) || []) {
           if (c.readyState !== 1 || (lobbyListeners.has(c) && (channel === 'global' || c.ctx.lobbyLang === ctx.lobbyLang))) continue;
           if (channel === 'lang' && (c.ctx.lobbyLang || 'en') !== ctx.lobbyLang) continue; // (a language chat they're not in)
@@ -590,7 +590,7 @@ function handleDm(ws, msg) {
     if (!res) return;
     sendTo(ctx.user.id, { type: 'dmMsg', friendId: toId, msg: res.msg, unread: dms.unreadCount(ctx.user.id) });
     sendTo(toId, { type: 'dmMsg', friendId: ctx.user.id, msg: res.msg, unread: dms.unreadCount(toId) });
-    if (!isOnline(toId) && !social.isBlocked?.(toId, ctx.user.id)) notifier.message(toId, { from: ctx.user.name, text: res.msg.text });
+    if (!isOnline(toId) && !social.isBlocked?.(toId, ctx.user.id)) notifier.message(toId, { fromId: ctx.user.id, from: ctx.user.name, text: res.msg.text });
     return;
   }
   if (msg.op === 'react') {
@@ -669,17 +669,33 @@ const invite = new ServerInvite({
   token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
 });
 async function maybeInvite(ws, userId) {
-  if (!invite.enabled || !store.wantsInvite(userId)) return;
-  if ((await invite.isMember(userId)) === true) return store.answerInvite(userId, 'join'); // already in
+  if (!invite.enabled) return;
+  const member = await invite.isMember(userId);
+  if (member !== null && inServer.get(userId) !== member) {
+    inServer.set(userId, member);
+    if (member) notifier.refused.delete(userId); // joined: worth trying DMs again
+    sendFriends(userId);
+  }
+  if (!store.wantsInvite(userId)) return;
+  if (member === true) return store.answerInvite(userId, 'join'); // already in
   if (ws.readyState === 1 && store.wantsInvite(userId)) ws.send(JSON.stringify({ type: 'invite', url: invite.url }));
 }
 const social = new SocialBook(SOCIAL_FILE);
 const isOnline = (id) => userSockets.has(id);
 // Away from the game: @mentions and friends' messages reach them as a Discord DM (see notify.js)
-const notifier = new DiscordNotifier({ token: (process.env.DISCORD_BOT_TOKEN || '').trim(), allowed: (id) => social.acceptsPings(id) });
+const notifier = new DiscordNotifier({
+  token: (process.env.DISCORD_BOT_TOKEN || '').trim(),
+  allowed: (id, kind) => social.acceptsPings(id, kind),
+  isOnline,
+  quietNow: (id) => social.quietNow(id),
+});
+// Whether the bot can reach someone on Discord (it shares our server with them): true / false,
+// or unknown. Shown in Settings so players outside the server know to join for notifications.
+const inServer = new Map();
 const dms = new DirectMessages(DMS_FILE, { profiles: store, social, isOnline });
 function sendFriends(userId) {
-  sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null });
+  const reach = notifier.refused.has(userId) ? false : inServer.get(userId);
+  sendTo(userId, { type: 'friends', ...social.view(userId, isOnline), inviteUrl: invite.enabled ? invite.url : null, inServer: reach ?? null });
 }
 // The inbox: personal notices, announcements, and (from the friends book) requests waiting
 const inbox = new Inbox(INBOX_FILE);
@@ -728,6 +744,7 @@ async function inviteFriend(ws, toId) {
       return send({ type: 'friendInvited', name, how: 'game' });
     }
     if (toId.startsWith('guest-')) throw new Error(`${name} isn't online`);
+    if (social.quietNow(toId)) throw new Error(`${name} has quiet hours on right now`);
     await sendDm(
       (process.env.DISCORD_BOT_TOKEN || '').trim(),
       toId,
@@ -762,7 +779,7 @@ const directory = new RoomDirectory({
     onStat: questProgress,
     onMention: (room, m) => {
       for (const { id: uid } of m.mentions) {
-        if (!isOnline(uid) && !social.isBlocked?.(uid, m.userId)) notifier.mention(uid, { from: m.name, text: m.text, where: 'room' });
+        if (!isOnline(uid) && !social.isBlocked?.(uid, m.userId)) notifier.mention(uid, { fromId: m.userId, from: m.name, text: m.text, where: 'room' });
       }
     },
     onChange: (room) => {
@@ -1036,6 +1053,7 @@ wss.on('connection', (ws, req) => {
         ctx.instanceId = String(msg.instanceId || 'local').slice(0, 100);
         if (!userSockets.has(user.id)) userSockets.set(user.id, new Set());
         userSockets.get(user.id).add(ws);
+        notifier.cancel(user.id); // back in the game: waiting pings are read here
         const isNew = !store.peek(user.id);
         store.get(user.id);
         const loginXp = store.passLogin(user.id); // the day's first visit: Battle Pass XP
@@ -1095,7 +1113,8 @@ wss.on('connection', (ws, req) => {
       if (msg.type === 'friend') {
         const id = String(msg.id || '');
         if (msg.op === 'invites') social.setInvites(ctx.user.id, !!msg.on);
-        else if (msg.op === 'pings') social.setPings(ctx.user.id, !!msg.on);
+        else if (msg.op === 'pings') social.setPings(ctx.user.id, msg.kind === 'dm' ? 'dm' : 'mention', !!msg.on);
+        else if (msg.op === 'quiet') social.setQuiet(ctx.user.id, msg.quiet || null);
         else if (msg.op === 'add') {
           const r = social.request(ctx.user.id, id);
           if (r === 'sent') sendTo(id, { type: 'friendRequest', from: { id: ctx.user.id, name: ctx.user.name } });
