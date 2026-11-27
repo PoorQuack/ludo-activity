@@ -2873,7 +2873,7 @@ button, .btn { touch-action: manipulation; }
    corners between them tucked in, and the last one has a little tail. Others: on the left, white,
    with their name above and their picture by the last bubble. You: on the right, in the game's red,
    no name. Translate is a small "AI" chip beside the bubble; Reply / React float over its corner. */
-:is([data-chat], #lobby-chat) { --me-bubble: #d9573b; --them-bubble: #ffffff; }
+:is([data-chat], #lobby-chat) { --me-bubble: #ffffff; --them-bubble: #ffffff; } /* your bubbles white too (on the right); no orange */
 :is([data-chat], #lobby-chat) .chat-log { gap: 10px; padding-inline: 10px; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg { align-items: flex-end; gap: 6px; max-width: calc(100% - 56px); }
 :is([data-chat], #lobby-chat) .chat-log .chat-av { width: 28px; height: 28px; margin: 0 0 1px; }
@@ -2892,9 +2892,8 @@ button, .btn { touch-action: manipulation; }
   background: var(--them-bubble); color: #1b1714; line-height: 1.32; box-shadow: 0 1px 1px rgba(70, 45, 20, 0.08);
 }
 :is([data-chat], #lobby-chat) .chat-log .chat-line + .chat-line { margin: 0; padding-top: 7px; border-top: 0; }
-:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line { background: var(--me-bubble); color: #fff; }
-:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .chat-line-content { color: #fff; }
-:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .mention { color: #dcebff; font-weight: 800; } /* (a mention on your own red bubble: light blue) */
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line { background: var(--me-bubble); color: #1b1714; }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line .chat-line-content { color: #1b1714; }
 /* corners: tucked in between bubbles of the same run (left side for others, right side for you) */
 :is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:not(:last-child) { border-bottom-left-radius: 6px; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg:not(.me) .chat-line:not(:first-child) { border-top-left-radius: 6px; }
@@ -2917,7 +2916,7 @@ button, .btn { touch-action: manipulation; }
 :is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-line.jumbo .chat-line-content { color: inherit; }
 /* a reply: the message it answers, small and grey above the bubble */
 :is([data-chat], #lobby-chat) .chat-log .chat-bubble > .reply-quote { margin: 0 6px 2px; padding: 3px 9px; border-radius: 12px; background: rgba(90, 60, 30, 0.08); color: #6b5d50; border-inline-start: 2px solid var(--seat-col, #b9a996); }
-:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-bubble > .reply-quote { border-inline-start: 0; border-inline-end: 2px solid var(--me-bubble); }
+:is([data-chat], #lobby-chat) .chat-log .chat-msg.me .chat-bubble > .reply-quote { border-inline-start: 0; border-inline-end: 2px solid #c9b79c; }
 /* Translate: the small AI chip, outside the bubble, level with its bottom */
 :is([data-chat], #lobby-chat) .chat-log .chat-line-content > .tr-btn {
   position: absolute; bottom: -2px; left: calc(100% + 16px); padding: 1px 5px; border-radius: 6px; border: 1px solid #c9b79c; background: #fff;
